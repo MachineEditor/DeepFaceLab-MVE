@@ -60,7 +60,6 @@ MTCNN produces less jitter.
 * ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/MIAEF128_diagramm.png)
 * MIAEF128 Ford success case:
 * ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/MIAEF128_Ford_0.jpg)
-* ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/MIAEF128_Ford_1.jpg)
 * MIAEF128 Cage fail case:
 * ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/MIAEF128_Cage_fail.jpg)
 - **AVATAR (4GB+)** - face controlling model. Usage:
