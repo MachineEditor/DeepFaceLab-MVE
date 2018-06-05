@@ -11,8 +11,8 @@ class Model(ModelBase):
     encoder64H5 = 'encoder64.h5'
     decoder64_srcH5 = 'decoder64_src.h5'
     decoder64_dstH5 = 'decoder64_dst.h5'
-    encoder128H5 = 'encoder128.h5'    
-    decoder128_srcH5 = 'decoder128_src.h5'
+    encoder256H5 = 'encoder256.h5'    
+    decoder256_srcH5 = 'decoder256_src.h5'
 
     #override
     def onInitialize(self, **in_options):
@@ -22,23 +22,23 @@ class Model(ModelBase):
         
         self.set_vram_batch_requirements( {4:8,5:16,6:20,7:24,8:32,9:48} )
                 
-        self.encoder64, self.decoder64_src, self.decoder64_dst, self.encoder128, self.decoder128_src = self.BuildAE()   
+        self.encoder64, self.decoder64_src, self.decoder64_dst, self.encoder256, self.decoder256_src = self.BuildAE()   
         img_shape64      = (64,64,1)
-        img_shape128   = (256,256,3)
+        img_shape256   = (256,256,3)
         
         if not self.is_first_run():
             self.encoder64.load_weights      (self.get_strpath_storage_for_file(self.encoder64H5))
             self.decoder64_src.load_weights  (self.get_strpath_storage_for_file(self.decoder64_srcH5))
             self.decoder64_dst.load_weights  (self.get_strpath_storage_for_file(self.decoder64_dstH5))
-            self.encoder128.load_weights     (self.get_strpath_storage_for_file(self.encoder128H5))
-            self.decoder128_src.load_weights (self.get_strpath_storage_for_file(self.decoder128_srcH5))
+            self.encoder256.load_weights     (self.get_strpath_storage_for_file(self.encoder256H5))
+            self.decoder256_src.load_weights (self.get_strpath_storage_for_file(self.decoder256_srcH5))
             
         if self.is_training_mode:
-            self.encoder64, self.decoder64_src, self.decoder64_dst, self.encoder128, self.decoder128_src = self.to_multi_gpu_model_if_possible ( [self.encoder64, self.decoder64_src, self.decoder64_dst, self.encoder128, self.decoder128_src] )
+            self.encoder64, self.decoder64_src, self.decoder64_dst, self.encoder256, self.decoder256_src = self.to_multi_gpu_model_if_possible ( [self.encoder64, self.decoder64_src, self.decoder64_dst, self.encoder256, self.decoder256_src] )
         
         input_src_64         = keras.layers.Input(img_shape64)
         input_src_target64   = keras.layers.Input(img_shape64)
-        input_src_target128  = keras.layers.Input(img_shape128)
+        input_src_target256  = keras.layers.Input(img_shape256)
         input_dst_64         = keras.layers.Input(img_shape64)
         input_dst_target64   = keras.layers.Input(img_shape64)
 
@@ -56,18 +56,18 @@ class Model(ModelBase):
                                        self.keras.optimizers.Adam(lr=5e-5, beta_1=0.5, beta_2=0.999).get_updates(total64_loss, self.encoder64.trainable_weights + self.decoder64_src.trainable_weights + self.decoder64_dst.trainable_weights)
                                      )
                                      
-        src_code128 = self.encoder128(input_src_64)  
-        rec_src128 = self.decoder128_src(src_code128)
-        src128_loss = tf_dssim(tf, input_src_target128, rec_src128)
+        src_code256 = self.encoder256(input_src_64)  
+        rec_src256 = self.decoder256_src(src_code256)
+        src256_loss = tf_dssim(tf, input_src_target256, rec_src256)
                                      
-        self.ed128_train = K.function ([input_src_64, input_src_target128],[K.mean(src128_loss)],
-                                       self.keras.optimizers.Adam(lr=5e-5, beta_1=0.5, beta_2=0.999).get_updates(src128_loss, self.encoder128.trainable_weights + self.decoder128_src.trainable_weights)
+        self.ed256_train = K.function ([input_src_64, input_src_target256],[K.mean(src256_loss)],
+                                       self.keras.optimizers.Adam(lr=5e-5, beta_1=0.5, beta_2=0.999).get_updates(src256_loss, self.encoder256.trainable_weights + self.decoder256_src.trainable_weights)
                                      )                             
                        
-        src_code128 = self.encoder128(rec_src64)  
-        rec_src128 = self.decoder128_src(src_code128)
+        src_code256 = self.encoder256(rec_src64)  
+        rec_src256 = self.decoder256_src(src_code256)
         
-        self.src128_view = K.function ([input_src_64], [rec_src128])
+        self.src256_view = K.function ([input_src_64], [rec_src256])
     
         if self.is_training_mode:
             from models import TrainingDataGenerator
@@ -91,17 +91,17 @@ class Model(ModelBase):
         self.save_weights_safe( [[self.encoder64, self.get_strpath_storage_for_file(self.encoder64H5)],
                                  [self.decoder64_src, self.get_strpath_storage_for_file(self.decoder64_srcH5)],
                                  [self.decoder64_dst, self.get_strpath_storage_for_file(self.decoder64_dstH5)],
-                                 [self.encoder128, self.get_strpath_storage_for_file(self.encoder128H5)],
-                                 [self.decoder128_src, self.get_strpath_storage_for_file(self.decoder128_srcH5)],
+                                 [self.encoder256, self.get_strpath_storage_for_file(self.encoder256H5)],
+                                 [self.decoder256_src, self.get_strpath_storage_for_file(self.decoder256_srcH5)],
                                  ] )
         
     #override
     def onTrainOneEpoch(self, sample):
-        warped_src64, target_src64, target_src128, target_src_source64_G, target_src_source128_GGG = sample[0]
-        warped_dst64, target_dst64, target_dst_source64_G, target_dst_source128_GGG = sample[1]    
+        warped_src64, target_src64, target_src256, target_src_source64_G, target_src_source256_GGG = sample[0]
+        warped_dst64, target_dst64, target_dst_source64_G, target_dst_source256_GGG = sample[1]    
         
         loss64,  = self.ed64_train  ([warped_src64, target_src64, warped_dst64, target_dst64])   
-        loss256, = self.ed128_train ([warped_src64, target_src128])   
+        loss256, = self.ed256_train ([warped_src64, target_src256])   
         
         return ( ('loss64', loss64), ('loss256', loss256) )
 
@@ -109,19 +109,19 @@ class Model(ModelBase):
     def onGetPreview(self, sample):
         n_samples = 4
         test_B    = sample[1][2][0:n_samples]
-        test_B128 = sample[1][3][0:n_samples] 
+        test_B256 = sample[1][3][0:n_samples] 
         
-        BB,      = self.src128_view ([test_B])
+        BB,      = self.src256_view ([test_B])
 
         st = []
         for i in range(n_samples // 2):
             st.append ( np.concatenate ( (
-                test_B128[i*2+0], BB[i*2+0], test_B128[i*2+1], BB[i*2+1],
+                test_B256[i*2+0], BB[i*2+0], test_B256[i*2+1], BB[i*2+1],
                 ), axis=1) )
         return [ ('AVATAR', np.concatenate ( st, axis=0 ) ) ]
 
     def predictor_func (self, img):
-        x, = self.src128_view ([ np.expand_dims(img, 0) ])[0]
+        x, = self.src256_view ([ np.expand_dims(img, 0) ])[0]
         return x
         
     #override
@@ -155,10 +155,10 @@ class Model(ModelBase):
             x = keras.layers.Dense (64)(x)            
             return keras.models.Model (_input, x)
             
-        encoder128 = Encoder( keras.layers.Input ( (64, 64, 1) ) )
+        encoder256 = Encoder( keras.layers.Input ( (64, 64, 1) ) )
         encoder64 = Encoder( keras.layers.Input ( (64, 64, 1) ) )
 
-        def decoder128_3(encoder):
+        def decoder256_3(encoder):
             decoder_input = keras.layers.Input ( K.int_shape(encoder.outputs[0])[1:] )
             x = decoder_input
             x = self.keras.layers.Dense(16 * 16 * 720)(x)
@@ -181,7 +181,7 @@ class Model(ModelBase):
             x = keras.layers.convolutional.Conv2D(1, kernel_size=5, padding='same', activation='sigmoid')(x)
             return keras.models.Model(decoder_input, x)
             
-        return encoder64, decoder64_1(encoder64), decoder64_1(encoder64), encoder128, decoder128_3(encoder128)
+        return encoder64, decoder64_1(encoder64), decoder64_1(encoder64), encoder256, decoder256_3(encoder256)
         
 from models import ConverterBase
 from facelib import FaceType
