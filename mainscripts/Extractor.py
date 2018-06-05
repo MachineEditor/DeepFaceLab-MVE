@@ -45,7 +45,7 @@ class ExtractSubprocessor(SubprocessorBase):
             self.param_y = -1
             self.param_rect_size = -1
             self.param = {'x': 0, 'y': 0, 'rect_size' : 5}
-                
+            
             def onMouse(event, x, y, flags, param):        
                 if event == cv2.EVENT_MOUSEWHEEL:
                     mod = 1 if flags > 0 else -1            
@@ -116,8 +116,10 @@ class ExtractSubprocessor(SubprocessorBase):
                     self.original_image = cv2.imread(filename)
                     
                     (h,w,c) = self.original_image.shape
+ 
                     self.view_scale = 1.0 if self.manual_window_size == 0 else self.manual_window_size / (w if w > h else h)
                     self.original_image = cv2.resize (self.original_image, ( int(w*self.view_scale), int(h*self.view_scale) ), interpolation=cv2.INTER_LINEAR)    
+                    (h,w,c) = self.original_image.shape
                     
                     self.text_lines_img = (image_utils.get_draw_text_lines ( self.original_image, (0,0, self.original_image.shape[1], min(100, self.original_image.shape[0]) ),
                                                     [   'Match landmarks with face exactly.',
@@ -137,13 +139,20 @@ class ExtractSubprocessor(SubprocessorBase):
                             is_frame_done = True
                             break
                             
-                        if self.param_x != self.param['x'] / self.view_scale or \
-                           self.param_y != self.param['y'] / self.view_scale or \
-                           self.param_rect_size != self.param['rect_size']:
+                        new_param_x = self.param['x'] / self.view_scale
+                        new_param_y = self.param['y'] / self.view_scale
+                        new_param_rect_size = self.param['rect_size']
+                        
+                        new_param_x = np.clip (new_param_x, 0, w-1)
+                        new_param_y = np.clip (new_param_y, 0, h-1)
+                                
+                        if self.param_x != new_param_x or \
+                           self.param_y != new_param_y or \
+                           self.param_rect_size != new_param_rect_size:
                            
-                            self.param_x = self.param['x'] / self.view_scale
-                            self.param_y = self.param['y'] / self.view_scale
-                            self.param_rect_size = self.param['rect_size']
+                            self.param_x = new_param_x
+                            self.param_y = new_param_y
+                            self.param_rect_size = new_param_rect_size
 
                             self.rect = (self.param_x-self.param_rect_size, self.param_y-self.param_rect_size, self.param_x+self.param_rect_size, self.param_y+self.param_rect_size)
                             return [filename, [self.rect]]
