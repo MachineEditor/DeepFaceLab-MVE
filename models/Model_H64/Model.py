@@ -15,7 +15,7 @@ class Model(ModelBase):
 
     #override
     def onInitialize(self, **in_options):
-        self.set_vram_batch_requirements( {2:2,3:4,4:8,5:16,6:32,7:32,8:32,9:48} )
+        self.set_vram_batch_requirements( {1.5:2,2:2,3:4,4:8,5:16,6:32,7:32,8:32,9:48} )
 
         ae_input_layer = self.keras.layers.Input(shape=(64, 64, 3))
         mask_layer = self.keras.layers.Input(shape=(64, 64, 1)) #same as output
