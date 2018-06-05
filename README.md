@@ -62,10 +62,10 @@ MTCNN produces less jitter.
 * ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/MIAEF128_Ford_0.jpg)
 * MIAEF128 Cage fail case:
 * ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/MIAEF128_Cage_fail.jpg)
-- **AVATAR (4GB+)** - face controlling model. Usage:
+- **AVATAR (4GB+)** - 256pix face controlling model. Usage:
 * src - controllable face (Cage)
 * dst - controller face (your face)
-* converter --input-dir contains aligned dst faces in sequence to be converted, its mean you can train on 1500 dst faces, but use only 100 for convert.
+* converter --input-dir must contains *extracted dst faces* in sequence to be converted, its mean you can train on 1500 dst faces, but use only 100 for convert.
 
 ### **Sort tool**:
 
@@ -95,12 +95,6 @@ Best practice for dst faces:
 1) delete first unsorted aligned groups of images what you can to delete. Dont touch target face mixed with others.
 2) `hist` -> delete groups of similar and leave only target face
 
-### **Prebuilt binary**:
-
-Windows 7,8,8.1,10 zero dependency binary except NVidia Video Drivers can be downloaded from torrent.
-
-Torrent page: https://rutracker.org/forum/viewtopic.php?p=75318742 (magnet link inside)
-
 ### **Facesets**:
 
 - Nicolas Cage.
@@ -108,6 +102,16 @@ Torrent page: https://rutracker.org/forum/viewtopic.php?p=75318742 (magnet link 
 - Cage/Trump workspace
 
 download from here: https://mega.nz/#F!y1ERHDaL!PPwg01PQZk0FhWLVo5_MaQ
+
+### **Build info**
+
+dlib==19.10.0 from pip compiled without CUDA. Therefore you have to compile DLIB manually.
+
+Command line example for windows: `python setup.py install -G "Visual Studio 14 2015" --yes DLIB_USE_CUDA`
+
+### **Prebuilt python folder with DeepFaceLab**:
+
+Windows 7,8,8.1,10 zero dependency (except GeForce Drivers) prebuilt Python 3.6.5 embeddable folder with DeepFaceLab can be downloaded from torrent https://rutracker.org/forum/viewtopic.php?p=75318742 (magnet link inside).
 
 ### **Pull requesting**:
 
