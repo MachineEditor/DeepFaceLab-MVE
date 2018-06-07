@@ -86,7 +86,13 @@ MIAEF128 Cage fail case:
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/MIAEF128_Cage_fail.jpg)
 
-- **AVATAR (4GB+)** - 256pix face controlling model. Usage:
+- **AVATAR (4GB+)** - 256pix face controlling model. 
+
+![](https://github.com/iperov/DeepFaceLab/blob/master/doc/AVATAR_Cage_0.jpg)
+
+Video: https://coub.com/view/1954x3
+
+Usage:
 
 src - controllable face (Cage)
 
