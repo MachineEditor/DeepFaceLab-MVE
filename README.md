@@ -92,6 +92,10 @@ MIAEF128 Cage fail case:
 
 Video: https://coub.com/view/1954x3
 
+![](https://github.com/iperov/DeepFaceLab/blob/master/doc/AVATAR_Navalniy_0.jpg)
+
+Video: [![](https://img.youtube.com/vi/3M0E4QnWMqA/0.jpg)](https://img.youtube.com/vi/3M0E4QnWMqA/0.jpg)
+
 Usage:
 
 src - controllable face (Cage)
