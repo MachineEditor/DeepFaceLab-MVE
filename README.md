@@ -86,11 +86,7 @@ MIAEF128 Cage fail case:
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/MIAEF128_Cage_fail.jpg)
 
-- **AVATAR (4GB+)** - 256pix face controlling model. 
-
-![](https://github.com/iperov/DeepFaceLab/blob/master/doc/AVATAR_Cage_0.jpg)
-
-Video: https://coub.com/view/1954x3
+- **AVATAR (4GB+)** - non GAN, 256x256 face controlling model. 
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/AVATAR_Navalniy_0.jpg)
 
