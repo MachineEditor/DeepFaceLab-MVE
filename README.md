@@ -96,7 +96,7 @@ Video: https://coub.com/view/1954x3
 
 Video: 
 
-[![](https://img.youtube.com/vi/3M0E4QnWMqA/0.jpg)](https://img.youtube.com/vi/3M0E4QnWMqA/0.jpg)
+[![](https://img.youtube.com/vi/3M0E4QnWMqA/0.jpg)](https://www.youtube.com/watch?v=3M0E4QnWMqA)
 
 Usage:
 
