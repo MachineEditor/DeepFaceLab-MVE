@@ -54,7 +54,7 @@ H128 asian face on blurry target:
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/H128_Asian_1.jpg)
 
-- **DF (5GB+)** - @dfaker model. As H128, but fullface model.
+- **DF (5GB+)** - @dfaker model. As H128, but fullface model. Strongly recommended not to mix various light conditions in src faces.
 
 DF example - later
 
