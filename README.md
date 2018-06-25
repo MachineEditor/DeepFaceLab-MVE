@@ -12,7 +12,7 @@ Based on original FaceSwap repo. **Facesets** of FaceSwap or FakeApp are **not c
 
 - face data embedded to png files
 
-- automatic GPU manager, chooses best gpu(s) and supports --multi-gpu
+- automatic GPU manager, chooses best gpu(s) and supports --multi-gpu (only for identical cards)
 
 - new preview window
 
