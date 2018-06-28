@@ -75,7 +75,8 @@ class SubprocessorBase(object):
         return None
         
     def inc_progress_bar(self, c):
-        self.progress_bar.update(c)
+        self.progress_bar.n += c
+        self.progress_bar.refresh()
     
     def safe_print(self, msg):
         self.print_lock.acquire()

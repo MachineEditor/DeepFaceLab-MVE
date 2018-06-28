@@ -44,13 +44,16 @@ class ExtractSubprocessor(SubprocessorBase):
             self.param_x = -1
             self.param_y = -1
             self.param_rect_size = -1
-            self.param = {'x': 0, 'y': 0, 'rect_size' : 5}
+            self.param = {'x': 0, 'y': 0, 'rect_size' : 5, 'rect_locked' : False, 'redraw_needed' : False }
             
             def onMouse(event, x, y, flags, param):        
                 if event == cv2.EVENT_MOUSEWHEEL:
                     mod = 1 if flags > 0 else -1            
                     param['rect_size'] = max (5, param['rect_size'] + 10*mod)
-                else:
+                elif event == cv2.EVENT_LBUTTONDOWN:
+                    param['rect_locked'] = not param['rect_locked']
+                    param['redraw_needed'] = True
+                elif not param['rect_locked']:
                     param['x'] = x
                     param['y'] = y
                     
@@ -108,10 +111,26 @@ class ExtractSubprocessor(SubprocessorBase):
             if len (self.input_data) > 0:
                 return self.input_data.pop(0)    
         else:
+            skip_remaining = False
+            allow_remark_faces = False
             while len (self.input_data) > 0:
                 data = self.input_data[0]
                 filename, faces = data
                 is_frame_done = False
+                go_to_prev_frame = False
+
+                # Can we mark an image that already has a marked face?
+                if allow_remark_faces:
+                    allow_remark_faces = False
+                    # If there was already a face then lock the rectangle to it until the mouse is clicked
+                    if len(faces) > 0:
+                        prev_rect = faces.pop()[0]
+                        self.param['rect_locked'] = True
+                        faces.clear()
+                        self.param['rect_size'] = ( prev_rect[2] - prev_rect[0] ) / 2
+                        self.param['x'] = ( ( prev_rect[0] + prev_rect[2] ) / 2 ) * self.view_scale
+                        self.param['y'] = ( ( prev_rect[1] + prev_rect[3] ) / 2 ) * self.view_scale
+
                 if len(faces) == 0:
                     self.original_image = cv2.imread(filename)
                     
@@ -122,10 +141,12 @@ class ExtractSubprocessor(SubprocessorBase):
                     (h,w,c) = self.original_image.shape
                     
                     self.text_lines_img = (image_utils.get_draw_text_lines ( self.original_image, (0,0, self.original_image.shape[1], min(100, self.original_image.shape[0]) ),
-                                                    [   'Match landmarks with face exactly.',
-                                                        '[Enter] - confirm frame',
-                                                        '[Space] - skip frame',
-                                                        '[Mouse wheel] - change rect'
+                                                    [   'Match landmarks with face exactly. Click to confirm/unconfirm selection',
+                                                        '[Enter] - confirm and continue to next unmarked frame',
+                                                        '[Space] - skip to next unmarked frame',
+                                                        '[Mouse wheel] - change rect',
+                                                        '[,] [.]- prev frame, next frame',
+                                                        '[Q] - skip remaining frames'
                                                     ], (1, 1, 1) )*255).astype(np.uint8)           
 
                     while True:
@@ -138,6 +159,22 @@ class ExtractSubprocessor(SubprocessorBase):
                         elif key == ord(' '):
                             is_frame_done = True
                             break
+                        elif key == ord('.'):
+                            allow_remark_faces = True
+                            # Only save the face if the rect is still locked
+                            if self.param['rect_locked']:
+                                faces.append ( [(self.rect), self.landmarks] )
+                            is_frame_done = True
+                            break
+                        elif key == ord(',')  and len(self.result) > 0:
+                            # Only save the face if the rect is still locked
+                            if self.param['rect_locked']:
+                                faces.append ( [(self.rect), self.landmarks] )
+                            go_to_prev_frame = True
+                            break
+                        elif key == ord('q'):
+                            skip_remaining = True
+                            break
                             
                         new_param_x = self.param['x'] / self.view_scale
                         new_param_y = self.param['y'] / self.view_scale
@@ -148,7 +185,8 @@ class ExtractSubprocessor(SubprocessorBase):
                                 
                         if self.param_x != new_param_x or \
                            self.param_y != new_param_y or \
-                           self.param_rect_size != new_param_rect_size:
+                           self.param_rect_size != new_param_rect_size or \
+                           self.param['redraw_needed']:
                            
                             self.param_x = new_param_x
                             self.param_y = new_param_y
@@ -164,6 +202,18 @@ class ExtractSubprocessor(SubprocessorBase):
                     self.result.append ( data )
                     self.input_data.pop(0)
                     self.inc_progress_bar(1)
+                    self.param['redraw_needed'] = True
+                    self.param['rect_locked'] = False
+                elif go_to_prev_frame:
+                    self.input_data.insert(0, self.result.pop() )
+                    self.inc_progress_bar(-1)
+                    allow_remark_faces = True
+                    self.param['redraw_needed'] = True
+                    self.param['rect_locked'] = False
+                elif skip_remaining:
+                    while len(self.input_data) > 0:
+                        self.result.append( self.input_data.pop(0) )
+                        self.inc_progress_bar(1)
 
         return None
     
@@ -297,6 +347,10 @@ class ExtractSubprocessor(SubprocessorBase):
             view_rect = (np.array(self.rect) * self.view_scale).astype(np.int).tolist()
             view_landmarks  = (np.array(self.landmarks) * self.view_scale).astype(np.int).tolist()
             facelib.LandmarksProcessor.draw_rect_landmarks (image, view_rect, view_landmarks, self.image_size, self.face_type)
+
+            if self.param['rect_locked']:
+                facelib.draw_landmarks(image, view_landmarks, (255,255,0) )
+            self.param['redraw_needed'] = False
             
             cv2.imshow (self.wnd_name, image)
             return 0
