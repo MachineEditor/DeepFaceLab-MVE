@@ -102,6 +102,12 @@ dst - controller face (your face)
 
 converter --input-dir must contains *extracted dst faces* in sequence to be converted, its mean you can train on 1500 dst faces, but use only 100 for convert.
 
+- Video comparison of different Cage facesets.
+Vertical: 1 - mix of various Cage face shape and light conditions. 2,3,4 - without mix.
+Horizontal: 1 - DF, 2 - LIAEF128.
+[![](https://img.youtube.com/vi/C1nFgrmtm_o/0.jpg)](https://youtu.be/C1nFgrmtm_o)
+Conclusion: **better not to mix and use only same shape faces with same light**
+
 ### **Sort tool**:
 
 `hist` groups images by similar content
@@ -132,9 +138,7 @@ Best practice for dst faces:
 
 ### **Facesets**:
 
-- Nicolas Cage.
-
-- Cage/Trump workspace
+- Nicolas Cage 4 facesets (1 mix + 3 different)
 
 download from here: https://mega.nz/#F!y1ERHDaL!PPwg01PQZk0FhWLVo5_MaQ
 
