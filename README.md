@@ -56,7 +56,7 @@ H128 asian face on blurry target:
 
 - **DF (5GB+)** - @dfaker model. As H128, but fullface model. Strongly recommended not to mix various light conditions in src faces.
 
-DF example - later
+![](https://github.com/iperov/DeepFaceLab/blob/master/doc/DF_Cage_0.jpg)
 
 - **LIAEF128 (5GB+)** - new model. Result of combining DF, IAE, + experiments. Model tries to morph src face to dst, while keeping facial features of src face, but less agressive morphing. Model has problems with closed eyes recognizing.
 
