@@ -26,8 +26,8 @@ Based on original FaceSwap repo. **Facesets** of FaceSwap or FakeApp are **not c
 ![](https://i.imgur.com/5qLiiOV.gif)
 MTCNN produces less jitter.
 
-- added **Manual extractor**. You can fix missed faces manually or do full manual extract, click on video:
-[![Watch the video](https://i.imgur.com/BDrPKR2.jpg)](https://webm.video/i/ogL0DL.mp4)
+- added **Manual extractor**. You can fix missed faces manually or do full manual extract:
+![](https://github.com/iperov/DeepFaceLab/blob/master/doc/manual_extractor_0.jpg)
 ![Result](https://user-images.githubusercontent.com/8076202/38454756-0fa7a86c-3a7e-11e8-9065-182b4a8a7a43.gif)
 
 - standalone zero dependencies ready to work prebuilt binary for all windows versions, see below
