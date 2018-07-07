@@ -174,42 +174,27 @@ def mirror_landmarks (landmarks, val):
     return result
     
 def draw_landmarks (image, image_landmarks, color):
-    if len(image_landmarks) == 68:
-        jaw = [image_landmarks[pt_idx] for pt_idx in range(*landmarks_68_pt["jaw"])]
-        for x, y in jaw:
-            cv2.circle(image, (x, y), 2, color, lineType=cv2.LINE_AA)
-        cv2.polylines(image, np.array([jaw]), False, color, lineType=cv2.LINE_AA)
+    if len(image_landmarks) == 68:        
+        jaw = image_landmarks[slice(*landmarks_68_pt["jaw"])]        
+        right_eyebrow = image_landmarks[slice(*landmarks_68_pt["right_eyebrow"])]
+        left_eyebrow = image_landmarks[slice(*landmarks_68_pt["left_eyebrow"])]
+        mouth = image_landmarks[slice(*landmarks_68_pt["mouth"])]                                    
+        right_eye = image_landmarks[slice(*landmarks_68_pt["right_eye"])]                     
+        left_eye = image_landmarks[slice(*landmarks_68_pt["left_eye"])]            
+        nose = image_landmarks[slice(*landmarks_68_pt["nose"])]            
         
-        right_eyebrow = [image_landmarks[pt_idx] for pt_idx in range(*landmarks_68_pt["right_eyebrow"])]
-        cv2.polylines(image, np.array([right_eyebrow]), False, color, lineType=cv2.LINE_AA)
-        for x, y in right_eyebrow:
+        # open shapes
+        cv2.polylines(image, tuple(np.array([v]) for v in (right_eyebrow, jaw, left_eyebrow, nose+[nose[-6]])), 
+                      False, color, lineType=cv2.LINE_AA)
+        # closed shapes
+        cv2.polylines(image, tuple(np.array([v]) for v in (right_eye, left_eye, mouth)),
+                      True, color, lineType=cv2.LINE_AA)
+        # the rest of the cicles
+        for x, y in right_eyebrow+left_eyebrow+mouth+right_eye+left_eye+nose:
             cv2.circle(image, (x, y), 1, color, 1, lineType=cv2.LINE_AA)
-            
-        left_eyebrow = [image_landmarks[pt_idx] for pt_idx in range(*landmarks_68_pt["left_eyebrow"])]
-        cv2.polylines(image, np.array([left_eyebrow]), False, color, lineType=cv2.LINE_AA)
-        for x, y in left_eyebrow:
-            cv2.circle(image, (x, y), 1, color, 1, lineType=cv2.LINE_AA)      
-            
-        mouth = [image_landmarks[pt_idx] for pt_idx in range(*landmarks_68_pt["mouth"])]        
-        cv2.polylines(image, np.array([mouth]), True, color, lineType=cv2.LINE_AA)
-        for x, y in mouth:
-            cv2.circle(image, (x, y), 1, color, 1, lineType=cv2.LINE_AA)
-            
-        right_eye = [image_landmarks[pt_idx] for pt_idx in range(*landmarks_68_pt["right_eye"])]
-        cv2.polylines(image, np.array([right_eye]), True, color, lineType=cv2.LINE_AA)
-        for x, y in right_eye:
-            cv2.circle(image, (x, y), 1, color, 1, lineType=cv2.LINE_AA)
-            
-        left_eye = [image_landmarks[pt_idx] for pt_idx in range(*landmarks_68_pt["left_eye"])]
-        cv2.polylines(image, np.array([left_eye]), True, color, lineType=cv2.LINE_AA)
-        for x, y in left_eye:
-            cv2.circle(image, (x, y), 1, color, 1, lineType=cv2.LINE_AA)      
-            
-        nose = [image_landmarks[pt_idx] for pt_idx in range(*landmarks_68_pt["nose"])]
-        cv2.polylines(image, np.array([nose+[nose[-6]]]), False, color, lineType=cv2.LINE_AA)
-        for x, y in nose:
-            cv2.circle(image, (x, y), 1, color, 1, lineType=cv2.LINE_AA)   
-                                                           
+        # jaw big circles
+        for x, y in jaw: 
+            cv2.circle(image, (x, y), 2, color, lineType=cv2.LINE_AA)                                                           
     else:        
         for i, (x, y) in enumerate(image_landmarks):
             cv2.circle(image, (x, y), 2, color, -1, lineType=cv2.LINE_AA)
