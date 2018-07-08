@@ -29,12 +29,12 @@ landmarks_2D = np.stack( [ mean_face_x, mean_face_y ], axis=1 )
 
 # 68 point landmark definitions
 landmarks_68_pt = { "mouth": (48,68),
-                    "right_eyebrow": (17,22),
-                    "left_eyebrow": (22,27),
-                    "right_eye": (36,42),
-                    "left_eye": (42,48),
-                    "nose": (27,35),
-                    "jaw": (0,17) }
+                    "right_eyebrow": (17, 22),
+                    "left_eyebrow": (22, 27),
+                    "right_eye": (36, 42),
+                    "left_eye": (42, 48),
+                    "nose": (27, 36), # missed one point
+                    "jaw": (0, 17) }
 
 def get_transform_mat (image_landmarks, output_size, face_type):
     if not isinstance(image_landmarks, np.ndarray):
@@ -174,17 +174,32 @@ def mirror_landmarks (landmarks, val):
     return result
     
 def draw_landmarks (image, image_landmarks, color):
-    for i, (x, y) in enumerate(image_landmarks):
-        cv2.circle(image, (x, y), 2, color, -1)
-        #text_color = colorsys.hsv_to_rgb ( (i%4) * (0.25), 1.0, 1.0 )
-        #cv2.putText(image, str(i), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.1,text_color,1)
-    if len(image_landmarks) == 68:
-        for feat,idx_range in landmarks_68_pt.items():
-            for idx in range( idx_range[0], idx_range[1] - 1 ):
-                pt1 = tuple(image_landmarks[idx])
-                pt2 = tuple(image_landmarks[idx + 1])
-                cv2.line( image, pt1, pt2, color )
-
+    if len(image_landmarks) == 68:        
+        jaw = image_landmarks[slice(*landmarks_68_pt["jaw"])]        
+        right_eyebrow = image_landmarks[slice(*landmarks_68_pt["right_eyebrow"])]
+        left_eyebrow = image_landmarks[slice(*landmarks_68_pt["left_eyebrow"])]
+        mouth = image_landmarks[slice(*landmarks_68_pt["mouth"])]                                    
+        right_eye = image_landmarks[slice(*landmarks_68_pt["right_eye"])]                     
+        left_eye = image_landmarks[slice(*landmarks_68_pt["left_eye"])]            
+        nose = image_landmarks[slice(*landmarks_68_pt["nose"])]            
+        
+        # open shapes
+        cv2.polylines(image, tuple(np.array([v]) for v in (right_eyebrow, jaw, left_eyebrow, nose+[nose[-6]])), 
+                      False, color, lineType=cv2.LINE_AA)
+        # closed shapes
+        cv2.polylines(image, tuple(np.array([v]) for v in (right_eye, left_eye, mouth)),
+                      True, color, lineType=cv2.LINE_AA)
+        # the rest of the cicles
+        for x, y in right_eyebrow+left_eyebrow+mouth+right_eye+left_eye+nose:
+            cv2.circle(image, (x, y), 1, color, 1, lineType=cv2.LINE_AA)
+        # jaw big circles
+        for x, y in jaw: 
+            cv2.circle(image, (x, y), 2, color, lineType=cv2.LINE_AA)                                                           
+    else:        
+        for i, (x, y) in enumerate(image_landmarks):
+            cv2.circle(image, (x, y), 2, color, -1, lineType=cv2.LINE_AA)
+            #text_color = colorsys.hsv_to_rgb ( (i%4) * (0.25), 1.0, 1.0 )
+            #cv2.putText(image, str(i), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.1,text_color,1)
         
 def draw_rect_landmarks (image, rect, image_landmarks, face_size, face_type):
     image_utils.draw_rect (image, rect, (255,0,0), 2 )
