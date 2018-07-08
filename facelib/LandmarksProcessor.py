@@ -81,7 +81,7 @@ def transform_points(points, mat, invert=False):
     
 def get_image_hull_mask (image, image_landmarks):        
     if len(image_landmarks) != 68:
-        raise Exception('get_image_hull_mask work only with 68 landmarks')
+        raise Exception('get_image_hull_mask works only with 68 landmarks')
         
     hull_mask = np.zeros(image.shape[0:2]+(1,),dtype=np.float32)
 
@@ -93,7 +93,7 @@ def get_image_hull_mask (image, image_landmarks):
     
 def get_image_eye_mask (image, image_landmarks):        
     if len(image_landmarks) != 68:
-        raise Exception('get_image_eye_mask work only with 68 landmarks')
+        raise Exception('get_image_eye_mask works only with 68 landmarks')
         
     hull_mask = np.zeros(image.shape[0:2]+(1,),dtype=np.float32)
 
@@ -174,32 +174,29 @@ def mirror_landmarks (landmarks, val):
     return result
     
 def draw_landmarks (image, image_landmarks, color):
-    if len(image_landmarks) == 68:        
-        jaw = image_landmarks[slice(*landmarks_68_pt["jaw"])]        
-        right_eyebrow = image_landmarks[slice(*landmarks_68_pt["right_eyebrow"])]
-        left_eyebrow = image_landmarks[slice(*landmarks_68_pt["left_eyebrow"])]
-        mouth = image_landmarks[slice(*landmarks_68_pt["mouth"])]                                    
-        right_eye = image_landmarks[slice(*landmarks_68_pt["right_eye"])]                     
-        left_eye = image_landmarks[slice(*landmarks_68_pt["left_eye"])]            
-        nose = image_landmarks[slice(*landmarks_68_pt["nose"])]            
+    if len(image_landmarks) != 68:
+        raise Exception('get_image_eye_mask works only with 68 landmarks')   
         
-        # open shapes
-        cv2.polylines(image, tuple(np.array([v]) for v in (right_eyebrow, jaw, left_eyebrow, nose+[nose[-6]])), 
-                      False, color, lineType=cv2.LINE_AA)
-        # closed shapes
-        cv2.polylines(image, tuple(np.array([v]) for v in (right_eye, left_eye, mouth)),
-                      True, color, lineType=cv2.LINE_AA)
-        # the rest of the cicles
-        for x, y in right_eyebrow+left_eyebrow+mouth+right_eye+left_eye+nose:
-            cv2.circle(image, (x, y), 1, color, 1, lineType=cv2.LINE_AA)
-        # jaw big circles
-        for x, y in jaw: 
-            cv2.circle(image, (x, y), 2, color, lineType=cv2.LINE_AA)                                                           
-    else:        
-        for i, (x, y) in enumerate(image_landmarks):
-            cv2.circle(image, (x, y), 2, color, -1, lineType=cv2.LINE_AA)
-            #text_color = colorsys.hsv_to_rgb ( (i%4) * (0.25), 1.0, 1.0 )
-            #cv2.putText(image, str(i), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.1,text_color,1)
+    jaw = image_landmarks[slice(*landmarks_68_pt["jaw"])]        
+    right_eyebrow = image_landmarks[slice(*landmarks_68_pt["right_eyebrow"])]
+    left_eyebrow = image_landmarks[slice(*landmarks_68_pt["left_eyebrow"])]
+    mouth = image_landmarks[slice(*landmarks_68_pt["mouth"])]                                    
+    right_eye = image_landmarks[slice(*landmarks_68_pt["right_eye"])]                     
+    left_eye = image_landmarks[slice(*landmarks_68_pt["left_eye"])]            
+    nose = image_landmarks[slice(*landmarks_68_pt["nose"])]            
+    
+    # open shapes
+    cv2.polylines(image, tuple(np.array([v]) for v in (right_eyebrow, jaw, left_eyebrow, nose+[nose[-6]])), 
+                  False, color, lineType=cv2.LINE_AA)
+    # closed shapes
+    cv2.polylines(image, tuple(np.array([v]) for v in (right_eye, left_eye, mouth)),
+                  True, color, lineType=cv2.LINE_AA)
+    # the rest of the cicles
+    for x, y in right_eyebrow+left_eyebrow+mouth+right_eye+left_eye+nose:
+        cv2.circle(image, (x, y), 1, color, 1, lineType=cv2.LINE_AA)
+    # jaw big circles
+    for x, y in jaw: 
+        cv2.circle(image, (x, y), 2, color, lineType=cv2.LINE_AA)
         
 def draw_rect_landmarks (image, rect, image_landmarks, face_size, face_type):
     image_utils.draw_rect (image, rect, (255,0,0), 2 )
