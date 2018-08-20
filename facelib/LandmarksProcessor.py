@@ -192,7 +192,7 @@ def draw_landmarks (image, image_landmarks, color):
     cv2.polylines(image, tuple(np.array([v]) for v in (right_eye, left_eye, mouth)),
                   True, color, lineType=cv2.LINE_AA)
     # the rest of the cicles
-    for x, y in right_eyebrow+left_eyebrow+mouth+right_eye+left_eye+nose:
+    for x, y in np.concatenate((right_eyebrow, left_eyebrow, mouth, right_eye, left_eye, nose), axis=0):
         cv2.circle(image, (x, y), 1, color, 1, lineType=cv2.LINE_AA)
     # jaw big circles
     for x, y in jaw: 
