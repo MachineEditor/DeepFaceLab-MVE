@@ -7,7 +7,7 @@ Official instruction: https://docs.anaconda.com/anaconda/install/linux
 
 After, you can create environment with packages, needed by DeepFaceLab:
 ```
-conda create -y -n deepfacelab python==3.6.6 pathlib==1.0.1 scandir h5py==2.7.1 Keras==2.1.6 tensorflow-gpu==1.8.0 scikit-image tqdm
+conda create -y -n deepfacelab python==3.6.6 cudatoolkit==9.0 cudnn
 ```
 Then activate environment:
 ```
@@ -15,8 +15,18 @@ source activate deepfacelab
 ```
 And install the remained packages:
 ```
-conda install -y -c conda-forge opencv==3.4.1
-pip install dlib==19.10.0 git+https://www.github.com/keras-team/keras-contrib.git
+python -m pip install \
+pathlib==1.0.1 \
+scandir==1.6 \
+h5py==2.7.1 \
+Keras==2.1.6 \
+opencv-python==3.4.0.12 \
+tensorflow-gpu==1.8.0 \
+scikit-image \
+dlib==19.10.0 \
+tqdm \
+git+https://www.github.com/keras-team/keras-contrib.git
+
 ```
 Now clone the repository and run...  Good luck ;-)
 ```
