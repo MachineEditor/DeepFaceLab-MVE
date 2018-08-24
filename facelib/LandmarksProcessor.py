@@ -186,7 +186,7 @@ def draw_landmarks (image, image_landmarks, color):
     nose = image_landmarks[slice(*landmarks_68_pt["nose"])]            
     
     # open shapes
-    cv2.polylines(image, tuple(np.array([v]) for v in (right_eyebrow, jaw, left_eyebrow, nose+[nose[-6]])), 
+    cv2.polylines(image, tuple(np.array([v]) for v in ( right_eyebrow, jaw, left_eyebrow, np.concatenate((nose, [nose[-6]])) )),
                   False, color, lineType=cv2.LINE_AA)
     # closed shapes
     cv2.polylines(image, tuple(np.array([v]) for v in (right_eye, left_eye, mouth)),
