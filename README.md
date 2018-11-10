@@ -158,7 +158,7 @@ Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) pr
 
 Windows 10 consumes % of VRAM even if card unused for video output.
 
-### **Pull requesting**:
+### **Problem of the year**:
 
-I understand some people want to help. But result of mass people contribution we can see in deepfakes\faceswap.
-High chance I will decline PR. Therefore before PR better ask me what you want to change or add to save your time.
+algorithm of overlaying neural face onto video face located in ConverterMasked.py.
+Can someone implement adaptive histogram matching to prevent glares when a dark eyes face merges onto a light eyes face ?
