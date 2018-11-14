@@ -84,10 +84,10 @@ def MSEMaskLossClass(keras):
     return MSEMaskLoss
     
 def PixelShufflerClass(keras):
-    class PixelShuffler(keras.engine.topology.Layer):
+    class PixelShuffler(keras.layers.Layer):
         def __init__(self, size=(2, 2), data_format=None, **kwargs):
             super(PixelShuffler, self).__init__(**kwargs)
-            self.data_format = keras.utils.conv_utils.normalize_data_format(data_format)
+            self.data_format = keras.backend.common.normalize_data_format(data_format)
             self.size = keras.utils.conv_utils.normalize_tuple(size, 2, 'size')
 
         def call(self, inputs):

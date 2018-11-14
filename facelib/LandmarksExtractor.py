@@ -57,7 +57,7 @@ class LandmarksExtractor(object):
     def __init__ (self, keras):
         self.keras = keras
         K = self.keras.backend
-        class TorchBatchNorm2D(self.keras.engine.topology.Layer):
+        class TorchBatchNorm2D(self.keras.layers.Layer):
             def __init__(self, axis=-1, momentum=0.99, epsilon=1e-3, **kwargs):
                 super(TorchBatchNorm2D, self).__init__(**kwargs)
                 self.supports_masking = True
