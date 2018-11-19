@@ -137,17 +137,15 @@ if __name__ == "__main__":
             except:
                 arguments.blur_mask_modifier = 0
             
-            if (arguments.alpha == False): #if argument was not passed in command line, ask it
-                try:
-                    arguments.alpha = bool ( {"1":True,"0":False}[input("Export png with alpha channel? [0..1] (default 0) : ").lower()] )
-                except:
-                    arguments.alpha = False
+            try:
+                arguments.alpha = bool ( {"1":True,"0":False}[input("Export png with alpha channel? [0..1] (default 0) : ").lower()] )
+            except:
+                arguments.alpha = False
 
-            if (arguments.transfercolor == False): #if argument was not passed in command line, ask it
-                try:
-                    arguments.transfercolor = bool ( {"1":True,"0":False}[input("Transfer color from original DST image? [0..1] (default 0) : ").lower()] )
-                except:
-                    arguments.transfercolor = False    
+            try:
+                arguments.transfercolor = bool ( {"1":True,"0":False}[input("Transfer color from original DST image? [0..1] (default 0) : ").lower()] )
+            except:
+                arguments.transfercolor = False    
                     
         arguments.erode_mask_modifier = np.clip ( int(arguments.erode_mask_modifier), -100, 100)
         arguments.blur_mask_modifier = np.clip ( int(arguments.blur_mask_modifier), -100, 200)
