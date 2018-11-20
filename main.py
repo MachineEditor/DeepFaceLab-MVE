@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 import argparse
 from utils import Path_utils
@@ -136,7 +136,17 @@ if __name__ == "__main__":
                 arguments.blur_mask_modifier = int ( input ("Choose blur mask modifier [-100..200] (default 0) : ") )
             except:
                 arguments.blur_mask_modifier = 0
-    
+            
+            try:
+                arguments.alpha = bool ( {"1":True,"0":False}[input("Export png with alpha channel? [0..1] (default 0) : ").lower()] )
+            except:
+                arguments.alpha = False
+
+            try:
+                arguments.transfercolor = bool ( {"1":True,"0":False}[input("Transfer color from original DST image? [0..1] (default 0) : ").lower()] )
+            except:
+                arguments.transfercolor = False    
+                    
         arguments.erode_mask_modifier = np.clip ( int(arguments.erode_mask_modifier), -100, 100)
         arguments.blur_mask_modifier = np.clip ( int(arguments.blur_mask_modifier), -100, 200)
         
@@ -152,7 +162,9 @@ if __name__ == "__main__":
             masked_hist_match = arguments.masked_hist_match,
             erode_mask_modifier = arguments.erode_mask_modifier,
             blur_mask_modifier = arguments.blur_mask_modifier,
-            force_best_gpu_idx = arguments.force_best_gpu_idx
+            force_best_gpu_idx = arguments.force_best_gpu_idx,
+            alpha = arguments.alpha,
+            transfercolor = arguments.transfercolor,
             )
         
     convert_parser = subparsers.add_parser( "convert", help="Converter") 
@@ -167,6 +179,8 @@ if __name__ == "__main__":
     convert_parser.add_argument('--erode-mask-modifier', type=int, dest="erode_mask_modifier", default=0, help="Automatic erode mask modifier. Valid range [-100..100].")
     convert_parser.add_argument('--blur-mask-modifier', type=int, dest="blur_mask_modifier", default=0, help="Automatic blur mask modifier. Valid range [-100..200].")    
     convert_parser.add_argument('--debug', action="store_true", dest="debug", default=False, help="Debug converter.")
+    convert_parser.add_argument('--alpha', action="store_true", dest="alpha", default=False, help="alpha channel.")
+    convert_parser.add_argument('--transfercolor', action="store_true", dest="transfercolor", default=False, help="transfer color from dst to merged.")
     convert_parser.add_argument('--force-best-gpu-idx', type=int, dest="force_best_gpu_idx", default=-1, help="Force to choose this GPU idx as best.")
     
     convert_parser.set_defaults(func=process_convert)
