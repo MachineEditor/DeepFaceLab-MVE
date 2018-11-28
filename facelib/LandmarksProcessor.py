@@ -35,8 +35,8 @@ landmarks_68_pt = { "mouth": (48,68),
                     "left_eye": (42, 48),
                     "nose": (27, 36), # missed one point
                     "jaw": (0, 17) }
-
-def get_transform_mat (image_landmarks, output_size, face_type):
+    
+def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
     if not isinstance(image_landmarks, np.ndarray):
         image_landmarks = np.array (image_landmarks) 
         
@@ -63,13 +63,15 @@ def get_transform_mat (image_landmarks, output_size, face_type):
             padding = (output_size / 64) * 24
         else:
             raise ValueError ('wrong face_type')
-            
+        
         mat = umeyama(image_landmarks[17:], landmarks_2D, True)[0:2]
         mat = mat * (output_size - 2 * padding)
-        mat[:,2] += padding
-
+        mat[:,2] += padding        
+        mat *= (1 / scale)
+        mat[:,2] += -output_size*( ( (1 / scale) - 1.0 ) / 2 )
+             
     return mat
-
+    
 def transform_points(points, mat, invert=False):
     if invert:
         mat = cv2.invertAffineTransform (mat)

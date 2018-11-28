@@ -138,6 +138,11 @@ if __name__ == "__main__":
                 arguments.blur_mask_modifier = 0
             
             try:
+                arguments.output_face_scale_modifier = int ( input ("Choose output face scale modifier [-50..50] (default 0) : ") )
+            except:
+                arguments.output_face_scale_modifier = 0
+                
+            try:
                 arguments.alpha = bool ( {"1":True,"0":False}[input("Export png with alpha channel? [0..1] (default 0) : ").lower()] )
             except:
                 arguments.alpha = False
@@ -149,6 +154,7 @@ if __name__ == "__main__":
                     
         arguments.erode_mask_modifier = np.clip ( int(arguments.erode_mask_modifier), -100, 100)
         arguments.blur_mask_modifier = np.clip ( int(arguments.blur_mask_modifier), -100, 200)
+        arguments.output_face_scale_modifier = np.clip ( int(arguments.output_face_scale_modifier), -50, 50)
         
         from mainscripts import Converter
         Converter.main (
@@ -162,6 +168,7 @@ if __name__ == "__main__":
             masked_hist_match = arguments.masked_hist_match,
             erode_mask_modifier = arguments.erode_mask_modifier,
             blur_mask_modifier = arguments.blur_mask_modifier,
+            output_face_scale_modifier = arguments.output_face_scale_modifier,
             force_best_gpu_idx = arguments.force_best_gpu_idx,
             alpha = arguments.alpha,
             transfercolor = arguments.transfercolor,
@@ -178,6 +185,7 @@ if __name__ == "__main__":
     convert_parser.add_argument('--masked-hist-match', type=str2bool, nargs='?', const=True, default=None, help="True or False. Excludes background for hist match. Default - model decide.")
     convert_parser.add_argument('--erode-mask-modifier', type=int, dest="erode_mask_modifier", default=0, help="Automatic erode mask modifier. Valid range [-100..100].")
     convert_parser.add_argument('--blur-mask-modifier', type=int, dest="blur_mask_modifier", default=0, help="Automatic blur mask modifier. Valid range [-100..200].")    
+    convert_parser.add_argument('--output-face-scale-modifier', type=int, dest="output_face_scale_modifier", default=0, help="Output face scale modifier. Valid range [-50..50].")    
     convert_parser.add_argument('--debug', action="store_true", dest="debug", default=False, help="Debug converter.")
     convert_parser.add_argument('--alpha', action="store_true", dest="alpha", default=False, help="alpha channel.")
     convert_parser.add_argument('--transfercolor', action="store_true", dest="transfercolor", default=False, help="transfer color from dst to merged.")
