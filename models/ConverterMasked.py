@@ -151,8 +151,14 @@ class ConverterMasked(ConverterBase):
                     
                 if self.masked_hist_match:
                     hist_mask_a *= prd_face_mask_a
-
-                new_prd_face_bgr = image_utils.color_hist_match(prd_face_bgr*hist_mask_a, dst_face_bgr*hist_mask_a )
+                
+                hist_match_1 = prd_face_bgr*hist_mask_a + (1.0-hist_mask_a)* np.ones ( prd_face_bgr.shape[:2] + (1,) , dtype=prd_face_bgr.dtype) 
+                hist_match_1[ hist_match_1 > 1.0 ] = 1.0
+                
+                hist_match_2 = dst_face_bgr*hist_mask_a + (1.0-hist_mask_a)* np.ones ( prd_face_bgr.shape[:2] + (1,) , dtype=prd_face_bgr.dtype) 
+                hist_match_2[ hist_match_1 > 1.0 ] = 1.0
+                
+                new_prd_face_bgr = image_utils.color_hist_match(hist_match_1, hist_match_2 )
 
                 prd_face_bgr = new_prd_face_bgr
                     
