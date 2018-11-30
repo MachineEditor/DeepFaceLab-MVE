@@ -23,7 +23,6 @@ def str2bool(v):
         
 if __name__ == "__main__":
     os_utils.set_process_lowest_prio()   
-
     parser = argparse.ArgumentParser()    
     parser.add_argument('--tf-suppress-std', action="store_true", dest="tf_suppress_std", default=False, help="Suppress tensorflow initialization info. May not works on some python builds such as anaconda python 3.6.4. If you can fix it, you are welcome.")
  
@@ -143,14 +142,21 @@ if __name__ == "__main__":
                 arguments.output_face_scale_modifier = 0
                 
             try:
+                arguments.transfercolor = bool ( {"1":True,"0":False}[input("Transfer color from original DST image? [0..1] (default 0) : ").lower()] )
+            except:
+                arguments.transfercolor = False    
+                
+            try:
+                arguments.final_image_color_degrade_power = int ( input ("Degrade color power of final image [0..100] (default 0) : ") )
+            except:
+                arguments.final_image_color_degrade_power = 0
+   
+            try:
                 arguments.alpha = bool ( {"1":True,"0":False}[input("Export png with alpha channel? [0..1] (default 0) : ").lower()] )
             except:
                 arguments.alpha = False
 
-            try:
-                arguments.transfercolor = bool ( {"1":True,"0":False}[input("Transfer color from original DST image? [0..1] (default 0) : ").lower()] )
-            except:
-                arguments.transfercolor = False    
+            
                     
         arguments.erode_mask_modifier = np.clip ( int(arguments.erode_mask_modifier), -100, 100)
         arguments.blur_mask_modifier = np.clip ( int(arguments.blur_mask_modifier), -100, 200)
@@ -169,9 +175,10 @@ if __name__ == "__main__":
             erode_mask_modifier = arguments.erode_mask_modifier,
             blur_mask_modifier = arguments.blur_mask_modifier,
             output_face_scale_modifier = arguments.output_face_scale_modifier,
-            force_best_gpu_idx = arguments.force_best_gpu_idx,
-            alpha = arguments.alpha,
+            final_image_color_degrade_power = arguments.final_image_color_degrade_power,
             transfercolor = arguments.transfercolor,
+            alpha = arguments.alpha,
+            force_best_gpu_idx = arguments.force_best_gpu_idx
             )
         
     convert_parser = subparsers.add_parser( "convert", help="Converter") 
@@ -186,9 +193,10 @@ if __name__ == "__main__":
     convert_parser.add_argument('--erode-mask-modifier', type=int, dest="erode_mask_modifier", default=0, help="Automatic erode mask modifier. Valid range [-100..100].")
     convert_parser.add_argument('--blur-mask-modifier', type=int, dest="blur_mask_modifier", default=0, help="Automatic blur mask modifier. Valid range [-100..200].")    
     convert_parser.add_argument('--output-face-scale-modifier', type=int, dest="output_face_scale_modifier", default=0, help="Output face scale modifier. Valid range [-50..50].")    
-    convert_parser.add_argument('--debug', action="store_true", dest="debug", default=False, help="Debug converter.")
-    convert_parser.add_argument('--alpha', action="store_true", dest="alpha", default=False, help="alpha channel.")
+    convert_parser.add_argument('--final-image-color-degrade-power', type=int, dest="final_image_color_degrade_power", default=0, help="Degrades colors of final image to hide face problems. Valid range [0..100].")    
     convert_parser.add_argument('--transfercolor', action="store_true", dest="transfercolor", default=False, help="transfer color from dst to merged.")
+    convert_parser.add_argument('--alpha', action="store_true", dest="alpha", default=False, help="alpha channel.")
+    convert_parser.add_argument('--debug', action="store_true", dest="debug", default=False, help="Debug converter.")
     convert_parser.add_argument('--force-best-gpu-idx', type=int, dest="force_best_gpu_idx", default=-1, help="Force to choose this GPU idx as best.")
     
     convert_parser.set_defaults(func=process_convert)

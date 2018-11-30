@@ -4,7 +4,6 @@ from facelib import FaceType
 import cv2
 import numpy as np
 from utils import image_utils
-
     
 class ConverterMasked(ConverterBase):
 
@@ -20,9 +19,10 @@ class ConverterMasked(ConverterBase):
                         mode='seamless', 
                         erode_mask_modifier=0, 
                         blur_mask_modifier=0,
-                        output_face_scale_modifier=0.0,
-                        alpha=False,
-                        transfercolor=False,                        
+                        output_face_scale_modifier=0.0,                        
+                        transfercolor=False,
+                        final_image_color_degrade_power=0,
+                        alpha=False,                                            
                         **in_options):
                         
         super().__init__(predictor)
@@ -38,8 +38,9 @@ class ConverterMasked(ConverterBase):
         self.erode_mask_modifier = erode_mask_modifier
         self.blur_mask_modifier = blur_mask_modifier
         self.output_face_scale = np.clip(1.0 + output_face_scale_modifier*0.01, 0.5, 1.0)
-        self.alpha = alpha
         self.transfercolor = transfercolor
+        self.final_image_color_degrade_power = np.clip (final_image_color_degrade_power, 0, 100)
+        self.alpha = alpha
         
         if self.erode_mask_modifier != 0 and not self.erode_mask:
             print ("Erode mask modifier not used in this model.")
@@ -165,7 +166,8 @@ class ConverterMasked(ConverterBase):
             if self.mode == 'hist-match-bw':
                 prd_face_bgr = prd_face_bgr.astype(np.float32)
 
-                    
+
+            
             out_img = cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, out_img, cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
 
             if debug:
@@ -205,6 +207,16 @@ class ConverterMasked(ConverterBase):
                 l_channel, tmp2_channel, tmp3_channel = cv2.split(lab_bw)   #taking lightness channel L from merged fake
                 img_LAB = cv2.merge((l_channel,a_channel, b_channel))       #merging light and color
                 out_img = color.lab2rgb(img_LAB)                            #converting LAB to RGB 
+ 
+            if self.final_image_color_degrade_power != 0:
+                if debug:
+                    debugs += [out_img.copy()]                    
+                out_img_reduced = image_utils.reduce_colors(out_img, 256)
+                if self.final_image_color_degrade_power == 100:
+                    out_img = out_img_reduced
+                else:
+                    alpha = self.final_image_color_degrade_power / 100.0                    
+                    out_img = (out_img*(1.0-alpha) + out_img_reduced*alpha)
                 
             if self.alpha:
                 new_image = out_img.copy()
@@ -215,6 +227,8 @@ class ConverterMasked(ConverterBase):
                 alpha_channel, tmp2, tmp3 = cv2.split(alpha_channel)                    #splitting alpha to three channels, they all same in original alpha channel, we need just one
                 out_img = cv2.merge((b_channel,g_channel, r_channel, alpha_channel))    #mergin RGB with alpha
                 out_img = out_img.astype(np.float32) / 255.0
+                
+            
                 
         if debug:
             debugs += [out_img.copy()]
