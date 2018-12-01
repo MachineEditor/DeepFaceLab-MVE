@@ -64,14 +64,14 @@ from utils.SubprocessorBase import SubprocessorBase
 class ConvertSubprocessor(SubprocessorBase):
 
     #override
-    def __init__(self, converter, input_path_image_paths, output_path, alignments, debug): 
+    def __init__(self, converter, input_path_image_paths, output_path, alignments, debug = False, **in_options): 
         super().__init__('Converter')    
         self.converter = converter
         self.input_path_image_paths = input_path_image_paths
         self.output_path = output_path
         self.alignments = alignments
         self.debug = debug
-        
+        self.in_options = in_options
         self.input_data = self.input_path_image_paths
         self.files_processed = 0
         self.faces_processed = 0
@@ -79,13 +79,18 @@ class ConvertSubprocessor(SubprocessorBase):
     #override
     def process_info_generator(self):
         r = [0] if self.debug else range(multiprocessing.cpu_count())
+        
+        
+
         for i in r:
             yield 'CPU%d' % (i), {}, {'device_idx': i,
                                       'device_name': 'CPU%d' % (i), 
                                       'converter' : self.converter, 
                                       'output_dir' : str(self.output_path), 
                                       'alignments' : self.alignments,
-                                      'debug': self.debug }
+                                      'debug': self.debug,
+                                      'in_options': self.in_options
+                                      }
      
     #override
     def get_no_process_started_message(self):
@@ -118,6 +123,12 @@ class ConvertSubprocessor(SubprocessorBase):
         self.output_path = Path(client_dict['output_dir']) if 'output_dir' in client_dict.keys() else None        
         self.alignments  = client_dict['alignments']
         self.debug       = client_dict['debug']
+        
+        import gpufmkmgr                
+        #model process ate all GPU mem,
+        #so we cannot use GPU for any TF operations in converter processes (for example image_utils.TFLabConverter) 
+        gpufmkmgr.set_prefer_GPUConfig ( gpufmkmgr.GPUConfig (cpu_only=True) )
+        
         return None
 
     #override
@@ -211,7 +222,6 @@ def main (input_dir, output_dir, aligned_dir, model_dir, model_name, **in_option
         model_sq = multiprocessing.Queue()
         model_cq = multiprocessing.Queue()
         model_lock = multiprocessing.Lock()
-        
         model_p = multiprocessing.Process(target=model_process, args=(model_name, model_dir, in_options, model_sq, model_cq))
         model_p.start()
         
@@ -241,13 +251,14 @@ def main (input_dir, output_dir, aligned_dir, model_dir, model_name, **in_option
                     alignments[ source_filename_stem ] = []
 
                 alignments[ source_filename_stem ].append ( np.array(d['source_landmarks']) )
-
+        
+        
         files_processed, faces_processed = ConvertSubprocessor ( 
                     converter              = converter.copy_and_set_predictor( model_process_predictor(model_sq,model_cq,model_lock) ), 
                     input_path_image_paths = Path_utils.get_image_paths(input_path), 
                     output_path            = output_path,
-                    alignments             = alignments,                                     
-                    debug                  = debug ).process()
+                    alignments             = alignments,  
+                    **in_options ).process()
                               
         model_sq.put ( {'op':'close'} )
         model_p.join()

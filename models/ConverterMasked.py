@@ -38,7 +38,8 @@ class ConverterMasked(ConverterBase):
         self.erode_mask_modifier = erode_mask_modifier
         self.blur_mask_modifier = blur_mask_modifier
         self.output_face_scale = np.clip(1.0 + output_face_scale_modifier*0.01, 0.5, 1.0)
-        self.transfercolor = transfercolor
+        self.transfercolor = transfercolor      
+        self.TFLabConverter = None
         self.final_image_color_degrade_power = np.clip (final_image_color_degrade_power, 0, 100)
         self.alpha = alpha
         
@@ -199,14 +200,14 @@ class ConverterMasked(ConverterBase):
                 new_out = cv2.warpAffine( new_out_face_bgr, face_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
                 out_img =  np.clip( img_bgr*(1-img_mask_blurry_aaa) + (new_out*img_mask_blurry_aaa) , 0, 1.0 )
                 
-            if self.transfercolor:                                          #making transfer color from original DST image to fake
-                from skimage import io, color
-                lab_clr = color.rgb2lab(img_bgr)                            #original DST, converting RGB to LAB color space
-                lab_bw = color.rgb2lab(out_img)                             #fake, converting RGB to LAB color space
-                tmp_channel, a_channel, b_channel = cv2.split(lab_clr)      #taking color channel A and B from original dst image
-                l_channel, tmp2_channel, tmp3_channel = cv2.split(lab_bw)   #taking lightness channel L from merged fake
-                img_LAB = cv2.merge((l_channel,a_channel, b_channel))       #merging light and color
-                out_img = color.lab2rgb(img_LAB)                            #converting LAB to RGB 
+            if self.transfercolor:  
+                if self.TFLabConverter is None:
+                    self.TFLabConverter = image_utils.TFLabConverter() 
+                    
+                img_lab_l, img_lab_a, img_lab_b = np.split ( self.TFLabConverter.bgr2lab (img_bgr), 3, axis=-1 )
+                out_img_lab_l, out_img_lab_a, out_img_lab_b = np.split ( self.TFLabConverter.bgr2lab (out_img), 3, axis=-1 )      
+                
+                out_img = self.TFLabConverter.lab2bgr ( np.concatenate([out_img_lab_l, img_lab_a, img_lab_b], axis=-1) )
  
             if self.final_image_color_degrade_power != 0:
                 if debug:
@@ -234,4 +235,5 @@ class ConverterMasked(ConverterBase):
             debugs += [out_img.copy()]
             
         return debugs if debug else out_img     
-     
+
+        

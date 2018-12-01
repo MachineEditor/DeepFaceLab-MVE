@@ -20,10 +20,6 @@ class ModelBase(object):
     #DONT OVERRIDE
     def __init__(self, model_path, training_data_src_path=None, training_data_dst_path=None,
                         batch_size=0,
-                        multi_gpu = False,
-                        choose_worst_gpu = False,
-                        force_best_gpu_idx = -1,
-                        force_gpu_idxs = None,
                         write_preview_history = False,
                         debug = False, **in_options
                 ):
@@ -70,37 +66,23 @@ class ModelBase(object):
                     for filename in Path_utils.get_image_paths(self.preview_history_path):
                         Path(filename).unlink()    
 
-        self.multi_gpu = multi_gpu
-   
-        gpu_idx = force_best_gpu_idx if (force_best_gpu_idx >= 0 and gpufmkmgr.isValidDeviceIdx(force_best_gpu_idx)) else gpufmkmgr.getBestDeviceIdx() if not choose_worst_gpu else gpufmkmgr.getWorstDeviceIdx()
-        gpu_total_vram_gb = gpufmkmgr.getDeviceVRAMTotalGb (gpu_idx)
-        is_gpu_low_mem = (gpu_total_vram_gb < 4)
-        
-        self.gpu_total_vram_gb = gpu_total_vram_gb
+                        
+        self.gpu_config = gpufmkmgr.GPUConfig(allow_growth=False, **in_options)
+        self.gpu_total_vram_gb = self.gpu_config.gpu_total_vram_gb
 
         if self.epoch == 0: 
             #first run         
-            self.options['created_vram_gb'] = gpu_total_vram_gb
-            self.created_vram_gb = gpu_total_vram_gb
+            self.options['created_vram_gb'] = self.gpu_total_vram_gb
+            self.created_vram_gb = self.gpu_total_vram_gb
         else: 
             #not first run        
             if 'created_vram_gb' in self.options.keys():
                 self.created_vram_gb = self.options['created_vram_gb']
             else:
-                self.options['created_vram_gb'] = gpu_total_vram_gb
-                self.created_vram_gb = gpu_total_vram_gb
+                self.options['created_vram_gb'] = self.gpu_total_vram_gb
+                self.created_vram_gb = self.gpu_total_vram_gb
             
-        if force_gpu_idxs is not None:
-            self.gpu_idxs = [ int(x) for x in force_gpu_idxs.split(',') ]
-        else:
-            if self.multi_gpu:
-                self.gpu_idxs = gpufmkmgr.getDeviceIdxsEqualModel( gpu_idx )
-                if len(self.gpu_idxs) <= 1:
-                    self.multi_gpu = False
-            else:
-                self.gpu_idxs = [gpu_idx]
-        
-        self.tf = gpufmkmgr.import_tf(self.gpu_idxs,allow_growth=False)
+        self.tf = gpufmkmgr.import_tf( self.gpu_config )
         self.tf_sess = gpufmkmgr.get_tf_session()
         self.keras = gpufmkmgr.import_keras()
         self.keras_contrib = gpufmkmgr.import_keras_contrib()
@@ -131,12 +113,12 @@ class ModelBase(object):
         print ("==")
         print ("== Options:")
         print ("== |== batch_size : %s " % (self.batch_size) )
-        print ("== |== multi_gpu : %s " % (self.multi_gpu) )
+        print ("== |== multi_gpu : %s " % (self.gpu_config.multi_gpu) )
         for key in self.options.keys():
             print ("== |== %s : %s" % (key, self.options[key]) )        
         
         print ("== Running on:")
-        for idx in self.gpu_idxs:
+        for idx in self.gpu_config.gpu_idxs:
             print ("== |== [%d : %s]" % (idx, gpufmkmgr.getDeviceName(idx)) )
  
         if self.gpu_total_vram_gb == 2:
@@ -188,18 +170,18 @@ class ModelBase(object):
         return ConverterBase(self, **in_options) 
      
     def to_multi_gpu_model_if_possible (self, models_list):
-        if len(self.gpu_idxs) > 1:
+        if len(self.gpu_config.gpu_idxs) > 1:
             #make batch_size to divide on GPU count without remainder
-            self.batch_size = int( self.batch_size / len(self.gpu_idxs) )
+            self.batch_size = int( self.batch_size / len(self.gpu_config.gpu_idxs) )
             if self.batch_size == 0:
                 self.batch_size = 1                
-            self.batch_size *= len(self.gpu_idxs)
+            self.batch_size *= len(self.gpu_config.gpu_idxs)
             
             result = []
             for model in models_list:
                 for i in range( len(model.output_names) ):
                     model.output_names = 'output_%d' % (i)                 
-                result += [ self.keras.utils.multi_gpu_model( model, self.gpu_idxs ) ]    
+                result += [ self.keras.utils.multi_gpu_model( model, self.gpu_config.gpu_idxs ) ]    
                 
             return result                
         else:

@@ -5,6 +5,8 @@ import contextlib
 from utils import std_utils
 from .pynvml import *
 
+
+        
 dlib_module = None
 def import_dlib(device_idx):
     global dlib_module
@@ -22,18 +24,26 @@ keras_module = None
 keras_contrib_module = None
 keras_vggface_module = None
 
+def set_prefer_GPUConfig(gpu_config):
+    global prefer_GPUConfig
+    prefer_GPUConfig = gpu_config
+    
 def get_tf_session():
     global tf_session
     return tf_session
-    
-#allow_growth=False for keras model
-#allow_growth=True for tf only model
-def import_tf( device_idxs_list, allow_growth ):
+
+def import_tf( gpu_config = None ):
+    global prefer_GPUConfig
     global tf_module
     global tf_session
     
+    if gpu_config is None:
+        gpu_config = prefer_GPUConfig
+    else:
+        prefer_GPUConfig = gpu_config
+        
     if tf_module is not None:
-        raise Exception ('Multiple import of tf is not allowed, reorganize your program.')
+        return tf_module
 
     if 'TF_SUPPRESS_STD' in os.environ.keys() and os.environ['TF_SUPPRESS_STD'] == '1':
         suppressor = std_utils.suppress_stdout_stderr().__enter__()
@@ -48,14 +58,18 @@ def import_tf( device_idxs_list, allow_growth ):
     import tensorflow as tf
     tf_module = tf
     
-    visible_device_list = ''
-    for idx in device_idxs_list: visible_device_list += str(idx) + ','
-    visible_device_list = visible_device_list[:-1]
+    if gpu_config.cpu_only:
+        config = tf_module.ConfigProto( device_count = {'GPU': 0} )
+    else:    
+        config = tf_module.ConfigProto()
+        visible_device_list = ''
+        for idx in gpu_config.gpu_idxs: visible_device_list += str(idx) + ','
+        visible_device_list = visible_device_list[:-1]
+        config.gpu_options.visible_device_list=visible_device_list
+        config.gpu_options.force_gpu_compatible = True
         
-    config = tf_module.ConfigProto()
-    config.gpu_options.allow_growth = allow_growth
-    config.gpu_options.visible_device_list=visible_device_list
-    config.gpu_options.force_gpu_compatible = True
+    config.gpu_options.allow_growth = gpu_config.allow_growth
+    
     tf_session = tf_module.Session(config=config)
         
     if suppressor is not None:  
@@ -71,11 +85,15 @@ def finalize_tf():
     tf_session = None
     tf_module = None
 
+def get_keras():
+    global keras_module
+    return keras_module
+    
 def import_keras():
     global keras_module
     
     if keras_module is not None:
-        raise Exception ('Multiple import of keras is not allowed, reorganize your program.')
+        return keras_module
         
     sess = get_tf_session()
     if sess is None:
@@ -242,3 +260,47 @@ def getDeviceName (idx):
         result = nvmlDeviceGetName(nvmlDeviceGetHandleByIndex(idx)).decode()
     nvmlShutdown()
     return result
+    
+    
+class GPUConfig():    
+    force_best_gpu_idx = -1
+    multi_gpu = False
+    force_gpu_idxs = None
+    choose_worst_gpu = False
+    gpu_idxs = []
+    gpu_total_vram_gb = 0
+    allow_growth = True
+    cpu_only = False
+    
+    def __init__ (self, force_best_gpu_idx = -1, 
+                        multi_gpu = False, 
+                        force_gpu_idxs = None, 
+                        choose_worst_gpu = False,
+                        allow_growth = True,
+                        cpu_only = False,
+                        **in_options):
+                        
+        if cpu_only:
+            self.cpu_only = cpu_only
+        else:
+            self.force_best_gpu_idx = force_best_gpu_idx
+            self.multi_gpu = multi_gpu
+            self.force_gpu_idxs = force_gpu_idxs
+            self.choose_worst_gpu = choose_worst_gpu        
+            self.allow_growth = allow_growth
+      
+            gpu_idx = force_best_gpu_idx if (force_best_gpu_idx >= 0 and isValidDeviceIdx(force_best_gpu_idx)) else getBestDeviceIdx() if not choose_worst_gpu else getWorstDeviceIdx()
+
+            if force_gpu_idxs is not None:
+                self.gpu_idxs = [ int(x) for x in force_gpu_idxs.split(',') ]
+            else:
+                if self.multi_gpu:
+                    self.gpu_idxs = getDeviceIdxsEqualModel( gpu_idx )
+                    if len(self.gpu_idxs) <= 1:
+                        self.multi_gpu = False
+                else:
+                    self.gpu_idxs = [gpu_idx]
+            
+            self.gpu_total_vram_gb = getDeviceVRAMTotalGb ( self.gpu_idxs[0] )
+        
+prefer_GPUConfig = GPUConfig()

@@ -241,7 +241,9 @@ class ExtractSubprocessor(SubprocessorBase):
         if self.type == 'rects':
             if self.detector is not None:
                 if self.detector == 'mt':
-                    self.tf = gpufmkmgr.import_tf ([self.device_idx], allow_growth=True)
+                
+                    self.gpu_config = gpufmkmgr.GPUConfig ( force_best_gpu_idx=self.device_idx, allow_growth=True)                
+                    self.tf = gpufmkmgr.import_tf ( self.gpu_config )
                     self.tf_session = gpufmkmgr.get_tf_session()
                     self.keras = gpufmkmgr.import_keras()
                     self.e = facelib.MTCExtractor(self.keras, self.tf, self.tf_session)                            
@@ -251,7 +253,8 @@ class ExtractSubprocessor(SubprocessorBase):
                 self.e.__enter__()
 
         elif self.type == 'landmarks':
-            self.tf = gpufmkmgr.import_tf([self.device_idx], allow_growth=True)
+            self.gpu_config = gpufmkmgr.GPUConfig ( force_best_gpu_idx=self.device_idx, allow_growth=True)                
+            self.tf = gpufmkmgr.import_tf ( self.gpu_config )
             self.tf_session = gpufmkmgr.get_tf_session()
             self.keras = gpufmkmgr.import_keras()
             self.e = facelib.LandmarksExtractor(self.keras)
