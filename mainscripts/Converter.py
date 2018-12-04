@@ -114,6 +114,11 @@ class ConvertSubprocessor(SubprocessorBase):
     def onHostDataReturn (self, data):
         self.input_data.insert(0, data)   
         
+    #overridable
+    def onClientGetDataName (self, data):
+        #return string identificator of your data
+        return data
+        
     #override
     def onClientInitialize(self, client_dict):
         print ('Running on %s.' % (client_dict['device_name']) )
