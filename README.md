@@ -154,6 +154,8 @@ Command line example for windows: `python setup.py install -G "Visual Studio 14 
 
 Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) prebuilt Python 3.6.5 embeddable folder with DeepFaceLab can be downloaded from torrent https://rutracker.org/forum/viewtopic.php?p=75318742 (magnet link inside).
 
+Video tutorial: https://www.youtube.com/watch?v=K98nTNjXkq8
+
 ### **Windows 10 memory problem:
 
 Windows 10 consumes % of VRAM even if card unused for video output.
