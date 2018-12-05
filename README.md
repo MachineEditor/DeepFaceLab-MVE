@@ -138,9 +138,11 @@ Best practice for dst faces:
 1) delete first unsorted aligned groups of images what you can to delete. Dont touch target face mixed with others.
 2) `hist` -> delete groups of similar and leave only target face
 
-### **Facesets**:
+### **Ready to work facesets**:
 
 - Nicolas Cage 4 facesets (1 mix + 3 different)
+
+- Steve Jobs
 
 download from here: https://mega.nz/#F!y1ERHDaL!PPwg01PQZk0FhWLVo5_MaQ
 
