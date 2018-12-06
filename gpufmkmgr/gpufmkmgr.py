@@ -204,7 +204,7 @@ def getDeviceVRAMTotalGb (idx):
         memInfo = nvmlDeviceGetMemoryInfo( handle )
         result = memInfo.total / (1024*1024*1024)
     nvmlShutdown()
-    return result
+    return round(result)
     
 def getBestDeviceIdx():
     nvmlInit()    
