@@ -138,9 +138,11 @@ Best practice for dst faces:
 1) delete first unsorted aligned groups of images what you can to delete. Dont touch target face mixed with others.
 2) `hist` -> delete groups of similar and leave only target face
 
-### **Facesets**:
+### **Ready to work facesets**:
 
 - Nicolas Cage 4 facesets (1 mix + 3 different)
+
+- Steve Jobs
 
 download from here: https://mega.nz/#F!y1ERHDaL!PPwg01PQZk0FhWLVo5_MaQ
 
@@ -153,6 +155,8 @@ Command line example for windows: `python setup.py install -G "Visual Studio 14 
 ### **Prebuilt python folder with DeepFaceLab**:
 
 Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) prebuilt Python 3.6.5 embeddable folder with DeepFaceLab can be downloaded from torrent https://rutracker.org/forum/viewtopic.php?p=75318742 (magnet link inside).
+
+Video tutorial: https://www.youtube.com/watch?v=K98nTNjXkq8
 
 ### **Windows 10 memory problem:
 
