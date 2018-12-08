@@ -78,7 +78,7 @@ class ConvertSubprocessor(SubprocessorBase):
         
     #override
     def process_info_generator(self):
-        r = [0] if self.debug else range(multiprocessing.cpu_count())
+        r = [0] if self.debug else range( max(multiprocessing.cpu_count(), 6) )
         
         
 
