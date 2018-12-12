@@ -171,12 +171,19 @@ class ConvertSubprocessor(SubprocessorBase):
                 faces_processed = 1
             elif self.converter.get_mode() == ConverterBase.MODE_FACE:
                 faces = self.alignments[filename_path.stem]
-                for image_landmarks in faces:                
-                    image = self.converter.convert_face(image, image_landmarks, self.debug)     
-                    if self.debug:
-                        for img in image:
-                            cv2.imshow ('Debug convert', img )
-                            cv2.waitKey(0)
+                for face_num, image_landmarks in enumerate(faces):
+                    try:
+                        if self.debug:
+                            print ( '\nConverting face_num [%d] in file [%s]' % (face_num, filename_path) )
+                        
+                        image = self.converter.convert_face(image, image_landmarks, self.debug)     
+                        if self.debug:
+                            for img in image:
+                                cv2.imshow ('Debug convert', img )
+                                cv2.waitKey(0)
+                    except Exception as e:
+                        print ( 'Error while converting face_num [%d] in file [%s]: %s' % (face_num, filename_path, str(e)) )
+                        traceback.print_exc()
                 faces_processed = len(faces)
                     
             if not self.debug:
