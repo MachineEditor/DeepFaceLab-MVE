@@ -37,7 +37,7 @@ class ConverterMasked(ConverterBase):
         self.mode = mode
         self.erode_mask_modifier = erode_mask_modifier
         self.blur_mask_modifier = blur_mask_modifier
-        self.output_face_scale = np.clip(1.0 + output_face_scale_modifier*0.01, 0.5, 1.0)
+        self.output_face_scale = np.clip(1.0 + output_face_scale_modifier*0.01, 0.5, 1.5)
         self.transfercolor = transfercolor      
         self.TFLabConverter = None
         self.final_image_color_degrade_power = np.clip (final_image_color_degrade_power, 0, 100)
