@@ -65,7 +65,7 @@ class ConvertSubprocessor(SubprocessorBase):
 
     #override
     def __init__(self, converter, input_path_image_paths, output_path, alignments, debug = False, **in_options): 
-        super().__init__('Converter')    
+        super().__init__('Converter', 86400 if debug == True else 60)    
         self.converter = converter
         self.input_path_image_paths = input_path_image_paths
         self.output_path = output_path

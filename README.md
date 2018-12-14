@@ -102,6 +102,8 @@ dst - controller face (your face)
 
 converter --input-dir must contains *extracted dst faces* in sequence to be converted, its mean you can train on for example 1500 dst faces, but use for example 100 faces for convert.
 
+![](https://github.com/iperov/DeepFaceLab/blob/master/doc/DeepFaceLab_convertor_overview.png)
+
 - Video comparison of different Cage facesets.
 Vertical: 1 - mix of various Cage face shape and light conditions. 2,3,4 - without mix.
 Horizontal: 1 - DF, 2 - LIAEF128.

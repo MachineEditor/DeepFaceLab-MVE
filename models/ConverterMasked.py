@@ -15,7 +15,8 @@ class ConverterMasked(ConverterBase):
                         erode_mask = True, 
                         blur_mask = True,
                         clip_border_mask_per = 0,
-                        masked_hist_match = False, 
+                        masked_hist_match = True,
+                        hist_match_threshold = 255,
                         mode='seamless', 
                         erode_mask_modifier=0, 
                         blur_mask_modifier=0,
@@ -34,6 +35,7 @@ class ConverterMasked(ConverterBase):
         self.blur_mask = blur_mask
         self.clip_border_mask_per = clip_border_mask_per
         self.masked_hist_match = masked_hist_match
+        self.hist_match_threshold = hist_match_threshold
         self.mode = mode
         self.erode_mask_modifier = erode_mask_modifier
         self.blur_mask_modifier = blur_mask_modifier
@@ -165,7 +167,7 @@ class ConverterMasked(ConverterBase):
                     hist_match_2 = dst_face_bgr*hist_mask_a + (1.0-hist_mask_a)* np.ones ( prd_face_bgr.shape[:2] + (1,) , dtype=prd_face_bgr.dtype) 
                     hist_match_2[ hist_match_1 > 1.0 ] = 1.0
                     
-                    new_prd_face_bgr = image_utils.color_hist_match(hist_match_1, hist_match_2 )
+                    new_prd_face_bgr = image_utils.color_hist_match(hist_match_1, hist_match_2, self.hist_match_threshold )
 
                     prd_face_bgr = new_prd_face_bgr
                         
@@ -202,7 +204,7 @@ class ConverterMasked(ConverterBase):
 
                 if self.mode == 'seamless-hist-match':
                     out_face_bgr = cv2.warpAffine( out_img, face_mat, (self.output_size, self.output_size) )      
-                    new_out_face_bgr = image_utils.color_hist_match(out_face_bgr, dst_face_bgr )                
+                    new_out_face_bgr = image_utils.color_hist_match(out_face_bgr, dst_face_bgr, self.hist_match_threshold)                
                     new_out = cv2.warpAffine( new_out_face_bgr, face_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
                     out_img =  np.clip( img_bgr*(1-img_mask_blurry_aaa) + (new_out*img_mask_blurry_aaa) , 0, 1.0 )
                     

@@ -6,7 +6,7 @@ import localization
 from scipy.spatial import Delaunay
 from PIL import Image, ImageDraw, ImageFont
 
-def channel_hist_match(source, template, mask=None):
+def channel_hist_match(source, template, hist_match_threshold=255, mask=None):
     # Code borrowed from:
     # https://stackoverflow.com/questions/32655686/histogram-matching-of-two-images-in-python-2-x
     masked_source = source
@@ -29,18 +29,18 @@ def channel_hist_match(source, template, mask=None):
     mt_values, mt_counts = np.unique(template, return_counts=True)
 
     s_quantiles = np.cumsum(s_counts).astype(np.float64)
-    s_quantiles /= s_quantiles[-1]
+    s_quantiles = hist_match_threshold * s_quantiles / s_quantiles[-1]
     t_quantiles = np.cumsum(t_counts).astype(np.float64)
-    t_quantiles /= t_quantiles[-1]
+    t_quantiles = 255 * t_quantiles / t_quantiles[-1]
     interp_t_values = np.interp(s_quantiles, t_quantiles, t_values)
 
     return interp_t_values[bin_idx].reshape(oldshape)    
 
-def color_hist_match(src_im, tar_im, mask=None):
+def color_hist_match(src_im, tar_im, hist_match_threshold=255):
     h,w,c = src_im.shape
-    matched_R = channel_hist_match(src_im[:,:,0], tar_im[:,:,0], mask)
-    matched_G = channel_hist_match(src_im[:,:,1], tar_im[:,:,1], mask)
-    matched_B = channel_hist_match(src_im[:,:,2], tar_im[:,:,2], mask)
+    matched_R = channel_hist_match(src_im[:,:,0], tar_im[:,:,0], hist_match_threshold, None)
+    matched_G = channel_hist_match(src_im[:,:,1], tar_im[:,:,1], hist_match_threshold, None)
+    matched_B = channel_hist_match(src_im[:,:,2], tar_im[:,:,2], hist_match_threshold, None)
     
     to_stack = (matched_R, matched_G, matched_B)
     for i in range(3, c):

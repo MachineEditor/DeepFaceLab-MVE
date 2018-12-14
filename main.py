@@ -121,18 +121,24 @@ if __name__ == "__main__":
             
             if arguments.mode == 'hist-match' or arguments.mode == 'hist-match-bw':
                 try:
-                    choice = int ( input ("Masked hist match? [0..1] (default - model choice) : ") )
-                    arguments.masked_hist_match = (choice != 0)
+                    arguments.masked_hist_match = bool ( {"1":True,"0":False}[input("Masked hist match? [0 or 1] (default 1) : ").lower()] )
                 except:
-                    arguments.masked_hist_match = None               
+                    arguments.masked_hist_match = True
+            
+            if arguments.mode == 'hist-match' or arguments.mode == 'hist-match-bw' or arguments.mode == 'seamless-hist-match':
+                try:
+                    hist_match_threshold = int ( input ("Hist match threshold. [0..255] (default - 255) : ") )
+                    arguments.hist_match_threshold = hist_match_threshold
+                except:
+                    arguments.hist_match_threshold = 255                
             
             try:
-                arguments.erode_mask_modifier = int ( input ("Choose erode mask modifier [-100..100] (default 0) : ") )
+                arguments.erode_mask_modifier = int ( input ("Choose erode mask modifier [-200..200] (default 0) : ") )
             except:
                 arguments.erode_mask_modifier = 0
                 
             try:
-                arguments.blur_mask_modifier = int ( input ("Choose blur mask modifier [-100..200] (default 0) : ") )
+                arguments.blur_mask_modifier = int ( input ("Choose blur mask modifier [-200..200] (default 0) : ") )
             except:
                 arguments.blur_mask_modifier = 0
             
@@ -142,7 +148,7 @@ if __name__ == "__main__":
                 arguments.output_face_scale_modifier = 0
                 
             try:
-                arguments.transfercolor = bool ( {"1":True,"0":False}[input("Transfer color from original DST image? [0..1] (default 0) : ").lower()] )
+                arguments.transfercolor = bool ( {"1":True,"0":False}[input("Transfer color from dst face to converted final face? [0 or 1] (default 0) : ").lower()] )
             except:
                 arguments.transfercolor = False    
                 
@@ -158,8 +164,8 @@ if __name__ == "__main__":
 
             
                     
-        arguments.erode_mask_modifier = np.clip ( int(arguments.erode_mask_modifier), -100, 100)
-        arguments.blur_mask_modifier = np.clip ( int(arguments.blur_mask_modifier), -100, 200)
+        arguments.erode_mask_modifier = np.clip ( int(arguments.erode_mask_modifier), -200, 200)
+        arguments.blur_mask_modifier = np.clip ( int(arguments.blur_mask_modifier), -200, 200)
         arguments.output_face_scale_modifier = np.clip ( int(arguments.output_face_scale_modifier), -50, 50)
         
         from mainscripts import Converter
@@ -172,6 +178,7 @@ if __name__ == "__main__":
             debug = arguments.debug,
             mode = arguments.mode,
             masked_hist_match = arguments.masked_hist_match,
+            hist_match_threshold = arguments.hist_match_threshold,
             erode_mask_modifier = arguments.erode_mask_modifier,
             blur_mask_modifier = arguments.blur_mask_modifier,
             output_face_scale_modifier = arguments.output_face_scale_modifier,
@@ -189,13 +196,14 @@ if __name__ == "__main__":
     convert_parser.add_argument('--model', required=True, dest="model_name", choices=Path_utils.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Type of model")
     convert_parser.add_argument('--ask-for-params', action="store_true", dest="ask_for_params", default=False, help="Ask for params.")    
     convert_parser.add_argument('--mode',  dest="mode", choices=['seamless','hist-match', 'hist-match-bw','seamless-hist-match'], default='seamless', help="Face overlaying mode. Seriously affects result.")
-    convert_parser.add_argument('--masked-hist-match', type=str2bool, nargs='?', const=True, default=None, help="True or False. Excludes background for hist match. Default - model decide.")
-    convert_parser.add_argument('--erode-mask-modifier', type=int, dest="erode_mask_modifier", default=0, help="Automatic erode mask modifier. Valid range [-100..100].")
-    convert_parser.add_argument('--blur-mask-modifier', type=int, dest="blur_mask_modifier", default=0, help="Automatic blur mask modifier. Valid range [-100..200].")    
+    convert_parser.add_argument('--masked-hist-match', type=str2bool, nargs='?', const=True, default=True, help="True or False. Excludes background for hist match. Default - True.")
+    convert_parser.add_argument('--hist-match-threshold', type=int, dest="hist_match_threshold", default=255, help="Hist match threshold. Decrease to hide artifacts of hist match. Valid range [0..255]. Default 255")
+    convert_parser.add_argument('--erode-mask-modifier', type=int, dest="erode_mask_modifier", default=0, help="Automatic erode mask modifier. Valid range [-200..200].")
+    convert_parser.add_argument('--blur-mask-modifier', type=int, dest="blur_mask_modifier", default=0, help="Automatic blur mask modifier. Valid range [-200..200].")    
     convert_parser.add_argument('--output-face-scale-modifier', type=int, dest="output_face_scale_modifier", default=0, help="Output face scale modifier. Valid range [-50..50].")    
     convert_parser.add_argument('--final-image-color-degrade-power', type=int, dest="final_image_color_degrade_power", default=0, help="Degrades colors of final image to hide face problems. Valid range [0..100].")    
-    convert_parser.add_argument('--transfercolor', action="store_true", dest="transfercolor", default=False, help="transfer color from dst to merged.")
-    convert_parser.add_argument('--alpha', action="store_true", dest="alpha", default=False, help="alpha channel.")
+    convert_parser.add_argument('--transfercolor', action="store_true", dest="transfercolor", default=False, help="Transfer color from dst face to converted final face.")
+    convert_parser.add_argument('--alpha', action="store_true", dest="alpha", default=False, help="Embeds alpha channel of face mask to final PNG. Used in manual composing video by editors such as Sony Vegas or After Effects.")
     convert_parser.add_argument('--debug', action="store_true", dest="debug", default=False, help="Debug converter.")
     convert_parser.add_argument('--force-best-gpu-idx', type=int, dest="force_best_gpu_idx", default=-1, help="Force to choose this GPU idx as best.")
     

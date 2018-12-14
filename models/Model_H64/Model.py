@@ -113,9 +113,6 @@ class Model(ModelBase):
     def get_converter(self, **in_options):
         from models import ConverterMasked
         
-        if 'masked_hist_match' not in in_options.keys() or in_options['masked_hist_match'] is None:
-            in_options['masked_hist_match'] = True
-
         if 'erode_mask_modifier' not in in_options.keys():
             in_options['erode_mask_modifier'] = 0
         in_options['erode_mask_modifier'] += 100
