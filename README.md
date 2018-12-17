@@ -154,9 +154,9 @@ dlib==19.10.0 from pip compiled without CUDA. Therefore you have to compile DLIB
 
 Command line example for windows: `python setup.py install -G "Visual Studio 14 2015" --yes DLIB_USE_CUDA`
 
-### **Prebuilt python folder with DeepFaceLab**:
+### Prebuilt windows app:
 
-Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) prebuilt Python 3.6.5 embeddable folder with DeepFaceLab can be downloaded from 
+Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) prebuilt DeepFaceLab can be downloaded from 
 1) torrent https://rutracker.org/forum/viewtopic.php?p=75318742 (magnet link inside).
 2) https://mega.nz/#F!b9MzCK4B!zEAG9txu7uaRUjXz9PtBqg
 
