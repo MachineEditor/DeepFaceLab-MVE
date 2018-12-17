@@ -156,7 +156,9 @@ Command line example for windows: `python setup.py install -G "Visual Studio 14 
 
 ### **Prebuilt python folder with DeepFaceLab**:
 
-Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) prebuilt Python 3.6.5 embeddable folder with DeepFaceLab can be downloaded from torrent https://rutracker.org/forum/viewtopic.php?p=75318742 (magnet link inside).
+Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) prebuilt Python 3.6.5 embeddable folder with DeepFaceLab can be downloaded from 
+1) torrent https://rutracker.org/forum/viewtopic.php?p=75318742 (magnet link inside).
+2) https://mega.nz/#F!b9MzCK4B!zEAG9txu7uaRUjXz9PtBqg
 
 Video tutorial: https://www.youtube.com/watch?v=K98nTNjXkq8
 
