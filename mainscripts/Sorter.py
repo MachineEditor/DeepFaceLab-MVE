@@ -359,8 +359,95 @@ def sort_by_hist(input_path):
 
     return img_list
 
-def sort_by_hist_dissim(input_path):
+class HistDissimSubprocessor(SubprocessorBase):
+    #override
+    def __init__(self, img_list ): 
+        self.img_list = img_list
+        self.img_list_range = [i for i in range(0, len(img_list) )]
 
+        self.result = []
+
+        super().__init__('HistDissim', 60)           
+
+    #override
+    def onHostClientsInitialized(self):
+        pass
+        
+    #override
+    def process_info_generator(self):    
+        for i in range(0, min(multiprocessing.cpu_count(), 8) ):
+            yield 'CPU%d' % (i), {}, {'device_idx': i,
+                                      'device_name': 'CPU%d' % (i), 
+                                      'img_list' : self.img_list
+                                      }
+
+    #override
+    def get_no_process_started_message(self):
+        print ( 'Unable to start CPU processes.')
+        
+    #override
+    def onHostGetProgressBarDesc(self):
+        return "Sorting"
+        
+    #override
+    def onHostGetProgressBarLen(self):
+        return len (self.img_list)
+        
+    #override
+    def onHostGetData(self):
+        if len (self.img_list_range) > 0:        
+            return [self.img_list_range.pop(0)]
+        
+        return None
+    
+    #override
+    def onHostDataReturn (self, data):
+        self.img_list_range.insert(0, data[0])   
+        
+    #override
+    def onClientInitialize(self, client_dict):
+        self.img_list = client_dict['img_list']
+        self.img_list_len = len(self.img_list)
+        
+        self.safe_print ('Running on %s.' % (client_dict['device_name']) )
+        return None
+
+    #override
+    def onClientFinalize(self):
+        pass
+        
+    #override
+    def onClientProcessData(self, data):  
+        i = data[0]
+        score_total = 0
+        for j in range( 0, self.img_list_len):
+            if i == j:
+                continue
+            score_total += cv2.compareHist(self.img_list[i][1], self.img_list[j][1], cv2.HISTCMP_BHATTACHARYYA) + \
+                           cv2.compareHist(self.img_list[i][2], self.img_list[j][2], cv2.HISTCMP_BHATTACHARYYA) + \
+                           cv2.compareHist(self.img_list[i][3], self.img_list[j][3], cv2.HISTCMP_BHATTACHARYYA)
+
+        return score_total
+
+    #override
+    def onClientGetDataName (self, data):
+        #return string identificator of your data
+        return data[1]
+        
+    #override
+    def onHostResult (self, data, result):
+        self.img_list[data[0]][4] = result
+        return 1
+    
+    #override    
+    def onHostProcessEnd(self):
+        pass
+             
+    #override
+    def get_start_return(self):
+        return self.img_list
+        
+def sort_by_hist_dissim(input_path):
     print ("Sorting by histogram dissimilarity...")
 
     img_list = []
@@ -371,24 +458,13 @@ def sort_by_hist_dissim(input_path):
                              cv2.calcHist([img], [2], None, [256], [0, 256]), 0
                          ])
 
-    img_list_len = len(img_list)
-    for i in tqdm ( range(0, img_list_len), desc="Sorting"):
-        score_total = 0
-        for j in range( 0, img_list_len):
-            if i == j:
-                continue
-            score_total += cv2.compareHist(img_list[i][1], img_list[j][1], cv2.HISTCMP_BHATTACHARYYA) + \
-                           cv2.compareHist(img_list[i][2], img_list[j][2], cv2.HISTCMP_BHATTACHARYYA) + \
-                           cv2.compareHist(img_list[i][3], img_list[j][3], cv2.HISTCMP_BHATTACHARYYA)
-
-        img_list[i][4] = score_total
-
-
+    img_list = HistDissimSubprocessor(img_list).process()
+                         
     print ("Sorting...")
     img_list = sorted(img_list, key=operator.itemgetter(4), reverse=True)
 
     return img_list
-            
+
 def final_rename(input_path, img_list):
     for i in tqdm( range(0,len(img_list)), desc="Renaming" , leave=False):
         src = Path (img_list[i][0])        
