@@ -464,7 +464,20 @@ def sort_by_hist_dissim(input_path):
     img_list = sorted(img_list, key=operator.itemgetter(4), reverse=True)
 
     return img_list
+    
+def sort_by_black(input_path):
+    print ("Sorting by amount of black pixels...")
 
+    img_list = []
+    for x in tqdm( Path_utils.get_image_paths(input_path), desc="Loading"):
+        img = cv2.imread(x)
+        img_list.append ([x, img[(img == 0)].size ])
+
+    print ("Sorting...")
+    img_list = sorted(img_list, key=operator.itemgetter(1), reverse=False)
+
+    return img_list
+    
 def final_rename(input_path, img_list):
     for i in tqdm( range(0,len(img_list)), desc="Renaming" , leave=False):
         src = Path (img_list[i][0])        
@@ -529,6 +542,7 @@ def main (input_path, sort_by_method):
     elif sort_by_method == 'hist-blur':     img_list = sort_by_hist_blur (input_path)
     elif sort_by_method == 'brightness':    img_list = sort_by_brightness (input_path)
     elif sort_by_method == 'hue':           img_list = sort_by_hue (input_path)
+    elif sort_by_method == 'black':         img_list = sort_by_black (input_path)    
     elif sort_by_method == 'origname':      img_list = sort_by_origname (input_path)       
     
     final_rename (input_path, img_list)
