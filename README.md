@@ -114,6 +114,8 @@ Conclusion: **better not to mix and use only same shape faces with same light**
 
 ### **Sort tool**:
 
+`blur` places most blurred faces at end of folder
+
 `hist` groups images by similar content
 
 `hist-dissim` places most similar to each other images to end.
@@ -124,15 +126,15 @@ Conclusion: **better not to mix and use only same shape faces with same light**
 
 `hue`
 
-`face` and `face-dissim` currently useless
+`black` Places images which contains black area at end of folder. Useful to get rid of src faces which cutted by screen.
 
 Best practice for gather src faceset:
 
 1) delete first unsorted aligned groups of images what you can to delete. Dont touch target face mixed with others.
-2) `blur` -> delete ~half of them
-3) `hist` -> delete groups of similar and leave only target face
-4) `hist-blur` -> delete blurred at end of groups of similar
-5) `hist-dissim` -> leave only first **1000-1500 faces**, because number of src faces can affect result. For YAW feeder model skip this step.
+2) `black` -> delete faces cutted by black area at end of folder
+3) `blur` -> delete 30-50% at end of folder
+4) `hist` -> delete groups of similar and leave only target face
+5) `hist-dissim` -> leave only first **1500 faces**
 6) `face-yaw` -> just for finalize faceset
 
 Best practice for dst faces:
