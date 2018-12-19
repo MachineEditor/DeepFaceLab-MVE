@@ -18,6 +18,7 @@ class ConverterMasked(ConverterBase):
                         masked_hist_match = True,
                         hist_match_threshold = 255,
                         mode='seamless', 
+                        use_predicted_mask = True,
                         erode_mask_modifier=0, 
                         blur_mask_modifier=0,
                         output_face_scale_modifier=0.0,                        
@@ -31,6 +32,7 @@ class ConverterMasked(ConverterBase):
         self.predictor_input_size = predictor_input_size
         self.output_size = output_size
         self.face_type = face_type        
+        self.use_predicted_mask = use_predicted_mask
         self.erode_mask = erode_mask
         self.blur_mask = blur_mask
         self.clip_border_mask_per = clip_border_mask_per
@@ -82,6 +84,10 @@ class ConverterMasked(ConverterBase):
 
         prd_face_bgr      = np.clip (predicted_bgra[:,:,0:3], 0, 1.0 )
         prd_face_mask_a_0 = np.clip (predicted_bgra[:,:,3], 0.0, 1.0)
+        
+        if not self.use_predicted_mask:
+            prd_face_mask_a_0 = predictor_input_mask_a_0
+        
         prd_face_mask_a_0[ prd_face_mask_a_0 < 0.001 ] = 0.0
         
         prd_face_mask_a   = np.expand_dims (prd_face_mask_a_0, axis=-1)

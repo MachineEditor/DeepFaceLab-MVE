@@ -133,6 +133,11 @@ if __name__ == "__main__":
                     arguments.hist_match_threshold = 255                
             
             try:
+                arguments.use_predicted_mask = bool ( {"1":True,"0":False}[input("Use predicted mask? [0 or 1] (default 1) : ").lower()] )
+            except:
+                arguments.use_predicted_mask = False    
+                
+            try:
                 arguments.erode_mask_modifier = int ( input ("Choose erode mask modifier [-200..200] (default 0) : ") )
             except:
                 arguments.erode_mask_modifier = 0
@@ -179,6 +184,7 @@ if __name__ == "__main__":
             mode = arguments.mode,
             masked_hist_match = arguments.masked_hist_match,
             hist_match_threshold = arguments.hist_match_threshold,
+            use_predicted_mask = arguments.use_predicted_mask,
             erode_mask_modifier = arguments.erode_mask_modifier,
             blur_mask_modifier = arguments.blur_mask_modifier,
             output_face_scale_modifier = arguments.output_face_scale_modifier,
@@ -198,6 +204,7 @@ if __name__ == "__main__":
     convert_parser.add_argument('--mode',  dest="mode", choices=['seamless','hist-match', 'hist-match-bw','seamless-hist-match'], default='seamless', help="Face overlaying mode. Seriously affects result.")
     convert_parser.add_argument('--masked-hist-match', type=str2bool, nargs='?', const=True, default=True, help="True or False. Excludes background for hist match. Default - True.")
     convert_parser.add_argument('--hist-match-threshold', type=int, dest="hist_match_threshold", default=255, help="Hist match threshold. Decrease to hide artifacts of hist match. Valid range [0..255]. Default 255")
+    convert_parser.add_argument('--use-predicted-mask', action="store_true", dest="use_predicted_mask", default=True, help="Use predicted mask by model. Default - True.")
     convert_parser.add_argument('--erode-mask-modifier', type=int, dest="erode_mask_modifier", default=0, help="Automatic erode mask modifier. Valid range [-200..200].")
     convert_parser.add_argument('--blur-mask-modifier', type=int, dest="blur_mask_modifier", default=0, help="Automatic blur mask modifier. Valid range [-200..200].")    
     convert_parser.add_argument('--output-face-scale-modifier', type=int, dest="output_face_scale_modifier", default=0, help="Output face scale modifier. Valid range [-50..50].")    
