@@ -166,8 +166,6 @@ if __name__ == "__main__":
                 arguments.alpha = bool ( {"1":True,"0":False}[input("Export png with alpha channel? [0..1] (default 0) : ").lower()] )
             except:
                 arguments.alpha = False
-
-            
                     
         arguments.erode_mask_modifier = np.clip ( int(arguments.erode_mask_modifier), -200, 200)
         arguments.blur_mask_modifier = np.clip ( int(arguments.blur_mask_modifier), -200, 200)
@@ -197,7 +195,7 @@ if __name__ == "__main__":
     convert_parser = subparsers.add_parser( "convert", help="Converter") 
     convert_parser.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
     convert_parser.add_argument('--output-dir', required=True, action=fixPathAction, dest="output_dir", help="Output directory. This is where the converted files will be stored.")
-    convert_parser.add_argument('--aligned-dir', action=fixPathAction, dest="aligned_dir", help="Aligned directory. This is where the aligned files stored. Not used in AVATAR model.")
+    convert_parser.add_argument('--aligned-dir', action=fixPathAction, dest="aligned_dir", help="Aligned directory. This is where the extracted of dst faces stored. Not used in AVATAR model.")
     convert_parser.add_argument('--model-dir', required=True, action=fixPathAction, dest="model_dir", help="Model dir.")
     convert_parser.add_argument('--model', required=True, dest="model_name", choices=Path_utils.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Type of model")
     convert_parser.add_argument('--ask-for-params', action="store_true", dest="ask_for_params", default=False, help="Ask for params.")    

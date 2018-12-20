@@ -202,15 +202,14 @@ class ConvertSubprocessor(SubprocessorBase):
     def get_start_return(self):
         return self.files_processed, self.faces_processed
         
-def main (input_dir, output_dir, aligned_dir, model_dir, model_name, **in_options):
+def main (input_dir, output_dir, model_dir, model_name, aligned_dir=None, **in_options):
     print ("Running converter.\r\n")
     
     debug = in_options['debug']
     
     try:
         input_path = Path(input_dir)
-        output_path = Path(output_dir)
-        aligned_path = Path(aligned_dir)
+        output_path = Path(output_dir)        
         model_path = Path(model_dir)
         
         if not input_path.exists():
@@ -223,9 +222,7 @@ def main (input_dir, output_dir, aligned_dir, model_dir, model_name, **in_option
         else:
             output_path.mkdir(parents=True, exist_ok=True)
             
-        if not aligned_path.exists():
-            print('Aligned directory not found. Please ensure it exists.')
-            return
+        
             
         if not model_path.exists():
             print('Model directory not found. Please ensure it exists.')
@@ -244,9 +241,21 @@ def main (input_dir, output_dir, aligned_dir, model_dir, model_name, **in_option
                 if obj_op == 'init':
                     converter = obj['converter']
                     break
-                    
-        alignments = {}            
-        if converter.get_mode() == ConverterBase.MODE_FACE:
+
+        alignments = None
+        
+        if converter.get_mode() == ConverterBase.MODE_FACE:            
+            if aligned_dir is None:
+                print('Aligned directory not found. Please ensure it exists.')
+                return 
+                
+            aligned_path = Path(aligned_dir)
+            if not aligned_path.exists():
+                print('Aligned directory not found. Please ensure it exists.')
+                return 
+                
+            alignments = {}
+            
             aligned_path_image_paths = Path_utils.get_image_paths(aligned_path)
             for filename in tqdm(aligned_path_image_paths, desc= "Collecting alignments" ):
                 a_png = AlignedPNG.load( str(filename) )
