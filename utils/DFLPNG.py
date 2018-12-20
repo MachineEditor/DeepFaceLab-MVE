@@ -4,6 +4,7 @@ import string
 import struct
 import zlib
 import pickle
+import numpy as np
 
 class Chunk(object):
     def __init__(self, name=None, data=None):
@@ -184,7 +185,7 @@ class IEND(Chunk):
     def __str__(self):
         return "<Chunk:IEND>".format(**self.__dict__)
 
-class FaceswapChunk(Chunk):
+class DFLChunk(Chunk):
     def __init__(self, dict_data=None):
         super().__init__("fcWp")
         self.dict_data = dict_data       
@@ -207,26 +208,26 @@ class FaceswapChunk(Chunk):
         
 chunk_map = {
     b"IHDR": IHDR,
-    b"fcWp": FaceswapChunk,
+    b"fcWp": DFLChunk,
     b"IEND": IEND
 }
 
-class AlignedPNG(object):
+class DFLPNG(object):
     def __init__(self):
         self.data = b""
         self.length = 0
         self.chunks = []
-
+        self.fcwp_dict = None
+        
     @staticmethod
-    def load(data):
-
+    def load_raw(filename):
         try:
-            with open(data, "rb") as f:
+            with open(filename, "rb") as f:
                 data = f.read()
         except:
             raise FileNotFoundError(data)
     
-        inst = AlignedPNG()
+        inst = DFLPNG()
         inst.data = data
         inst.length = len(data)
         
@@ -242,14 +243,47 @@ class AlignedPNG(object):
             chunk = chunk_map.get(chunk_name, Chunk).load(data[chunk_start:chunk_end])
             inst.chunks.append(chunk)
             chunk_start = chunk_end
-
+        
         return inst
         
+    @staticmethod
+    def load(filename, print_on_no_embedded_data=False, throw_on_no_embedded_data=False):
+        inst = DFLPNG.load_raw (filename)
+        inst.fcwp_dict = inst.getDFLDictData()
         
-    def save(self, filename):
+        if inst.fcwp_dict == None:
+            if print_on_no_embedded_data:
+                print ( "No DFL data found in %s" % (filename) )
+            if throw_on_no_embedded_data:
+                raise ValueError("No DFL data found in %s" % (filename) )
+            return None
+        
+        return inst
+        
+    @staticmethod
+    def embed_data(filename, face_type=None,
+                             landmarks=None,
+                             yaw_value=None,
+                             pitch_value=None,
+                             source_filename=None,
+                             source_rect=None,
+                             source_landmarks=None
+                   ):
+    
+        inst = DFLPNG.load_raw (filename)
+        inst.setDFLDictData ({
+                                'face_type': face_type,
+                                'landmarks': landmarks,
+                                'yaw_value': yaw_value,
+                                'pitch_value': pitch_value,
+                                'source_filename': source_filename,
+                                'source_rect': source_rect,
+                                'source_landmarks': source_landmarks
+                             })
+    
         try:
             with open(filename, "wb") as f:
-                f.write ( self.dump() )
+                f.write ( inst.dump() )
         except:
             raise Exception( 'cannot save %s' % (filename) )
 
@@ -274,23 +308,42 @@ class AlignedPNG(object):
                 return chunk.height
         return 0
         
-    def getFaceswapDictData(self):        
+    def getDFLDictData(self):        
         for chunk in self.chunks:
-            if type(chunk) == FaceswapChunk:
+            if type(chunk) == DFLChunk:
                 return chunk.getDictData()
         return None
                 
-    def setFaceswapDictData (self, dict_data=None):
+    def setDFLDictData (self, dict_data=None):
         for chunk in self.chunks:
-            if type(chunk) == FaceswapChunk:
+            if type(chunk) == DFLChunk:
                 self.chunks.remove(chunk)
                 break
     
         if not dict_data is None:
-            chunk = FaceswapChunk(dict_data)
+            chunk = DFLChunk(dict_data)
             self.chunks.insert(-1, chunk)
+       
+    def get_face_type(self):                   
+        return self.fcwp_dict['face_type']
         
+    def get_landmarks(self):                   
+        return np.array ( self.fcwp_dict['landmarks'] )
         
+    def get_yaw_value(self):                   
+        return self.fcwp_dict['yaw_value']
         
+    def get_pitch_value(self):                   
+        return self.fcwp_dict['pitch_value']    
+        
+    def get_source_filename(self):                   
+        return self.fcwp_dict['source_filename']    
+        
+    def get_source_rect(self):                   
+        return self.fcwp_dict['source_rect']    
+        
+    def get_source_landmarks(self):                   
+        return np.array ( self.fcwp_dict['source_landmarks'] )
+
     def __str__(self):
         return "<PNG length={length} chunks={}>".format(len(self.chunks), **self.__dict__)

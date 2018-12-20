@@ -8,7 +8,8 @@ from shutil import copyfile
 
 from pathlib import Path
 from utils import Path_utils
-from utils.AlignedPNG import AlignedPNG
+from utils import image_utils
+from utils.DFLPNG import DFLPNG
 from facelib import LandmarksProcessor
 from utils.SubprocessorBase import SubprocessorBase
 import multiprocessing
@@ -86,22 +87,16 @@ class BlurEstimatorSubprocessor(SubprocessorBase):
     #override
     def onClientProcessData(self, data):
         filename_path = Path( data[0] )
-        image = cv2.imread( str(filename_path) )
-        face_mask = None        
-        
-        a_png = AlignedPNG.load( str(filename_path) )        
-        if a_png is not None:
-            d = a_png.getFaceswapDictData()
-            if (d is not None) and (d['landmarks'] is not None):            
-                face_mask = LandmarksProcessor.get_image_hull_mask (image, np.array(d['landmarks']))
-        
-        if face_mask is not None:
-            image = (image*face_mask).astype(np.uint8)
+
+        dflpng = DFLPNG.load( str(filename_path), print_on_no_embedded_data=True )        
+        if dflpng is not None:
+            image = cv2.imread( str(filename_path) )
+            image = ( image * \
+                      LandmarksProcessor.get_image_hull_mask (image, dflpng.get_landmarks()) \
+                     ).astype(np.uint8)
+            return [ str(filename_path), estimate_sharpness( image ) ]
         else:
-            print ( "%s - no embedded data found." % (str(filename_path)) ) 
             return [ str(filename_path), 0 ]
-        
-        return [ str(filename_path), estimate_sharpness( image ) ]
 
     #override
     def onClientGetDataName (self, data):
@@ -164,18 +159,11 @@ def sort_by_face(input_path):
             print ("%s is not a png file required for sort_by_face" % (filepath.name) ) 
             continue
         
-        a_png = AlignedPNG.load (str(filepath))
-        if a_png is None:
-            print ("%s failed to load" % (filepath.name) ) 
-            continue
-            
-        d = a_png.getFaceswapDictData()
-        
-        if d is None or d['landmarks'] is None:          
-            print ("%s - no embedded data found required for sort_by_face" % (filepath.name) )
+        dflpng = DFLPNG.load (str(filepath), print_on_no_embedded_data=True)
+        if dflpng is None:
             continue
         
-        img_list.append( [str(filepath), np.array(d['landmarks']) ] )
+        img_list.append( [str(filepath), dflpng.get_landmarks()] )
         
 
     img_list_len = len(img_list)
@@ -207,18 +195,11 @@ def sort_by_face_dissim(input_path):
             print ("%s is not a png file required for sort_by_face_dissim" % (filepath.name) ) 
             continue
         
-        a_png = AlignedPNG.load (str(filepath))
-        if a_png is None:
-            print ("%s failed to load" % (filepath.name) ) 
-            continue
-            
-        d = a_png.getFaceswapDictData()
-        
-        if d is None or d['landmarks'] is None:          
-            print ("%s - no embedded data found required for sort_by_face_dissim" % (filepath.name) )
+        dflpng = DFLPNG.load (str(filepath), print_on_no_embedded_data=True)
+        if dflpng is None:
             continue
         
-        img_list.append( [str(filepath), np.array(d['landmarks']), 0 ] )
+        img_list.append( [str(filepath), dflpng.get_landmarks(), 0 ] )
         
     img_list_len = len(img_list)
     for i in tqdm( range(0, img_list_len-1), desc="Sorting"):
@@ -247,18 +228,11 @@ def sort_by_face_yaw(input_path):
             print ("%s is not a png file required for sort_by_face_dissim" % (filepath.name) ) 
             continue
         
-        a_png = AlignedPNG.load (str(filepath))
-        if a_png is None:
-            print ("%s failed to load" % (filepath.name) ) 
-            continue
-            
-        d = a_png.getFaceswapDictData()
-        
-        if d is None or d['yaw_value'] is None:          
-            print ("%s - no embedded data found required for sort_by_face_dissim" % (filepath.name) )
+        dflpng = DFLPNG.load (str(filepath), print_on_no_embedded_data=True)
+        if dflpng is None:
             continue
         
-        img_list.append( [str(filepath), np.array(d['yaw_value']) ] )
+        img_list.append( [str(filepath), np.array( dflpng.get_yaw_value() ) ] )
 
     print ("Sorting...")
     img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)
@@ -423,9 +397,7 @@ class HistDissimSubprocessor(SubprocessorBase):
         for j in range( 0, self.img_list_len):
             if i == j:
                 continue
-            score_total += cv2.compareHist(self.img_list[i][1], self.img_list[j][1], cv2.HISTCMP_BHATTACHARYYA) + \
-                           cv2.compareHist(self.img_list[i][2], self.img_list[j][2], cv2.HISTCMP_BHATTACHARYYA) + \
-                           cv2.compareHist(self.img_list[i][3], self.img_list[j][3], cv2.HISTCMP_BHATTACHARYYA)
+            score_total += cv2.compareHist(self.img_list[i][1], self.img_list[j][1], cv2.HISTCMP_BHATTACHARYYA)
 
         return score_total
 
@@ -436,7 +408,7 @@ class HistDissimSubprocessor(SubprocessorBase):
         
     #override
     def onHostResult (self, data, result):
-        self.img_list[data[0]][4] = result
+        self.img_list[data[0]][2] = result
         return 1
     
     #override    
@@ -451,17 +423,20 @@ def sort_by_hist_dissim(input_path):
     print ("Sorting by histogram dissimilarity...")
 
     img_list = []
-    for x in tqdm( Path_utils.get_image_paths(input_path), desc="Loading"):
-        img = cv2.imread(x)    
-        img_list.append ([x, cv2.calcHist([img], [0], None, [256], [0, 256]),
-                             cv2.calcHist([img], [1], None, [256], [0, 256]),
-                             cv2.calcHist([img], [2], None, [256], [0, 256]), 0
-                         ])
+    for filename_path in tqdm( Path_utils.get_image_paths(input_path), desc="Loading"):
+        image = cv2.imread(filename_path)
+        
+        dflpng = DFLPNG.load( str(filename_path), print_on_no_embedded_data=True )        
+        if dflpng is not None:        
+            face_mask = LandmarksProcessor.get_image_hull_mask (image, dflpng.get_landmarks())
+            image = (image*face_mask).astype(np.uint8)
+
+        img_list.append ([filename_path, cv2.calcHist([cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)], [0], None, [256], [0, 256]), 0 ])
 
     img_list = HistDissimSubprocessor(img_list).process()
                          
     print ("Sorting...")
-    img_list = sorted(img_list, key=operator.itemgetter(4), reverse=True)
+    img_list = sorted(img_list, key=operator.itemgetter(2), reverse=True)
 
     return img_list
     
@@ -508,18 +483,11 @@ def sort_by_origname(input_path):
             print ("%s is not a png file required for sort_by_origname" % (filepath.name) ) 
             continue
         
-        a_png = AlignedPNG.load (str(filepath))
-        if a_png is None:
-            print ("%s failed to load" % (filepath.name) ) 
-            continue
-            
-        d = a_png.getFaceswapDictData()
-        
-        if d is None or d['source_filename'] is None:          
-            print ("%s - no embedded data found required for sort_by_origname" % (filepath.name) )
+        dflpng = DFLPNG.load (str(filepath), print_on_no_embedded_data=True)
+        if dflpng is None:
             continue
 
-        img_list.append( [str(filepath), d['source_filename']] )
+        img_list.append( [str(filepath), dflpng.get_source_filename()] )
 
     print ("Sorting...")
     img_list = sorted(img_list, key=operator.itemgetter(1))

@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import cv2
 from utils import Path_utils
-from utils.AlignedPNG import AlignedPNG
+from utils.DFLPNG import DFLPNG
 from utils import image_utils
 from facelib import FaceType
 import facelib 
@@ -313,20 +313,15 @@ class ExtractSubprocessor(SubprocessorBase):
                         face_image_landmarks = facelib.LandmarksProcessor.transform_points (image_landmarks, image_to_face_mat)
                     
                     cv2.imwrite(output_file, face_image)
-                    
-                    a_png = AlignedPNG.load (output_file)
-                    
-                    d = {
-                      'face_type': FaceType.toString(self.face_type),
-                      'landmarks': face_image_landmarks.tolist(),
-                      'yaw_value': facelib.LandmarksProcessor.calc_face_yaw (face_image_landmarks),
-                      'pitch_value': facelib.LandmarksProcessor.calc_face_pitch (face_image_landmarks),
-                      'source_filename': filename_path.name,
-                      'source_rect': rect,
-                      'source_landmarks': image_landmarks.tolist()
-                    }
-                    a_png.setFaceswapDictData (d)
-                    a_png.save(output_file)  
+
+                    DFLPNG.embed_data(output_file, face_type = FaceType.toString(self.face_type),
+                                                   landmarks = face_image_landmarks.tolist(),
+                                                   yaw_value = facelib.LandmarksProcessor.calc_face_yaw (face_image_landmarks),
+                                                   pitch_value = facelib.LandmarksProcessor.calc_face_pitch (face_image_landmarks),
+                                                   source_filename = filename_path.name,
+                                                   source_rect=  rect,
+                                                   source_landmarks = image_landmarks.tolist()
+                                        )  
                         
                     result.append (output_file)
                     

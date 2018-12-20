@@ -3,7 +3,7 @@ from pathlib import Path
 from utils import Path_utils
 import cv2
 from tqdm import tqdm
-from utils.AlignedPNG import AlignedPNG
+from utils.DFLPNG import DFLPNG
 from utils import image_utils
 import shutil
 import numpy as np
@@ -156,12 +156,7 @@ class ConvertSubprocessor(SubprocessorBase):
             image = (cv2.imread(str(filename_path)) / 255.0).astype(np.float32)
 
             if self.converter.get_mode() == ConverterBase.MODE_IMAGE:
-                image_landmarks = None
-                a_png = AlignedPNG.load( str(filename_path) )
-                if a_png is not None:                 
-                    d = a_png.getFaceswapDictData()
-                    if d is not None and 'landmarks' in d.keys():
-                        image_landmarks = np.array(d['landmarks'])
+                image_landmarks = DFLPNG.load( str(filename_path), throw_on_no_embedded_data=True ).get_landmarks()
                         
                 image = self.converter.convert_image(image, image_landmarks, self.debug)
                 if self.debug:
@@ -258,20 +253,15 @@ def main (input_dir, output_dir, model_dir, model_name, aligned_dir=None, **in_o
             
             aligned_path_image_paths = Path_utils.get_image_paths(aligned_path)
             for filename in tqdm(aligned_path_image_paths, desc= "Collecting alignments" ):
-                a_png = AlignedPNG.load( str(filename) )
-                if a_png is None:
-                    print ( "%s - no embedded data found." % (filename) )
-                    continue
-                d = a_png.getFaceswapDictData()
-                if d is None or d['source_filename'] is None or d['source_rect'] is None or d['source_landmarks'] is None:
-                    print ( "%s - no embedded data found." % (filename) )
+                dflpng = DFLPNG.load( str(filename), print_on_no_embedded_data=True )                
+                if dflpng is None:
                     continue
                 
-                source_filename_stem = Path(d['source_filename']).stem
+                source_filename_stem = Path( dflpng.get_source_filename() ).stem
                 if source_filename_stem not in alignments.keys():
                     alignments[ source_filename_stem ] = []
 
-                alignments[ source_filename_stem ].append ( np.array(d['source_landmarks']) )
+                alignments[ source_filename_stem ].append (dflpng.get_source_landmarks())
         
         
         files_processed, faces_processed = ConvertSubprocessor ( 

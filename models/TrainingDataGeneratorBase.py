@@ -4,7 +4,7 @@ from pathlib import Path
 from tqdm import tqdm
 import numpy as np
 import cv2
-from utils.AlignedPNG import AlignedPNG
+from utils.DFLPNG import DFLPNG
 from utils import iter_utils
 from utils import Path_utils
 from .BaseTypes import TrainingDataType
@@ -177,19 +177,14 @@ def X_LOAD ( RAWS ):
             print ("%s is not a png file required for training" % (s_filename_path.name) ) 
             continue
         
-        a_png = AlignedPNG.load ( str(s_filename_path) )
-        if a_png is None:
-            print ("%s failed to load" % (s_filename_path.name) )
+        dflpng = DFLPNG.load ( str(s_filename_path), print_on_no_embedded_data=True )
+        if dflpng is None:
             continue
 
-        d = a_png.getFaceswapDictData()
-        if d is None or d['landmarks'] is None or d['yaw_value'] is None:
-            print ("%s - no embedded faceswap info found required for training" % (s_filename_path.name) ) 
-            continue
-            
-        face_type = d['face_type'] if 'face_type' in d.keys() else 'full_face'        
-        face_type = FaceType.fromString (face_type) 
-        sample_list.append( s.copy_and_set(face_type=face_type, shape=a_png.get_shape(), landmarks=d['landmarks'], yaw=d['yaw_value']) )
+        sample_list.append( s.copy_and_set(face_type=FaceType.fromString (dflpng.get_face_type()),
+                                            shape=dflpng.get_shape(), 
+                                            landmarks=dflpng.get_landmarks(),
+                                            yaw=dflpng.get_yaw_value()) )
         
     return sample_list
     
