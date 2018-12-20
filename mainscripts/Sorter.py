@@ -239,73 +239,6 @@ def sort_by_face_yaw(input_path):
     
     return img_list
     
-def sort_by_hist_blur(input_path):
-
-    print ("Sorting by histogram similarity and blur...")
-
-    img_list = []
-    for x in tqdm( Path_utils.get_image_paths(input_path), desc="Loading"):
-        img = cv2.imread(x)    
-        img_list.append ([x, cv2.calcHist([img], [0], None, [256], [0, 256]),
-                             cv2.calcHist([img], [1], None, [256], [0, 256]),
-                             cv2.calcHist([img], [2], None, [256], [0, 256]),
-                             estimate_sharpness(img)
-                         ])
-
-    img_list_len = len(img_list)
-    for i in tqdm( range(0, img_list_len-1), desc="Sorting"):
-        min_score = float("inf")
-        j_min_score = i+1
-        for j in range(i+1,len(img_list)):
-            score = cv2.compareHist(img_list[i][1], img_list[j][1], cv2.HISTCMP_BHATTACHARYYA) + \
-                    cv2.compareHist(img_list[i][2], img_list[j][2], cv2.HISTCMP_BHATTACHARYYA) + \
-                    cv2.compareHist(img_list[i][3], img_list[j][3], cv2.HISTCMP_BHATTACHARYYA)
-            if score < min_score:
-                min_score = score
-                j_min_score = j
-        img_list[i+1], img_list[j_min_score] = img_list[j_min_score], img_list[i+1]
-     
-    l = []
-    for i in range(0, img_list_len-1):
-        score = cv2.compareHist(img_list[i][1], img_list[i+1][1], cv2.HISTCMP_BHATTACHARYYA) + \
-                cv2.compareHist(img_list[i][2], img_list[i+1][2], cv2.HISTCMP_BHATTACHARYYA) + \
-                cv2.compareHist(img_list[i][3], img_list[i+1][3], cv2.HISTCMP_BHATTACHARYYA)
-        l += [score]
-    l = np.array(l)
-    v = np.mean(l)
-    if v*2 < np.max(l):
-        v *= 2
-    
-    new_img_list = []
-        
-    start_group_i = 0
-    odd_counter = 0
-    for i in tqdm( range(0, img_list_len), desc="Sorting"):
-        end_group_i = -1
-        if i < img_list_len-1:
-            score = cv2.compareHist(img_list[i][1], img_list[i+1][1], cv2.HISTCMP_BHATTACHARYYA) + \
-                    cv2.compareHist(img_list[i][2], img_list[i+1][2], cv2.HISTCMP_BHATTACHARYYA) + \
-                    cv2.compareHist(img_list[i][3], img_list[i+1][3], cv2.HISTCMP_BHATTACHARYYA)
-                         
-            if score >= v:
-                end_group_i = i
-                
-        elif i == img_list_len-1:
-            end_group_i = i
-    
-        if end_group_i >= start_group_i:
-            odd_counter += 1
-            
-            s = sorted(img_list[start_group_i:end_group_i+1] , key=operator.itemgetter(4), reverse=True)         
-            if odd_counter % 2 == 0:            
-                new_img_list = new_img_list + s
-            else:
-                new_img_list = s + new_img_list
-                
-            start_group_i = i + 1
-
-    return new_img_list
-    
 def sort_by_hist(input_path):
 
     print ("Sorting by histogram similarity...")
@@ -507,7 +440,6 @@ def main (input_path, sort_by_method):
     elif sort_by_method == 'face-yaw':      img_list = sort_by_face_yaw (input_path)
     elif sort_by_method == 'hist':          img_list = sort_by_hist (input_path)
     elif sort_by_method == 'hist-dissim':   img_list = sort_by_hist_dissim (input_path)
-    elif sort_by_method == 'hist-blur':     img_list = sort_by_hist_blur (input_path)
     elif sort_by_method == 'brightness':    img_list = sort_by_brightness (input_path)
     elif sort_by_method == 'hue':           img_list = sort_by_hue (input_path)
     elif sort_by_method == 'black':         img_list = sort_by_black (input_path)    
