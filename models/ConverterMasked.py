@@ -12,8 +12,6 @@ class ConverterMasked(ConverterBase):
                         predictor_input_size=0, 
                         output_size=0, 
                         face_type=FaceType.FULL, 
-                        erode_mask = True, 
-                        blur_mask = True,
                         clip_border_mask_per = 0,
                         masked_hist_match = True,
                         hist_match_threshold = 255,
@@ -21,6 +19,7 @@ class ConverterMasked(ConverterBase):
                         use_predicted_mask = True,
                         erode_mask_modifier=0, 
                         blur_mask_modifier=0,
+                        seamless_erode_mask_modifier=0,
                         output_face_scale_modifier=0.0,                        
                         transfercolor=False,
                         final_image_color_degrade_power=0,
@@ -33,25 +32,18 @@ class ConverterMasked(ConverterBase):
         self.output_size = output_size
         self.face_type = face_type        
         self.use_predicted_mask = use_predicted_mask
-        self.erode_mask = erode_mask
-        self.blur_mask = blur_mask
         self.clip_border_mask_per = clip_border_mask_per
         self.masked_hist_match = masked_hist_match
         self.hist_match_threshold = hist_match_threshold
         self.mode = mode
         self.erode_mask_modifier = erode_mask_modifier
         self.blur_mask_modifier = blur_mask_modifier
+        self.seamless_erode_mask_modifier = seamless_erode_mask_modifier
         self.output_face_scale = np.clip(1.0 + output_face_scale_modifier*0.01, 0.5, 1.5)
         self.transfercolor = transfercolor      
         self.TFLabConverter = None
         self.final_image_color_degrade_power = np.clip (final_image_color_degrade_power, 0, 100)
-        self.alpha = alpha
-        
-        if self.erode_mask_modifier != 0 and not self.erode_mask:
-            print ("Erode mask modifier not used in this model.")
-            
-        if self.blur_mask_modifier != 0 and not self.blur_mask:
-            print ("Blur modifier not used in this model.")
+        self.alpha = alpha        
             
     #override
     def get_mode(self):
@@ -125,34 +117,44 @@ class ConverterMasked(ConverterBase):
                 
                 if debug:
                     print ("lowest_len = %f" % (lowest_len) )
-
-                ero  = int( lowest_len * ( 0.126 - lowest_len * 0.00004551365 ) * 0.01*self.erode_mask_modifier )
-                blur = int( lowest_len * 0.10                                   * 0.01*self.blur_mask_modifier )
               
-                if debug:
-                    print ("erode_size = %d, blur_size = %d" % (ero, blur) )
-                    
                 img_mask_blurry_aaa = img_face_mask_aaa
-                if self.erode_mask:
+                if self.erode_mask_modifier != 0:
+                    ero  = int( lowest_len * ( 0.126 - lowest_len * 0.00004551365 ) * 0.01*self.erode_mask_modifier )
+                    if debug:
+                        print ("erode_size = %d" % (ero) )
+                    
                     if ero > 0:
-                        img_mask_blurry_aaa = cv2.erode(img_mask_blurry_aaa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(ero,ero)), iterations = 1 )
+                        img_mask_blurry_aaa = cv2.erode(img_mask_blurry_aaa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(ero,ero)), iterations = 1 )                        
                     elif ero < 0:
                         img_mask_blurry_aaa = cv2.dilate(img_mask_blurry_aaa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(-ero,-ero)), iterations = 1 )
-
-                if self.blur_mask and blur > 0:
+                
+                if self.seamless_erode_mask_modifier != 0:
+                    ero  = int( lowest_len * ( 0.126 - lowest_len * 0.00004551365 ) * 0.01*self.seamless_erode_mask_modifier )
+                    if ero > 0:
+                        img_face_mask_flatten_aaa = cv2.erode(img_face_mask_flatten_aaa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(ero,ero)), iterations = 1 )
+                    elif ero < 0:
+                        img_face_mask_flatten_aaa = cv2.dilate(img_face_mask_flatten_aaa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(-ero,-ero)), iterations = 1 )
+                    if debug:
+                        print ("seamless_erode_size = %d" % (ero) )
+                        
+                if self.blur_mask_modifier > 0:
+                    blur = int( lowest_len * 0.10 * 0.01*self.blur_mask_modifier )
                     img_mask_blurry_aaa = cv2.blur(img_mask_blurry_aaa, (blur, blur) )
+                    if debug:
+                        print ("blur_size = %d" % (blur) )
                     
                 img_mask_blurry_aaa = np.clip( img_mask_blurry_aaa, 0, 1.0 )
                 
-                if self.clip_border_mask_per > 0:
-                    prd_border_rect_mask_a = np.ones ( prd_face_mask_a.shape, dtype=prd_face_mask_a.dtype)        
-                    prd_border_size = int ( prd_border_rect_mask_a.shape[1] * self.clip_border_mask_per )
-
-                    prd_border_rect_mask_a[0:prd_border_size,:,:] = 0
-                    prd_border_rect_mask_a[-prd_border_size:,:,:] = 0
-                    prd_border_rect_mask_a[:,0:prd_border_size,:] = 0
-                    prd_border_rect_mask_a[:,-prd_border_size:,:] = 0
-                    prd_border_rect_mask_a = np.expand_dims(cv2.blur(prd_border_rect_mask_a, (prd_border_size, prd_border_size) ),-1)
+                #if self.clip_border_mask_per > 0:
+                #    prd_border_rect_mask_a = np.ones ( prd_face_mask_a.shape, dtype=prd_face_mask_a.dtype)        
+                #    prd_border_size = int ( prd_border_rect_mask_a.shape[1] * self.clip_border_mask_per )
+                #
+                #    prd_border_rect_mask_a[0:prd_border_size,:,:] = 0
+                #    prd_border_rect_mask_a[-prd_border_size:,:,:] = 0
+                #    prd_border_rect_mask_a[:,0:prd_border_size,:] = 0
+                #    prd_border_rect_mask_a[:,-prd_border_size:,:] = 0
+                #    prd_border_rect_mask_a = np.expand_dims(cv2.blur(prd_border_rect_mask_a, (prd_border_size, prd_border_size) ),-1)
 
                 if self.mode == 'hist-match-bw':
                     prd_face_bgr = cv2.cvtColor(prd_face_bgr, cv2.COLOR_BGR2GRAY)
@@ -199,12 +201,12 @@ class ConverterMasked(ConverterBase):
                     if debug:
                         debugs += [out_img.copy()]
                         
-                if self.clip_border_mask_per > 0:
-                    img_prd_border_rect_mask_a = cv2.warpAffine( prd_border_rect_mask_a, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
-                    img_prd_border_rect_mask_a = np.expand_dims (img_prd_border_rect_mask_a, -1)
-
-                    out_img = out_img * img_prd_border_rect_mask_a + img_bgr * (1.0 - img_prd_border_rect_mask_a)
-                    img_mask_blurry_aaa *= img_prd_border_rect_mask_a
+                #if self.clip_border_mask_per > 0:
+                #    img_prd_border_rect_mask_a = cv2.warpAffine( prd_border_rect_mask_a, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
+                #    img_prd_border_rect_mask_a = np.expand_dims (img_prd_border_rect_mask_a, -1)
+                #
+                #    out_img = out_img * img_prd_border_rect_mask_a + img_bgr * (1.0 - img_prd_border_rect_mask_a)
+                #    img_mask_blurry_aaa *= img_prd_border_rect_mask_a
                 
                 out_img =  np.clip( img_bgr*(1-img_mask_blurry_aaa) + (out_img*img_mask_blurry_aaa) , 0, 1.0 )
 

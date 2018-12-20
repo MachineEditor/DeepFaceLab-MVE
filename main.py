@@ -147,6 +147,12 @@ if __name__ == "__main__":
             except:
                 arguments.blur_mask_modifier = 0
             
+            if arguments.mode == 'seamless' or arguments.mode == 'seamless-hist-match':
+                try:
+                    arguments.seamless_erode_mask_modifier = int ( input ("Choose seamless erode mask modifier [-20..20] (default 0) : ") )
+                except:
+                    arguments.seamless_erode_mask_modifier = 0
+                
             try:
                 arguments.output_face_scale_modifier = int ( input ("Choose output face scale modifier [-50..50] (default 0) : ") )
             except:
@@ -169,6 +175,7 @@ if __name__ == "__main__":
                     
         arguments.erode_mask_modifier = np.clip ( int(arguments.erode_mask_modifier), -200, 200)
         arguments.blur_mask_modifier = np.clip ( int(arguments.blur_mask_modifier), -200, 200)
+        arguments.seamless_erode_mask_modifier = np.clip ( int(arguments.seamless_erode_mask_modifier), -20, 20)
         arguments.output_face_scale_modifier = np.clip ( int(arguments.output_face_scale_modifier), -50, 50)
         
         from mainscripts import Converter
@@ -185,6 +192,7 @@ if __name__ == "__main__":
             use_predicted_mask = arguments.use_predicted_mask,
             erode_mask_modifier = arguments.erode_mask_modifier,
             blur_mask_modifier = arguments.blur_mask_modifier,
+            seamless_erode_mask_modifier = arguments.seamless_erode_mask_modifier,
             output_face_scale_modifier = arguments.output_face_scale_modifier,
             final_image_color_degrade_power = arguments.final_image_color_degrade_power,
             transfercolor = arguments.transfercolor,
@@ -205,6 +213,7 @@ if __name__ == "__main__":
     convert_parser.add_argument('--use-predicted-mask', action="store_true", dest="use_predicted_mask", default=True, help="Use predicted mask by model. Default - True.")
     convert_parser.add_argument('--erode-mask-modifier', type=int, dest="erode_mask_modifier", default=0, help="Automatic erode mask modifier. Valid range [-200..200].")
     convert_parser.add_argument('--blur-mask-modifier', type=int, dest="blur_mask_modifier", default=0, help="Automatic blur mask modifier. Valid range [-200..200].")    
+    convert_parser.add_argument('--seamless-erode-mask-modifier', type=int, dest="seamless_erode_mask_modifier", default=0, help="Automatic seamless erode mask modifier. Valid range [-200..200].")
     convert_parser.add_argument('--output-face-scale-modifier', type=int, dest="output_face_scale_modifier", default=0, help="Output face scale modifier. Valid range [-50..50].")    
     convert_parser.add_argument('--final-image-color-degrade-power', type=int, dest="final_image_color_degrade_power", default=0, help="Degrades colors of final image to hide face problems. Valid range [0..100].")    
     convert_parser.add_argument('--transfercolor', action="store_true", dest="transfercolor", default=False, help="Transfer color from dst face to converted final face.")
