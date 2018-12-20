@@ -149,7 +149,7 @@ if __name__ == "__main__":
             
             if arguments.mode == 'seamless' or arguments.mode == 'seamless-hist-match':
                 try:
-                    arguments.seamless_erode_mask_modifier = int ( input ("Choose seamless erode mask modifier [-20..20] (default 0) : ") )
+                    arguments.seamless_erode_mask_modifier = int ( input ("Choose seamless erode mask modifier [-100..100] (default 0) : ") )
                 except:
                     arguments.seamless_erode_mask_modifier = 0
                 
@@ -175,7 +175,7 @@ if __name__ == "__main__":
                     
         arguments.erode_mask_modifier = np.clip ( int(arguments.erode_mask_modifier), -200, 200)
         arguments.blur_mask_modifier = np.clip ( int(arguments.blur_mask_modifier), -200, 200)
-        arguments.seamless_erode_mask_modifier = np.clip ( int(arguments.seamless_erode_mask_modifier), -20, 20)
+        arguments.seamless_erode_mask_modifier = np.clip ( int(arguments.seamless_erode_mask_modifier), -100, 100)
         arguments.output_face_scale_modifier = np.clip ( int(arguments.output_face_scale_modifier), -50, 50)
         
         from mainscripts import Converter
