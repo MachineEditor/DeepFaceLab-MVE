@@ -18,13 +18,14 @@ from utils.SubprocessorBase import SubprocessorBase
 class ExtractSubprocessor(SubprocessorBase):
 
     #override
-    def __init__(self, input_data, type, image_size, face_type, debug, multi_gpu=False, manual=False, manual_window_size=0, detector=None, output_path=None ): 
+    def __init__(self, input_data, type, image_size, face_type, debug, multi_gpu=False, cpu_only=False, manual=False, manual_window_size=0, detector=None, output_path=None ): 
         self.input_data = input_data
         self.type = type
         self.image_size = image_size
         self.face_type = face_type
         self.debug = debug        
         self.multi_gpu = multi_gpu
+        self.cpu_only = cpu_only
         self.detector = detector
         self.output_path = output_path        
         self.manual = manual        
@@ -59,8 +60,10 @@ class ExtractSubprocessor(SubprocessorBase):
                     
             cv2.setMouseCallback(self.wnd_name, onMouse, self.param)
     
-    def get_devices_for_type (self, type, multi_gpu):
-        if (type == 'rects' or type == 'landmarks'):
+    def get_devices_for_type (self, type, multi_gpu, cpu_only):
+        if cpu_only:
+            devices = [ (0, 'CPU', 0 ) ]
+        elif (type == 'rects' or type == 'landmarks'):
             if not multi_gpu:            
                 devices = [gpufmkmgr.getBestDeviceIdx()]
             else:
@@ -74,16 +77,20 @@ class ExtractSubprocessor(SubprocessorBase):
         
     #override
     def process_info_generator(self):    
-        for (device_idx, device_name, device_total_vram_gb) in self.get_devices_for_type(self.type, self.multi_gpu): 
+        for (device_idx, device_name, device_total_vram_gb) in self.get_devices_for_type(self.type, self.multi_gpu, self.cpu_only): 
             num_processes = 1
             if not self.manual and self.type == 'rects' and self.detector == 'mt':
-                num_processes = int ( max (1, device_total_vram_gb / 2) )
+                if self.cpu_only:
+                    num_processes = int ( max (1, multiprocessing.cpu_count() / 2 ) )
+                else:
+                    num_processes = int ( max (1, device_total_vram_gb / 2) )
                 
             for i in range(0, num_processes ):
                 device_name_for_process = device_name if num_processes == 1 else '%s #%d' % (device_name,i)
                 yield device_name_for_process, {}, {'type' : self.type, 
                                                     'device_idx' : device_idx,
                                                     'device_name' : device_name_for_process, 
+                                                    'device_type' : 'CPU' if self.cpu_only else 'GPU',
                                                     'image_size': self.image_size, 
                                                     'face_type': self.face_type, 
                                                     'debug': self.debug, 
@@ -229,6 +236,7 @@ class ExtractSubprocessor(SubprocessorBase):
         self.image_size   = client_dict['image_size']
         self.face_type    = client_dict['face_type']
         self.device_idx   = client_dict['device_idx']
+        self.cpu_only     = client_dict['device_type'] == 'CPU'
         self.output_path  = Path(client_dict['output_dir']) if 'output_dir' in client_dict.keys() else None        
         self.debug        = client_dict['debug']
         self.detector     = client_dict['detector']
@@ -242,18 +250,18 @@ class ExtractSubprocessor(SubprocessorBase):
             if self.detector is not None:
                 if self.detector == 'mt':
                 
-                    self.gpu_config = gpufmkmgr.GPUConfig ( force_best_gpu_idx=self.device_idx, allow_growth=True)                
+                    self.gpu_config = gpufmkmgr.GPUConfig ( cpu_only=self.cpu_only, force_best_gpu_idx=self.device_idx, allow_growth=True)                
                     self.tf = gpufmkmgr.import_tf ( self.gpu_config )
                     self.tf_session = gpufmkmgr.get_tf_session()
                     self.keras = gpufmkmgr.import_keras()
                     self.e = facelib.MTCExtractor(self.keras, self.tf, self.tf_session)                            
                 elif self.detector == 'dlib':
-                    self.dlib = gpufmkmgr.import_dlib( self.device_idx )
+                    self.dlib = gpufmkmgr.import_dlib( self.device_idx, cpu_only=self.cpu_only )
                     self.e = facelib.DLIBExtractor(self.dlib)
                 self.e.__enter__()
 
         elif self.type == 'landmarks':
-            self.gpu_config = gpufmkmgr.GPUConfig ( force_best_gpu_idx=self.device_idx, allow_growth=True)                
+            self.gpu_config = gpufmkmgr.GPUConfig ( cpu_only=self.cpu_only, force_best_gpu_idx=self.device_idx, allow_growth=True)                
             self.tf = gpufmkmgr.import_tf ( self.gpu_config )
             self.tf_session = gpufmkmgr.get_tf_session()
             self.keras = gpufmkmgr.import_keras()
@@ -381,9 +389,9 @@ face_type
     'full_face'
     'avatar'
 '''
-def main (input_dir, output_dir, debug, detector='mt', multi_gpu=True, manual_fix=False, manual_window_size=0, image_size=256, face_type='full_face'):
+def main (input_dir, output_dir, debug, detector='mt', multi_gpu=True, cpu_only=False, manual_fix=False, manual_window_size=0, image_size=256, face_type='full_face'):
     print ("Running extractor.\r\n")
-    
+
     input_path = Path(input_dir)
     output_path = Path(output_dir)
     face_type = FaceType.fromString(face_type)
@@ -412,13 +420,13 @@ def main (input_dir, output_dir, debug, detector='mt', multi_gpu=True, manual_fi
     if images_found != 0:    
         if detector == 'manual':
             print ('Performing manual extract...')
-            extracted_faces = ExtractSubprocessor ([ (filename,[]) for filename in input_path_image_paths ], 'landmarks', image_size, face_type, debug, manual=True, manual_window_size=manual_window_size).process()
+            extracted_faces = ExtractSubprocessor ([ (filename,[]) for filename in input_path_image_paths ], 'landmarks', image_size, face_type, debug, cpu_only=cpu_only, manual=True, manual_window_size=manual_window_size).process()
         else:
             print ('Performing 1st pass...')
-            extracted_rects = ExtractSubprocessor ([ (x,) for x in input_path_image_paths ], 'rects', image_size, face_type, debug, multi_gpu=multi_gpu, manual=False, detector=detector).process()
+            extracted_rects = ExtractSubprocessor ([ (x,) for x in input_path_image_paths ], 'rects', image_size, face_type, debug, multi_gpu=multi_gpu, cpu_only=cpu_only, manual=False, detector=detector).process()
                 
             print ('Performing 2nd pass...')
-            extracted_faces = ExtractSubprocessor (extracted_rects, 'landmarks', image_size, face_type, debug, multi_gpu=multi_gpu, manual=False).process()
+            extracted_faces = ExtractSubprocessor (extracted_rects, 'landmarks', image_size, face_type, debug, multi_gpu=multi_gpu, cpu_only=cpu_only, manual=False).process()
                 
             if manual_fix:
                 print ('Performing manual fix...')
@@ -430,7 +438,7 @@ def main (input_dir, output_dir, debug, detector='mt', multi_gpu=True, manual_fi
 
         if len(extracted_faces) > 0:
             print ('Performing 3rd pass...')
-            final_imgs_paths = ExtractSubprocessor (extracted_faces, 'final', image_size, face_type, debug, multi_gpu=multi_gpu, manual=False, output_path=output_path).process()
+            final_imgs_paths = ExtractSubprocessor (extracted_faces, 'final', image_size, face_type, debug, multi_gpu=multi_gpu, cpu_only=cpu_only, manual=False, output_path=output_path).process()
             faces_detected = len(final_imgs_paths)
             
     print('-------------------------')

@@ -37,8 +37,10 @@ if __name__ == "__main__":
             face_type=arguments.face_type,
             detector=arguments.detector,
             multi_gpu=arguments.multi_gpu,
+            cpu_only=arguments.cpu_only,
             manual_fix=arguments.manual_fix,
-            manual_window_size=arguments.manual_window_size)
+            manual_window_size=arguments.manual_window_size
+            )
         
     extract_parser = subparsers.add_parser( "extract", help="Extract the faces from a pictures.")
     extract_parser.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
@@ -49,6 +51,8 @@ if __name__ == "__main__":
     extract_parser.add_argument('--multi-gpu', action="store_true", dest="multi_gpu", default=False, help="Enables multi GPU.")
     extract_parser.add_argument('--manual-fix', action="store_true", dest="manual_fix", default=False, help="Enables manual extract only frames where faces were not recognized.")
     extract_parser.add_argument('--manual-window-size', type=int, dest="manual_window_size", default=0, help="Manual fix window size. Example: 1368. Default: frame size.") 
+    extract_parser.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Extract on CPU. Forces to use MT extractor.")    
+    
     
     extract_parser.set_defaults (func=process_extract)
     
@@ -85,6 +89,7 @@ if __name__ == "__main__":
             force_best_gpu_idx = arguments.force_best_gpu_idx,
             multi_gpu          = arguments.multi_gpu,
             force_gpu_idxs     = arguments.force_gpu_idxs,
+            cpu_only           = arguments.cpu_only
             )
         
     train_parser = subparsers.add_parser( "train", help="Trainer") 
@@ -101,6 +106,8 @@ if __name__ == "__main__":
     train_parser.add_argument('--force-best-gpu-idx', type=int, dest="force_best_gpu_idx", default=-1, help="Force to choose this GPU idx as best(worst).")
     train_parser.add_argument('--multi-gpu', action="store_true", dest="multi_gpu", default=False, help="MultiGPU option. It will select only same best(worst) GPU models.")
     train_parser.add_argument('--force-gpu-idxs', type=str, dest="force_gpu_idxs", default=None, help="Override final GPU idxs. Example: 0,1,2.")
+    train_parser.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Train on CPU.")    
+    
     train_parser.set_defaults (func=process_train)
     
     def process_convert(arguments):
@@ -197,7 +204,8 @@ if __name__ == "__main__":
             final_image_color_degrade_power = arguments.final_image_color_degrade_power,
             transfercolor = arguments.transfercolor,
             alpha = arguments.alpha,
-            force_best_gpu_idx = arguments.force_best_gpu_idx
+            force_best_gpu_idx = arguments.force_best_gpu_idx,
+            cpu_only = arguments.cpu_only
             )
         
     convert_parser = subparsers.add_parser( "convert", help="Converter") 
@@ -220,6 +228,7 @@ if __name__ == "__main__":
     convert_parser.add_argument('--alpha', action="store_true", dest="alpha", default=False, help="Embeds alpha channel of face mask to final PNG. Used in manual composing video by editors such as Sony Vegas or After Effects.")
     convert_parser.add_argument('--debug', action="store_true", dest="debug", default=False, help="Debug converter.")
     convert_parser.add_argument('--force-best-gpu-idx', type=int, dest="force_best_gpu_idx", default=-1, help="Force to choose this GPU idx as best.")
+    convert_parser.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Convert on CPU.")
     
     convert_parser.set_defaults(func=process_convert)
 

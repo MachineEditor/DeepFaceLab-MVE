@@ -118,10 +118,13 @@ class ModelBase(object):
             print ("== |== %s : %s" % (key, self.options[key]) )        
         
         print ("== Running on:")
-        for idx in self.gpu_config.gpu_idxs:
-            print ("== |== [%d : %s]" % (idx, gpufmkmgr.getDeviceName(idx)) )
+        if self.gpu_config.cpu_only:
+            print ("== |== [CPU]")
+        else:
+            for idx in self.gpu_config.gpu_idxs:
+                print ("== |== [%d : %s]" % (idx, gpufmkmgr.getDeviceName(idx)) )
  
-        if self.gpu_total_vram_gb == 2:
+        if not self.gpu_config.cpu_only and self.gpu_total_vram_gb == 2:
             print ("==")
             print ("== WARNING: You are using 2GB GPU. Result quality may be significantly decreased.")
             print ("== If training does not start, close all programs and try again.")
@@ -264,7 +267,10 @@ class ModelBase(object):
         self.epoch += 1
         
         #............."Saving... 
-        loss_string = "Training [#{0:06d}][{1:04d}ms]".format ( self.epoch, int(epoch_time*1000) % 10000 )
+        if epoch_time >= 10000:
+            loss_string = "Training [#{0:06d}][{1:03d}s]".format ( self.epoch, epoch_time / 1000 )
+        else:
+            loss_string = "Training [#{0:06d}][{1:04d}ms]".format ( self.epoch, int(epoch_time*1000) % 10000 )
         for (loss_name, loss_value) in losses:
             loss_string += " %s:%.3f" % (loss_name, loss_value)
 
@@ -301,14 +307,18 @@ class ModelBase(object):
         #example d = {2:2,3:4,4:8,5:16,6:32,7:32,8:32,9:48} 
         keys = [x for x in d.keys()]
         
-        if self.gpu_total_vram_gb < keys[0]:
-            raise Exception ('Sorry, this model works only on %dGB+ GPU' % ( keys[0] ) )
-
-        if self.batch_size == 0:        
-            for x in keys:
-                if self.gpu_total_vram_gb <= x:
-                    self.batch_size = d[x]
-                    break
-                    
+        if self.gpu_config.cpu_only:
             if self.batch_size == 0:
-                self.batch_size = d[ keys[-1] ]
+                self.batch_size = 2
+        else:
+            if self.gpu_total_vram_gb < keys[0]:
+                raise Exception ('Sorry, this model works only on %dGB+ GPU' % ( keys[0] ) )
+
+            if self.batch_size == 0:        
+                for x in keys:
+                    if self.gpu_total_vram_gb <= x:
+                        self.batch_size = d[x]
+                        break
+                        
+                if self.batch_size == 0:
+                    self.batch_size = d[ keys[-1] ]

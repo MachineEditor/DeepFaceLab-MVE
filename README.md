@@ -14,6 +14,8 @@ Based on original FaceSwap repo. **Facesets** of FaceSwap or FakeApp are **not c
 
 - automatic GPU manager, chooses best gpu(s) and supports --multi-gpu (only for identical cards). Warning: dont use cards in SLI mode.
 
+- cpu mode. 8th gen Intel core CPU able to train H64 model in 2 days.
+
 - new preview window
 
 - extractor in parallel
@@ -156,9 +158,15 @@ dlib==19.10.0 from pip compiled without CUDA. Therefore you have to compile DLIB
 
 Command line example for windows: `python setup.py install -G "Visual Studio 14 2015" --yes DLIB_USE_CUDA`
 
+### **CPU only mode**
+
+CPU mode enabled by arg --cpu-only for all stages. Follow requirements-cpu.txt to install req packages.
+Do not use DLIB extractor in CPU mode, its too slow.
+Only H64 model reasonable to train on home CPU.
+
 ### Prebuilt windows app:
 
-Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) prebuilt DeepFaceLab can be downloaded from 
+Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) prebuilt DeepFaceLab (include GPU and CPU versions) can be downloaded from 
 1) torrent https://rutracker.org/forum/viewtopic.php?p=75318742 (magnet link inside).
 2) https://mega.nz/#F!b9MzCK4B!zEAG9txu7uaRUjXz9PtBqg
 

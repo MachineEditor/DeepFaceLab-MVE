@@ -8,14 +8,15 @@ from .pynvml import *
 
         
 dlib_module = None
-def import_dlib(device_idx):
+def import_dlib(device_idx, cpu_only=False):
     global dlib_module
     if dlib_module is not None:
         raise Exception ('Multiple import of dlib is not allowed, reorganize your program.')
         
     import dlib
     dlib_module = dlib
-    dlib_module.cuda.set_device(device_idx)    
+    if not cpu_only:
+        dlib_module.cuda.set_device(device_idx)    
     return dlib_module
 
 tf_module = None
@@ -151,7 +152,15 @@ def import_keras_vggface(optional=False):
 def finalize_keras_vggface():
     global keras_vggface_module
     keras_vggface_module = None    
-    
+
+def hasNVML():
+    try:
+        nvmlInit()
+        nvmlShutdown()
+    except:
+        return False
+    return True    
+ 
 #returns [ (device_idx, device_name), ... ]
 def getDevicesWithAtLeastFreeMemory(freememsize):
     result = []
@@ -279,7 +288,9 @@ class GPUConfig():
                         allow_growth = True,
                         cpu_only = False,
                         **in_options):
-                        
+        if not hasNVML():
+            cpu_only = True
+            
         if cpu_only:
             self.cpu_only = cpu_only
         else:
