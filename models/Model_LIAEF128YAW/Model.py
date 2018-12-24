@@ -1,5 +1,4 @@
 from models import ModelBase
-from models import TrainingDataType
 import numpy as np
 import cv2
 
@@ -7,7 +6,8 @@ from nnlib import DSSIMMaskLossClass
 from nnlib import conv
 from nnlib import upscale
 from facelib import FaceType
-
+from samples import *
+ 
 class Model(ModelBase):
 
     encoderH5 = 'encoder.h5'
@@ -47,12 +47,18 @@ class Model(ModelBase):
         self.autoencoder_src.compile(optimizer=optimizer, loss=[dssimloss, 'mse'] )
         self.autoencoder_dst.compile(optimizer=optimizer, loss=[dssimloss, 'mse'] )
   
-        if self.is_training_mode:
-            from models import TrainingDataGenerator
-            f = TrainingDataGenerator.SampleTypeFlags 
+        if self.is_training_mode:           
+            f = SampleProcessor.TypeFlags 
             self.set_training_data_generators ([            
-                    TrainingDataGenerator(TrainingDataType.FACE_YAW_SORTED_AS_TARGET, self.training_data_src_path, target_training_data_path=self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size, output_sample_types=[ [f.WARPED_TRANSFORMED | f.FULL_FACE | f.MODE_BGR, 128], [f.TRANSFORMED | f.FULL_FACE | f.MODE_BGR, 128], [f.TRANSFORMED | f.FULL_FACE | f.MODE_M | f.MASK_FULL, 128] ], random_flip=True ),
-                    TrainingDataGenerator(TrainingDataType.FACE,                      self.training_data_dst_path,                                                        debug=self.is_debug(), batch_size=self.batch_size, output_sample_types=[ [f.WARPED_TRANSFORMED | f.FULL_FACE | f.MODE_BGR, 128], [f.TRANSFORMED | f.FULL_FACE | f.MODE_BGR, 128], [f.TRANSFORMED | f.FULL_FACE | f.MODE_M | f.MASK_FULL, 128] ], random_flip=True )
+                    SampleGeneratorFace(self.training_data_src_path, sort_by_yaw_target_samples_path=self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size, 
+                        output_sample_types=[ [f.WARPED_TRANSFORMED | f.FACE_ALIGN_FULL | f.MODE_BGR, 128], 
+                                              [f.TRANSFORMED | f.FACE_ALIGN_FULL | f.MODE_BGR, 128], 
+                                              [f.TRANSFORMED | f.FACE_ALIGN_FULL | f.MODE_M | f.FACE_MASK_FULL, 128] ] ),
+                                              
+                    SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size, 
+                        output_sample_types=[ [f.WARPED_TRANSFORMED | f.FACE_ALIGN_FULL | f.MODE_BGR, 128], 
+                                              [f.TRANSFORMED | f.FACE_ALIGN_FULL | f.MODE_BGR, 128], 
+                                              [f.TRANSFORMED | f.FACE_ALIGN_FULL | f.MODE_M | f.FACE_MASK_FULL, 128] ] )
                 ])
             
     #override

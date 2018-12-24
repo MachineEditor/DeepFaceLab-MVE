@@ -5,6 +5,7 @@ import struct
 import zlib
 import pickle
 import numpy as np
+from facelib import FaceType
 
 class Chunk(object):
     def __init__(self, name=None, data=None):
@@ -250,6 +251,9 @@ class DFLPNG(object):
     def load(filename, print_on_no_embedded_data=False, throw_on_no_embedded_data=False):
         inst = DFLPNG.load_raw (filename)
         inst.fcwp_dict = inst.getDFLDictData()
+        
+        if 'face_type' not in inst.fcwp_dict.keys():
+            inst.fcwp_dict['face_type'] = FaceType.toString (FaceType.FULL)
         
         if inst.fcwp_dict == None:
             if print_on_no_embedded_data:

@@ -1,6 +1,6 @@
 from models import ModelBase
-from models import TrainingDataType
 import numpy as np
+from samples import *
 
 from nnlib import DSSIMMaskLossClass
 from nnlib import conv
@@ -46,11 +46,17 @@ class Model(ModelBase):
         self.dst_view = K.function([input_dst_bgr],[rec_dst_bgr, rec_dst_mask])
   
         if self.is_training_mode:
-            from models import TrainingDataGenerator
-            f = TrainingDataGenerator.SampleTypeFlags 
+            f = SampleProcessor.TypeFlags
             self.set_training_data_generators ([    
-                    TrainingDataGenerator(TrainingDataType.FACE, self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size, output_sample_types=[ [f.WARPED_TRANSFORMED | f.HALF_FACE | f.MODE_BGR, 64], [f.TRANSFORMED | f.HALF_FACE | f.MODE_BGR, 64], [f.TRANSFORMED | f.HALF_FACE | f.MODE_M | f.MASK_FULL, 64] ], random_flip=True ),
-                    TrainingDataGenerator(TrainingDataType.FACE, self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size, output_sample_types=[ [f.WARPED_TRANSFORMED | f.HALF_FACE | f.MODE_BGR, 64], [f.TRANSFORMED | f.HALF_FACE | f.MODE_BGR, 64], [f.TRANSFORMED | f.HALF_FACE | f.MODE_M | f.MASK_FULL, 64] ], random_flip=True )
+                    SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size, 
+                            output_sample_types=[ [f.WARPED_TRANSFORMED | f.FACE_ALIGN_HALF | f.MODE_BGR, 64], 
+                                                  [f.TRANSFORMED | f.FACE_ALIGN_HALF | f.MODE_BGR, 64], 
+                                                  [f.TRANSFORMED | f.FACE_ALIGN_HALF | f.MODE_M | f.FACE_MASK_FULL, 64] ] ),
+                                                  
+                    SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size, 
+                            output_sample_types=[ [f.WARPED_TRANSFORMED | f.FACE_ALIGN_HALF | f.MODE_BGR, 64], 
+                                                  [f.TRANSFORMED | f.FACE_ALIGN_HALF | f.MODE_BGR, 64], 
+                                                  [f.TRANSFORMED | f.FACE_ALIGN_HALF | f.MODE_M | f.FACE_MASK_FULL, 64] ] )
                 ])
                 
     #override
