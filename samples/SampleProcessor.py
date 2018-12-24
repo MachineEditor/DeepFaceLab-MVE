@@ -51,7 +51,7 @@ class SampleProcessor(object):
             
         sample_rnd_seed = np.random.randint(0x80000000)
             
-        outputs = []        
+        outputs = []       
         for sample_type in output_sample_types:
             f = sample_type[0]
             size = sample_type[1]
@@ -139,13 +139,13 @@ class SampleProcessor(object):
             outputs.append ( img )
 
         if debug:
-            result = ()
+            result = []
 
             for output in outputs:
                 if output.shape[2] < 4:
-                    result += (output,)
+                    result += [output,]
                 elif output.shape[2] == 4:
-                    result += (output[...,0:3]*output[...,3:4],)
+                    result += [output[...,0:3]*output[...,3:4],]
 
             return result            
         else:

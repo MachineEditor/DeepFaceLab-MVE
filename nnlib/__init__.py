@@ -363,7 +363,7 @@ def total_variation_loss(keras, x):
 # |num_downs|: number of downsamplings in UNet. For example,
 # if |num_downs| == 7, image of size 128x128 will become of size 1x1
 # at the bottleneck
-def UNet(keras, output_nc, num_downs, ngf=64, use_dropout=False):
+def UNet(keras, tf, input_shape, output_nc, num_downs, ngf=64, use_dropout=False):
     Conv2D = keras.layers.convolutional.Conv2D
     Conv2DTranspose = keras.layers.convolutional.Conv2DTranspose
     LeakyReLU = keras.layers.advanced_activations.LeakyReLU
@@ -377,6 +377,8 @@ def UNet(keras, output_nc, num_downs, ngf=64, use_dropout=False):
     conv_kernel_initializer = keras.initializers.RandomNormal(0, 0.02)
     norm_gamma_initializer = keras.initializers.RandomNormal(1, 0.02)
     
+    input = keras.layers.Input (input_shape)
+    
     def UNetSkipConnection(outer_nc, inner_nc, sub_model=None, outermost=False, innermost=False, use_dropout=False):       
         def func(inp):
             downconv_pad = ZeroPadding2D( (1,1) )
@@ -384,7 +386,6 @@ def UNet(keras, output_nc, num_downs, ngf=64, use_dropout=False):
             downrelu = LeakyReLU(0.2)        
             downnorm = BatchNormalization( gamma_initializer=norm_gamma_initializer )        
             
-            #upconv_pad = ZeroPadding2D( (0,0) )
             upconv = Conv2DTranspose(outer_nc, kernel_size=4, kernel_initializer=conv_kernel_initializer, strides=2, padding='same', use_bias=False)
             uprelu = ReLU()
             upnorm = BatchNormalization( gamma_initializer=norm_gamma_initializer )
@@ -394,7 +395,6 @@ def UNet(keras, output_nc, num_downs, ngf=64, use_dropout=False):
                 x = downconv(downconv_pad(x))
                 x = sub_model(x)
                 x = uprelu(x)
-                #x = upconv(upconv_pad(x))
                 x = upconv(x)
                 x = tanh(x)            
             elif innermost:           
@@ -402,16 +402,9 @@ def UNet(keras, output_nc, num_downs, ngf=64, use_dropout=False):
                 x = downrelu(x)
                 x = downconv(downconv_pad(x))
                 x = uprelu(x)
-                #
-                #
-                #x = upconv(upconv_pad(x))
                 x = upconv(x)
                 x = upnorm(x)   
-                
-                #import code
-                #code.interact(local=dict(globals(), **locals()))    
-                x = Concatenate(axis=3)([inp, x])    
-                            
+                x = Concatenate(axis=3)([inp, x])                                
             else:
                 x = inp
                 x = downrelu(x)
@@ -419,7 +412,6 @@ def UNet(keras, output_nc, num_downs, ngf=64, use_dropout=False):
                 x = downnorm(x)
                 x = sub_model(x)
                 x = uprelu(x)                
-                #x = upconv(upconv_pad(x))
                 x = upconv(x)
                 x = upnorm(x)                
                 if use_dropout:
@@ -430,23 +422,25 @@ def UNet(keras, output_nc, num_downs, ngf=64, use_dropout=False):
             
         return func
         
-    def func(inp):   
-        unet_block = UNetSkipConnection(ngf * 8, ngf * 8, sub_model=None, innermost=True)
 
-        for i in range(num_downs - 5):
-            unet_block = UNetSkipConnection(ngf * 8, ngf * 8, sub_model=unet_block, use_dropout=use_dropout)
-        
-        unet_block = UNetSkipConnection(ngf * 4  , ngf * 8, sub_model=unet_block)
-        unet_block = UNetSkipConnection(ngf * 2  , ngf * 4, sub_model=unet_block)
-        unet_block = UNetSkipConnection(ngf      , ngf * 2, sub_model=unet_block)
-        unet_block = UNetSkipConnection(output_nc, ngf    , sub_model=unet_block, outermost=True)
-        
-        return unet_block(inp)
-            
-    return func
+    unet_block = UNetSkipConnection(ngf * 8, ngf * 8, sub_model=None, innermost=True)
 
-#predicts future_image_tensor based on past_image_tensor
-def UNetStreamPredictor(keras, tf, output_nc, num_downs, ngf=32, use_dropout=False):
+    #for i in range(num_downs - 5):
+    #    unet_block = UNetSkipConnection(ngf * 8, ngf * 8, sub_model=unet_block, use_dropout=use_dropout)
+    
+    unet_block = UNetSkipConnection(ngf * 4  , ngf * 8, sub_model=unet_block)
+    unet_block = UNetSkipConnection(ngf * 2  , ngf * 4, sub_model=unet_block)
+    unet_block = UNetSkipConnection(ngf      , ngf * 2, sub_model=unet_block)
+    unet_block = UNetSkipConnection(output_nc, ngf    , sub_model=unet_block, outermost=True)
+    
+    x = input
+    x = unet_block(x)
+    
+    return keras.models.Model (input,x)
+
+#predicts based on two past_image_tensors
+def UNetTemporalPredictor(keras, tf, input_shape, output_nc, num_downs, ngf=32, use_dropout=False):
+    K = keras.backend
     Conv2D = keras.layers.convolutional.Conv2D
     Conv2DTranspose = keras.layers.convolutional.Conv2DTranspose
     LeakyReLU = keras.layers.advanced_activations.LeakyReLU
@@ -461,52 +455,59 @@ def UNetStreamPredictor(keras, tf, output_nc, num_downs, ngf=32, use_dropout=Fal
     conv_kernel_initializer = keras.initializers.RandomNormal(0, 0.02)
     norm_gamma_initializer = keras.initializers.RandomNormal(1, 0.02)
 
-    def func(past_image_tensor, future_image_tensor):
-        def model1(inp):   
-            x = inp
-            x = ReflectionPadding2D((3,3))(x)
-            x = Conv2D(ngf, kernel_size=7, kernel_initializer=conv_kernel_initializer, strides=1, padding='valid', use_bias=False)(x)
-            x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
-            x = ReLU()(x)
-            
-            x = ZeroPadding2D((1,1))(x)
-            x = Conv2D(ngf*2, kernel_size=3, kernel_initializer=conv_kernel_initializer, strides=1, padding='valid', use_bias=False)(x)
-            x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
-            x = ReLU()(x)
-            
-            x = ZeroPadding2D((1,1))(x)
-            x = Conv2D(ngf*4, kernel_size=3, kernel_initializer=conv_kernel_initializer, strides=1, padding='valid', use_bias=False)(x)
-            x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
-            x = ReLU()(x)
-            
-            return x
-            
-        def model3(inp):
-            x = inp
-            
-            x = ZeroPadding2D((1,1))(x)
-            x = Conv2D(ngf*2, kernel_size=3, kernel_initializer=conv_kernel_initializer, strides=1, padding='valid', use_bias=False)(x)
-            x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
-            x = ReLU()(x)
-            
-            x = ZeroPadding2D((1,1))(x)
-            x = Conv2D(ngf, kernel_size=3, kernel_initializer=conv_kernel_initializer, strides=1, padding='valid', use_bias=False)(x)
-            x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
-            x = ReLU()(x)
-            
-            x = ReflectionPadding2D((3,3))(x)
-            x = Conv2D(output_nc, kernel_size=7, kernel_initializer=conv_kernel_initializer, strides=1, padding='valid', use_bias=False)(x)
-            x = tanh(x)
-            return x
-        
-        model = UNet(keras, ngf*4, num_downs=num_downs, ngf=ngf*4*4, #ngf=ngf*4*4,
-                            use_dropout=use_dropout)
-        return model3 ( model( Concatenate(axis=3)([ model1(past_image_tensor), model1(future_image_tensor) ]) ) )
-        
-    return func
+    past_2_image_tensor = keras.layers.Input (input_shape)
+    past_1_image_tensor = keras.layers.Input (input_shape)
     
+    def model1(input_shape):   
+        input = keras.layers.Input (input_shape)
+        x = input
+        x = ReflectionPadding2D((3,3))(x)
+        x = Conv2D(ngf, kernel_size=7, kernel_initializer=conv_kernel_initializer, strides=1, padding='valid', use_bias=False)(x)
+        x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
+        x = ReLU()(x)
+        
+        x = ZeroPadding2D((1,1))(x)
+        x = Conv2D(ngf*2, kernel_size=3, kernel_initializer=conv_kernel_initializer, strides=1, padding='valid', use_bias=False)(x)
+        x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
+        x = ReLU()(x)
+        
+        x = ZeroPadding2D((1,1))(x)
+        x = Conv2D(ngf*4, kernel_size=3, kernel_initializer=conv_kernel_initializer, strides=1, padding='valid', use_bias=False)(x)
+        x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
+        x = ReLU()(x)
+        
+        return keras.models.Model(input, x)
+        
+    def model3(input_shape):
+        input = keras.layers.Input (input_shape)
+        x = input
+        
+        x = ZeroPadding2D((1,1))(x)
+        x = Conv2D(ngf*2, kernel_size=3, kernel_initializer=conv_kernel_initializer, strides=1, padding='valid', use_bias=False)(x)
+        x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
+        x = ReLU()(x)
+        
+        x = ZeroPadding2D((1,1))(x)
+        x = Conv2D(ngf, kernel_size=3, kernel_initializer=conv_kernel_initializer, strides=1, padding='valid', use_bias=False)(x)
+        x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
+        x = ReLU()(x)
+        
+        x = ReflectionPadding2D((3,3))(x)
+        x = Conv2D(output_nc, kernel_size=7, kernel_initializer=conv_kernel_initializer, strides=1, padding='valid', use_bias=False)(x)
+        x = tanh(x)
+        return keras.models.Model(input, x)
     
-def Resnet(keras, tf, output_nc, ngf=64, use_dropout=False, n_blocks=6):
+    x = Concatenate(axis=3)([ model1(input_shape)(past_2_image_tensor), model1(input_shape)(past_1_image_tensor) ])
+
+    unet = UNet(keras, tf, K.int_shape(x)[1:], ngf*4, num_downs=num_downs, ngf=ngf*4*2, #ngf=ngf*4*4,
+                        use_dropout=use_dropout)
+                        
+    x = unet(x)
+    x = model3 ( K.int_shape(x)[1:] ) (x)
+
+    return keras.models.Model ( [past_2_image_tensor,past_1_image_tensor], x )
+
+def Resnet(keras, tf, input_shape, output_nc, ngf=64, use_dropout=False, n_blocks=6):
     Conv2D = keras.layers.convolutional.Conv2D
     Conv2DTranspose = keras.layers.convolutional.Conv2DTranspose
     LeakyReLU = keras.layers.advanced_activations.LeakyReLU
@@ -522,9 +523,10 @@ def Resnet(keras, tf, output_nc, ngf=64, use_dropout=False, n_blocks=6):
     conv_kernel_initializer = keras.initializers.RandomNormal(0, 0.02)
     norm_gamma_initializer = keras.initializers.RandomNormal(1, 0.02)
     use_bias = False
+
+    input = keras.layers.Input (input_shape)
     
-    def ResnetBlock(dim, use_dropout, use_bias):
-    
+    def ResnetBlock(dim, use_dropout, use_bias):    
         def func(inp):
             x = inp
             
@@ -539,93 +541,80 @@ def Resnet(keras, tf, output_nc, ngf=64, use_dropout=False, n_blocks=6):
             x = ReflectionPadding2D((1,1))(x)
             x = Conv2D(dim, kernel_size=3, kernel_initializer=conv_kernel_initializer, padding='valid', use_bias=use_bias)(x)
             x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)    
-            
-            return Add()([x,inp])
-            
+            return Add()([x,inp])            
         return func
-        
-    def func(inp):
-        x = inp
-        
-        x = ReflectionPadding2D((3,3))(x)
-        x = Conv2D(ngf, kernel_size=7, kernel_initializer=conv_kernel_initializer, padding='valid', use_bias=use_bias)(x)
+
+    x = input
+    
+    x = ReflectionPadding2D((3,3))(x)
+    x = Conv2D(ngf, kernel_size=7, kernel_initializer=conv_kernel_initializer, padding='valid', use_bias=use_bias)(x)
+    x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
+    x = ReLU()(x)
+    
+    n_downsampling = 2
+    for i in range(n_downsampling):            
+        x = ZeroPadding2D( (1,1) ) (x)
+        x = Conv2D(ngf * (2**i) * 2, kernel_size=3, kernel_initializer=conv_kernel_initializer, strides=2, padding='valid', use_bias=use_bias)(x)
         x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
         x = ReLU()(x)
-        
-        n_downsampling = 2
-        for i in range(n_downsampling):            
-            x = ZeroPadding2D( (1,1) ) (x)
-            x = Conv2D(ngf * (2**i) * 2, kernel_size=3, kernel_initializer=conv_kernel_initializer, strides=2, padding='valid', use_bias=use_bias)(x)
-            x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
-            x = ReLU()(x)
-        
-        for i in range(n_blocks):
-            x = ResnetBlock(ngf*(2**n_downsampling), use_dropout=use_dropout, use_bias=use_bias)(x)
-        
-        for i in range(n_downsampling):
-            x = ZeroPadding2D( (1,1) ) (x)
-            x = Conv2DTranspose( int(ngf* (2**(n_downsampling - i)) /2), kernel_size=3, kernel_initializer=conv_kernel_initializer, strides=2, padding='valid', output_padding=1, use_bias=use_bias)(x)
-            x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
-            x = ReLU()(x)
-           
-        x = ReflectionPadding2D((3,3))(x)
-        x = Conv2D(output_nc, kernel_size=7, kernel_initializer=conv_kernel_initializer, padding='valid')(x)
-        x = tanh(x)
-            
-        return x
-        
-    return func
     
-def NLayerDiscriminator(keras, tf, ndf=64, n_layers=3, use_sigmoid=False):
+    for i in range(n_blocks):
+        x = ResnetBlock(ngf*(2**n_downsampling), use_dropout=use_dropout, use_bias=use_bias)(x)
+    
+    for i in range(n_downsampling):
+        x = Conv2DTranspose( int(ngf* (2**(n_downsampling - i)) /2), kernel_size=3, kernel_initializer=conv_kernel_initializer, strides=2, padding='same', output_padding=1, use_bias=use_bias)(x)
+        x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
+        x = ReLU()(x)
+    
+    
+        
+    x = ReflectionPadding2D((3,3))(x)
+    x = Conv2D(output_nc, kernel_size=7, kernel_initializer=conv_kernel_initializer, padding='valid')(x)
+    x = tanh(x)
+    
+    return keras.models.Model(input, x)
+    
+def NLayerDiscriminator(keras, tf, input_shape, ndf=64, n_layers=3, use_sigmoid=False):
     Conv2D = keras.layers.convolutional.Conv2D
-    Conv2DTranspose = keras.layers.convolutional.Conv2DTranspose
     LeakyReLU = keras.layers.advanced_activations.LeakyReLU
     BatchNormalization = keras.layers.BatchNormalization
-    ReLU = keras.layers.ReLU
-    Add = keras.layers.Add
-    tanh = keras.layers.Activation('tanh')
     sigmoid = keras.layers.Activation('sigmoid')
     ZeroPadding2D = keras.layers.ZeroPadding2D
-    Dropout = keras.layers.Dropout
-    Concatenate = keras.layers.Concatenate
-    
     conv_kernel_initializer = keras.initializers.RandomNormal(0, 0.02)
     norm_gamma_initializer = keras.initializers.RandomNormal(1, 0.02)
     use_bias = False
     
-    def func(inp):
-        x = inp
+    input = keras.layers.Input (input_shape, name="NLayerDiscriminatorInput") ###
+    
+    x = input
+    x = ZeroPadding2D( (1,1) ) (x)
+    x = Conv2D(ndf, kernel_size=4, kernel_initializer=conv_kernel_initializer, strides=2, padding='valid', use_bias=use_bias)(x)
+    x = LeakyReLU(0.2)(x)
+    
+    nf_mult = 1
+    nf_mult_prev = 1
+    for n in range(1, n_layers):
+        nf_mult = min(2**n, 8)
         
         x = ZeroPadding2D( (1,1) ) (x)
-        x = Conv2D(ndf, kernel_size=4, kernel_initializer=conv_kernel_initializer, strides=2, padding='valid', use_bias=use_bias)(x)
-        x = LeakyReLU(0.2)(x)
-        
-        nf_mult = 1
-        nf_mult_prev = 1
-        for n in range(1, n_layers):
-            nf_mult = min(2**n, 8)
-            
-            x = ZeroPadding2D( (1,1) ) (x)
-            x = Conv2D(ndf * nf_mult, kernel_size=4, kernel_initializer=conv_kernel_initializer, strides=2, padding='valid', use_bias=use_bias)(x)
-            x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
-            x = LeakyReLU(0.2)(x)
-            
-        nf_mult = min(2**n_layers, 8)
-        
-        #x = ZeroPadding2D( (1,1) ) (x)
-        x = Conv2D(ndf * nf_mult, kernel_size=4, kernel_initializer=conv_kernel_initializer, strides=1, padding='same', use_bias=use_bias)(x)
+        x = Conv2D(ndf * nf_mult, kernel_size=4, kernel_initializer=conv_kernel_initializer, strides=2, padding='valid', use_bias=use_bias)(x)
         x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
         x = LeakyReLU(0.2)(x)
         
-        #x = ZeroPadding2D( (1,1) ) (x)
-        x = Conv2D(1, kernel_size=4, kernel_initializer=conv_kernel_initializer, strides=1, padding='same', use_bias=use_bias)(x)
+    nf_mult = min(2**n_layers, 8)
+    
+    #x = ZeroPadding2D( (1,1) ) (x)
+    x = Conv2D(ndf * nf_mult, kernel_size=4, kernel_initializer=conv_kernel_initializer, strides=1, padding='same', use_bias=use_bias)(x)
+    x = BatchNormalization( gamma_initializer=norm_gamma_initializer )(x)
+    x = LeakyReLU(0.2)(x)
+    
+    #x = ZeroPadding2D( (1,1) ) (x)
+    x = Conv2D(1, kernel_size=4, kernel_initializer=conv_kernel_initializer, strides=1, padding='same', use_bias=use_bias)(x)
+    
+    if use_sigmoid:
+        x = sigmoid(x)
         
-        if use_sigmoid:
-            x = sigmoid(x)
-        
-        return x
-        
-    return func
+    return keras.models.Model (input,x)
 
 def ReflectionPadding2DClass(keras, tf):
 
