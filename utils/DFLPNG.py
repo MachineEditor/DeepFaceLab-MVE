@@ -252,7 +252,7 @@ class DFLPNG(object):
         inst = DFLPNG.load_raw (filename)
         inst.fcwp_dict = inst.getDFLDictData()
         
-        if 'face_type' not in inst.fcwp_dict.keys():
+        if (inst.fcwp_dict is not None) and ('face_type' not in inst.fcwp_dict.keys()):
             inst.fcwp_dict['face_type'] = FaceType.toString (FaceType.FULL)
         
         if inst.fcwp_dict == None:
