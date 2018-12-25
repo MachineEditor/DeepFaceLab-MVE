@@ -454,7 +454,7 @@ def sort_by_hist_dissim(input_path):
     for filename_path in tqdm( Path_utils.get_image_paths(input_path), desc="Loading"):
         image = cv2.imread(filename_path)
         
-        dflpng = DFLPNG.load( str(filename_path), print_on_no_embedded_data=True )        
+        dflpng = DFLPNG.load( str(filename_path) )
         if dflpng is not None:        
             face_mask = LandmarksProcessor.get_image_hull_mask (image, dflpng.get_landmarks())
             image = (image*face_mask).astype(np.uint8)
