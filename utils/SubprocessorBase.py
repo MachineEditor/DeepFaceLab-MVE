@@ -94,19 +94,24 @@ class SubprocessorBase(object):
             cq = multiprocessing.Queue()
             
             client_dict.update ( {'print_lock' : self.print_lock} ) 
-            
-            p = multiprocessing.Process(target=self.subprocess, args=(sq,cq,client_dict))
-            p.daemon = True
-            p.start()
-            self.processes.append ( { 'process' : p,
-                                      'sq' : sq,
-                                      'cq' : cq,
-                                      'state' : 'busy',
-                                      'sent_time': time.time(),
-                                      'name': name,
-                                      'host_dict' : host_dict
-                                    } )
+            try:
+                p = multiprocessing.Process(target=self.subprocess, args=(sq,cq,client_dict))
+                p.daemon = True
+                p.start()
+                self.processes.append ( { 'process' : p,
+                                          'sq' : sq,
+                                          'cq' : cq,
+                                          'state' : 'busy',
+                                          'sent_time': time.time(),
+                                          'name': name,
+                                          'host_dict' : host_dict
+                                        } )
+            except:
+                print ("Unable to start subprocess %s" % (name))
 
+        if len(self.processes) == 0:
+            raise Exception ("Unable to start Subprocessor '%s' " % (self.name))
+        
         while True:
             for p in self.processes[:]:
                 while not p['cq'].empty():
