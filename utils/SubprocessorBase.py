@@ -178,9 +178,8 @@ class SubprocessorBase(object):
                     elif p['state'] == 'busy':
                         if (time.time() - p['sent_time']) > self.no_response_time_sec:
                             print ( '%s doesnt response, terminating it.' % (p['name']) )
-                            self.onHostDataReturn ( p['sent_data'] )                        
-                            p['sq'].put ( {'op': 'close'} )
-                            p['process'].join()
+                            self.onHostDataReturn ( p['sent_data'] )
+                            p['process'].terminate()
                             self.processes.remove(p)
                             
                 if all ([p['state'] == 'free' for p in self.processes]):
@@ -194,21 +193,28 @@ class SubprocessorBase(object):
         
         for p in self.processes[:]:
             p['sq'].put ( {'op': 'close'} )
+            p['sent_time'] = time.time()
             
         while True:
             for p in self.processes[:]:
+                terminate_it = False
                 while not p['cq'].empty():
                     obj = p['cq'].get()
                     obj_op = obj['op']                    
                     if obj_op == 'finalized':
-                        p['state'] = 'finalized'
+                        terminate_it = True
+                        break
                         
+                if (time.time() - p['sent_time']) > self.no_response_time_sec:                
+                    terminate_it = True
+                    
+                if terminate_it:
+                    p['state'] = 'finalized'
+                    p['process'].terminate()
+                    
             if all ([p['state'] == 'finalized' for p in self.processes]):
                 break
-                    
-        for p in self.processes[:]:
-            p['process'].terminate()
-         
+
         self.onHostProcessEnd() 
          
         return self.get_start_return()
