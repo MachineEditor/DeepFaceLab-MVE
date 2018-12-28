@@ -1,10 +1,7 @@
 import numpy as np
-import cv2
 
+from nnlib import nnlib
 from models import ModelBase
-from nnlib import DSSIMMaskLossClass
-from nnlib import conv
-from nnlib import upscale
 from facelib import FaceType
 from samples import *
 
@@ -21,20 +18,15 @@ class Model(ModelBase):
 
     #override
     def onInitialize(self, **in_options):
+        exec(nnlib.import_all(), locals(), globals())
         self.set_vram_batch_requirements( {4.5:4,5:4,6:8,7:12,8:16,9:20,10:24,11:24,12:32,13:48} )
                 
-        ae_input_layer = self.keras.layers.Input(shape=(128, 128, 3))
-        mask_layer = self.keras.layers.Input(shape=(128, 128, 1)) #same as output
+        ae_input_layer = Input(shape=(128, 128, 3))
+        mask_layer = Input(shape=(128, 128, 1)) #same as output
 
-        self.encoder = self.Encoder(ae_input_layer)
-        self.decoderMask = self.DecoderMask()
-        self.decoderCommonA = self.DecoderCommon()
-        self.decoderCommonB = self.DecoderCommon()        
-        self.decoderRGB = self.DecoderRGB()
-        self.decoderBW = self.DecoderBW()
-        self.inter_A = self.Intermediate ()
-        self.inter_B = self.Intermediate ()        
-        
+        self.encoder, self.decoderMask, self.decoderCommonA, self.decoderCommonB, self.decoderRGB, \
+            self.decoderBW, self.inter_A, self.inter_B = self.Build(ae_input_layer)
+            
         if not self.is_first_run():
             self.encoder.load_weights  (self.get_strpath_storage_for_file(self.encoderH5))
             self.decoderMask.load_weights  (self.get_strpath_storage_for_file(self.decoderMaskH5))
@@ -49,37 +41,35 @@ class Model(ModelBase):
         A = self.inter_A(code)
         B = self.inter_B(code)
         
-        inter_A_A = self.keras.layers.Concatenate()([A, A])
-        inter_B_A = self.keras.layers.Concatenate()([B, A])
+        inter_A_A = Concatenate()([A, A])
+        inter_B_A = Concatenate()([B, A])
  
         x1,m1 = self.decoderCommonA (inter_A_A)
         x2,m2 = self.decoderCommonA (inter_A_A)
-        self.autoencoder_src     = self.keras.models.Model([ae_input_layer,mask_layer],
-                    [ self.decoderBW  (self.keras.layers.Concatenate()([x1,x2]) ),
-                      self.decoderMask(self.keras.layers.Concatenate()([m1,m2]) )
+        self.autoencoder_src     = Model([ae_input_layer,mask_layer],
+                    [ self.decoderBW  (Concatenate()([x1,x2]) ),
+                      self.decoderMask(Concatenate()([m1,m2]) )
                     ])
                     
         x1,m1 = self.decoderCommonA (inter_A_A)
         x2,m2 = self.decoderCommonB (inter_A_A)
-        self.autoencoder_src_RGB = self.keras.models.Model([ae_input_layer,mask_layer], 
-                    [ self.decoderRGB  (self.keras.layers.Concatenate()([x1,x2]) ),
-                      self.decoderMask (self.keras.layers.Concatenate()([m1,m2]) )
+        self.autoencoder_src_RGB = Model([ae_input_layer,mask_layer], 
+                    [ self.decoderRGB  (Concatenate()([x1,x2]) ),
+                      self.decoderMask (Concatenate()([m1,m2]) )
                     ])
         
         x1,m1 = self.decoderCommonA (inter_B_A)
         x2,m2 = self.decoderCommonB (inter_B_A)
-        self.autoencoder_dst     = self.keras.models.Model([ae_input_layer,mask_layer], 
-                    [ self.decoderRGB  (self.keras.layers.Concatenate()([x1,x2]) ),
-                      self.decoderMask (self.keras.layers.Concatenate()([m1,m2]) )
+        self.autoencoder_dst     = Model([ae_input_layer,mask_layer], 
+                    [ self.decoderRGB  (Concatenate()([x1,x2]) ),
+                      self.decoderMask (Concatenate()([m1,m2]) )
                     ])
         
         if self.is_training_mode:
             self.autoencoder_src, self.autoencoder_dst = self.to_multi_gpu_model_if_possible ( [self.autoencoder_src, self.autoencoder_dst] )
-                
-        optimizer = self.keras.optimizers.Adam(lr=5e-5, beta_1=0.5, beta_2=0.999)        
-        dssimloss = DSSIMMaskLossClass(self.tf)([mask_layer])
-        self.autoencoder_src.compile(optimizer=optimizer, loss=[dssimloss, 'mse'] )
-        self.autoencoder_dst.compile(optimizer=optimizer, loss=[dssimloss, 'mse'] )
+
+        self.autoencoder_src.compile(optimizer=Adam(lr=5e-5, beta_1=0.5, beta_2=0.999), loss=[DSSIMMaskLoss([mask_layer]), 'mse'] )
+        self.autoencoder_dst.compile(optimizer=Adam(lr=5e-5, beta_1=0.5, beta_2=0.999), loss=[DSSIMMaskLoss([mask_layer]), 'mse'] )
   
         if self.is_training_mode:
             f = SampleProcessor.TypeFlags
@@ -169,53 +159,67 @@ class Model(ModelBase):
             
         return ConverterMasked(self.predictor_func, predictor_input_size=128, output_size=128, face_type=FaceType.FULL, clip_border_mask_per=0.046875, **in_options)
   
-
-    def Encoder(self, input_layer,):
-        x = input_layer
-        x = conv(self.keras, x, 128)
-        x = conv(self.keras, x, 256)
-        x = conv(self.keras, x, 512)
-        x = conv(self.keras, x, 1024)
-        x = self.keras.layers.Flatten()(x)
-        return self.keras.models.Model(input_layer, x)
-
-    def Intermediate(self):
-        input_layer = self.keras.layers.Input(shape=(None, 8 * 8 * 1024))
-        x = input_layer
-        x = self.keras.layers.Dense(256)(x)
-        x = self.keras.layers.Dense(8 * 8 * 512)(x)
-        x = self.keras.layers.Reshape((8, 8, 512))(x)
-        x = upscale(self.keras, x, 512)
-        return self.keras.models.Model(input_layer, x)
-
-    def DecoderCommon(self): 
-        input_ = self.keras.layers.Input(shape=(16, 16, 1024))
-        x = input_
-        x = upscale(self.keras, x, 512)
-        x = upscale(self.keras, x, 256)
-        x = upscale(self.keras, x, 128)
+    def Build(self, input_layer):
+        exec(nnlib.code_import_all, locals(), globals())
         
-        y = input_
-        y = upscale(self.keras, y, 256)
-        y = upscale(self.keras, y, 128)
-        y = upscale(self.keras, y, 64)
-        
-        return self.keras.models.Model(input_, [x,y])
-        
-    def DecoderRGB(self): 
-        input_ = self.keras.layers.Input(shape=(128, 128, 256))
-        x = input_
-        x = self.keras.layers.convolutional.Conv2D(3, kernel_size=5, padding='same', activation='sigmoid')(x)
-        return self.keras.models.Model(input_, [x])
+        def downscale (dim):
+            def func(x):
+                return LeakyReLU(0.1)(Conv2D(dim, 5, strides=2, padding='same')(x))
+            return func 
+            
+        def upscale (dim):
+            def func(x):
+                return PixelShuffler()(LeakyReLU(0.1)(Conv2D(dim * 4, 3, strides=1, padding='same')(x)))
+            return func   
+            
+        def Encoder():
+            x = input_layer
+            x = downscale(128)(x)
+            x = downscale(256)(x)
+            x = downscale(512)(x)
+            x = downscale(1024)(x)
+            x = Flatten()(x)
+            return Model(input_layer, x)
 
-    def DecoderBW(self): 
-        input_ = self.keras.layers.Input(shape=(128, 128, 256))
-        x = input_
-        x = self.keras.layers.convolutional.Conv2D(1, kernel_size=5, padding='same', activation='sigmoid')(x)
-        return self.keras.models.Model(input_, [x])
-        
-    def DecoderMask(self):
-        input_ = self.keras.layers.Input(shape=(128, 128, 128))        
-        y = input_
-        y = self.keras.layers.convolutional.Conv2D(1, kernel_size=5, padding='same', activation='sigmoid')(y)
-        return self.keras.models.Model(input_, [y])
+        def Intermediate():
+            input_layer = Input(shape=(None, 8 * 8 * 1024))
+            x = input_layer
+            x = Dense(256)(x)
+            x = Dense(8 * 8 * 512)(x)
+            x = Reshape((8, 8, 512))(x)
+            x = upscale(512)(x)
+            return Model(input_layer, x)
+
+        def DecoderCommon(): 
+            input_ = Input(shape=(16, 16, 1024))
+            x = input_
+            x = upscale(512)(x)
+            x = upscale(256)(x)
+            x = upscale(128)(x)
+            
+            y = input_
+            y = upscale(256)(y)
+            y = upscale(128)(y)
+            y = upscale(64)(y)
+            
+            return Model(input_, [x,y])
+            
+        def DecoderRGB(): 
+            input_ = Input(shape=(128, 128, 256))
+            x = input_
+            x = Conv2D(3, kernel_size=5, padding='same', activation='sigmoid')(x)
+            return Model(input_, [x])
+
+        def DecoderBW(): 
+            input_ = Input(shape=(128, 128, 256))
+            x = input_
+            x = Conv2D(1, kernel_size=5, padding='same', activation='sigmoid')(x)
+            return Model(input_, [x])
+            
+        def DecoderMask():
+            input_ = Input(shape=(128, 128, 128))        
+            y = input_
+            y = Conv2D(1, kernel_size=5, padding='same', activation='sigmoid')(y)
+            return Model(input_, [y])
+            
+        return Encoder(), DecoderMask(), DecoderCommon(), DecoderCommon(), DecoderRGB(), DecoderBW(), Intermediate(), Intermediate()

@@ -12,7 +12,7 @@ from utils.DFLPNG import DFLPNG
 from utils import image_utils
 from facelib import FaceType
 import facelib 
-import gpufmkmgr
+from nnlib import nnlib
 
 from utils.SubprocessorBase import SubprocessorBase
 class ExtractSubprocessor(SubprocessorBase):
@@ -63,10 +63,10 @@ class ExtractSubprocessor(SubprocessorBase):
     def get_devices_for_type (self, type, multi_gpu):
         if (type == 'rects' or type == 'landmarks'):
             if not multi_gpu:            
-                devices = [gpufmkmgr.getBestDeviceIdx()]
+                devices = [nnlib.device.getBestDeviceIdx()]
             else:
-                devices = gpufmkmgr.getDevicesWithAtLeastTotalMemoryGB(2)
-            devices = [ (idx, gpufmkmgr.getDeviceName(idx), gpufmkmgr.getDeviceVRAMTotalGb(idx) ) for idx in devices]
+                devices = nnlib.device.getDevicesWithAtLeastTotalMemoryGB(2)
+            devices = [ (idx, nnlib.device.getDeviceName(idx), nnlib.device.getDeviceVRAMTotalGb(idx) ) for idx in devices]
 
         elif type == 'final':
             devices = [ (i, 'CPU%d' % (i), 0 ) for i in range(0, multiprocessing.cpu_count()) ]
@@ -253,31 +253,22 @@ class ExtractSubprocessor(SubprocessorBase):
         self.debug        = client_dict['debug']
         self.detector     = client_dict['detector']
 
-        self.keras = None
-        self.tf = None
-        self.tf_session = None
-        
         self.e = None
+
+        device_config = nnlib.DeviceConfig ( cpu_only=self.cpu_only, force_best_gpu_idx=self.device_idx, allow_growth=True)
         if self.type == 'rects':
             if self.detector is not None:
                 if self.detector == 'mt':
-                
-                    self.gpu_config = gpufmkmgr.GPUConfig ( cpu_only=self.cpu_only, force_best_gpu_idx=self.device_idx, allow_growth=True)                
-                    self.tf = gpufmkmgr.import_tf ( self.gpu_config )
-                    self.tf_session = gpufmkmgr.get_tf_session()
-                    self.keras = gpufmkmgr.import_keras()
-                    self.e = facelib.MTCExtractor(self.keras, self.tf, self.tf_session)                            
+                    nnlib.import_all (device_config)
+                    self.e = facelib.MTCExtractor(nnlib.keras, nnlib.tf, nnlib.tf_sess)                            
                 elif self.detector == 'dlib':
-                    self.dlib = gpufmkmgr.import_dlib( self.device_idx, cpu_only=self.cpu_only )
-                    self.e = facelib.DLIBExtractor(self.dlib)
+                    nnlib.import_dlib (device_config)
+                    self.e = facelib.DLIBExtractor(nnlib.dlib)
                 self.e.__enter__()
 
         elif self.type == 'landmarks':
-            self.gpu_config = gpufmkmgr.GPUConfig ( cpu_only=self.cpu_only, force_best_gpu_idx=self.device_idx, allow_growth=True)                
-            self.tf = gpufmkmgr.import_tf ( self.gpu_config )
-            self.tf_session = gpufmkmgr.get_tf_session()
-            self.keras = gpufmkmgr.import_keras()
-            self.e = facelib.LandmarksExtractor(self.keras)
+            nnlib.import_all (device_config)
+            self.e = facelib.LandmarksExtractor(nnlib.keras)
             self.e.__enter__()
             
         elif self.type == 'final':

@@ -41,25 +41,20 @@ def model_process(model_name, model_dir, in_options, sq, cq):
         
         cq.put ( {'op':'init', 'converter' : converter.copy_and_set_predictor( None ) } )
 
-        closing = False
-        while not closing:
+        while True:
             while not sq.empty():
                 obj = sq.get()
                 obj_op = obj['op']
                 if obj_op == 'predict':
                     result = converter.predictor ( obj['face'] )
                     cq.put ( {'op':'predict_result', 'result':result} )
-                elif obj_op == 'close':                    
-                    closing = True
-                    break
             time.sleep(0.005)        
-                    
-        model.finalize()
-        
     except Exception as e:
         print ( 'Error: %s' % (str(e)))
         traceback.print_exc()
-            
+    
+    
+    
 from utils.SubprocessorBase import SubprocessorBase
 class ConvertSubprocessor(SubprocessorBase):
 
@@ -129,10 +124,11 @@ class ConvertSubprocessor(SubprocessorBase):
         self.alignments  = client_dict['alignments']
         self.debug       = client_dict['debug']
         
-        import gpufmkmgr                
+        from nnlib import nnlib          
         #model process ate all GPU mem,
-        #so we cannot use GPU for any TF operations in converter processes (for example image_utils.TFLabConverter) 
-        gpufmkmgr.set_prefer_GPUConfig ( gpufmkmgr.GPUConfig (cpu_only=True) )
+        #so we cannot use GPU for any TF operations in converter processes (for example image_utils.TFLabConverter)
+        #therefore forcing prefer_DeviceConfig to CPU only
+        nnlib.prefer_DeviceConfig = nnlib.DeviceConfig (cpu_only=True)
         
         return None
 
@@ -156,6 +152,13 @@ class ConvertSubprocessor(SubprocessorBase):
             image = (cv2.imread(str(filename_path)) / 255.0).astype(np.float32)
 
             if self.converter.get_mode() == ConverterBase.MODE_IMAGE:
+                image = self.converter.convert_image(image, self.debug)
+                if self.debug:
+                    for img in image:
+                        cv2.imshow ('Debug convert', img )
+                        cv2.waitKey(0)
+                faces_processed = 1
+            elif self.converter.get_mode() == ConverterBase.MODE_IMAGE_WITH_LANDMARKS:
                 image_landmarks = DFLPNG.load( str(filename_path), throw_on_no_embedded_data=True ).get_landmarks()
                         
                 image = self.converter.convert_image(image, image_landmarks, self.debug)
@@ -270,9 +273,8 @@ def main (input_dir, output_dir, model_dir, model_name, aligned_dir=None, **in_o
                     output_path            = output_path,
                     alignments             = alignments,  
                     **in_options ).process()
-                              
-        model_sq.put ( {'op':'close'} )
-        model_p.join()
+
+        model_p.terminate()
         
         '''            
         if model_name == 'AVATAR':

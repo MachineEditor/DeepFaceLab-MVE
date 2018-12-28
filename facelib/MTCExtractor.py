@@ -18,14 +18,6 @@ class MTCExtractor(object):
         self.thresh2 = 0.85
         self.thresh3 = 0.6
         self.scale_factor = 0.95
-        
-        '''
-        self.min_face_size = self.scale_to * 0.042
-        self.thresh1 = 7
-        self.thresh2 = 85
-        self.thresh3 = 6
-        self.scale_factor = 0.95
-        '''
 
     def __enter__(self):
         with self.tf.variable_scope('pnet2'):

@@ -9,9 +9,8 @@ from utils import std_utils
 from utils import image_utils
 import numpy as np
 import cv2
-import gpufmkmgr
 from samples import SampleGeneratorBase
-
+from nnlib import nnlib
 '''
 You can implement your own model. Check examples.
 '''
@@ -63,27 +62,22 @@ class ModelBase(object):
                 if self.epoch == 0:
                     for filename in Path_utils.get_image_paths(self.preview_history_path):
                         Path(filename).unlink()    
-
-                        
-        self.gpu_config = gpufmkmgr.GPUConfig(allow_growth=False, **in_options)
-        self.gpu_total_vram_gb = self.gpu_config.gpu_total_vram_gb
+  
+        self.device_config = nnlib.DeviceConfig(allow_growth=False, **in_options)
 
         if self.epoch == 0: 
             #first run         
-            self.options['created_vram_gb'] = self.gpu_total_vram_gb
-            self.created_vram_gb = self.gpu_total_vram_gb
+            self.options['created_vram_gb'] = self.device_config.gpu_total_vram_gb
+            self.created_vram_gb = self.device_config.gpu_total_vram_gb
         else: 
             #not first run        
             if 'created_vram_gb' in self.options.keys():
                 self.created_vram_gb = self.options['created_vram_gb']
             else:
-                self.options['created_vram_gb'] = self.gpu_total_vram_gb
-                self.created_vram_gb = self.gpu_total_vram_gb
-            
-        self.tf = gpufmkmgr.import_tf( self.gpu_config )
-        self.tf_sess = gpufmkmgr.get_tf_session()
-        self.keras = gpufmkmgr.import_keras()
-        self.keras_contrib = gpufmkmgr.import_keras_contrib()
+                self.options['created_vram_gb'] = self.device_config.gpu_total_vram_gb
+                self.created_vram_gb = self.device_config.gpu_total_vram_gb
+
+        nnlib.import_all (self.device_config)
 
         self.onInitialize(**in_options)
         
@@ -108,18 +102,18 @@ class ModelBase(object):
         print ("==")
         print ("== Options:")
         print ("== |== batch_size : %s " % (self.batch_size) )
-        print ("== |== multi_gpu : %s " % (self.gpu_config.multi_gpu) )
+        print ("== |== multi_gpu : %s " % (self.device_config.multi_gpu) )
         for key in self.options.keys():
             print ("== |== %s : %s" % (key, self.options[key]) )        
         
         print ("== Running on:")
-        if self.gpu_config.cpu_only:
+        if self.device_config.cpu_only:
             print ("== |== [CPU]")
         else:
-            for idx in self.gpu_config.gpu_idxs:
-                print ("== |== [%d : %s]" % (idx, gpufmkmgr.getDeviceName(idx)) )
+            for idx in self.device_config.gpu_idxs:
+                print ("== |== [%d : %s]" % (idx, nnlib.device.getDeviceName(idx)) )
  
-        if not self.gpu_config.cpu_only and self.gpu_total_vram_gb == 2:
+        if not self.device_config.cpu_only and self.device_config.gpu_total_vram_gb == 2:
             print ("==")
             print ("== WARNING: You are using 2GB GPU. Result quality may be significantly decreased.")
             print ("== If training does not start, close all programs and try again.")
@@ -168,18 +162,18 @@ class ModelBase(object):
         return ConverterBase(self, **in_options) 
      
     def to_multi_gpu_model_if_possible (self, models_list):
-        if len(self.gpu_config.gpu_idxs) > 1:
+        if len(self.device_config.gpu_idxs) > 1:
             #make batch_size to divide on GPU count without remainder
-            self.batch_size = int( self.batch_size / len(self.gpu_config.gpu_idxs) )
+            self.batch_size = int( self.batch_size / len(self.device_config.gpu_idxs) )
             if self.batch_size == 0:
                 self.batch_size = 1                
-            self.batch_size *= len(self.gpu_config.gpu_idxs)
+            self.batch_size *= len(self.device_config.gpu_idxs)
             
             result = []
             for model in models_list:
                 for i in range( len(model.output_names) ):
                     model.output_names = 'output_%d' % (i)                 
-                result += [ self.keras.utils.multi_gpu_model( model, self.gpu_config.gpu_idxs ) ]    
+                result += [ nnlib.keras.utils.multi_gpu_model( model, self.device_config.gpu_idxs ) ]    
                 
             return result                
         else:
@@ -259,12 +253,12 @@ class ModelBase(object):
                 cv2.imwrite ( str (self.preview_history_path / ('%.6d.jpg' %( self.epoch) )), img )     
                 
         self.epoch += 1
-        
-        #............."Saving... 
+
         if epoch_time >= 10000:
-            loss_string = "Training [#{0:06d}][{1:03d}s]".format ( self.epoch, epoch_time / 1000 )
+            #............."Saving... 
+            loss_string = "Training [#{0:06d}][{1:.5s}s]".format ( self.epoch, '{:0.4f}'.format(epoch_time / 1000) )
         else:
-            loss_string = "Training [#{0:06d}][{1:04d}ms]".format ( self.epoch, int(epoch_time*1000) % 10000 )
+            loss_string = "Training [#{0:06d}][{1:04d}ms]".format ( self.epoch, int(epoch_time*1000) )
         for (loss_name, loss_value) in losses:
             loss_string += " %s:%.3f" % (loss_name, loss_value)
 
@@ -274,13 +268,19 @@ class ModelBase(object):
         self.last_sample = self.generate_next_sample()     
         
     def finalize(self):
-        gpufmkmgr.finalize_keras()
+        nnlib.finalize_all()
                 
     def is_first_run(self):
         return self.epoch == 0
         
     def is_debug(self):
         return self.debug
+        
+    def set_batch_size(self, batch_size):
+        self.batch_size = batch_size
+        
+    def get_batch_size(self):
+        return self.batch_size
         
     def get_epoch(self):
         return self.epoch
@@ -301,16 +301,16 @@ class ModelBase(object):
         #example d = {2:2,3:4,4:8,5:16,6:32,7:32,8:32,9:48} 
         keys = [x for x in d.keys()]
         
-        if self.gpu_config.cpu_only:
+        if self.device_config.cpu_only:
             if self.batch_size == 0:
                 self.batch_size = 2
         else:
-            if self.gpu_total_vram_gb < keys[0]:
+            if self.device_config.gpu_total_vram_gb < keys[0]:
                 raise Exception ('Sorry, this model works only on %dGB+ GPU' % ( keys[0] ) )
 
             if self.batch_size == 0:        
                 for x in keys:
-                    if self.gpu_total_vram_gb <= x:
+                    if self.device_config.gpu_total_vram_gb <= x:
                         self.batch_size = d[x]
                         break
                         

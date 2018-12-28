@@ -1,12 +1,10 @@
-from models import ModelBase
 import numpy as np
-import cv2
 
-from nnlib import DSSIMMaskLossClass
-from nnlib import conv
-from nnlib import upscale
+from nnlib import nnlib
+from models import ModelBase
 from facelib import FaceType
 from samples import *
+
 class Model(ModelBase):
 
     encoderH5 = 'encoder.h5'
@@ -15,30 +13,27 @@ class Model(ModelBase):
 
     #override
     def onInitialize(self, **in_options):
+        exec(nnlib.import_all(), locals(), globals())
         self.set_vram_batch_requirements( {4.5:16,5:16,6:16,7:16,8:24,9:24,10:32,11:32,12:32,13:48} )
                 
-        ae_input_layer = self.keras.layers.Input(shape=(128, 128, 3))
-        mask_layer = self.keras.layers.Input(shape=(128, 128, 1)) #same as output
+        ae_input_layer = Input(shape=(128, 128, 3))
+        mask_layer = Input(shape=(128, 128, 1)) #same as output
         
-        self.encoder = self.Encoder(ae_input_layer)
-        self.decoder_src = self.Decoder()
-        self.decoder_dst = self.Decoder()        
-        
+        self.encoder, self.decoder_src, self.decoder_dst = self.Build(ae_input_layer)    
+
         if not self.is_first_run():
             self.encoder.load_weights     (self.get_strpath_storage_for_file(self.encoderH5))
             self.decoder_src.load_weights (self.get_strpath_storage_for_file(self.decoder_srcH5))
             self.decoder_dst.load_weights (self.get_strpath_storage_for_file(self.decoder_dstH5))
 
-        self.autoencoder_src = self.keras.models.Model([ae_input_layer,mask_layer], self.decoder_src(self.encoder(ae_input_layer)))
-        self.autoencoder_dst = self.keras.models.Model([ae_input_layer,mask_layer], self.decoder_dst(self.encoder(ae_input_layer)))
+        self.autoencoder_src = Model([ae_input_layer,mask_layer], self.decoder_src(self.encoder(ae_input_layer)))
+        self.autoencoder_dst = Model([ae_input_layer,mask_layer], self.decoder_dst(self.encoder(ae_input_layer)))
 
         if self.is_training_mode:
             self.autoencoder_src, self.autoencoder_dst = self.to_multi_gpu_model_if_possible ( [self.autoencoder_src, self.autoencoder_dst] )
                 
-        optimizer = self.keras.optimizers.Adam(lr=5e-5, beta_1=0.5, beta_2=0.999)
-        dssimloss = DSSIMMaskLossClass(self.tf)([mask_layer])
-        self.autoencoder_src.compile(optimizer=optimizer, loss=[dssimloss, 'mse'] )
-        self.autoencoder_dst.compile(optimizer=optimizer, loss=[dssimloss, 'mse'] )
+        self.autoencoder_src.compile(optimizer=Adam(lr=5e-5, beta_1=0.5, beta_2=0.999), loss=[DSSIMMaskLoss([mask_layer]), 'mse'] )
+        self.autoencoder_dst.compile(optimizer=Adam(lr=5e-5, beta_1=0.5, beta_2=0.999), loss=[DSSIMMaskLoss([mask_layer]), 'mse'] )
   
         if self.is_training_mode:
             f = SampleProcessor.TypeFlags
@@ -123,33 +118,48 @@ class Model(ModelBase):
             
         return ConverterMasked(self.predictor_func, predictor_input_size=128, output_size=128, face_type=FaceType.FULL, clip_border_mask_per=0.046875, **in_options)
         
-    def Encoder(self, input_layer):
-        x = input_layer
-        x = conv(self.keras, x, 128)
-        x = conv(self.keras, x, 256)
-        x = conv(self.keras, x, 512)
-        x = conv(self.keras, x, 1024)
-
-        x = self.keras.layers.Dense(512)(self.keras.layers.Flatten()(x))
-        x = self.keras.layers.Dense(8 * 8 * 512)(x)
-        x = self.keras.layers.Reshape((8, 8, 512))(x)
-        x = upscale(self.keras, x, 512)
+    def Build(self, input_layer):
+        exec(nnlib.code_import_all, locals(), globals())
+    
+        def downscale (dim):
+            def func(x):
+                return LeakyReLU(0.1)(Conv2D(dim, 5, strides=2, padding='same')(x))
+            return func 
             
-        return self.keras.models.Model(input_layer, x)
-
-    def Decoder(self):
-        input_ = self.keras.layers.Input(shape=(16, 16, 512))
-        x = input_
-        x = upscale(self.keras, x, 512)
-        x = upscale(self.keras, x, 256)
-        x = upscale(self.keras, x, 128)
-        
-        y = input_  #mask decoder
-        y = upscale(self.keras, y, 512)
-        y = upscale(self.keras, y, 256)
-        y = upscale(self.keras, y, 128)
+        def upscale (dim):
+            def func(x):
+                return PixelShuffler()(LeakyReLU(0.1)(Conv2D(dim * 4, 3, strides=1, padding='same')(x)))
+            return func   
             
-        x = self.keras.layers.convolutional.Conv2D(3, kernel_size=5, padding='same', activation='sigmoid')(x)
-        y = self.keras.layers.convolutional.Conv2D(1, kernel_size=5, padding='same', activation='sigmoid')(y)
+        def Encoder(input_layer):            
+            x = input_layer
+            x = downscale(128)(x)
+            x = downscale(256)(x)
+            x = downscale(512)(x)
+            x = downscale(1024)(x)
+
+            x = Dense(512)(Flatten()(x))
+            x = Dense(8 * 8 * 512)(x)
+            x = Reshape((8, 8, 512))(x)
+            x = upscale(512)(x)
+                
+            return Model(input_layer, x)
+
+        def Decoder():
+            input_ = Input(shape=(16, 16, 512))
+            x = input_
+            x = upscale(512)(x)
+            x = upscale(256)(x)
+            x = upscale(128)(x)
+            
+            y = input_  #mask decoder
+            y = upscale(512)(y)
+            y = upscale(256)(y)
+            y = upscale(128)(y)
+                
+            x = Conv2D(3, kernel_size=5, padding='same', activation='sigmoid')(x)
+            y = Conv2D(1, kernel_size=5, padding='same', activation='sigmoid')(y)
+            
+            return Model(input_, [x,y])
         
-        return self.keras.models.Model(input_, [x,y])
+        return Encoder(input_layer), Decoder(), Decoder()

@@ -1,9 +1,6 @@
 import numpy as np
-import cv2
 
-from nnlib import DSSIMMaskLossClass
-from nnlib import conv
-from nnlib import upscale
+from nnlib import nnlib
 from models import ModelBase
 from facelib import FaceType
 from samples import *
@@ -16,10 +13,8 @@ class Model(ModelBase):
 
     #override
     def onInitialize(self, **in_options):
-        tf = self.tf
-        keras = self.keras
-        K = keras.backend
-        self.set_vram_batch_requirements( {2.5:2,3:2,4:2,4:4,5:8,6:8,7:16,8:16,9:24,10:24,11:32,12:32,13:48} )
+        exec(nnlib.import_all(), locals(), globals())        
+        self.set_vram_batch_requirements( {2.5:2,3:2,4:2,4:4,5:8,6:12,7:16,8:16,9:24,10:24,11:32,12:32,13:48} )
                 
         bgr_shape, mask_shape, self.encoder, self.decoder_src, self.decoder_dst = self.Build(self.created_vram_gb)
         if not self.is_first_run():
@@ -27,21 +22,21 @@ class Model(ModelBase):
             self.decoder_src.load_weights (self.get_strpath_storage_for_file(self.decoder_srcH5))
             self.decoder_dst.load_weights (self.get_strpath_storage_for_file(self.decoder_dstH5))
             
-        input_src_bgr = self.keras.layers.Input(bgr_shape)
-        input_src_mask = self.keras.layers.Input(mask_shape)
-        input_dst_bgr = self.keras.layers.Input(bgr_shape)
-        input_dst_mask = self.keras.layers.Input(mask_shape)
+        input_src_bgr = Input(bgr_shape)
+        input_src_mask = Input(mask_shape)
+        input_dst_bgr = Input(bgr_shape)
+        input_dst_mask = Input(mask_shape)
 
         rec_src_bgr, rec_src_mask = self.decoder_src( self.encoder(input_src_bgr) )        
         rec_dst_bgr, rec_dst_mask = self.decoder_dst( self.encoder(input_dst_bgr) )
 
-        self.ae = self.keras.models.Model([input_src_bgr,input_src_mask,input_dst_bgr,input_dst_mask], [rec_src_bgr, rec_src_mask, rec_dst_bgr, rec_dst_mask] )
+        self.ae = Model([input_src_bgr,input_src_mask,input_dst_bgr,input_dst_mask], [rec_src_bgr, rec_src_mask, rec_dst_bgr, rec_dst_mask] )
             
         if self.is_training_mode:
             self.ae, = self.to_multi_gpu_model_if_possible ( [self.ae,] )
 
-        self.ae.compile(optimizer=self.keras.optimizers.Adam(lr=5e-5, beta_1=0.5, beta_2=0.999),
-                        loss=[ DSSIMMaskLossClass(self.tf)([input_src_mask]), 'mae', DSSIMMaskLossClass(self.tf)([input_dst_mask]), 'mae' ] )
+        self.ae.compile(optimizer=Adam(lr=5e-5, beta_1=0.5, beta_2=0.999),
+                        loss=[ DSSIMMaskLoss([input_src_mask]), 'mae', DSSIMMaskLoss([input_dst_mask]), 'mae' ] )
   
         self.src_view = K.function([input_src_bgr],[rec_src_bgr, rec_src_mask])
         self.dst_view = K.function([input_dst_bgr],[rec_dst_bgr, rec_dst_mask])
@@ -129,61 +124,73 @@ class Model(ModelBase):
         return ConverterMasked(self.predictor_func, predictor_input_size=128, output_size=128, face_type=FaceType.HALF, **in_options)
     
     def Build(self, created_vram_gb):
+        exec(nnlib.code_import_all, locals(), globals())
+        
         bgr_shape = (128, 128, 3)
         mask_shape = (128, 128, 1)
         
+        def downscale (dim):
+            def func(x):
+                return LeakyReLU(0.1)(Conv2D(dim, 5, strides=2, padding='same')(x))
+            return func 
+            
+        def upscale (dim):
+            def func(x):
+                return PixelShuffler()(LeakyReLU(0.1)(Conv2D(dim * 4, 3, strides=1, padding='same')(x)))
+            return func   
+            
         def Encoder(input_shape):
-            input_layer = self.keras.layers.Input(input_shape)
+            input_layer = Input(input_shape)
             x = input_layer
             if created_vram_gb >= 5:
-                x = conv(self.keras, x, 128)
-                x = conv(self.keras, x, 256)
-                x = conv(self.keras, x, 512)
-                x = conv(self.keras, x, 1024)
-                x = self.keras.layers.Dense(512)(self.keras.layers.Flatten()(x))
-                x = self.keras.layers.Dense(8 * 8 * 512)(x)
-                x = self.keras.layers.Reshape((8, 8, 512))(x)
-                x = upscale(self.keras, x, 512)
+                x = downscale(128)(x)
+                x = downscale(256)(x)
+                x = downscale(512)(x)
+                x = downscale(1024)(x)
+                x = Dense(512)(Flatten()(x))
+                x = Dense(8 * 8 * 512)(x)
+                x = Reshape((8, 8, 512))(x)
+                x = upscale(512)(x)
             else:
-                x = conv(self.keras, x, 128)
-                x = conv(self.keras, x, 256)
-                x = conv(self.keras, x, 512)
-                x = conv(self.keras, x, 1024)
-                x = self.keras.layers.Dense(256)(self.keras.layers.Flatten()(x))
-                x = self.keras.layers.Dense(8 * 8 * 256)(x)
-                x = self.keras.layers.Reshape((8, 8, 256))(x)
-                x = upscale(self.keras, x, 256)
+                x = downscale(128)(x)
+                x = downscale(256)(x)
+                x = downscale(512)(x)
+                x = downscale(1024)(x)
+                x = Dense(256)(Flatten()(x))
+                x = Dense(8 * 8 * 256)(x)
+                x = Reshape((8, 8, 256))(x)
+                x = upscale(256)(x)
                 
-            return self.keras.models.Model(input_layer, x)
+            return Model(input_layer, x)
 
         def Decoder():
             if created_vram_gb >= 5:
-                input_ = self.keras.layers.Input(shape=(16, 16, 512))
+                input_ = Input(shape=(16, 16, 512))
                 x = input_
-                x = upscale(self.keras, x, 512)
-                x = upscale(self.keras, x, 256)
-                x = upscale(self.keras, x, 128)
+                x = upscale(512)(x)
+                x = upscale(256)(x)
+                x = upscale(128)(x)
                 
                 y = input_  #mask decoder
-                y = upscale(self.keras, y, 512)
-                y = upscale(self.keras, y, 256)
-                y = upscale(self.keras, y, 128)
+                y = upscale(512)(y)
+                y = upscale(256)(y)
+                y = upscale(128)(y)
             else:
                 input_ = self.keras.layers.Input(shape=(16, 16, 256))
                 x = input_
-                x = upscale(self.keras, x, 256)
-                x = upscale(self.keras, x, 128)
-                x = upscale(self.keras, x, 64)
+                x = upscale(256)(x)
+                x = upscale(128)(x)
+                x = upscale(64)(x)
                 
                 y = input_  #mask decoder
-                y = upscale(self.keras, y, 256)
-                y = upscale(self.keras, y, 128)
-                y = upscale(self.keras, y, 64)
+                y = upscale(256)(y)
+                y = upscale(128)(y)
+                y = upscale(64)(y)
             
-            x = self.keras.layers.convolutional.Conv2D(3, kernel_size=5, padding='same', activation='sigmoid')(x)
-            y = self.keras.layers.convolutional.Conv2D(1, kernel_size=5, padding='same', activation='sigmoid')(y)
+            x = Conv2D(3, kernel_size=5, padding='same', activation='sigmoid')(x)
+            y = Conv2D(1, kernel_size=5, padding='same', activation='sigmoid')(y)
             
             
-            return self.keras.models.Model(input_, [x,y])
+            return Model(input_, [x,y])
             
         return bgr_shape, mask_shape, Encoder(bgr_shape), Decoder(), Decoder()

@@ -6,6 +6,7 @@ You can implement your own Converter, check example ConverterMasked.py
 class ConverterBase(object):
     MODE_FACE = 0
     MODE_IMAGE = 1
+    MODE_IMAGE_WITH_LANDMARKS = 2
     
     #overridable
     def __init__(self, predictor):

@@ -240,9 +240,10 @@ if __name__ == "__main__":
     arguments = parser.parse_args()
     if arguments.tf_suppress_std:
         os.environ['TF_SUPPRESS_STD'] = '1'
+
     arguments.func(arguments)
 
-
+    print ("Done.")
 '''
 import code
 code.interact(local=dict(globals(), **locals()))

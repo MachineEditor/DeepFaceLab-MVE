@@ -2,10 +2,7 @@ import numpy as np
 import cv2
 from models import ModelBase
 from samples import *
-from nnlib import tf_dssim
-from nnlib import DSSIMLossClass
-from nnlib import conv
-from nnlib import upscale
+from nnlib import nnlib
 
 class Model(ModelBase):
 
@@ -17,9 +14,7 @@ class Model(ModelBase):
 
     #override
     def onInitialize(self, **in_options):
-        tf = self.tf
-        keras = self.keras
-        K = keras.backend
+        exec(nnlib.import_all(), locals(), globals())
         
         self.set_vram_batch_requirements( {3.5:8,4:8,5:12,6:16,7:24,8:32,9:48} )
         if self.batch_size < 4:
@@ -34,39 +29,39 @@ class Model(ModelBase):
             self.encoder256.load_weights     (self.get_strpath_storage_for_file(self.encoder256H5))
             self.decoder256.load_weights (self.get_strpath_storage_for_file(self.decoder256H5))
             
-        if self.is_training_mode:
-            self.encoder64, self.decoder64_src, self.decoder64_dst, self.encoder256, self.decoder256 = self.to_multi_gpu_model_if_possible ( [self.encoder64, self.decoder64_src, self.decoder64_dst, self.encoder256, self.decoder256] )
+        #if self.is_training_mode:
+        #    self.encoder64, self.decoder64_src, self.decoder64_dst, self.encoder256, self.decoder256 = self.to_multi_gpu_model_if_possible ( [self.encoder64, self.decoder64_src, self.decoder64_dst, self.encoder256, self.decoder256] )
         
-        input_A_warped64 = keras.layers.Input(img_shape64)
-        input_B_warped64 = keras.layers.Input(img_shape64)
+        input_A_warped64 = Input(img_shape64)
+        input_B_warped64 = Input(img_shape64)
         A_rec64 = self.decoder64_src(self.encoder64(input_A_warped64))
         B_rec64 = self.decoder64_dst(self.encoder64(input_B_warped64))
-        self.ae64 = self.keras.models.Model([input_A_warped64, input_B_warped64], [A_rec64, B_rec64] )
+        self.ae64 = Model([input_A_warped64, input_B_warped64], [A_rec64, B_rec64] )
 
         if self.is_training_mode:
             self.ae64, = self.to_multi_gpu_model_if_possible ( [self.ae64,] )
 
-        self.ae64.compile(optimizer=self.keras.optimizers.Adam(lr=5e-5, beta_1=0.5, beta_2=0.999),
-                        loss=[DSSIMLossClass(self.tf)(), DSSIMLossClass(self.tf)()] )
+        self.ae64.compile(optimizer=Adam(lr=5e-5, beta_1=0.5, beta_2=0.999),
+                        loss=[DSSIMLoss(), DSSIMLoss()] )
                          
         self.A64_view = K.function ([input_A_warped64], [A_rec64])
         self.B64_view = K.function ([input_B_warped64], [B_rec64])
 
-        input_A_warped64 = keras.layers.Input(img_shape64)
-        input_A_target256 = keras.layers.Input(img_shape256)
+        input_A_warped64 = Input(img_shape64)
+        input_A_target256 = Input(img_shape256)
         A_rec256 = self.decoder256( self.encoder256(input_A_warped64)   )       
         
-        input_B_warped64 = keras.layers.Input(img_shape64)
+        input_B_warped64 = Input(img_shape64)
         BA_rec64 = self.decoder64_src( self.encoder64(input_B_warped64) )
         BA_rec256 = self.decoder256( self.encoder256(BA_rec64)  )       
 
-        self.ae256 = self.keras.models.Model([input_A_warped64], [A_rec256] )
+        self.ae256 = Model([input_A_warped64], [A_rec256] )
 
         if self.is_training_mode:
             self.ae256, = self.to_multi_gpu_model_if_possible ( [self.ae256,] )
 
-        self.ae256.compile(optimizer=self.keras.optimizers.Adam(lr=5e-5, beta_1=0.5, beta_2=0.999),
-                        loss=[DSSIMLossClass(self.tf)()])
+        self.ae256.compile(optimizer=Adam(lr=5e-5, beta_1=0.5, beta_2=0.999),
+                        loss=[DSSIMLoss()])
 
         self.A256_view = K.function ([input_A_warped64], [A_rec256])        
         self.BA256_view = K.function ([input_B_warped64], [BA_rec256])
@@ -153,62 +148,67 @@ class Model(ModelBase):
         return ConverterAvatar(self.predictor_func, predictor_input_size=64, output_size=256, **in_options)
         
     def Build(self):
-        keras, K = self.keras, self.keras.backend
+        exec(nnlib.code_import_all, locals(), globals())
         
         img_shape64  = (64,64,3)
         img_shape256  = (256,256,3)
 
+        def upscale (dim):
+            def func(x):
+                return PixelShuffler()(LeakyReLU(0.1)(Conv2D(dim * 4, 3, strides=1, padding='same')(x)))
+            return func   
+            
         def Encoder(_input):
             x = _input
-            x = self.keras.layers.convolutional.Conv2D(90, kernel_size=5, strides=1, padding='same')(x)
-            x = self.keras.layers.convolutional.Conv2D(90, kernel_size=5, strides=1, padding='same')(x)
-            x = self.keras.layers.MaxPooling2D(pool_size=(3, 3), strides=2, padding='same')(x)
+            x = Conv2D(90, kernel_size=5, strides=1, padding='same')(x)
+            x = Conv2D(90, kernel_size=5, strides=1, padding='same')(x)
+            x = MaxPooling2D(pool_size=(3, 3), strides=2, padding='same')(x)
             
-            x = self.keras.layers.convolutional.Conv2D(180, kernel_size=3, strides=1, padding='same')(x)
-            x = self.keras.layers.convolutional.Conv2D(180, kernel_size=3, strides=1, padding='same')(x)
-            x = self.keras.layers.MaxPooling2D(pool_size=(3, 3), strides=2, padding='same')(x)
+            x = Conv2D(180, kernel_size=3, strides=1, padding='same')(x)
+            x = Conv2D(180, kernel_size=3, strides=1, padding='same')(x)
+            x = MaxPooling2D(pool_size=(3, 3), strides=2, padding='same')(x)
             
-            x = self.keras.layers.convolutional.Conv2D(360, kernel_size=3, strides=1, padding='same')(x)
-            x = self.keras.layers.convolutional.Conv2D(360, kernel_size=3, strides=1, padding='same')(x)
-            x = self.keras.layers.MaxPooling2D(pool_size=(3, 3), strides=2, padding='same')(x)
+            x = Conv2D(360, kernel_size=3, strides=1, padding='same')(x)
+            x = Conv2D(360, kernel_size=3, strides=1, padding='same')(x)
+            x = MaxPooling2D(pool_size=(3, 3), strides=2, padding='same')(x)
             
-            x = self.keras.layers.Dense (1024)(x)
-            x = self.keras.layers.advanced_activations.LeakyReLU(0.1)(x)
-            x = self.keras.layers.Dropout(0.5)(x)
+            x = Dense (1024)(x)
+            x = LeakyReLU(0.1)(x)
+            x = Dropout(0.5)(x)
             
-            x = self.keras.layers.Dense (1024)(x)
-            x = self.keras.layers.advanced_activations.LeakyReLU(0.1)(x)
-            x = self.keras.layers.Dropout(0.5)(x)
-            x = self.keras.layers.Flatten()(x)
-            x = self.keras.layers.Dense (64)(x)
+            x = Dense (1024)(x)
+            x = LeakyReLU(0.1)(x)
+            x = Dropout(0.5)(x)
+            x = Flatten()(x)
+            x = Dense (64)(x)
             
             return keras.models.Model (_input, x)
             
-        encoder256 = Encoder( keras.layers.Input (img_shape64) )
-        encoder64 = Encoder( keras.layers.Input (img_shape64) )
+        encoder256 = Encoder( Input (img_shape64) )
+        encoder64 = Encoder( Input (img_shape64) )
 
         def decoder256(encoder):
-            decoder_input = keras.layers.Input ( K.int_shape(encoder.outputs[0])[1:] )
+            decoder_input = Input ( K.int_shape(encoder.outputs[0])[1:] )
             x = decoder_input
-            x = self.keras.layers.Dense(16 * 16 * 720)(x)
-            x = keras.layers.Reshape ( (16, 16, 720) )(x)
-            x = upscale(keras, x, 720)
-            x = upscale(keras, x, 360)
-            x = upscale(keras, x, 180)
-            x = upscale(keras, x, 90)
-            x = keras.layers.convolutional.Conv2D(3, kernel_size=5, padding='same', activation='sigmoid')(x)
+            x = Dense(16 * 16 * 720)(x)
+            x = Reshape ( (16, 16, 720) )(x)
+            x = upscale(720)(x)
+            x = upscale(360)(x)
+            x = upscale(180)(x)
+            x = upscale(90)(x)
+            x = Conv2D(3, kernel_size=5, padding='same', activation='sigmoid')(x)
             return keras.models.Model(decoder_input, x)
         
         def decoder64(encoder):
-            decoder_input = keras.layers.Input ( K.int_shape(encoder.outputs[0])[1:] )
+            decoder_input = Input ( K.int_shape(encoder.outputs[0])[1:] )
             x = decoder_input
-            x = self.keras.layers.Dense(8 * 8 * 720)(x)
-            x = keras.layers.Reshape ( (8, 8, 720) )(x)
-            x = upscale(keras, x, 360)
-            x = upscale(keras, x, 180)
-            x = upscale(keras, x, 90)
-            x = keras.layers.convolutional.Conv2D(3, kernel_size=5, padding='same', activation='sigmoid')(x)
-            return keras.models.Model(decoder_input, x)
+            x = Dense(8 * 8 * 720)(x)
+            x = Reshape ( (8, 8, 720) )(x)
+            x = upscale(360)(x)
+            x = upscale(180)(x)
+            x = upscale(90)(x)
+            x = Conv2D(3, kernel_size=5, padding='same', activation='sigmoid')(x)
+            return Model(decoder_input, x)
             
         return img_shape64, img_shape256, encoder64, decoder64(encoder64), decoder64(encoder64), encoder256, decoder256(encoder256)
         
@@ -230,7 +230,7 @@ class ConverterAvatar(ConverterBase):
   
     #override
     def get_mode(self):
-        return ConverterBase.MODE_IMAGE
+        return ConverterBase.MODE_IMAGE_WITH_LANDMARKS
         
     #override
     def dummy_predict(self):
