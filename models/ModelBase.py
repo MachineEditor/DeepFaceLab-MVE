@@ -92,7 +92,7 @@ class ModelBase(object):
                     if not isinstance(generator, SampleGeneratorBase):
                         raise Exception('training data generator is not subclass of SampleGeneratorBase')
                         
-            if self.sample_for_preview is None:
+            if (self.sample_for_preview is None) or (self.epoch == 0):
                 self.sample_for_preview = self.generate_next_sample()
 
         print ("===== Model summary =====")

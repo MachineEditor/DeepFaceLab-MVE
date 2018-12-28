@@ -551,8 +551,8 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 for i in range(n_blocks):
                     x = ResnetBlock(ngf*4)(x)
                     
-                x = ReLU()(XNormalization(Conv2DTranspose(ngf*2, 3, 2, 'same')(x)))
-                x = ReLU()(XNormalization(Conv2DTranspose(ngf  , 3, 2, 'same')(x)))
+                x = ReLU()(XNormalization(PixelShuffler()(Conv2D(ngf*2 *4, 3, 1, 'same')(x))))
+                x = ReLU()(XNormalization(PixelShuffler()(Conv2D(ngf   *4, 3, 1, 'same')(x))))
                 
                 x = ReflectionPadding2D((3,3))(x)
                 x = Conv2D(output_nc, 7, 1, 'valid')(x)
