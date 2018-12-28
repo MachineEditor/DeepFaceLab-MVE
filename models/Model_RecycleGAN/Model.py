@@ -36,9 +36,9 @@ class Model(ModelBase):
                 created_resolution = 64
 
             try:
-                created_batch_size = int ( input ("Batch_size (minimum/default - 16) : ") )
+                created_batch_size = int ( input ("Batch_size (minimum/default - 10) : ") )
             except:
-                created_batch_size = 16
+                created_batch_size = 10
             created_batch_size = max(created_batch_size,1)
             
             print ("Done. If training won't start, decrease resolution")
