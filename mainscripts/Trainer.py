@@ -277,7 +277,7 @@ def previewThread (input_queue, output_queue):
             
     cv2.destroyAllWindows()
     
-def main (training_data_src_dir, training_data_dst_dir, model_path, model_name, disable_preview, **in_options):
+def main (training_data_src_dir, training_data_dst_dir, model_path, model_name, **in_options):
     print ("Running trainer.\r\n")
     
     output_queue = queue.Queue()
@@ -286,5 +286,4 @@ def main (training_data_src_dir, training_data_dst_dir, model_path, model_name, 
     thread = threading.Thread(target=trainerThread, args=(output_queue, input_queue, training_data_src_dir, training_data_dst_dir, model_path, model_name), kwargs=in_options )
     thread.start()
 
-    if not disable_preview:
-        previewThread (input_queue, output_queue)
+    previewThread (input_queue, output_queue)
