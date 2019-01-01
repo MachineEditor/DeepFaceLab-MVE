@@ -80,7 +80,6 @@ if __name__ == "__main__":
             model_path=arguments.model_dir, 
             model_name=arguments.model_name,
             debug              = arguments.debug,
-            preview           = arguments.preview,
             #**options
             batch_size         = arguments.batch_size,
             write_preview_history = arguments.write_preview_history,
@@ -108,7 +107,6 @@ if __name__ == "__main__":
     train_parser.add_argument('--multi-gpu', action="store_true", dest="multi_gpu", default=False, help="MultiGPU option. It will select only same best(worst) GPU models.")
     train_parser.add_argument('--force-gpu-idxs', type=str, dest="force_gpu_idxs", default=None, help="Override final GPU idxs. Example: 0,1,2.")
     train_parser.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Train on CPU.")
-    train_parser.add_argument('--preview', action="store_true",dest="preview", default=False, help="Show preview.")
 
     train_parser.set_defaults (func=process_train)
     
