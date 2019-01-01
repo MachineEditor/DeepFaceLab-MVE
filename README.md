@@ -176,6 +176,9 @@ Video tutorial: https://www.youtube.com/watch?v=K98nTNjXkq8
 
 Windows 10 consumes % of VRAM even if card unused for video output.
 
+### For Mac Users
+Check out [DockerCPU.md](DockerCPU.md) for more detailed instructions.
+
 ### **Problem of the year**:
 
 algorithm of overlaying neural face onto video face located in ConverterMasked.py.

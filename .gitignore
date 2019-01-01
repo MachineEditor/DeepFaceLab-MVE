@@ -13,3 +13,5 @@
 !models
 !nnlib
 !utils
+!Dockerfile*
+!*.sh

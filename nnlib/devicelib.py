@@ -58,7 +58,7 @@ class devicelib:
         try:
             nvmlInit()
             nvmlShutdown()
-        except e:
+        except:
             return False
         return True    
      

@@ -2,7 +2,8 @@
 import locale
 
 system_locale = locale.getdefaultlocale()[0]
-system_language = system_locale[0:2]
+# system_locale may be nil
+system_language = system_locale[0:2] if system_locale is not None else "en"
 
 windows_font_name_map = {
     'en' : 'cour',
