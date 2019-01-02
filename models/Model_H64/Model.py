@@ -4,6 +4,7 @@ from nnlib import nnlib
 from models import ModelBase
 from facelib import FaceType
 from samples import *
+from utils.console_utils import *
 
 class Model(ModelBase):
 
@@ -44,7 +45,8 @@ class Model(ModelBase):
         if self.is_training_mode:
             f = SampleProcessor.TypeFlags
             self.set_training_data_generators ([    
-                    SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size, 
+                    SampleGeneratorFace(self.training_data_src_path, sort_by_yaw_target_samples_path=self.training_data_dst_path if self.sort_by_yaw else None, 
+                                                                     debug=self.is_debug(), batch_size=self.batch_size, 
                             output_sample_types=[ [f.WARPED_TRANSFORMED | f.FACE_ALIGN_HALF | f.MODE_BGR, 64], 
                                                   [f.TRANSFORMED | f.FACE_ALIGN_HALF | f.MODE_BGR, 64], 
                                                   [f.TRANSFORMED | f.FACE_ALIGN_HALF | f.MODE_M | f.FACE_MASK_FULL, 64] ] ),
@@ -66,7 +68,6 @@ class Model(ModelBase):
         warped_src, target_src, target_src_full_mask = sample[0]
         warped_dst, target_dst, target_dst_full_mask = sample[1]    
 
-     
         total, loss_src_bgr, loss_src_mask, loss_dst_bgr, loss_dst_mask = self.ae.train_on_batch( [warped_src, target_src_full_mask, warped_dst, target_dst_full_mask], [target_src, target_src_full_mask, target_dst, target_dst_full_mask] )
 
         return ( ('loss_src', loss_src_bgr), ('loss_dst', loss_dst_bgr) )
@@ -114,16 +115,13 @@ class Model(ModelBase):
     #override
     def get_converter(self, **in_options):
         from models import ConverterMasked
-        
-        if 'erode_mask_modifier' not in in_options.keys():
-            in_options['erode_mask_modifier'] = 0
-        in_options['erode_mask_modifier'] += 100
-            
-        if 'blur_mask_modifier' not in in_options.keys():
-            in_options['blur_mask_modifier'] = 0
-        in_options['blur_mask_modifier'] += 100
-        
-        return ConverterMasked(self.predictor_func, predictor_input_size=64, output_size=64, face_type=FaceType.HALF, **in_options)
+        return ConverterMasked(self.predictor_func,
+                               predictor_input_size=64, 
+                               output_size=64, 
+                               face_type=FaceType.HALF, 
+                               base_erode_mask_modifier=100,
+                               base_blur_mask_modifier=100,
+                               **in_options)
         
     def Build(self, created_vram_gb):
         exec(nnlib.code_import_all, locals(), globals())

@@ -11,11 +11,12 @@ class ConverterBase(object):
     #overridable
     def __init__(self, predictor):
         self.predictor = predictor
-        
+
     #overridable
     def get_mode(self):
         #MODE_FACE calls convert_face
-        #MODE_IMAGE calls convert_image
+        #MODE_IMAGE calls convert_image without landmarks
+        #MODE_IMAGE_WITH_LANDMARKS calls convert_image with landmarks
         return ConverterBase.MODE_FACE
         
     #overridable

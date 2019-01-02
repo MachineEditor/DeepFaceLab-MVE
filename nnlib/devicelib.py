@@ -9,7 +9,7 @@ class devicelib:
         gpu_idxs = []
         gpu_total_vram_gb = 0
         allow_growth = True
-        float16 = False
+        use_fp16 = False
         cpu_only = False
         
         def __init__ (self, force_best_gpu_idx = -1, 
@@ -17,11 +17,11 @@ class devicelib:
                             force_gpu_idxs = None, 
                             choose_worst_gpu = False,
                             allow_growth = True,
-                            float16 = False,
+                            use_fp16 = False,
                             cpu_only = False,
                             **in_options):
 
-            self.float16 = float16
+            self.use_fp16 = use_fp16
             if cpu_only or not devicelib.hasNVML():
                 self.cpu_only = True
             else:

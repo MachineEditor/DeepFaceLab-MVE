@@ -34,7 +34,7 @@ class ConverterImage(ConverterBase):
         self.predictor ( np.zeros ( (self.predictor_input_size, self.predictor_input_size,3), dtype=np.float32) )
         
     #override
-    def convert_image (self, img_bgr, debug):
+    def convert_image (self, img_bgr, img_landmarks, debug):
         img_size = img_bgr.shape[1], img_bgr.shape[0]
 
         predictor_input_bgr = cv2.resize ( img_bgr, (self.predictor_input_size, self.predictor_input_size), cv2.INTER_LANCZOS4 )

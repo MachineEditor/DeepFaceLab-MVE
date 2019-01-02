@@ -25,7 +25,7 @@ class Model(ModelBase):
         if self.epoch == 0: 
             #first run
             
-            print ("\nModel first run. Enter options.")
+            
             
             try:
                 created_resolution = int ( input ("Resolution (default:64, valid: 64,128,256) : ") )
@@ -68,9 +68,9 @@ class Model(ModelBase):
         
         self.set_batch_size(created_batch_size)
         
-        use_batch_norm = created_batch_size > 1
-        self.GA = modelify(ResNet (bgr_shape[2], use_batch_norm, n_blocks=6, ngf=ngf, use_dropout=False))(Input(bgr_shape))
-        self.GB = modelify(ResNet (bgr_shape[2], use_batch_norm, n_blocks=6, ngf=ngf, use_dropout=False))(Input(bgr_shape))
+        use_batch_norm = False #created_batch_size > 1
+        self.GA = modelify(ResNet (bgr_shape[2], use_batch_norm, n_blocks=6, ngf=ngf, use_dropout=True))(Input(bgr_shape))
+        self.GB = modelify(ResNet (bgr_shape[2], use_batch_norm, n_blocks=6, ngf=ngf, use_dropout=True))(Input(bgr_shape))
         #self.GA = modelify(UNet (bgr_shape[2], use_batch_norm, num_downs=get_power_of_two(resolution)-1, ngf=ngf, use_dropout=True))(Input(bgr_shape))
         #self.GB = modelify(UNet (bgr_shape[2], use_batch_norm, num_downs=get_power_of_two(resolution)-1, ngf=ngf, use_dropout=True))(Input(bgr_shape))
         
@@ -211,7 +211,7 @@ class Model(ModelBase):
         loss_G,  = self.G_train ( feed )
         loss_DA, = self.DA_train( feed )
         loss_DB, = self.DB_train( feed )
-        
+        #return ( ('G', loss_G), )
         return ( ('G', loss_G), ('DA', loss_DA),  ('DB', loss_DB)  )
 
     #override
@@ -242,7 +242,9 @@ class Model(ModelBase):
         
     #override
     def get_converter(self, **in_options):
-        from models import ConverterImage
-                   
-        return ConverterImage(self.predictor_func, predictor_input_size=self.options['created_resolution'], output_size=self.options['created_resolution'], **in_options)
+        from models import ConverterImage                   
+        return ConverterImage(self.predictor_func, 
+                              predictor_input_size=self.options['created_resolution'], 
+                              output_size=self.options['created_resolution'], 
+                              **in_options)
 

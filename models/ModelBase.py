@@ -7,6 +7,7 @@ from pathlib import Path
 from utils import Path_utils
 from utils import std_utils
 from utils import image_utils
+from utils.console_utils import *
 import numpy as np
 import cv2
 from samples import SampleGeneratorBase
@@ -18,8 +19,11 @@ class ModelBase(object):
 
     #DONT OVERRIDE
     def __init__(self, model_path, training_data_src_path=None, training_data_dst_path=None,
-                        batch_size=0,
-                        write_preview_history = False,
+                        ask_for_session_options=False,
+                        session_write_preview_history = None,
+                        session_target_epoch=0,
+                        session_batch_size=0,
+                        
                         debug = False, **in_options
                 ):
         print ("Loading model...")
@@ -35,56 +39,94 @@ class ModelBase(object):
         self.dst_yaw_images_paths = None
         self.src_data_generator = None
         self.dst_data_generator = None
-        self.is_training_mode = (training_data_src_path is not None and training_data_dst_path is not None)
-        self.batch_size = batch_size
-        self.write_preview_history = write_preview_history
         self.debug = debug
+        self.is_training_mode = (training_data_src_path is not None and training_data_dst_path is not None)
+        
         self.supress_std_once = ('TF_SUPPRESS_STD' in os.environ.keys() and os.environ['TF_SUPPRESS_STD'] == '1')
         
+        self.epoch = 0
+        self.options = {}
+        self.loss_history = []
+        self.sample_for_preview = None
         if self.model_data_path.exists():            
             model_data = pickle.loads ( self.model_data_path.read_bytes() )            
             self.epoch = model_data['epoch']            
-            self.options = model_data['options']
-            self.loss_history = model_data['loss_history'] if 'loss_history' in model_data.keys() else []
-            self.sample_for_preview = model_data['sample_for_preview']  if 'sample_for_preview' in model_data.keys() else None
-        else:
-            self.epoch = 0
-            self.options = {}
-            self.loss_history = []
-            self.sample_for_preview = None
+            if self.epoch != 0:
+                self.options = model_data['options']
+                self.loss_history = model_data['loss_history'] if 'loss_history' in model_data.keys() else []
+                self.sample_for_preview = model_data['sample_for_preview']  if 'sample_for_preview' in model_data.keys() else None
             
-        if self.write_preview_history:
-            self.preview_history_path = self.model_path / ( '%s_history' % (self.get_model_name()) )
-            
-            if not self.preview_history_path.exists():
-                self.preview_history_path.mkdir(exist_ok=True)
-            else:
-                if self.epoch == 0:
-                    for filename in Path_utils.get_image_paths(self.preview_history_path):
-                        Path(filename).unlink()    
-  
-        self.device_config = nnlib.DeviceConfig(allow_growth=False, **in_options)
-
         if self.epoch == 0: 
-            #first run         
-            self.options['created_vram_gb'] = self.device_config.gpu_total_vram_gb
-            self.created_vram_gb = self.device_config.gpu_total_vram_gb
+            print ("\nModel first run. Enter model options as default for each run.")
+            self.options['write_preview_history'] = input_bool("Write preview history? (y/n skip:n) : ", False)
+            self.options['target_epoch'] = max(0, input_int("Target epoch (skip:unlimited) : ", 0))
+            self.options['batch_size'] = max(0, input_int("Batch_size (skip:model choice) : ", 0))
+            self.options['sort_by_yaw'] = input_bool("Feed faces to network sorted by yaw? (y/n skip:n) : ", False)
+            
+            #self.options['use_fp16'] = use_fp16 = input_bool("Use float16? (y/n skip:n) : ", False)
         else: 
-            #not first run        
-            if 'created_vram_gb' in self.options.keys():
-                self.created_vram_gb = self.options['created_vram_gb']
-            else:
-                self.options['created_vram_gb'] = self.device_config.gpu_total_vram_gb
-                self.created_vram_gb = self.device_config.gpu_total_vram_gb
+            self.options['write_preview_history'] = self.options.get('write_preview_history', False)
+            self.options['target_epoch'] = self.options.get('target_epoch', 0)
+            self.options['batch_size'] = self.options.get('batch_size', 0)
+            self.options['sort_by_yaw'] = self.options.get('sort_by_yaw', False)
+            #self.options['use_fp16'] = use_fp16 = self.options['use_fp16'] if 'use_fp16' in self.options.keys() else False
+            
+        use_fp16 = False #currently models fails with fp16
+           
+        if ask_for_session_options:
+            print ("Override options for current session:")  
+            session_write_preview_history = input_bool("Write preview history? (y/n skip:default) : ", None )            
+            session_target_epoch = input_int("Target epoch (skip:default) : ", 0)
+            session_batch_size = input_int("Batch_size (skip:default) : ", 0)
+            
+        if self.options['write_preview_history']:
+            if session_write_preview_history is None:
+                session_write_preview_history = self.options['write_preview_history']
+        else:
+            self.options.pop('write_preview_history') 
+        
+        if self.options['target_epoch'] != 0:
+            if session_target_epoch == 0:
+                session_target_epoch = self.options['target_epoch']
+        else:
+            self.options.pop('target_epoch') 
+           
+        if self.options['batch_size'] != 0:
+            if session_batch_size == 0:
+                session_batch_size = self.options['batch_size']
+        else:
+            self.options.pop('batch_size') 
+            
+        self.sort_by_yaw = self.options['sort_by_yaw']
+        if not self.sort_by_yaw:
+            self.options.pop('sort_by_yaw') 
+           
+        self.write_preview_history = session_write_preview_history
+        self.target_epoch = session_target_epoch
+        self.batch_size = session_batch_size
 
+        self.device_config = nnlib.DeviceConfig(allow_growth=False, use_fp16=use_fp16, **in_options)
+
+        self.created_vram_gb = self.options['created_vram_gb'] if 'created_vram_gb' in self.options.keys() else self.device_config.gpu_total_vram_gb
+
+        self.onInitializeOptions(self.epoch == 0, ask_for_session_options)        
         nnlib.import_all (self.device_config)
-
         self.onInitialize(**in_options)
         
         if self.debug or self.batch_size == 0:
             self.batch_size = 1 
         
         if self.is_training_mode:
+            if self.write_preview_history:
+                self.preview_history_path = self.model_path / ( '%s_history' % (self.get_model_name()) )
+                
+                if not self.preview_history_path.exists():
+                    self.preview_history_path.mkdir(exist_ok=True)
+                else:
+                    if self.epoch == 0:
+                        for filename in Path_utils.get_image_paths(self.preview_history_path):
+                            Path(filename).unlink()
+        
             if self.generator_list is None:
                 raise Exception( 'You didnt set_training_data_generators()')
             else:
@@ -100,11 +142,18 @@ class ModelBase(object):
         print ("==")
         print ("== Current epoch: " + str(self.epoch) )
         print ("==")
-        print ("== Options:")
-        print ("== |== batch_size : %s " % (self.batch_size) )
-        print ("== |== multi_gpu : %s " % (self.device_config.multi_gpu) )
+        print ("== Model options:")
         for key in self.options.keys():
             print ("== |== %s : %s" % (key, self.options[key]) )        
+        print ("== Session options:")
+        if self.write_preview_history:
+             print ("== |== write_preview_history : True ")
+        if self.target_epoch != 0:
+            print ("== |== target_epoch : %s " % (self.target_epoch) )
+        print ("== |== batch_size : %s " % (self.batch_size) )
+        if self.device_config.multi_gpu:
+            print ("== |== multi_gpu : True ")
+        
         
         print ("== Running on:")
         if self.device_config.cpu_only:
@@ -122,6 +171,10 @@ class ModelBase(object):
             
         print ("=========================")
   
+    #overridable
+    def onInitializeOptions(self, is_first_run, ask_for_session_options):
+        pass
+       
     #overridable
     def onInitialize(self, **in_options):
         '''
@@ -160,6 +213,12 @@ class ModelBase(object):
         #return existing or your own converter which derived from base        
         from .ConverterBase import ConverterBase
         return ConverterBase(self, **in_options) 
+     
+    def get_target_epoch(self):
+        return self.target_epoch
+        
+    def is_reached_epoch_goal(self):
+        return self.target_epoch != 0 and self.epoch >= self.target_epoch    
      
     def to_multi_gpu_model_if_possible (self, models_list):
         if len(self.device_config.gpu_idxs) > 1:
@@ -305,9 +364,6 @@ class ModelBase(object):
             if self.batch_size == 0:
                 self.batch_size = 2
         else:
-            if self.device_config.gpu_total_vram_gb < keys[0]:
-                raise Exception ('Sorry, this model works only on %dGB+ GPU' % ( keys[0] ) )
-
             if self.batch_size == 0:        
                 for x in keys:
                     if self.device_config.gpu_total_vram_gb <= x:

@@ -1,4 +1,6 @@
-﻿import traceback
+﻿import sys
+import os
+import traceback
 from pathlib import Path
 from utils import Path_utils
 import cv2
@@ -30,7 +32,9 @@ class model_process_predictor(object):
                     return obj['result']
             time.sleep(0.005)
         
-def model_process(model_name, model_dir, in_options, sq, cq):
+def model_process(stdin_fd, model_name, model_dir, in_options, sq, cq):
+    sys.stdin = os.fdopen(stdin_fd)
+    
     try:    
         model_path = Path(model_dir)
         
@@ -152,7 +156,7 @@ class ConvertSubprocessor(SubprocessorBase):
             image = (cv2.imread(str(filename_path)) / 255.0).astype(np.float32)
 
             if self.converter.get_mode() == ConverterBase.MODE_IMAGE:
-                image = self.converter.convert_image(image, self.debug)
+                image = self.converter.convert_image(image, None, self.debug)
                 if self.debug:
                     for img in image:
                         cv2.imshow ('Debug convert', img )
@@ -229,7 +233,7 @@ def main (input_dir, output_dir, model_dir, model_name, aligned_dir=None, **in_o
         model_sq = multiprocessing.Queue()
         model_cq = multiprocessing.Queue()
         model_lock = multiprocessing.Lock()
-        model_p = multiprocessing.Process(target=model_process, args=(model_name, model_dir, in_options, model_sq, model_cq))
+        model_p = multiprocessing.Process(target=model_process, args=( sys.stdin.fileno(), model_name, model_dir, in_options, model_sq, model_cq))
         model_p.start()
         
         while True:
@@ -266,7 +270,39 @@ def main (input_dir, output_dir, model_dir, model_name, aligned_dir=None, **in_o
 
                 alignments[ source_filename_stem ].append (dflpng.get_source_landmarks())
         
-        
+            
+            #interpolate landmarks
+            #from facelib import LandmarksProcessor
+            #from facelib import FaceType
+            #a = sorted(alignments.keys())
+            #a_len = len(a)
+            #
+            #box_pts = 3            
+            #box = np.ones(box_pts)/box_pts
+            #for i in range( a_len ):
+            #    if i >= box_pts and i <= a_len-box_pts-1:
+            #        af0 = alignments[ a[i] ][0] ##first face
+            #        m0 = LandmarksProcessor.get_transform_mat (af0, 256, face_type=FaceType.FULL)      
+            #    
+            #        points = []
+            #        
+            #        for j in range(-box_pts, box_pts+1):
+            #            af = alignments[ a[i+j] ][0] ##first face
+            #            m = LandmarksProcessor.get_transform_mat (af, 256, face_type=FaceType.FULL)                    
+            #            p = LandmarksProcessor.transform_points (af, m)
+            #            points.append (p)
+            #    
+            #        points = np.array(points)
+            #        points_len = len(points)
+            #        t_points = np.transpose(points, [1,0,2])
+            #        
+            #        p1 = np.array ( [ int(np.convolve(x[:,0], box, mode='same')[points_len//2]) for x in t_points ] )
+            #        p2 = np.array ( [ int(np.convolve(x[:,1], box, mode='same')[points_len//2]) for x in t_points ] )
+            #        
+            #        new_points = np.concatenate( [np.expand_dims(p1,-1),np.expand_dims(p2,-1)], -1 )
+            #        
+            #        alignments[ a[i] ][0]  = LandmarksProcessor.transform_points (new_points, m0, True).astype(np.int32)
+            
         files_processed, faces_processed = ConvertSubprocessor ( 
                     converter              = converter.copy_and_set_predictor( model_process_predictor(model_sq,model_cq,model_lock) ), 
                     input_path_image_paths = Path_utils.get_image_paths(input_path), 

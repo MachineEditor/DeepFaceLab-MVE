@@ -1,7 +1,5 @@
 ## **DeepFaceLab** is a tool that utilizes deep learning to recognize and swap faces in pictures and videos.
 
-Based on original FaceSwap repo. **Facesets** of FaceSwap or FakeApp are **not compatible** with this repo. You should to run extract again.
-
 ### **Features**:
 
 - new models
@@ -34,6 +32,8 @@ MTCNN produces less jitter.
 
 - standalone zero dependencies ready to work prebuilt binary for all windows versions, see below
 
+### Warning: **Facesets** of FaceSwap or FakeApp are **not compatible** with this repo. You should to run extract again.
+
 ### **Model types**:
 
 - **H64 (2GB+)** - half face with 64 resolution. It is as original FakeApp or FaceSwap, but with new TensorFlow 1.8 DSSIM Loss func and separated mask decoder + better ConverterMasked. for 2GB and 3GB VRAM model works in reduced mode.
@@ -60,7 +60,7 @@ H128 asian face on blurry target:
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/DF_Cage_0.jpg)
 
-- **LIAEF128 (5GB+)** - new model. Result of combining DF, IAE, + experiments. Model tries to morph src face to dst, while keeping facial features of src face, but less agressive morphing. Model has problems with closed eyes recognizing.
+- **LIAEF128 (5GB+)** - Less agressive Improved Autoencoder Fullface 128 model. Result of combining DF, IAE, + experiments. Model tries to morph src face to dst, while keeping facial features of src face, but less agressive morphing. Model has problems with closed eyes recognizing.
 
 LIAEF128 Cage:
 
@@ -72,47 +72,10 @@ LIAEF128 Cage video:
 
 [![Watch the video](https://img.youtube.com/vi/mRsexePEVco/0.jpg)](https://www.youtube.com/watch?v=mRsexePEVco)
 
-- **LIAEF128YAW (5GB+)** - currently testing. Useful when your src faceset has too many side faces vs dst faceset. It feeds NN by sorted samples by yaw.
-
-- **MIAEF128 (5GB+)** - as LIAEF128, but also it tries to match brightness/color features.
-
-MIAEF128 model diagramm:
-
-![](https://github.com/iperov/DeepFaceLab/blob/master/doc/MIAEF128_diagramm.png)
-
-MIAEF128 Ford success case:
-
-![](https://github.com/iperov/DeepFaceLab/blob/master/doc/MIAEF128_Ford_0.jpg)
-
-MIAEF128 Cage fail case:
-
-![](https://github.com/iperov/DeepFaceLab/blob/master/doc/MIAEF128_Cage_fail.jpg)
-
-- **AVATAR (4GB+)** - non GAN, 256x256 face controlling model. 
-
-![](https://github.com/iperov/DeepFaceLab/blob/master/doc/AVATAR_Navalniy_0.jpg)
-
-Video: 
-
-[![](https://img.youtube.com/vi/3M0E4QnWMqA/0.jpg)](https://www.youtube.com/watch?v=3M0E4QnWMqA)
-
-Usage:
-
-src - controllable face (Cage)
-
-dst - controller face (your face)
-
-converter --input-dir must contains *extracted dst faces* in sequence to be converted, its mean you can train on for example 1500 dst faces, but use for example 100 faces for convert.
+- **UFM (4GB+)** - U-net Face Morpher model. If "match_style" option choosed, then this model tries to morph src face to target face and fill around face same background. UFM is result of combining modified U-Net, classic face autoencoder, DSSIM and style losses.
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/DeepFaceLab_convertor_overview.png)
 
-- Video comparison of different Cage facesets.
-Vertical: 1 - mix of various Cage face shape and light conditions. 2,3,4 - without mix.
-Horizontal: 1 - DF, 2 - LIAEF128.
-
-[![](https://img.youtube.com/vi/C1nFgrmtm_o/0.jpg)](https://youtu.be/C1nFgrmtm_o)
-
-Conclusion: **better not to mix and use only same shape faces with same light**
 
 ### **Sort tool**:
 
@@ -163,6 +126,10 @@ Command line example for windows: `python setup.py install -G "Visual Studio 14 
 CPU mode enabled by arg --cpu-only for all stages. Follow requirements-cpu.txt to install req packages.
 Do not use DLIB extractor in CPU mode, its too slow.
 Only H64 model reasonable to train on home CPU.
+
+### Mac/linux/docker script support.
+
+This repo supports only windows build of scripts. If you want to support mac/linux/docker - create such fork, it will be referenced here.
 
 ### Prebuilt windows app:
 

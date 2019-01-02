@@ -11,7 +11,7 @@ from utils import Path_utils
 from utils import image_utils    
 import cv2
 
-def trainerThread (input_queue, output_queue, training_data_src_dir, training_data_dst_dir, model_path, model_name, save_interval_min=10, debug=False, target_epoch=0, **in_options):
+def trainerThread (input_queue, output_queue, training_data_src_dir, training_data_dst_dir, model_path, model_name, save_interval_min=10, debug=False, **in_options):
 
     while True:
         try: 
@@ -29,8 +29,6 @@ def trainerThread (input_queue, output_queue, training_data_src_dir, training_da
                 
             if not model_path.exists():
                 model_path.mkdir(exist_ok=True)
-                
-            
 
             import models 
             model = models.import_model(model_name)(
@@ -40,7 +38,7 @@ def trainerThread (input_queue, output_queue, training_data_src_dir, training_da
                         debug=debug,
                         **in_options)
             
-            is_reached_goal = (target_epoch > 0 and model.get_epoch() >= target_epoch)
+            is_reached_goal = model.is_reached_epoch_goal()
             
             def model_save():
                 if not debug and not is_reached_goal:
@@ -58,11 +56,11 @@ def trainerThread (input_queue, output_queue, training_data_src_dir, training_da
             if model.is_first_run():
                 model_save()
                 
-            if target_epoch != 0:
+            if model.get_target_epoch() != 0:
                 if is_reached_goal:
                     print ('Model already trained to target epoch. You can use preview.')
                 else:
-                    print('Starting. Target epoch: %d. Press "Enter" to stop training and save model.' % (target_epoch) )
+                    print('Starting. Target epoch: %d. Press "Enter" to stop training and save model.' % ( model.get_target_epoch()  ) )
             else: 
                 print('Starting. Press "Enter" to stop training and save model.')
  
@@ -73,7 +71,7 @@ def trainerThread (input_queue, output_queue, training_data_src_dir, training_da
                         loss_string = model.train_one_epoch()     
 
                         print (loss_string, end='\r')
-                        if target_epoch != 0 and model.get_epoch() >= target_epoch:
+                        if model.get_target_epoch() != 0 and model.is_reached_epoch_goal():
                             print ('Reached target epoch.')
                             model_save()
                             is_reached_goal = True

@@ -42,8 +42,11 @@ class Model(ModelBase):
   
         if self.is_training_mode:
             f = SampleProcessor.TypeFlags
-            self.set_training_data_generators ([            
-                    SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size, 
+            self.set_training_data_generators ([         
+                    
+            
+                    SampleGeneratorFace(self.training_data_src_path, sort_by_yaw_target_samples_path=self.training_data_dst_path if self.sort_by_yaw else None, 
+                                                                     debug=self.is_debug(), batch_size=self.batch_size, 
                         output_sample_types=[ [f.WARPED_TRANSFORMED | f.FACE_ALIGN_FULL | f.MODE_BGR, 128], 
                                               [f.TRANSFORMED | f.FACE_ALIGN_FULL | f.MODE_BGR, 128], 
                                               [f.TRANSFORMED | f.FACE_ALIGN_FULL | f.MODE_M | f.FACE_MASK_FULL, 128] ] ),
@@ -115,15 +118,13 @@ class Model(ModelBase):
     #override
     def get_converter(self, **in_options):
         from models import ConverterMasked
-        
-        if 'erode_mask_modifier' not in in_options.keys():
-            in_options['erode_mask_modifier'] = 0
-        in_options['erode_mask_modifier'] += 30
-            
-        if 'blur_mask_modifier' not in in_options.keys():
-            in_options['blur_mask_modifier'] = 0
-            
-        return ConverterMasked(self.predictor_func, predictor_input_size=128, output_size=128, face_type=FaceType.FULL, clip_border_mask_per=0.046875, **in_options)
+        return ConverterMasked(self.predictor_func, 
+                               predictor_input_size=128, 
+                               output_size=128, 
+                               face_type=FaceType.FULL, 
+                               base_erode_mask_modifier=30,
+                               base_blur_mask_modifier=0,
+                               **in_options)
       
     def Build(self, input_layer):
         exec(nnlib.code_import_all, locals(), globals())

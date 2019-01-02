@@ -1,6 +1,7 @@
 import os
 import sys
 import contextlib
+import numpy as np
 
 from utils import std_utils
 from .devicelib import devicelib
@@ -26,16 +27,20 @@ class nnlib(object):
     tf_dssim = None
     tf_ssim = None
     tf_resize_like = None
+    tf_image_histogram = None
     tf_rgb_to_lab = None
     tf_lab_to_rgb = None
-    tf_image_histogram = None
+    tf_adain = None
+    tf_gaussian_blur = None
+    tf_style_loss = None
 
     modelify = None
     ReflectionPadding2D = None
     DSSIMLoss = None
     DSSIMMaskLoss = None
     PixelShuffler = None  
-
+    SubpixelUpscaler = None
+    
     ResNet = None
     UNet = None
     UNetTemporalPredictor = None
@@ -53,6 +58,9 @@ tf_resize_like = nnlib.tf_resize_like
 tf_image_histogram = nnlib.tf_image_histogram
 tf_rgb_to_lab = nnlib.tf_rgb_to_lab
 tf_lab_to_rgb = nnlib.tf_lab_to_rgb
+tf_adain = nnlib.tf_adain
+tf_gaussian_blur = nnlib.tf_gaussian_blur
+tf_style_loss = nnlib.tf_style_loss
 """
     code_import_keras_string = \
 """
@@ -62,12 +70,12 @@ K = keras.backend
 Input = keras.layers.Input
 
 Dense = keras.layers.Dense
-Conv2D = keras.layers.convolutional.Conv2D
-Conv2DTranspose = keras.layers.convolutional.Conv2DTranspose
+Conv2D = keras.layers.Conv2D
+Conv2DTranspose = keras.layers.Conv2DTranspose
 MaxPooling2D = keras.layers.MaxPooling2D
 BatchNormalization = keras.layers.BatchNormalization
 
-LeakyReLU = keras.layers.advanced_activations.LeakyReLU
+LeakyReLU = keras.layers.LeakyReLU
 ReLU = keras.layers.ReLU
 tanh = keras.layers.Activation('tanh')
 sigmoid = keras.layers.Activation('sigmoid')
@@ -91,6 +99,7 @@ ReflectionPadding2D = nnlib.ReflectionPadding2D
 DSSIMLoss = nnlib.DSSIMLoss
 DSSIMMaskLoss = nnlib.DSSIMMaskLoss
 PixelShuffler = nnlib.PixelShuffler
+SubpixelUpscaler = nnlib.SubpixelUpscaler
 """
     code_import_keras_contrib_string = \
 """
@@ -282,19 +291,93 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
             return func
         nnlib.tf_image_histogram = tf_image_histogram
      
+        def tf_adain(epsilon=1e-5):
+            def func(content, style):
+                axes = [1,2]
+                c_mean, c_var = tf.nn.moments(content, axes=axes, keep_dims=True)
+                s_mean, s_var = tf.nn.moments(style, axes=axes, keep_dims=True)
+                c_std, s_std = tf.sqrt(c_var + epsilon), tf.sqrt(s_var + epsilon)
+                return s_std * (content - c_mean) / c_std + s_mean
+            return func
+        nnlib.tf_adain = tf_adain
+        
+        def tf_gaussian_blur(radius=2.0):
+            def gaussian_kernel(size,mean,std):
+                d = tf.distributions.Normal( float(mean), float(std) )
+
+                vals = d.prob(tf.range(start = -int(size), limit = int(size) + 1, dtype = tf.float32))
+
+                gauss_kernel = tf.einsum('i,j->ij',
+                                              vals,
+                                              vals)
+
+                return gauss_kernel / tf.reduce_sum(gauss_kernel)
+
+            gauss_kernel = gaussian_kernel(radius, 1.0, radius )
+            gauss_kernel = gauss_kernel[:, :, tf.newaxis, tf.newaxis]
+            
+            def func(input):
+                return tf.nn.conv2d(input, gauss_kernel, strides=[1, 1, 1, 1], padding="SAME")
+            return func
+        nnlib.tf_gaussian_blur = tf_gaussian_blur
+
+        def tf_style_loss(gaussian_blur_radius=0.0, loss_weight=1.0, batch_normalize=False, epsilon=1e-5):
+            def sl(content, style):
+                axes = [1,2]
+                c_mean, c_var = tf.nn.moments(content, axes=axes, keep_dims=True)
+                s_mean, s_var = tf.nn.moments(style, axes=axes, keep_dims=True)
+                c_std, s_std = tf.sqrt(c_var + epsilon), tf.sqrt(s_var + epsilon)
+
+                mean_loss = tf.reduce_sum(tf.squared_difference(c_mean, s_mean))
+                std_loss = tf.reduce_sum(tf.squared_difference(c_std, s_std))
+
+                if batch_normalize:
+                    #normalize w.r.t batch size
+                    n = tf.cast(tf.shape(content)[0], dtype=tf.float32)
+                    mean_loss /= n
+                    std_loss /= n
+                
+                return (mean_loss + std_loss) * loss_weight
+                
+            def func(target, style):
+                target_nc = target.get_shape().as_list()[-1]
+                style_nc = style.get_shape().as_list()[-1]
+                if target_nc != style_nc:
+                    raise Exception("target_nc != style_nc")
+                   
+                targets = tf.split(target, target_nc, -1)
+                styles = tf.split(style, style_nc, -1)
+                
+                style_loss = []
+                for i in range(len(targets)):
+                    if gaussian_blur_radius > 0.0:
+                        style_loss += [ sl( tf_gaussian_blur(gaussian_blur_radius)(targets[i]), 
+                                            tf_gaussian_blur(gaussian_blur_radius)(styles[i]))  ]
+                    else:
+                        style_loss += [ sl( targets[i], 
+                                            styles[i])  ]
+                return np.sum ( style_loss )  
+            return func
+            
+        nnlib.tf_style_loss = tf_style_loss
+        
     @staticmethod
     def import_keras(device_config = None):
         if nnlib.keras is not None:
             return nnlib.code_import_keras
 
         nnlib.import_tf(device_config)
-
+        device_config = nnlib.prefer_DeviceConfig
         if 'TF_SUPPRESS_STD' in os.environ.keys() and os.environ['TF_SUPPRESS_STD'] == '1':
             suppressor = std_utils.suppress_stdout_stderr().__enter__()
             
         import keras as keras_
         nnlib.keras = keras_
-        nnlib.keras.backend.tensorflow_backend.set_session(nnlib.tf_sess)
+        
+        if device_config.use_fp16:
+            nnlib.keras.backend.set_floatx('float16')
+        
+        nnlib.keras.backend.set_session(nnlib.tf_sess)
         
         if 'TF_SUPPRESS_STD' in os.environ.keys() and os.environ['TF_SUPPRESS_STD'] == '1':        
             suppressor.__exit__()
@@ -307,6 +390,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
     def __initialize_keras_functions():
         tf = nnlib.tf
         keras = nnlib.keras
+        K = keras.backend
 
         def modelify(model_functor):
             def func(tensor):
@@ -365,9 +449,11 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 for mask in self.mask_list:
                 
                     if not self.is_tanh:            
-                        loss = (1.0 - tf.image.ssim (y_true*mask, y_pred*mask, 1.0)) / 2.0
+                        loss = (1.0 - (tf.image.ssim (y_true*mask, y_pred*mask, 1.0))) / 2.0
                     else:
                         loss = (1.0 - tf.image.ssim ( (y_true/2+0.5)*(mask/2+0.5), (y_pred/2+0.5)*(mask/2+0.5), 1.0)) / 2.0
+                    
+                    loss = K.cast (loss, K.floatx())
                     
                     if total_loss is None:
                         total_loss = loss
@@ -376,7 +462,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                         
                 return total_loss
         nnlib.DSSIMMaskLoss = DSSIMMaskLoss
-   
+        
         class PixelShuffler(keras.layers.Layer):
             def __init__(self, size=(2, 2), data_format=None, **kwargs):
                 super(PixelShuffler, self).__init__(**kwargs)
@@ -391,33 +477,12 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                                      '; Received input shape:', str(input_shape))
 
                 if self.data_format == 'channels_first':
-                    batch_size, c, h, w = input_shape
-                    if batch_size is None:
-                        batch_size = -1
-                    rh, rw = self.size
-                    oh, ow = h * rh, w * rw
-                    oc = c // (rh * rw)
-
-                    out = keras.backend.reshape(inputs, (batch_size, rh, rw, oc, h, w))
-                    out = keras.backend.permute_dimensions(out, (0, 3, 4, 1, 5, 2))
-                    out = keras.backend.reshape(out, (batch_size, oc, oh, ow))
-                    return out
+                    return tf.depth_to_space(inputs, self.size[0], 'NCHW')
 
                 elif self.data_format == 'channels_last':
-                    batch_size, h, w, c = input_shape
-                    if batch_size is None:
-                        batch_size = -1
-                    rh, rw = self.size
-                    oh, ow = h * rh, w * rw
-                    oc = c // (rh * rw)
-
-                    out = keras.backend.reshape(inputs, (batch_size, h, w, rh, rw, oc))
-                    out = keras.backend.permute_dimensions(out, (0, 1, 3, 2, 4, 5))
-                    out = keras.backend.reshape(out, (batch_size, oh, ow, oc))
-                    return out
+                    return tf.depth_to_space(inputs, self.size[0], 'NHWC')
 
             def compute_output_shape(self, input_shape):
-
                 if len(input_shape) != 4:
                     raise ValueError('Inputs should have rank ' +
                                      str(4) +
@@ -455,8 +520,10 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 base_config = super(PixelShuffler, self).get_config()
 
                 return dict(list(base_config.items()) + list(config.items()))
+
         nnlib.PixelShuffler = PixelShuffler
-    
+        nnlib.SubpixelUpscaler = PixelShuffler
+        
     @staticmethod
     def import_keras_contrib(device_config = None):
         if nnlib.keras_contrib is not None:
@@ -512,10 +579,10 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 def XNormalization(x):
                     return BatchNormalization (axis=3, gamma_initializer=RandomNormal(1., 0.02))(x)
                     
-            def Conv2D (filters, kernel_size, strides=(1, 1), padding='valid', data_format=None, dilation_rate=(1, 1), activation=None, use_bias=True, kernel_initializer=RandomNormal(0, 0.02), bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None):
-                return keras.layers.convolutional.Conv2D( filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, data_format=data_format, dilation_rate=dilation_rate, activation=activation, use_bias=use_bias, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer, activity_regularizer=activity_regularizer, kernel_constraint=kernel_constraint, bias_constraint=bias_constraint )
+            def Conv2D (filters, kernel_size, strides=(1, 1), padding='valid', data_format=None, dilation_rate=(1, 1), activation=None, use_bias=use_bias, kernel_initializer=RandomNormal(0, 0.02), bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None):
+                return keras.layers.Conv2D( filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, data_format=data_format, dilation_rate=dilation_rate, activation=activation, use_bias=use_bias, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer, activity_regularizer=activity_regularizer, kernel_constraint=kernel_constraint, bias_constraint=bias_constraint )
         
-            def Conv2DTranspose(filters, kernel_size, strides=(1, 1), padding='valid', output_padding=None, data_format=None, dilation_rate=(1, 1), activation=None, use_bias=True, kernel_initializer='glorot_uniform', bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None):
+            def Conv2DTranspose(filters, kernel_size, strides=(1, 1), padding='valid', output_padding=None, data_format=None, dilation_rate=(1, 1), activation=None, use_bias=use_bias, kernel_initializer='glorot_uniform', bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None):
                 return keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, output_padding=output_padding, data_format=data_format, dilation_rate=dilation_rate, activation=activation, use_bias=use_bias, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer, activity_regularizer=activity_regularizer, kernel_constraint=kernel_constraint, bias_constraint=bias_constraint)
             
             def func(input):
@@ -580,10 +647,10 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 def XNormalization(x):
                     return BatchNormalization (axis=3, gamma_initializer=RandomNormal(1., 0.02))(x)
                     
-            def Conv2D (filters, kernel_size, strides=(1, 1), padding='valid', data_format=None, dilation_rate=(1, 1), activation=None, use_bias=True, kernel_initializer=RandomNormal(0, 0.02), bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None):
-                return keras.layers.convolutional.Conv2D( filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, data_format=data_format, dilation_rate=dilation_rate, activation=activation, use_bias=use_bias, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer, activity_regularizer=activity_regularizer, kernel_constraint=kernel_constraint, bias_constraint=bias_constraint )
+            def Conv2D (filters, kernel_size, strides=(1, 1), padding='valid', data_format=None, dilation_rate=(1, 1), activation=None, use_bias=use_bias, kernel_initializer=RandomNormal(0, 0.02), bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None):
+                return keras.layers.Conv2D( filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, data_format=data_format, dilation_rate=dilation_rate, activation=activation, use_bias=use_bias, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer, activity_regularizer=activity_regularizer, kernel_constraint=kernel_constraint, bias_constraint=bias_constraint )
 
-            def Conv2DTranspose(filters, kernel_size, strides=(1, 1), padding='valid', output_padding=None, data_format=None, dilation_rate=(1, 1), activation=None, use_bias=True, kernel_initializer='glorot_uniform', bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None):
+            def Conv2DTranspose(filters, kernel_size, strides=(1, 1), padding='valid', output_padding=None, data_format=None, dilation_rate=(1, 1), activation=None, use_bias=use_bias, kernel_initializer='glorot_uniform', bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None):
                 return keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, output_padding=output_padding, data_format=data_format, dilation_rate=dilation_rate, activation=activation, use_bias=use_bias, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer, activity_regularizer=activity_regularizer, kernel_constraint=kernel_constraint, bias_constraint=bias_constraint)
                 
             def UNetSkipConnection(outer_nc, inner_nc, sub_model=None, outermost=False, innermost=False, use_dropout=False):       
@@ -658,8 +725,8 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 def XNormalization(x):
                     return BatchNormalization (axis=3, gamma_initializer=RandomNormal(1., 0.02))(x)
 
-            def Conv2D (filters, kernel_size, strides=(1, 1), padding='valid', data_format=None, dilation_rate=(1, 1), activation=None, use_bias=True, kernel_initializer=RandomNormal(0, 0.02), bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None):
-                return keras.layers.convolutional.Conv2D( filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, data_format=data_format, dilation_rate=dilation_rate, activation=activation, use_bias=use_bias, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer, activity_regularizer=activity_regularizer, kernel_constraint=kernel_constraint, bias_constraint=bias_constraint )
+            def Conv2D (filters, kernel_size, strides=(1, 1), padding='valid', data_format=None, dilation_rate=(1, 1), activation=None, use_bias=use_bias, kernel_initializer=RandomNormal(0, 0.02), bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None):
+                return keras.layers.Conv2D( filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, data_format=data_format, dilation_rate=dilation_rate, activation=activation, use_bias=use_bias, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer, activity_regularizer=activity_regularizer, kernel_constraint=kernel_constraint, bias_constraint=bias_constraint )
 
             def func(input):
                 x = input

@@ -95,7 +95,7 @@ class SampleProcessor(object):
                         mask[mask > 0.0] = 1.0
                         img = np.concatenate( (img, mask ), -1 )               
 
-                images[img_type][face_mask_type] = image_utils.warp_by_params (params, img, (img_type==1 or img_type==2), (img_type==2 or img_type==3), img_type != 0)
+                images[img_type][face_mask_type] = image_utils.warp_by_params (params, img, (img_type==1 or img_type==2), (img_type==2 or img_type==3), img_type != 0, face_mask_type == 0)
                 
             img = images[img_type][face_mask_type]
                     
