@@ -74,6 +74,10 @@ LIAEF128 Cage video:
 
 - **UFM (4GB+)** - U-net Face Morpher model. If "match_style" option choosed, then this model tries to morph src face to target face and fill around face same background. UFM is result of combining modified U-Net, classic face autoencoder, DSSIM and style losses.
 
+![](https://github.com/iperov/DeepFaceLab/blob/master/doc/UFM_Cage_0.jpg)
+
+![](https://github.com/iperov/DeepFaceLab/blob/master/doc/UFM_Cage_1.jpg)
+
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/DeepFaceLab_convertor_overview.png)
 
 
