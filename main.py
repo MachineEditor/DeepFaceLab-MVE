@@ -72,6 +72,9 @@ if __name__ == "__main__":
         if 'DFL_BATCH_SIZE' in os.environ.keys():
             arguments.batch_size = int ( os.environ['DFL_BATCH_SIZE'] )
 
+        if 'DFL_WORST_GPU' in os.environ.keys():
+            arguments.choose_worst_gpu = True
+            
         from mainscripts import Trainer
         Trainer.main (
             training_data_src_dir=arguments.training_data_src_dir, 
@@ -106,7 +109,7 @@ if __name__ == "__main__":
     train_parser.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Train on CPU.")
     train_parser.add_argument('--force-gpu-idxs', type=str, dest="force_gpu_idxs", default=None, help="Override final GPU idxs. Example: 0,1,2.")
     train_parser.add_argument('--multi-gpu', action="store_true", dest="multi_gpu", default=False, help="MultiGPU option (if model supports it). It will select only same best(worst) GPU models.")
-    train_parser.add_argument('--choose-worst-gpu', action="store_true", dest="choose_worst_gpu", default=False, help="Choose worst GPU instead of best.")
+    train_parser.add_argument('--choose-worst-gpu', action="store_true", dest="choose_worst_gpu", default=False, help="Choose worst GPU instead of best. Environment variable to force True: DFL_WORST_GPU")
     train_parser.add_argument('--force-best-gpu-idx', type=int, dest="force_best_gpu_idx", default=-1, help="Force to choose this GPU idx as best(worst).")
 
     train_parser.set_defaults (func=process_train)
