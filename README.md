@@ -6,8 +6,6 @@
 
 - new architecture, easy to experiment with models
 
-- works on 2GB old cards , such as GT730. Example of fake trained on 2GB gtx850m notebook in 18 hours https://www.youtube.com/watch?v=bprVuRxBA34
-
 - face data embedded to png files
 
 - automatic GPU manager, chooses best gpu(s) and supports --multi-gpu (only for identical cards). Warning: dont use cards in SLI mode.
