@@ -104,13 +104,13 @@ class ConvertSubprocessor(SubprocessorBase):
         return len (self.input_data)
         
     #override
-    def onHostGetData(self):
+    def onHostGetData(self, host_dict):
         if len (self.input_data) > 0:
             return self.input_data.pop(0)            
         return None
     
     #override
-    def onHostDataReturn (self, data):
+    def onHostDataReturn (self, host_dict, data):
         self.input_data.insert(0, data)   
         
     #overridable
@@ -195,13 +195,13 @@ class ConvertSubprocessor(SubprocessorBase):
         return (files_processed, faces_processed)
         
     #override
-    def onHostResult (self, data, result):
+    def onHostResult (self, host_dict, data, result):
         self.files_processed += result[0]
         self.faces_processed += result[1]    
         return 1
              
     #override
-    def get_start_return(self):
+    def onFinalizeAndGetResult(self):
         return self.files_processed, self.faces_processed
         
 def main (input_dir, output_dir, model_dir, model_name, aligned_dir=None, **in_options):

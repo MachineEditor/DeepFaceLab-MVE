@@ -125,7 +125,7 @@ class ExtractSubprocessor(SubprocessorBase):
         return len (self.input_data)
         
     #override
-    def onHostGetData(self):
+    def onHostGetData(self, host_dict):
         if not self.manual:
             if len (self.input_data) > 0:
                 return self.input_data.pop(0)    
@@ -237,7 +237,7 @@ class ExtractSubprocessor(SubprocessorBase):
         return None
     
     #override
-    def onHostDataReturn (self, data):
+    def onHostDataReturn (self, host_dict, data):
         if not self.manual:
             self.input_data.insert(0, data)   
         
@@ -348,7 +348,7 @@ class ExtractSubprocessor(SubprocessorBase):
         return data[0]
         
     #override
-    def onHostResult (self, data, result):
+    def onHostResult (self, host_dict, data, result):
         if self.manual == True:
             self.landmarks = result[1][0][1]
                                         
@@ -372,14 +372,11 @@ class ExtractSubprocessor(SubprocessorBase):
                 self.result += result
                          
             return 1
-    
-    #override    
-    def onHostProcessEnd(self):
+
+    #override
+    def onFinalizeAndGetResult(self):
         if self.manual == True:
             cv2.destroyAllWindows()
-             
-    #override
-    def get_start_return(self):
         return self.result
 
 '''

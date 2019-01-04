@@ -119,7 +119,7 @@ download from here: https://mega.nz/#F!y1ERHDaL!PPwg01PQZk0FhWLVo5_MaQ
 
 ### **Build info**
 
-dlib==19.10.0 from pip compiled without CUDA. Therefore you have to compile DLIB manually.
+dlib==19.10.0 from pip compiled without CUDA. Therefore you have to compile DLIB manually, orelse use MT extractor only.
 
 Command line example for windows: `python setup.py install -G "Visual Studio 14 2015" --yes DLIB_USE_CUDA`
 
