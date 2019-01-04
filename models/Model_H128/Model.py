@@ -174,7 +174,7 @@ class Model(ModelBase):
                 y = upscale(256)(y)
                 y = upscale(128)(y)
             else:
-                input_ = self.keras.layers.Input(shape=(16, 16, 256))
+                input_ = Input(shape=(16, 16, 256))
                 x = input_
                 x = upscale(256)(x)
                 x = upscale(128)(x)
