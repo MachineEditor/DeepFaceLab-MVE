@@ -82,6 +82,8 @@ LIAEF128 Cage video:
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_1.jpg)
 
+SAE model Cage-Trump video: https://www.youtube.com/watch?v=2R_aqHBClUQ
+
 - **SAE vs UFM** . 
 
 [![Watch the video](https://img.youtube.com/vi/ywiv0_PTp1w/0.jpg)](https://www.youtube.com/watch?v=ywiv0_PTp1w)
