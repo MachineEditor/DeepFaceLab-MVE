@@ -76,7 +76,7 @@ LIAEF128 Cage video:
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/UFM_Cage_1.jpg)
 
-- **SAE (4GB+)** - Styled AutoEncoder. It is like LIAEF but with new face style loss like in UFM.
+- **SAE (2GB+)** - Styled AutoEncoder. It is like LIAEF but with new face style loss like in UFM.
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_0.jpg)
 
