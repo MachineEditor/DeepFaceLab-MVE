@@ -46,12 +46,14 @@ class Model(ModelBase):
                     
             
                     SampleGeneratorFace(self.training_data_src_path, sort_by_yaw_target_samples_path=self.training_data_dst_path if self.sort_by_yaw else None, 
-                                                                     debug=self.is_debug(), batch_size=self.batch_size, 
+                                                                     debug=self.is_debug(), batch_size=self.batch_size,
+                        sample_process_options=SampleProcessor.Options(random_flip=self.random_flip), 
                         output_sample_types=[ [f.WARPED_TRANSFORMED | f.FACE_ALIGN_FULL | f.MODE_BGR, 128], 
                                               [f.TRANSFORMED | f.FACE_ALIGN_FULL | f.MODE_BGR, 128], 
                                               [f.TRANSFORMED | f.FACE_ALIGN_FULL | f.MODE_M | f.FACE_MASK_FULL, 128] ] ),
                                               
                     SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size, 
+                        sample_process_options=SampleProcessor.Options(random_flip=self.random_flip), 
                         output_sample_types=[ [f.WARPED_TRANSFORMED | f.FACE_ALIGN_FULL | f.MODE_BGR, 128], 
                                               [f.TRANSFORMED | f.FACE_ALIGN_FULL | f.MODE_BGR, 128], 
                                               [f.TRANSFORMED | f.FACE_ALIGN_FULL | f.MODE_M | f.FACE_MASK_FULL, 128] ] )

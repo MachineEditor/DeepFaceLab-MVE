@@ -159,7 +159,7 @@ class SAEModel(ModelBase):
             self.set_training_data_generators ([            
                     SampleGeneratorFace(self.training_data_src_path, sort_by_yaw_target_samples_path=self.training_data_dst_path if self.sort_by_yaw else None, 
                                                                      debug=self.is_debug(), batch_size=self.batch_size, 
-                        sample_process_options=SampleProcessor.Options(normalize_tanh = True), 
+                        sample_process_options=SampleProcessor.Options(random_flip=self.random_flip, normalize_tanh = True), 
                         output_sample_types=[ [f.WARPED_TRANSFORMED | face_type | f.MODE_BGR, resolution], 
                                               [f.TRANSFORMED | face_type | f.MODE_BGR, resolution], 
                                               [f.TRANSFORMED | face_type | f.MODE_M | f.FACE_MASK_FULL, resolution],
@@ -168,7 +168,7 @@ class SAEModel(ModelBase):
                                               ] ),
                                               
                     SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size,
-                        sample_process_options=SampleProcessor.Options(normalize_tanh = True), 
+                        sample_process_options=SampleProcessor.Options(random_flip=self.random_flip, normalize_tanh = True), 
                         output_sample_types=[ [f.WARPED_TRANSFORMED | face_type | f.MODE_BGR, resolution], 
                                               [f.TRANSFORMED | face_type | f.MODE_BGR, resolution], 
                                               [f.TRANSFORMED | face_type | f.MODE_M | f.FACE_MASK_FULL, resolution] ] )

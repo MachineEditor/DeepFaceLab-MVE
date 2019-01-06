@@ -62,13 +62,14 @@ class ModelBase(object):
             self.options['target_epoch'] = max(0, input_int("Target epoch (skip:unlimited) : ", 0))
             self.options['batch_size'] = max(0, input_int("Batch_size (skip:model choice) : ", 0))
             self.options['sort_by_yaw'] = input_bool("Feed faces to network sorted by yaw? (y/n skip:n) : ", False)
-            
+            self.options['random_flip'] = input_bool("Flip faces randomly? (y/n skip:y) : ", True)
             #self.options['use_fp16'] = use_fp16 = input_bool("Use float16? (y/n skip:n) : ", False)
         else: 
             self.options['write_preview_history'] = self.options.get('write_preview_history', False)
             self.options['target_epoch'] = self.options.get('target_epoch', 0)
             self.options['batch_size'] = self.options.get('batch_size', 0)
             self.options['sort_by_yaw'] = self.options.get('sort_by_yaw', False)
+            self.options['random_flip'] = self.options.get('random_flip', True)
             #self.options['use_fp16'] = use_fp16 = self.options['use_fp16'] if 'use_fp16' in self.options.keys() else False
             
         use_fp16 = False #currently models fails with fp16
@@ -100,7 +101,11 @@ class ModelBase(object):
         self.sort_by_yaw = self.options['sort_by_yaw']
         if not self.sort_by_yaw:
             self.options.pop('sort_by_yaw') 
-           
+        
+        self.random_flip = self.options['random_flip']
+        if self.random_flip:
+            self.options.pop('random_flip') 
+            
         self.write_preview_history = session_write_preview_history
         self.target_epoch = session_target_epoch
         self.batch_size = session_batch_size
