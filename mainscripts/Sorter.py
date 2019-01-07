@@ -553,10 +553,12 @@ def sort_final(input_path):
     imgs_per_grad = 15 
     sharpned_imgs_per_grad = imgs_per_grad*10
     
+    grads_space = np.linspace (-255,255,grads)
+    
     yaws_sample_list = [None]*grads
-    for g in tqdm ( range (grads), desc="Sort by yaw" ):
-        yaw = -grads+1 + g*2
-        next_yaw = -grads+1 + (g+1)*2
+    for g in tqdm ( range(grads), desc="Sort by yaw" ):    
+        yaw = grads_space[g]
+        next_yaw = grads_space[g+1] if g < grads-1 else yaw
         
         yaw_samples = []
         for img in img_list:
