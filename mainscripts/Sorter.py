@@ -452,6 +452,163 @@ def sort_by_hist_dissim(input_path):
     img_list = sorted(img_list, key=operator.itemgetter(2), reverse=True)
 
     return img_list
+
+
+class FinalLoaderSubprocessor(SubprocessorBase):
+    #override
+    def __init__(self, img_list ): 
+        self.img_list = img_list
+
+        self.result = []
+        self.result_trash = []
+
+        super().__init__('FinalLoader', 60)           
+
+    #override
+    def onHostClientsInitialized(self):
+        pass
+        
+    #override
+    def process_info_generator(self):    
+        for i in range(0, min(multiprocessing.cpu_count(), 8) ):
+            yield 'CPU%d' % (i), {}, {'device_idx': i,
+                                      'device_name': 'CPU%d' % (i)
+                                      }
+
+    #override
+    def get_no_process_started_message(self):
+        print ( 'Unable to start CPU processes.')
+        
+    #override
+    def onHostGetProgressBarDesc(self):
+        return "Loading"
+        
+    #override
+    def onHostGetProgressBarLen(self):
+        return len (self.img_list)
+        
+    #override
+    def onHostGetData(self, host_dict):
+        if len (self.img_list) > 0:        
+            return [self.img_list.pop(0)]
+        
+        return None
+    
+    #override
+    def onHostDataReturn (self, host_dict, data):
+        self.img_list.insert(0, data[0])   
+        
+    #override
+    def onClientInitialize(self, client_dict):        
+        self.safe_print ('Running on %s.' % (client_dict['device_name']) )
+        return None
+
+    #override
+    def onClientFinalize(self):
+        pass
+        
+    #override
+    def onClientProcessData(self, data):        
+        filepath = Path(data[0])        
+        if filepath.suffix != '.png':
+            print ("%s is not a png file required for sort_final" % (filepath.name) ) 
+            return [ 1, [str(filepath)] ]
+        
+        dflpng = DFLPNG.load (str(filepath), print_on_no_embedded_data=True)
+        if dflpng is None:
+            return [ 1, [str(filepath)] ]
+        
+        bgr = cv2.imread(str(filepath))
+        gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)        
+        gray_masked = ( gray * LandmarksProcessor.get_image_hull_mask (bgr, dflpng.get_landmarks() )[:,:,0] ).astype(np.uint8)
+        sharpness = estimate_sharpness(gray_masked)
+        hist = cv2.calcHist([gray], [0], None, [256], [0, 256])        
+        return [ 0, [str(filepath), sharpness, hist, dflpng.get_yaw_value() ] ]
+        
+
+    #override
+    def onClientGetDataName (self, data):
+        #return string identificator of your data
+        return data[0]
+        
+    #override
+    def onHostResult (self, host_dict, data, result):
+        if result[0] == 0:
+            self.result.append (result[1])
+        else:
+            self.result_trash.append (result[1])
+        return 1
+
+    #override
+    def onFinalizeAndGetResult(self):
+        return self.result, self.result_trash
+    
+def sort_final(input_path):
+    print ("Performing final sort.")
+    
+    img_list, trash_img_list = FinalLoaderSubprocessor( Path_utils.get_image_paths(input_path) ).process()
+    final_img_list = []
+
+    grads = 128
+    imgs_per_grad = 15 
+    sharpned_imgs_per_grad = imgs_per_grad*10
+    
+    yaws_sample_list = [None]*grads
+    for g in tqdm ( range (grads), desc="Sort by yaw" ):
+        yaw = -grads+1 + g*2
+        next_yaw = -grads+1 + (g+1)*2
+        
+        yaw_samples = []
+        for img in img_list:
+            s_yaw = -img[3]
+            if (g == 0          and s_yaw < next_yaw) or \
+               (g < grads-1     and s_yaw >= yaw and s_yaw < next_yaw) or \
+               (g == grads-1    and s_yaw >= yaw):
+                yaw_samples += [ img ]
+        if len(yaw_samples) > 0:
+            yaws_sample_list[g] = yaw_samples
+    
+    for g in tqdm ( range (grads), desc="Sort by blur" ):
+        img_list = yaws_sample_list[g]
+        if img_list is None:
+            continue
+
+        img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)    
+ 
+        if len(img_list) > imgs_per_grad*2:
+            trash_img_list += img_list[len(img_list) // 2:]
+            img_list = img_list[0: len(img_list) // 2]
+        
+        if len(img_list) > sharpned_imgs_per_grad:
+            trash_img_list += img_list[sharpned_imgs_per_grad:]
+            img_list = img_list[0:sharpned_imgs_per_grad]
+            
+        yaws_sample_list[g] = img_list
+            
+    for g in tqdm ( range (grads), desc="Sort by hist" ):
+        img_list = yaws_sample_list[g]
+        if img_list is None:
+            continue
+            
+        for i in range( len(img_list) ):
+            score_total = 0
+            for j in range( len(img_list) ):
+                if i == j:
+                    continue
+                score_total += cv2.compareHist(img_list[i][2], img_list[j][2], cv2.HISTCMP_BHATTACHARYYA)
+            img_list[i][3] = score_total
+            
+        yaws_sample_list[g] = sorted(img_list, key=operator.itemgetter(3), reverse=True)    
+
+    for g in tqdm ( range (grads), desc="Fetching best" ):
+        img_list = yaws_sample_list[g]
+        if img_list is None:
+            continue
+            
+        final_img_list += img_list[0:imgs_per_grad]
+        trash_img_list += img_list[imgs_per_grad:]
+    
+    return final_img_list, trash_img_list
     
 def sort_by_black(input_path):
     print ("Sorting by amount of black pixels...")
@@ -466,16 +623,36 @@ def sort_by_black(input_path):
 
     return img_list
     
-def final_rename(input_path, img_list):
-    for i in tqdm( range(0,len(img_list)), desc="Renaming" , leave=False):
+def final_process(input_path, img_list, trash_img_list):
+    if len(trash_img_list) != 0:
+        parent_input_path = input_path.parent
+        trash_path = parent_input_path / (input_path.stem + '_trash')
+        trash_path.mkdir (exist_ok=True)
+        
+        print ("Trashing %d items to %s" % ( len(trash_img_list), str(trash_path) ) )        
+        
+        for filename in Path_utils.get_image_paths(trash_path):
+            Path(filename).unlink()
+
+        for i in tqdm( range(len(trash_img_list)), desc="Moving trash" , leave=False):
+            src = Path (trash_img_list[i][0])        
+            dst = trash_path / src.name
+            try:
+                src.rename (dst)
+            except:
+                print ('fail to trashing %s' % (src.name) )
+                
+        print ("")
+        
+    for i in tqdm( range(len(img_list)), desc="Renaming" , leave=False):
         src = Path (img_list[i][0])        
         dst = input_path / ('%.5d_%s' % (i, src.name ))
         try:
             src.rename (dst)
         except:
-            print ('fail to rename %s' % (src.name) )    
+            print ('fail to rename %s' % (src.name) )
             
-    for i in tqdm( range(0,len(img_list)) , desc="Renaming" ):
+    for i in tqdm( range(len(img_list)) , desc="Renaming" ):
         src = Path (img_list[i][0])
         
         src = input_path / ('%.5d_%s' % (i, src.name))
@@ -483,8 +660,8 @@ def final_rename(input_path, img_list):
         try:
             src.rename (dst)
         except:
-            print ('fail to rename %s' % (src.name) )    
-
+            print ('fail to rename %s' % (src.name) )   
+        
 def sort_by_origname(input_path):
     print ("Sort by original filename...")
     
@@ -513,7 +690,7 @@ def main (input_path, sort_by_method):
     print ("Running sort tool.\r\n")
     
     img_list = []
-
+    trash_img_list = []
     if sort_by_method == 'blur':            img_list = sort_by_blur (input_path)
     elif sort_by_method == 'face':          img_list = sort_by_face (input_path)
     elif sort_by_method == 'face-dissim':   img_list = sort_by_face_dissim (input_path)
@@ -524,5 +701,6 @@ def main (input_path, sort_by_method):
     elif sort_by_method == 'hue':           img_list = sort_by_hue (input_path)
     elif sort_by_method == 'black':         img_list = sort_by_black (input_path)    
     elif sort_by_method == 'origname':      img_list = sort_by_origname (input_path)       
+    elif sort_by_method == 'final':   img_list, trash_img_list = sort_final (input_path)  
     
-    final_rename (input_path, img_list)
+    final_process (input_path, img_list, trash_img_list)

@@ -96,19 +96,19 @@ SAE model Cage-Trump video: https://www.youtube.com/watch?v=2R_aqHBClUQ
 
 `black` Places images which contains black area at end of folder. Useful to get rid of src faces which cutted by screen.
 
-Best practice for gather src faceset:
+`final` sorts by yaw, blur, and hist, and leaves best 1500-1700 images.
 
-1) delete first unsorted aligned groups of images what you can to delete. Dont touch target face mixed with others.
-2) `black` -> delete faces cutted by black area at end of folder
-3) `blur` -> delete 30-50% at end of folder
-4) `hist` -> delete groups of similar and leave only target face
-5) `hist-dissim` -> leave only first **1500 faces**
-6) `face-yaw` -> just for finalize faceset
+Best practice for gather src faceset from tens of thousands images:
+
+1) `black` -> then delete faces cutted by black area at end of folder
+2) `blur` -> then delete blurred faces at end of folder
+3) `hist` -> then delete groups of similar unwanted faces and leave only target face
+4) `final` -> then delete faces occluded by obstructions
 
 Best practice for dst faces:
 
 1) delete first unsorted aligned groups of images what you can to delete. Dont touch target face mixed with others.
-2) `hist` -> delete groups of similar and leave only target face
+2) `hist` -> then delete groups of similar and leave only target face
 
 ### **Ready to work facesets**:
 
