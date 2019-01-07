@@ -72,9 +72,9 @@ class SampleLoader:
         return sample_list
         
     @staticmethod
-    def upgradeToFaceYawSortedSamples( YAW_RAWS ):
+    def upgradeToFaceYawSortedSamples( samples ):
 
-        lowest_yaw, highest_yaw = -32, +32      
+        lowest_yaw, highest_yaw = -256, +256      
         gradations = 64
         diff_rot_per_grad = abs(highest_yaw-lowest_yaw) / gradations
 
@@ -85,7 +85,7 @@ class SampleLoader:
             next_yaw = lowest_yaw + (i+1)*diff_rot_per_grad
 
             yaw_samples = []        
-            for s in YAW_RAWS:                
+            for s in samples:                
                 s_yaw = s.yaw
                 if (i == 0            and s_yaw < next_yaw) or \
                    (i  < gradations-1 and s_yaw >= yaw and s_yaw < next_yaw) or \
