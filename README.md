@@ -112,9 +112,7 @@ Best practice for dst faces:
 
 ### **Ready to work facesets**:
 
-- Nicolas Cage 4 facesets (1 mix + 3 different)
-
-- Steve Jobs
+Nicolas Cage 4 facesets (1 mix + 3 different), Steve Jobs, Putin
 
 download from here: https://mega.nz/#F!y1ERHDaL!PPwg01PQZk0FhWLVo5_MaQ
 
