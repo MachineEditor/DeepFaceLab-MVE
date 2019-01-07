@@ -116,7 +116,7 @@ class Model(ModelBase):
                                output_size=128, 
                                face_type=FaceType.FULL, 
                                base_erode_mask_modifier=30,
-                               base_blur_mask_modifier=100,
+                               base_blur_mask_modifier=0,
                                **in_options)
         
     def Build(self, input_layer):
