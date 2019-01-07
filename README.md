@@ -70,7 +70,7 @@ LIAEF128 Cage video:
 
 [![Watch the video](https://img.youtube.com/vi/mRsexePEVco/0.jpg)](https://www.youtube.com/watch?v=mRsexePEVco)
 
-- **SAE (2GB+)** - Styled AutoEncoder. It is like LIAEF but with new face style loss like in UFM.
+- **SAE (2GB+)** - Styled AutoEncoder. It is like LIAEF but with new face style loss. SAE more like face morpher/stylizer rather than direct swapper. Available options on start: resolution, ae-dims, half/full face. 
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_0.jpg)
 
