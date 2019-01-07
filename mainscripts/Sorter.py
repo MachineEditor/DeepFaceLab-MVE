@@ -509,20 +509,28 @@ class FinalLoaderSubprocessor(SubprocessorBase):
         
     #override
     def onClientProcessData(self, data):        
-        filepath = Path(data[0])        
-        if filepath.suffix != '.png':
-            print ("%s is not a png file required for sort_final" % (filepath.name) ) 
+        filepath = Path(data[0])     
+
+        try:
+            if filepath.suffix != '.png':
+                raise Exception ("%s is not a png file required for sort_final" % (filepath.name) ) 
+            
+            dflpng = DFLPNG.load (str(filepath), print_on_no_embedded_data=True)
+            if dflpng is None:
+                raise Exception ("")
+            
+            bgr = cv2.imread(str(filepath))
+            if bgr is None:
+                raise Exception ("Unable to load %s" % (filepath.name) ) 
+                
+            gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)        
+            gray_masked = ( gray * LandmarksProcessor.get_image_hull_mask (bgr, dflpng.get_landmarks() )[:,:,0] ).astype(np.uint8)
+            sharpness = estimate_sharpness(gray_masked)
+            hist = cv2.calcHist([gray], [0], None, [256], [0, 256])   
+        except Exception as e:
+            print (e)
             return [ 1, [str(filepath)] ]
-        
-        dflpng = DFLPNG.load (str(filepath), print_on_no_embedded_data=True)
-        if dflpng is None:
-            return [ 1, [str(filepath)] ]
-        
-        bgr = cv2.imread(str(filepath))
-        gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)        
-        gray_masked = ( gray * LandmarksProcessor.get_image_hull_mask (bgr, dflpng.get_landmarks() )[:,:,0] ).astype(np.uint8)
-        sharpness = estimate_sharpness(gray_masked)
-        hist = cv2.calcHist([gray], [0], None, [256], [0, 256])        
+            
         return [ 0, [str(filepath), sharpness, hist, dflpng.get_yaw_value() ] ]
         
 
@@ -551,8 +559,7 @@ def sort_final(input_path):
 
     grads = 128
     imgs_per_grad = 15 
-    sharpned_imgs_per_grad = imgs_per_grad*10
-    
+
     grads_space = np.linspace (-255,255,grads)
     
     yaws_sample_list = [None]*grads
@@ -569,6 +576,17 @@ def sort_final(input_path):
                 yaw_samples += [ img ]
         if len(yaw_samples) > 0:
             yaws_sample_list[g] = yaw_samples
+    
+    total_lack = 0
+    for g in tqdm ( range (grads), desc="" ):
+        img_list = yaws_sample_list[g]
+        img_list_len = len(img_list) if img_list is not None else 0
+        
+        lack = imgs_per_grad - img_list_len
+        total_lack += max(lack, 0)        
+
+    imgs_per_grad += total_lack // grads
+    sharpned_imgs_per_grad = imgs_per_grad*10
     
     for g in tqdm ( range (grads), desc="Sort by blur" ):
         img_list = yaws_sample_list[g]
