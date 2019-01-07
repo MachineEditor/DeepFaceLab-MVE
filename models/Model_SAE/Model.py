@@ -231,8 +231,8 @@ class SAEModel(ModelBase):
     def get_converter(self, **in_options):
         from models import ConverterMasked
 
-        base_erode_mask_modifier = 30 if self.options['face_type'] == 'f' else 100
-        base_blur_mask_modifier = 0 if self.options['face_type'] == 'f' else 100
+        base_erode_mask_modifier = 40 if self.options['face_type'] == 'f' else 100
+        base_blur_mask_modifier = 10 if self.options['face_type'] == 'f' else 100
         
         face_type = FaceType.FULL if self.options['face_type'] == 'f' else FaceType.HALF
         
