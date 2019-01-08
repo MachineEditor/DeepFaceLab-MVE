@@ -1699,3 +1699,18 @@ def nvmlDeviceGetTopologyCommonAncestor(device1, device2):
     ret = fn(device1, device2, byref(c_level))
     _nvmlCheckReturn(ret)
     return c_level.value
+
+#DeepFaceLab additions
+def nvmlDeviceGetCudaComputeCapability(device):
+    c_major = c_int()
+    c_minor = c_int()
+    fn = _nvmlGetFunctionPointer("nvmlDeviceGetCudaComputeCapability")
+    
+    # get the count
+    ret = fn(device, byref(c_major), byref(c_minor))
+    
+    # this should only fail with insufficient size
+    if (ret != NVML_SUCCESS):
+        raise NVMLError(ret)
+
+    return c_major.value, c_minor.value

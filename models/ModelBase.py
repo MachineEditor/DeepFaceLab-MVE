@@ -109,13 +109,13 @@ class ModelBase(object):
         self.write_preview_history = session_write_preview_history
         self.target_epoch = session_target_epoch
         self.batch_size = session_batch_size
-
-        self.device_config = nnlib.DeviceConfig(allow_growth=False, use_fp16=use_fp16, **in_options)
-
+        self.onInitializeOptions(self.epoch == 0, ask_for_session_options)
+        
+        nnlib.import_all ( nnlib.DeviceConfig(allow_growth=False, use_fp16=use_fp16, **in_options) )
+        self.device_config = nnlib.active_DeviceConfig
+        
         self.created_vram_gb = self.options['created_vram_gb'] if 'created_vram_gb' in self.options.keys() else self.device_config.gpu_total_vram_gb
 
-        self.onInitializeOptions(self.epoch == 0, ask_for_session_options)        
-        nnlib.import_all (self.device_config)
         self.onInitialize(**in_options)
         
         if self.debug or self.batch_size == 0:

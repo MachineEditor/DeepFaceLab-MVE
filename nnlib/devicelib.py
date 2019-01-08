@@ -7,7 +7,9 @@ class devicelib:
         force_gpu_idxs = None
         choose_worst_gpu = False
         gpu_idxs = []
+        gpu_names = []
         gpu_total_vram_gb = 0
+        gpu_compute_caps = []
         allow_growth = True
         use_fp16 = False
         cpu_only = False
@@ -47,12 +49,16 @@ class devicelib:
                         else:
                             self.gpu_idxs = [gpu_idx]
                             
-                if len(self.gpu_idxs) == 0:
-                    self.cpu_only = True
-                else:
-                    self.cpu_only = False
+                self.cpu_only = (len(self.gpu_idxs) == 0)
+ 
+                if not self.cpu_only:
                     self.gpu_total_vram_gb = devicelib.getDeviceVRAMTotalGb ( self.gpu_idxs[0] )
-    
+                    self.gpu_names = []
+                    self.gpu_compute_caps = []
+                    for gpu_idx in self.gpu_idxs:
+                        self.gpu_names += [devicelib.getDeviceName(gpu_idx)]
+                        self.gpu_compute_caps += [ devicelib.getDeviceComputeCapability ( gpu_idx ) ]
+                    
     @staticmethod
     def hasNVML():
         try:
@@ -207,3 +213,15 @@ class devicelib:
         except:
             pass
         return result
+        
+    @staticmethod
+    def getDeviceComputeCapability(idx):
+        result = 0
+        try:
+            nvmlInit()    
+            if idx < nvmlDeviceGetCount():    
+                result = nvmlDeviceGetCudaComputeCapability(nvmlDeviceGetHandleByIndex(idx))
+            nvmlShutdown()
+        except:
+            pass
+        return result[0] * 10 + result[1]

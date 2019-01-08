@@ -9,7 +9,7 @@ from .devicelib import devicelib
 class nnlib(object):
     device = devicelib #forwards nnlib.devicelib to device in order to use nnlib as standalone lib
     DeviceConfig = devicelib.Config
-    prefer_DeviceConfig = DeviceConfig() #default is one best GPU
+    active_DeviceConfig = DeviceConfig() #default is one best GPU
 
     dlib = None
     keras = None
@@ -125,12 +125,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
     def import_tf(device_config = None):
         if nnlib.tf is not None:
             return nnlib.code_import_tf
-        
-        if device_config is None:
-            device_config = nnlib.prefer_DeviceConfig
-        else:
-            nnlib.prefer_DeviceConfig = device_config
-            
+
         if 'TF_SUPPRESS_STD' in os.environ.keys() and os.environ['TF_SUPPRESS_STD'] == '1':
             suppressor = std_utils.suppress_stdout_stderr().__enter__()
         else:
@@ -143,6 +138,26 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         
         import tensorflow as tf
         nnlib.tf = tf
+        
+        if device_config is None:
+            device_config = nnlib.active_DeviceConfig
+        
+        tf_ver = [int(x) for x in tf.VERSION.split('.')]
+        req_cap = 35
+        if tf_ver[0] > 1 or (tf_ver[0] == 1 and tf_ver[1] >= 11):
+            req_cap = 37
+            
+        if not device_config.cpu_only and device_config.gpu_compute_caps[0] < req_cap:
+            if suppressor is not None:  
+                suppressor.__exit__()
+            
+            print ("%s does not meet minimum required compute capability: %d.%d. Falling back to CPU mode." % ( device_config.gpu_names[0], req_cap // 10, req_cap % 10 ) )
+            device_config = nnlib.DeviceConfig(cpu_only=True)
+            
+            if suppressor is not None:  
+                suppressor.__enter__()
+
+        nnlib.active_DeviceConfig = device_config
         
         if device_config.cpu_only:
             config = tf.ConfigProto( device_count = {'GPU': 0} )
@@ -160,6 +175,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
             
         if suppressor is not None:  
             suppressor.__exit__()
+            
 
         nnlib.__initialize_tf_functions()
         nnlib.code_import_tf = compile (nnlib.code_import_tf_string,'','exec')
@@ -367,7 +383,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
             return nnlib.code_import_keras
 
         nnlib.import_tf(device_config)
-        device_config = nnlib.prefer_DeviceConfig
+        device_config = nnlib.active_DeviceConfig
         if 'TF_SUPPRESS_STD' in os.environ.keys() and os.environ['TF_SUPPRESS_STD'] == '1':
             suppressor = std_utils.suppress_stdout_stderr().__enter__()
             

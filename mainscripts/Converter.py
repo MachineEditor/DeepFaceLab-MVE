@@ -131,8 +131,8 @@ class ConvertSubprocessor(SubprocessorBase):
         from nnlib import nnlib          
         #model process ate all GPU mem,
         #so we cannot use GPU for any TF operations in converter processes (for example image_utils.TFLabConverter)
-        #therefore forcing prefer_DeviceConfig to CPU only
-        nnlib.prefer_DeviceConfig = nnlib.DeviceConfig (cpu_only=True)
+        #therefore forcing active_DeviceConfig to CPU only
+        nnlib.active_DeviceConfig = nnlib.DeviceConfig (cpu_only=True)
         
         return None
 
