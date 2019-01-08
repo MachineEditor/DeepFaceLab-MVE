@@ -80,6 +80,20 @@ SAE model Cage-Trump video: https://www.youtube.com/watch?v=2R_aqHBClUQ
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/DeepFaceLab_convertor_overview.png)
 
+
+### **Tips and tricks**:
+
+unfortunately deepfaking is time/eletricpower consuming topic and has a lot of nuances.
+
+Every model is good for specific scenes and faces.
+H64 - good for straight faces as a demo and for low vram.
+H128 - good for straight faces, gives highest resolution and details possible in 2019. Absolute best for asian faces, because they are flat, similar and evenly lighted with clear skin.
+DF - good for side faces, but results in a lower resolution and details. Covers more area of cheeks. Keeps face unmorphed. Good for similar face shapes.
+LIAE - can partially fix dissimilar face shapes, but results in a less recognizable face.
+SAE - no matter how similar faces, src face will be morphed onto dst face, which can make face absolutely unrecognizable. Model can collapse on some scenes. Easy to overlay final face because dst background is also predicted.
+
+also quality of src faceset significantly affects the final face.
+
 ### **Sort tool**:
 
 `blur` places most blurred faces at end of folder
