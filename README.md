@@ -92,7 +92,9 @@ DF - good for side faces, but results in a lower resolution and details. Covers 
 LIAE - can partially fix dissimilar face shapes, but results in a less recognizable face.
 SAE - no matter how similar faces, src face will be morphed onto dst face, which can make face absolutely unrecognizable. Model can collapse on some scenes. Easy to overlay final face because dst background is also predicted.
 
-also quality of src faceset significantly affects the final face.
+Quality of src faceset significantly affects the final face.
+
+Narrow src face is better fakeable than wide. This is why Cage is so popular in deepfakes.
 
 ### **Sort tool**:
 

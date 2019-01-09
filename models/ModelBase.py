@@ -58,11 +58,12 @@ class ModelBase(object):
             
         if self.epoch == 0: 
             print ("\nModel first run. Enter model options as default for each run.")
-            self.options['write_preview_history'] = input_bool("Write preview history? (y/n skip:n) : ", False)
+            self.options['write_preview_history'] = input_bool("Write preview history? (y/n ?:help skip:n) : ", False, help_message="Preview history will be writed to <ModelName>_history folder.")
             self.options['target_epoch'] = max(0, input_int("Target epoch (skip:unlimited) : ", 0))
-            self.options['batch_size'] = max(0, input_int("Batch_size (skip:model choice) : ", 0))
-            self.options['sort_by_yaw'] = input_bool("Feed faces to network sorted by yaw? (y/n skip:n) : ", False)
-            self.options['random_flip'] = input_bool("Flip faces randomly? (y/n skip:y) : ", True)
+            self.options['batch_size'] = max(0, input_int("Batch_size (?:help skip:model choice) : ", 0, help_message="Larger batch size is always better for NN's generalization, but it can cause Out of Memory error. Tune this value for your videocard manually."))
+            self.options['sort_by_yaw'] = input_bool("Feed faces to network sorted by yaw? (y/n ?:help skip:n) : ", False, help_message="NN will not learn src face directions that don't match dst face directions." )
+            self.options['random_flip'] = input_bool("Flip faces randomly? (y/n ?:help skip:y) : ", True, help_message="Predicted face will look more naturally without this option, but src faceset should cover all face directions as dst faceset.")
+            self.options['src_scale_mod'] = np.clip( input_int("Src face scale modifier % ( -30...30, ?:help skip:0) : ", 0, help_message="If src face shape is wider than dst, try to decrease this value to get a better result."), -30, 30)
             #self.options['use_fp16'] = use_fp16 = input_bool("Use float16? (y/n skip:n) : ", False)
         else: 
             self.options['write_preview_history'] = self.options.get('write_preview_history', False)
@@ -70,6 +71,7 @@ class ModelBase(object):
             self.options['batch_size'] = self.options.get('batch_size', 0)
             self.options['sort_by_yaw'] = self.options.get('sort_by_yaw', False)
             self.options['random_flip'] = self.options.get('random_flip', True)
+            self.options['src_scale_mod'] = self.options.get('src_scale_mod', 0)
             #self.options['use_fp16'] = use_fp16 = self.options['use_fp16'] if 'use_fp16' in self.options.keys() else False
             
         use_fp16 = False #currently models fails with fp16
@@ -105,6 +107,10 @@ class ModelBase(object):
         self.random_flip = self.options['random_flip']
         if self.random_flip:
             self.options.pop('random_flip') 
+        
+        self.src_scale_mod = self.options['src_scale_mod']
+        if self.src_scale_mod == 0:
+            self.options.pop('src_scale_mod') 
             
         self.write_preview_history = session_write_preview_history
         self.target_epoch = session_target_epoch
