@@ -288,7 +288,7 @@ class SAEModel(ModelBase):
             st.append ( np.concatenate ( (
                 S[i], SS[i], #SM[i],
                 D[i], DD[i], #DM[i],
-                SD[i], SDM[i]
+                SD[i], #SDM[i]
                 ), axis=1) )
             
         return [ ('SAE', np.concatenate ( st, axis=0 ) ) ]
