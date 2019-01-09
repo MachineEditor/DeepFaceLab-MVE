@@ -96,7 +96,7 @@ class ConverterMasked(ConverterBase):
 
         prd_face_bgr      = np.clip (predicted_bgra[:,:,0:3], 0, 1.0 )
         prd_face_mask_a_0 = np.clip (predicted_bgra[:,:,3], 0.0, 1.0)
-        
+
         if not self.use_predicted_mask:
             prd_face_mask_a_0 = predictor_input_mask_a_0
             
@@ -125,7 +125,7 @@ class ConverterMasked(ConverterBase):
         if self.mode == 'raw':
             if self.raw_mode == 'rgb' or self.raw_mode == 'rgb-mask':
                 out_img = cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, out_img, cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
-                
+             
             if self.raw_mode == 'rgb-mask':
                 out_img = np.concatenate ( [out_img, np.expand_dims (img_face_mask_aaa[:,:,0],-1)], -1 )
                 
@@ -256,6 +256,8 @@ class ConverterMasked(ConverterBase):
                     if self.alpha:
                         out_img = np.concatenate ( [out_img, np.expand_dims (img_mask_blurry_aaa[:,:,0],-1)], -1 )                        
        
+        out_img = np.clip (out_img, 0.0, 1.0 )
+        
         if debug:
             debugs += [out_img.copy()]
             
