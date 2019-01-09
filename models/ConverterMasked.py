@@ -33,10 +33,11 @@ class ConverterMasked(ConverterBase):
                      6:'raw'}.get (mode, 'seamless')
         
         if self.mode == 'raw':
-            mode = input_int ("Choose raw mode: (1) rgb, (2) rgb+mask (default), (3) mask only : ", 2)
+            mode = input_int ("Choose raw mode: (1) rgb, (2) rgb+mask (default), (3) mask only, (4) predicted only : ", 2)
             self.raw_mode = {1:'rgb',
                              2:'rgb-mask',
-                             3:'mask-only'}.get (mode, 'rgb-mask')
+                             3:'mask-only',
+                             4:'predicted-only'}.get (mode, 'rgb-mask')
         
         if self.mode != 'raw':
             if self.mode == 'hist-match' or self.mode == 'hist-match-bw':
@@ -122,14 +123,18 @@ class ConverterMasked(ConverterBase):
         out_img = img_bgr.copy()
         
         if self.mode == 'raw':
-            if self.raw_mode == 'rgb':
+            if self.raw_mode == 'rgb' or self.raw_mode == 'rgb-mask':
                 out_img = cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, out_img, cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
                 
             if self.raw_mode == 'rgb-mask':
                 out_img = np.concatenate ( [out_img, np.expand_dims (img_face_mask_aaa[:,:,0],-1)], -1 )
                 
             if self.raw_mode == 'mask-only':
-                out_img = img_face_mask_aaa            
+                out_img = img_face_mask_aaa   
+
+            if self.raw_mode == 'predicted-only':
+                out_img = cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(out_img.shape), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
+                
         else:
             if maxregion.size != 0:
                 miny,minx = maxregion.min(axis=0)[:2]
