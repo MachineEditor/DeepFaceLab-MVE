@@ -128,8 +128,7 @@ class ConverterMasked(ConverterBase):
                 if self.erode_mask_modifier != 0:
                     ero  = int( lowest_len * ( 0.126 - lowest_len * 0.00004551365 ) * 0.01*self.erode_mask_modifier )
                     if debug:
-                        print ("erode_size = %d" % (ero) )
-                    
+                        print ("erode_size = %d" % (ero) )                    
                     if ero > 0:
                         img_mask_blurry_aaa = cv2.erode(img_mask_blurry_aaa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(ero,ero)), iterations = 1 )                        
                     elif ero < 0:
@@ -137,18 +136,20 @@ class ConverterMasked(ConverterBase):
                 
                 if self.seamless_erode_mask_modifier != 0:
                     ero  = int( lowest_len * ( 0.126 - lowest_len * 0.00004551365 ) * 0.01*self.seamless_erode_mask_modifier )
+                    if debug:
+                        print ("seamless_erode_size = %d" % (ero) )
                     if ero > 0:
                         img_face_mask_flatten_aaa = cv2.erode(img_face_mask_flatten_aaa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(ero,ero)), iterations = 1 )
                     elif ero < 0:
                         img_face_mask_flatten_aaa = cv2.dilate(img_face_mask_flatten_aaa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(-ero,-ero)), iterations = 1 )
-                    if debug:
-                        print ("seamless_erode_size = %d" % (ero) )
+                    
                         
                 if self.blur_mask_modifier > 0:
                     blur = int( lowest_len * 0.10 * 0.01*self.blur_mask_modifier )
-                    img_mask_blurry_aaa = cv2.blur(img_mask_blurry_aaa, (blur, blur) )
                     if debug:
                         print ("blur_size = %d" % (blur) )
+                    if blur > 0:
+                        img_mask_blurry_aaa = cv2.blur(img_mask_blurry_aaa, (blur, blur) )                    
                     
                 img_mask_blurry_aaa = np.clip( img_mask_blurry_aaa, 0, 1.0 )
 
