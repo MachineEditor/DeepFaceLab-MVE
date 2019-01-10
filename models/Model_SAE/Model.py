@@ -21,32 +21,40 @@ class SAEModel(ModelBase):
     decoder_dstmH5 = 'decoder_dstm.h5'
     
     #override
-    def onInitializeOptions(self, is_first_run, ask_for_session_options):
+    def onInitializeOptions(self, is_first_run, ask_override):
         default_resolution = 128
         default_archi = 'liae'
         default_style_power = 100
         default_face_type = 'f'
         
-        if is_first_run: 
-            #first run
+        if is_first_run:
             self.options['resolution'] = input_int("Resolution (64,128, ?:help skip:128) : ", default_resolution, [64,128], help_message="More resolution requires more VRAM.")
             self.options['archi'] = input_str ("AE architecture (df, liae, ?:help skip:liae) : ", default_archi, ['df','liae'], help_message="DF keeps faces more natural, while LIAE can fix overly different face shapes.").lower()            
-            self.options['learn_face_style'] = input_bool("Learn face style? (y/n skip:y) : ", True)
-            self.options['learn_bg_style'] = input_bool("Learn background style? (y/n skip:y) : ", True)
-            self.options['style_power'] = np.clip ( input_int("Style power (1..100 ?:help skip:100) : ", default_style_power, help_message="How fast NN will learn dst style during generalization of src and dst faces."), 1, 100 )            
-            default_ae_dims = 256 if self.options['archi'] == 'liae' else 512
+            self.options['lighter_encoder'] = input_bool ("Use lightweight encoder? (y/n, ?:help skip:n) : ", False, help_message="Lightweight encoder is 35% faster, but it is not tested on various scenes.").lower()
+        else:
+            self.options['resolution'] = self.options.get('resolution', default_resolution)
+            self.options['archi'] = self.options.get('archi', default_archi)
+            self.options['lighter_encoder'] = self.options.get('lighter_encoder', False)
+
+        if is_first_run or ask_override:
+            self.options['face_style_power'] = np.clip ( input_int("Face style power (0..100 ?:help skip:100) : ", default_style_power, help_message="How fast NN will learn dst face style during generalization of src and dst faces."), 0, 100 )            
+        else:
+            self.options['face_style_power'] = self.options.get('face_style_power', default_style_power)
+            
+        if is_first_run or ask_override: 
+            self.options['bg_style_power'] = np.clip ( input_int("Background style power (0..100 ?:help skip:100) : ", default_style_power, help_message="How fast NN will learn dst background style during generalization of src and dst faces."), 0, 100 )            
+        else:
+            self.options['bg_style_power'] = self.options.get('bg_style_power', default_style_power)
+            
+        default_ae_dims = 256 if self.options['archi'] == 'liae' else 512
+        
+        if is_first_run:
             self.options['ae_dims'] = input_int("AutoEncoder dims (128,256,512 ?:help skip:%d) : " % (default_ae_dims) , default_ae_dims, [128,256,512], help_message="More dims are better, but requires more VRAM." )
             self.options['face_type'] = input_str ("Half or Full face? (h/f, ?:help skip:f) : ", default_face_type, ['h','f'], help_message="Half face has better resolution, but covers less area of cheeks.").lower()            
-        else: 
-            #not first run
-            self.options['resolution'] = self.options.get('resolution', default_resolution)
-            self.options['learn_face_style'] = self.options.get('learn_face_style', True)
-            self.options['learn_bg_style'] = self.options.get('learn_bg_style', True)
-            self.options['archi'] = self.options.get('archi', default_archi)
-            self.options['style_power'] = self.options.get('style_power', default_style_power)
-            default_ae_dims = 256 if self.options['archi'] == 'liae' else 512
+        else:
             self.options['ae_dims'] = self.options.get('ae_dims', default_ae_dims)
             self.options['face_type'] = self.options.get('face_type', default_face_type)
+            
 
     #override
     def onInitialize(self, **in_options):
@@ -68,7 +76,7 @@ class SAEModel(ModelBase):
         target_dstm = Input(mask_shape)
             
         if self.options['archi'] == 'liae':
-            self.encoder = modelify(SAEModel.EncFlow()  ) (Input(bgr_shape))
+            self.encoder = modelify(SAEModel.EncFlow(self.options['lighter_encoder'])  ) (Input(bgr_shape))
             
             enc_output_Inputs = [ Input(K.int_shape(x)[1:]) for x in self.encoder.outputs ] 
             
@@ -107,7 +115,7 @@ class SAEModel(ModelBase):
             pred_src_dst = self.decoder(warped_src_dst_inter_code)
             pred_src_dstm = self.decoderm(warped_src_dst_inter_code)
         else:
-            self.encoder = modelify(SAEModel.DFEncFlow(dims=ae_dims,lowest_dense_res=resolution // 16)  ) (Input(bgr_shape))
+            self.encoder = modelify(SAEModel.DFEncFlow(self.options['lighter_encoder'], dims=ae_dims,lowest_dense_res=resolution // 16)  ) (Input(bgr_shape))
             
             dec_Inputs = [ Input(K.int_shape(x)[1:]) for x in self.encoder.outputs ] 
             
@@ -162,17 +170,16 @@ class SAEModel(ModelBase):
         
         psd_target_dst_masked = pred_src_dst_sigm * target_dstm_sigm
         psd_target_dst_anti_masked = pred_src_dst_sigm * target_dstm_anti_sigm
-        
-
-        style_power = self.options['style_power'] / 100.0
-        
+  
         src_loss = K.mean( 100*K.square(tf_dssim(2.0)( target_src_masked, pred_src_src_masked )) ) 
         
-        if self.options['learn_face_style']:
-            src_loss += tf_style_loss(gaussian_blur_radius=resolution // 8, loss_weight=0.2*style_power)(psd_target_dst_masked, target_dst_masked) 
+        if self.options['face_style_power'] != 0:
+            face_style_power = self.options['face_style_power'] / 100.0
+            src_loss += tf_style_loss(gaussian_blur_radius=resolution // 8, loss_weight=0.2*face_style_power)(psd_target_dst_masked, target_dst_masked) 
             
-        if self.options['learn_bg_style']:
-            src_loss += K.mean( (100*style_power)*K.square(tf_dssim(2.0)( psd_target_dst_anti_masked, target_dst_anti_masked )))
+        if self.options['bg_style_power'] != 0:
+            bg_style_power = self.options['bg_style_power'] / 100.0
+            src_loss += K.mean( (100*bg_style_power)*K.square(tf_dssim(2.0)( psd_target_dst_anti_masked, target_dst_anti_masked )))
 
         if self.options['archi'] == 'liae':
             src_train_weights = self.encoder.trainable_weights + self.inter_AB.trainable_weights + self.decoder.trainable_weights
@@ -180,8 +187,7 @@ class SAEModel(ModelBase):
             src_train_weights = self.encoder.trainable_weights + self.decoder_src.trainable_weights
         self.src_train = K.function ([warped_src, target_src, target_srcm, warped_dst, target_dst, target_dstm ],[src_loss],
                                     Adam(lr=5e-5, beta_1=0.5, beta_2=0.999).get_updates(src_loss, src_train_weights) )
-                  
-             
+
         dst_loss = K.mean( 100*K.square(tf_dssim(2.0)( target_dst_masked, pred_dst_dst_masked )) )        
         
         if self.options['archi'] == 'liae':
@@ -190,8 +196,7 @@ class SAEModel(ModelBase):
             dst_train_weights = self.encoder.trainable_weights + self.decoder_dst.trainable_weights
         self.dst_train = K.function ([warped_dst, target_dst, target_dstm],[dst_loss],
                                     Adam(lr=5e-5, beta_1=0.5, beta_2=0.999).get_updates(dst_loss, dst_train_weights) )
-                                    
-        
+  
         src_mask_loss = K.mean(K.square(target_srcm-pred_src_srcm))    
 
         if self.options['archi'] == 'liae':
@@ -317,12 +322,17 @@ class SAEModel(ModelBase):
                                **in_options)
     
     @staticmethod
-    def EncFlow():
+    def EncFlow(light_enc):
         exec (nnlib.import_all(), locals(), globals())
         
         def downscale (dim):
             def func(x):
                 return LeakyReLU(0.1)(Conv2D(dim, 5, strides=2, padding='same')(x))
+            return func 
+
+        def downscale_sep (dim):
+            def func(x):
+                return LeakyReLU(0.1)(SeparableConv2D(dim, 5, strides=2, padding='same')(x))
             return func 
             
         def upscale (dim):
@@ -334,9 +344,15 @@ class SAEModel(ModelBase):
             x = input
             
             x = downscale(128)(x)
-            x = downscale(256)(x)
-            x = downscale(512)(x)
-            x = downscale(1024)(x)    
+            if not light_enc:                
+                x = downscale(256)(x)
+                x = downscale(512)(x)
+                x = downscale(1024)(x)
+            else:
+                x = downscale_sep(256)(x)
+                x = downscale_sep(512)(x)
+                x = downscale_sep(1024)(x)
+            
             x = Flatten()(x)               
             return x
         return func
@@ -380,12 +396,17 @@ class SAEModel(ModelBase):
 
         
     @staticmethod
-    def DFEncFlow(dims=512, lowest_dense_res=8):
+    def DFEncFlow(light_enc, dims=512, lowest_dense_res=8):
         exec (nnlib.import_all(), locals(), globals())
         
         def downscale (dim):
             def func(x):
                 return LeakyReLU(0.1)(Conv2D(dim, 5, strides=2, padding='same')(x))
+            return func 
+            
+        def downscale_sep (dim):
+            def func(x):
+                return LeakyReLU(0.1)(SeparableConv2D(dim, 5, strides=2, padding='same')(x))
             return func 
             
         def upscale (dim):
@@ -397,9 +418,14 @@ class SAEModel(ModelBase):
             x = input
             
             x = downscale(128)(x)
-            x = downscale(256)(x)
-            x = downscale(512)(x)
-            x = downscale(1024)(x)
+            if not light_enc:
+                x = downscale(256)(x)
+                x = downscale(512)(x)
+                x = downscale(1024)(x)
+            else:
+                x = downscale_sep(256)(x)
+                x = downscale_sep(512)(x)
+                x = downscale_sep(1024)(x)
     
             x = Dense(dims)(Flatten()(x))
             x = Dense(lowest_dense_res * lowest_dense_res * dims)(x)

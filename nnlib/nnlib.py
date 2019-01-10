@@ -72,6 +72,7 @@ Input = keras.layers.Input
 Dense = keras.layers.Dense
 Conv2D = keras.layers.Conv2D
 Conv2DTranspose = keras.layers.Conv2DTranspose
+SeparableConv2D = keras.layers.SeparableConv2D
 MaxPooling2D = keras.layers.MaxPooling2D
 BatchNormalization = keras.layers.BatchNormalization
 

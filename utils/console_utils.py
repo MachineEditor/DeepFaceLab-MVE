@@ -1,4 +1,7 @@
-
+import os
+import sys
+import time
+import multiprocessing
 
 def input_int(s, default_value, valid_list=None, help_message=None):
     while True:
@@ -52,3 +55,27 @@ def input_str(s, default_value, valid_list=None, help_message=None):
         except:
             print (default_value)
             return default_value
+            
+def input_process(stdin_fd, sq, str):
+    sys.stdin = os.fdopen(stdin_fd)
+    try:
+        inp = input (str)
+        sq.put (True)
+    except:
+        sq.put (False)
+        
+def input_in_time (str, max_time_sec):
+    sq = multiprocessing.Queue()
+    p = multiprocessing.Process(target=input_process, args=( sys.stdin.fileno(), sq, str))
+    p.start()
+    t = time.time()
+    inp = False
+    while True:
+        if not sq.empty():
+            inp = sq.get()
+            break
+        if time.time() - t > max_time_sec:
+            break
+    p.terminate()
+    sys.stdin = os.fdopen( sys.stdin.fileno() )
+    return inp

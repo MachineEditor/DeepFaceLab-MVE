@@ -81,16 +81,10 @@ if __name__ == "__main__":
             training_data_dst_dir=arguments.training_data_dst_dir, 
             model_path=arguments.model_dir, 
             model_name=arguments.model_name,
-            ask_for_session_options = arguments.ask_for_session_options,
             debug              = arguments.debug,
             #**options
-            session_write_preview_history = arguments.session_write_preview_history,
-            session_target_epoch = arguments.session_target_epoch,
-            session_batch_size  = arguments.session_batch_size,
-            save_interval_min  = arguments.save_interval_min,
             choose_worst_gpu   = arguments.choose_worst_gpu,
             force_best_gpu_idx = arguments.force_best_gpu_idx,
-            multi_gpu          = arguments.multi_gpu,
             force_gpu_idxs     = arguments.force_gpu_idxs,
             cpu_only           = arguments.cpu_only
             )
@@ -101,14 +95,8 @@ if __name__ == "__main__":
     train_parser.add_argument('--model-dir', required=True, action=fixPathAction, dest="model_dir", help="Model dir.")
     train_parser.add_argument('--model', required=True, dest="model_name", choices=Path_utils.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Type of model")
     train_parser.add_argument('--debug', action="store_true", dest="debug", default=False, help="Debug samples.")  
-    train_parser.add_argument('--ask-for-session-options', action="store_true", dest="ask_for_session_options", default=False, help="Ask to override session options.")    
-    train_parser.add_argument('--session-write-preview-history', action="store_true", dest="session_write_preview_history", default=None, help="Enable write preview history for this session.")
-    train_parser.add_argument('--session-target-epoch', type=int, dest="session_target_epoch", default=0, help="Train until target epoch for this session. Default - unlimited. Environment variable to override: DFL_TARGET_EPOCH.")
-    train_parser.add_argument('--session-batch-size', type=int, dest="session_batch_size", default=0, help="Model batch size for this session. Default - auto. Environment variable to override: DFL_BATCH_SIZE.") 
-    train_parser.add_argument('--save-interval-min', type=int, dest="save_interval_min", default=10, help="Save interval in minutes. Default 10.")
     train_parser.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Train on CPU.")
     train_parser.add_argument('--force-gpu-idxs', type=str, dest="force_gpu_idxs", default=None, help="Override final GPU idxs. Example: 0,1,2.")
-    train_parser.add_argument('--multi-gpu', action="store_true", dest="multi_gpu", default=False, help="MultiGPU option (if model supports it). It will select only same best(worst) GPU models.")
     train_parser.add_argument('--choose-worst-gpu', action="store_true", dest="choose_worst_gpu", default=False, help="Choose worst GPU instead of best. Environment variable to force True: DFL_WORST_GPU")
     train_parser.add_argument('--force-best-gpu-idx', type=int, dest="force_best_gpu_idx", default=-1, help="Force to choose this GPU idx as best(worst).")
 

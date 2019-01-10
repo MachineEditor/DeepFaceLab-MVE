@@ -33,9 +33,6 @@ class Model(ModelBase):
 
         self.ae = Model([input_src_bgr,input_src_mask,input_dst_bgr,input_dst_mask], [rec_src_bgr, rec_src_mask, rec_dst_bgr, rec_dst_mask] )
             
-        if self.is_training_mode:
-            self.ae, = self.to_multi_gpu_model_if_possible ( [self.ae,] )
-
         self.ae.compile(optimizer=Adam(lr=5e-5, beta_1=0.5, beta_2=0.999),
                         loss=[ DSSIMMaskLoss([input_src_mask]), 'mae', DSSIMMaskLoss([input_dst_mask]), 'mae' ] )
   

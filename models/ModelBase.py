@@ -18,14 +18,7 @@ You can implement your own model. Check examples.
 class ModelBase(object):
 
     #DONT OVERRIDE
-    def __init__(self, model_path, training_data_src_path=None, training_data_dst_path=None,
-                        ask_for_session_options=False,
-                        session_write_preview_history = None,
-                        session_target_epoch=0,
-                        session_batch_size=0,
-                        
-                        debug = False, **in_options
-                ):
+    def __init__(self, model_path, training_data_src_path=None, training_data_dst_path=None, debug = False, **in_options):
         print ("Loading model...")
         self.model_path = model_path
         self.model_data_path = Path( self.get_strpath_storage_for_file('data.dat') )
@@ -56,50 +49,52 @@ class ModelBase(object):
                 self.loss_history = model_data['loss_history'] if 'loss_history' in model_data.keys() else []
                 self.sample_for_preview = model_data['sample_for_preview']  if 'sample_for_preview' in model_data.keys() else None
             
+        ask_override = self.epoch != 0 and input_in_time ("Press enter during 2 seconds to override some model settings.", 2)
+        
         if self.epoch == 0: 
             print ("\nModel first run. Enter model options as default for each run.")
+            
+        if self.epoch == 0 or ask_override: 
             self.options['write_preview_history'] = input_bool("Write preview history? (y/n ?:help skip:n) : ", False, help_message="Preview history will be writed to <ModelName>_history folder.")
-            self.options['target_epoch'] = max(0, input_int("Target epoch (skip:unlimited) : ", 0))
-            self.options['batch_size'] = max(0, input_int("Batch_size (?:help skip:model choice) : ", 0, help_message="Larger batch size is always better for NN's generalization, but it can cause Out of Memory error. Tune this value for your videocard manually."))
-            self.options['sort_by_yaw'] = input_bool("Feed faces to network sorted by yaw? (y/n ?:help skip:n) : ", False, help_message="NN will not learn src face directions that don't match dst face directions." )
-            self.options['random_flip'] = input_bool("Flip faces randomly? (y/n ?:help skip:y) : ", True, help_message="Predicted face will look more naturally without this option, but src faceset should cover all face directions as dst faceset.")
-            self.options['src_scale_mod'] = np.clip( input_int("Src face scale modifier % ( -30...30, ?:help skip:0) : ", 0, help_message="If src face shape is wider than dst, try to decrease this value to get a better result."), -30, 30)
-            #self.options['use_fp16'] = use_fp16 = input_bool("Use float16? (y/n skip:n) : ", False)
-        else: 
-            self.options['write_preview_history'] = self.options.get('write_preview_history', False)
-            self.options['target_epoch'] = self.options.get('target_epoch', 0)
-            self.options['batch_size'] = self.options.get('batch_size', 0)
-            self.options['sort_by_yaw'] = self.options.get('sort_by_yaw', False)
-            self.options['random_flip'] = self.options.get('random_flip', True)
-            self.options['src_scale_mod'] = self.options.get('src_scale_mod', 0)
-            #self.options['use_fp16'] = use_fp16 = self.options['use_fp16'] if 'use_fp16' in self.options.keys() else False
-            
-        use_fp16 = False #currently models fails with fp16
-           
-        if ask_for_session_options:
-            print ("Override options for current session:")  
-            session_write_preview_history = input_bool("Write preview history? (y/n skip:default) : ", None )            
-            session_target_epoch = input_int("Target epoch (skip:default) : ", 0)
-            session_batch_size = input_int("Batch_size (skip:default) : ", 0)
-            
-        if self.options['write_preview_history']:
-            if session_write_preview_history is None:
-                session_write_preview_history = self.options['write_preview_history']
         else:
+            self.options['write_preview_history'] = self.options.get('write_preview_history', False)
+            
+        if self.epoch == 0 or ask_override: 
+            self.options['target_epoch'] = max(0, input_int("Target epoch (skip:unlimited) : ", 0))
+        else:
+            self.options['target_epoch'] = self.options.get('target_epoch', 0)
+        
+        if self.epoch == 0 or ask_override: 
+            default_batch_size = 0 if self.epoch == 0 else self.options['batch_size']
+            self.options['batch_size'] = max(0, input_int("Batch_size (?:help skip:default) : ", default_batch_size, help_message="Larger batch size is always better for NN's generalization, but it can cause Out of Memory error. Tune this value for your videocard manually."))
+        else:
+            self.options['batch_size'] = self.options.get('batch_size', 0)
+        
+        if self.epoch == 0: 
+            self.options['sort_by_yaw'] = input_bool("Feed faces to network sorted by yaw? (y/n ?:help skip:n) : ", False, help_message="NN will not learn src face directions that don't match dst face directions." )
+        else:
+            self.options['sort_by_yaw'] = self.options.get('sort_by_yaw', False)
+            
+        if self.epoch == 0: 
+            self.options['random_flip'] = input_bool("Flip faces randomly? (y/n ?:help skip:y) : ", True, help_message="Predicted face will look more naturally without this option, but src faceset should cover all face directions as dst faceset.")
+        else:
+            self.options['random_flip'] = self.options.get('random_flip', True)
+        
+        if self.epoch == 0: 
+            self.options['src_scale_mod'] = np.clip( input_int("Src face scale modifier % ( -30...30, ?:help skip:0) : ", 0, help_message="If src face shape is wider than dst, try to decrease this value to get a better result."), -30, 30)
+        else:            
+            self.options['src_scale_mod'] = self.options.get('src_scale_mod', 0)
+             
+        self.write_preview_history = self.options['write_preview_history']
+        if not self.options['write_preview_history']:
             self.options.pop('write_preview_history') 
         
-        if self.options['target_epoch'] != 0:
-            if session_target_epoch == 0:
-                session_target_epoch = self.options['target_epoch']
-        else:
+        self.target_epoch = self.options['target_epoch']
+        if self.options['target_epoch'] == 0:
             self.options.pop('target_epoch') 
            
-        if self.options['batch_size'] != 0:
-            if session_batch_size == 0:
-                session_batch_size = self.options['batch_size']
-        else:
-            self.options.pop('batch_size') 
-            
+        self.batch_size = self.options['batch_size']
+
         self.sort_by_yaw = self.options['sort_by_yaw']
         if not self.sort_by_yaw:
             self.options.pop('sort_by_yaw') 
@@ -112,17 +107,16 @@ class ModelBase(object):
         if self.src_scale_mod == 0:
             self.options.pop('src_scale_mod') 
             
-        self.write_preview_history = session_write_preview_history
-        self.target_epoch = session_target_epoch
-        self.batch_size = session_batch_size
-        self.onInitializeOptions(self.epoch == 0, ask_for_session_options)
+        self.onInitializeOptions(self.epoch == 0, ask_override)
         
-        nnlib.import_all ( nnlib.DeviceConfig(allow_growth=False, use_fp16=use_fp16, **in_options) )
+        nnlib.import_all ( nnlib.DeviceConfig(allow_growth=False, **in_options) )
         self.device_config = nnlib.active_DeviceConfig
         
         self.created_vram_gb = self.options['created_vram_gb'] if 'created_vram_gb' in self.options.keys() else self.device_config.gpu_total_vram_gb
 
         self.onInitialize(**in_options)
+        
+        self.options['batch_size'] = self.batch_size
         
         if self.debug or self.batch_size == 0:
             self.batch_size = 1 
@@ -155,16 +149,10 @@ class ModelBase(object):
         print ("==")
         print ("== Model options:")
         for key in self.options.keys():
-            print ("== |== %s : %s" % (key, self.options[key]) )        
-        print ("== Session options:")
-        if self.write_preview_history:
-             print ("== |== write_preview_history : True ")
-        if self.target_epoch != 0:
-            print ("== |== target_epoch : %s " % (self.target_epoch) )
-        print ("== |== batch_size : %s " % (self.batch_size) )
+            print ("== |== %s : %s" % (key, self.options[key]) )
+
         if self.device_config.multi_gpu:
-            print ("== |== multi_gpu : True ")
-        
+            print ("== |== multi_gpu : True ")        
         
         print ("== Running on:")
         if self.device_config.cpu_only:
@@ -183,7 +171,7 @@ class ModelBase(object):
         print ("=========================")
   
     #overridable
-    def onInitializeOptions(self, is_first_run, ask_for_session_options):
+    def onInitializeOptions(self, is_first_run, ask_override):
         pass
        
     #overridable
@@ -231,23 +219,24 @@ class ModelBase(object):
     def is_reached_epoch_goal(self):
         return self.target_epoch != 0 and self.epoch >= self.target_epoch    
      
-    def to_multi_gpu_model_if_possible (self, models_list):
-        if len(self.device_config.gpu_idxs) > 1:
-            #make batch_size to divide on GPU count without remainder
-            self.batch_size = int( self.batch_size / len(self.device_config.gpu_idxs) )
-            if self.batch_size == 0:
-                self.batch_size = 1                
-            self.batch_size *= len(self.device_config.gpu_idxs)
-            
-            result = []
-            for model in models_list:
-                for i in range( len(model.output_names) ):
-                    model.output_names = 'output_%d' % (i)                 
-                result += [ nnlib.keras.utils.multi_gpu_model( model, self.device_config.gpu_idxs ) ]    
-                
-            return result                
-        else:
-            return models_list
+    #multi gpu in keras actually is fake and doesn't work for training https://github.com/keras-team/keras/issues/11976
+    #def to_multi_gpu_model_if_possible (self, models_list):
+    #    if len(self.device_config.gpu_idxs) > 1:
+    #        #make batch_size to divide on GPU count without remainder
+    #        self.batch_size = int( self.batch_size / len(self.device_config.gpu_idxs) )
+    #        if self.batch_size == 0:
+    #            self.batch_size = 1                
+    #        self.batch_size *= len(self.device_config.gpu_idxs)
+    #        
+    #        result = []
+    #        for model in models_list:
+    #            for i in range( len(model.output_names) ):
+    #                model.output_names = 'output_%d' % (i)                 
+    #            result += [ nnlib.keras.utils.multi_gpu_model( model, self.device_config.gpu_idxs ) ]    
+    #            
+    #        return result                
+    #    else:
+    #        return models_list
      
     def get_previews(self):       
         return self.onGetPreview ( self.last_sample )
