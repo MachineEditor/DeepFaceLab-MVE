@@ -211,7 +211,11 @@ class ExtractSubprocessor(SubprocessorBase):
                             self.param_y = new_param_y
                             self.param_rect_size = new_param_rect_size
 
-                            self.rect = (self.param_x-self.param_rect_size, self.param_y-self.param_rect_size, self.param_x+self.param_rect_size, self.param_y+self.param_rect_size)
+                            self.rect = ( int(self.param_x-self.param_rect_size), 
+                                          int(self.param_y-self.param_rect_size), 
+                                          int(self.param_x+self.param_rect_size), 
+                                          int(self.param_y+self.param_rect_size) )
+                                          
                             return [filename, [self.rect]]
                             
                 else:
