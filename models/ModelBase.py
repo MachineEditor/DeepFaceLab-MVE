@@ -64,18 +64,19 @@ class ModelBase(object):
                 force_best_gpu_idx = input_int("Which GPU idx to choose? ( skip: system choice ) : ", -1)
             
         if self.epoch == 0 or ask_override: 
-            self.options['write_preview_history'] = input_bool("Write preview history? (y/n ?:help skip:n) : ", False, help_message="Preview history will be writed to <ModelName>_history folder.")
+            default_write_preview_history = False if self.epoch == 0 else self.options['batch_size']
+            self.options['write_preview_history'] = input_bool("Write preview history? (y/n ?:help skip:n/default) : ", default_write_preview_history, help_message="Preview history will be writed to <ModelName>_history folder.")
         else:
             self.options['write_preview_history'] = self.options.get('write_preview_history', False)
             
         if self.epoch == 0 or ask_override: 
-            self.options['target_epoch'] = max(0, input_int("Target epoch (skip:unlimited) : ", 0))
+            self.options['target_epoch'] = max(0, input_int("Target epoch (skip:unlimited/default) : ", 0))
         else:
             self.options['target_epoch'] = self.options.get('target_epoch', 0)
         
         if self.epoch == 0 or ask_override: 
             default_batch_size = 0 if self.epoch == 0 else self.options['batch_size']
-            self.options['batch_size'] = max(0, input_int("Batch_size (?:help skip:default) : ", default_batch_size, help_message="Larger batch size is always better for NN's generalization, but it can cause Out of Memory error. Tune this value for your videocard manually."))
+            self.options['batch_size'] = max(0, input_int("Batch_size (?:help skip:0/default) : ", default_batch_size, help_message="Larger batch size is always better for NN's generalization, but it can cause Out of Memory error. Tune this value for your videocard manually."))
         else:
             self.options['batch_size'] = self.options.get('batch_size', 0)
         
