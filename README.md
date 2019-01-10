@@ -70,7 +70,7 @@ LIAEF128 Cage video:
 
 [![Watch the video](https://img.youtube.com/vi/mRsexePEVco/0.jpg)](https://www.youtube.com/watch?v=mRsexePEVco)
 
-- **SAE (2GB+)** - Styled AutoEncoder. It is like LIAEF but with new face style loss. SAE more like face morpher/stylizer rather than direct swapper. Available options on start: resolution, ae-dims, half/full face. 
+- **SAE (2GB+)** - Styled AutoEncoder. It is like LIAEF but with new face style loss. SAE more like face morpher/stylizer rather than direct swapper. Model has several options on start for fine tuning. 
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_0.jpg)
 
@@ -86,10 +86,15 @@ SAE model Cage-Trump video: https://www.youtube.com/watch?v=2R_aqHBClUQ
 unfortunately deepfaking is time/eletricpower consuming topic and has a lot of nuances.
 
 Every model is good for specific scenes and faces.
+
 H64 - good for straight faces as a demo and for low vram.
+
 H128 - good for straight faces, gives highest resolution and details possible in 2019. Absolute best for asian faces, because they are flat, similar and evenly lighted with clear skin.
+
 DF - good for side faces, but results in a lower resolution and details. Covers more area of cheeks. Keeps face unmorphed. Good for similar face shapes.
+
 LIAE - can partially fix dissimilar face shapes, but results in a less recognizable face.
+
 SAE - no matter how similar faces, src face will be morphed onto dst face, which can make face absolutely unrecognizable. Model can collapse on some scenes. Easy to overlay final face because dst background is also predicted.
 
 Quality of src faceset significantly affects the final face.
