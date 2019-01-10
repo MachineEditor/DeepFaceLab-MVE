@@ -24,7 +24,6 @@ class SAEModel(ModelBase):
     def onInitializeOptions(self, is_first_run, ask_override):
         default_resolution = 128
         default_archi = 'liae'
-        default_style_power = 100
         default_face_type = 'f'
         
         if is_first_run:
@@ -37,12 +36,14 @@ class SAEModel(ModelBase):
             self.options['lighter_encoder'] = self.options.get('lighter_encoder', False)
 
         if is_first_run or ask_override:
-            self.options['face_style_power'] = np.clip ( input_int("Face style power (0..100 ?:help skip:100) : ", default_style_power, help_message="How fast NN will learn dst face style during generalization of src and dst faces."), 0, 100 )            
+            default_style_power = 100 if is_first_run else self.options['face_style_power']
+            self.options['face_style_power'] = np.clip ( input_int("Face style power (0..100 ?:help skip:%d) : " % (default_style_power), default_style_power, help_message="How fast NN will learn dst face style during generalization of src and dst faces."), 0, 100 )            
         else:
             self.options['face_style_power'] = self.options.get('face_style_power', default_style_power)
             
         if is_first_run or ask_override: 
-            self.options['bg_style_power'] = np.clip ( input_int("Background style power (0..100 ?:help skip:100) : ", default_style_power, help_message="How fast NN will learn dst background style during generalization of src and dst faces."), 0, 100 )            
+            default_style_power = 100 if is_first_run else self.options['bg_style_power']
+            self.options['bg_style_power'] = np.clip ( input_int("Background style power (0..100 ?:help skip:%d) : " % (default_style_power), default_style_power, help_message="How fast NN will learn dst background style during generalization of src and dst faces."), 0, 100 )            
         else:
             self.options['bg_style_power'] = self.options.get('bg_style_power', default_style_power)
             

@@ -168,15 +168,14 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
             for idx in device_config.gpu_idxs:
                 visible_device_list += str(idx) + ','
             config.gpu_options.visible_device_list=visible_device_list[:-1]
-            config.gpu_options.force_gpu_compatible = True
             
+        config.gpu_options.force_gpu_compatible = True            
         config.gpu_options.allow_growth = device_config.allow_growth
         
         nnlib.tf_sess = tf.Session(config=config)
             
         if suppressor is not None:  
             suppressor.__exit__()
-            
 
         nnlib.__initialize_tf_functions()
         nnlib.code_import_tf = compile (nnlib.code_import_tf_string,'','exec')
@@ -395,6 +394,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
             nnlib.keras.backend.set_floatx('float16')
         
         nnlib.keras.backend.set_session(nnlib.tf_sess)
+        nnlib.keras.backend.set_image_data_format('channels_last')
         
         if 'TF_SUPPRESS_STD' in os.environ.keys() and os.environ['TF_SUPPRESS_STD'] == '1':        
             suppressor.__exit__()

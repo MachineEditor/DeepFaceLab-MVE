@@ -110,6 +110,17 @@ class devicelib:
         return result
         
     @staticmethod
+    def getAllDevicesIdxsWithNamesList ():
+        result = []
+        try:
+            nvmlInit()    
+            result = [ (i, nvmlDeviceGetName(nvmlDeviceGetHandleByIndex(i)).decode() ) for i in range(0, nvmlDeviceGetCount() ) ]    
+            nvmlShutdown()
+        except:
+            pass
+        return result
+        
+    @staticmethod
     def getDeviceVRAMFree (idx):
         result = 0
         try:

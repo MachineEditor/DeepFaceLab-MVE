@@ -18,7 +18,7 @@ You can implement your own model. Check examples.
 class ModelBase(object):
 
     #DONT OVERRIDE
-    def __init__(self, model_path, training_data_src_path=None, training_data_dst_path=None, debug = False, **in_options):
+    def __init__(self, model_path, training_data_src_path=None, training_data_dst_path=None, debug = False, force_best_gpu_idx=-1, **in_options):
         print ("Loading model...")
         self.model_path = model_path
         self.model_data_path = Path( self.get_strpath_storage_for_file('data.dat') )
@@ -53,6 +53,15 @@ class ModelBase(object):
         
         if self.epoch == 0: 
             print ("\nModel first run. Enter model options as default for each run.")
+        
+        if (self.epoch == 0 or ask_override) and (force_best_gpu_idx == -1): 
+            idxs_names_list = nnlib.device.getAllDevicesIdxsWithNamesList()
+            if len(idxs_names_list) > 1:
+                print ("You have multi GPUs in a system: ")
+                for idx, name in idxs_names_list:
+                    print ("[%d] : %s" % (idx, name) )
+
+                force_best_gpu_idx = input_int("Which GPU idx to choose? ( skip: system choice ) : ", -1)
             
         if self.epoch == 0 or ask_override: 
             self.options['write_preview_history'] = input_bool("Write preview history? (y/n ?:help skip:n) : ", False, help_message="Preview history will be writed to <ModelName>_history folder.")
@@ -109,10 +118,13 @@ class ModelBase(object):
             
         self.onInitializeOptions(self.epoch == 0, ask_override)
         
-        nnlib.import_all ( nnlib.DeviceConfig(allow_growth=False, **in_options) )
+        nnlib.import_all ( nnlib.DeviceConfig(allow_growth=False, force_best_gpu_idx=force_best_gpu_idx, **in_options) )
         self.device_config = nnlib.active_DeviceConfig
         
-        self.created_vram_gb = self.options['created_vram_gb'] if 'created_vram_gb' in self.options.keys() else self.device_config.gpu_total_vram_gb
+        if self.epoch == 0: 
+            self.created_vram_gb = self.options['created_vram_gb'] = self.device_config.gpu_total_vram_gb
+        else:            
+            self.created_vram_gb = self.options['created_vram_gb'] = self.options.get('created_vram_gb',self.device_config.gpu_total_vram_gb)
 
         self.onInitialize(**in_options)
         
