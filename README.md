@@ -153,7 +153,7 @@ Only H64 model reasonable to train on home CPU.
 
 ### Mac/linux/docker script support.
 
-This repo supports only windows build of scripts. If you want to support mac/linux/docker - create such fork, it will be referenced here.
+This repo supports only windows build of scripts. If you want to support mac/linux/docker - create fork, it will be referenced here.
 
 ### Prebuilt windows app:
 

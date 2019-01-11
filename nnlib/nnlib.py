@@ -40,6 +40,7 @@ class nnlib(object):
     DSSIMMaskLoss = None
     PixelShuffler = None  
     SubpixelUpscaler = None
+    AddUniformNoise = None
     
     ResNet = None
     UNet = None
@@ -101,6 +102,7 @@ DSSIMLoss = nnlib.DSSIMLoss
 DSSIMMaskLoss = nnlib.DSSIMMaskLoss
 PixelShuffler = nnlib.PixelShuffler
 SubpixelUpscaler = nnlib.SubpixelUpscaler
+AddUniformNoise = nnlib.AddUniformNoise
 """
     code_import_keras_contrib_string = \
 """
@@ -541,6 +543,25 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         nnlib.PixelShuffler = PixelShuffler
         nnlib.SubpixelUpscaler = PixelShuffler
         
+        class AddUniformNoise(keras.layers.Layer):
+            def __init__(self, power=1.0, minval=-1.0, maxval=1.0, **kwargs):
+                super(AddUniformNoise, self).__init__(**kwargs)
+                self.power = power
+                self.supports_masking = True
+                self.minval = minval
+                self.maxval = maxval
+
+            def call(self, inputs, training=None):
+                def noised():
+                    return inputs + self.power*K.random_uniform(shape=K.shape(inputs), minval=self.minval, maxval=self.maxval)
+                return K.in_train_phase(noised, inputs, training=training)
+
+            def get_config(self):
+                config = {'power': self.power, 'minval': self.minval, 'maxval': self.maxval}
+                base_config = super(AddUniformNoise, self).get_config()
+                return dict(list(base_config.items()) + list(config.items()))
+        nnlib.AddUniformNoise = AddUniformNoise       
+                
     @staticmethod
     def import_keras_contrib(device_config = None):
         if nnlib.keras_contrib is not None:

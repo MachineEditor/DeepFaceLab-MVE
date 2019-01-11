@@ -196,43 +196,42 @@ def previewThread (input_queue, output_queue):
                 lh_len = len(loss_history)
                 
                 l_per_col = lh_len / w                
-                plist_max = [   [   max (0.0, 0.0,  *[  loss_history[i_ab][p] 
-                                                        for i_ab in range( int(col*l_per_col), int((col+1)*l_per_col) )                                         
-                                                     ]
-                                        ) 
-                                    for p in range(0,loss_count) 
-                                ]  
-                                for col in range(0, w) 
-                            ] 
-                            
-                            
-                plist_min = [   [   min (plist_max[col][p], 
-                                         plist_max[col][p],  
+                plist_max = [   [   max (0.0, loss_history[int(col*l_per_col)][p],
                                                     *[  loss_history[i_ab][p] 
                                                         for i_ab in range( int(col*l_per_col), int((col+1)*l_per_col) )                                         
                                                      ]
                                         ) 
-                                    for p in range(0,loss_count) 
+                                    for p in range(loss_count)
                                 ]  
-                                for col in range(0, w) 
+                                for col in range(w)
                             ]
+
+                plist_min = [   [   min (plist_max[col][p], loss_history[int(col*l_per_col)][p],
+                                                    *[  loss_history[i_ab][p] 
+                                                        for i_ab in range( int(col*l_per_col), int((col+1)*l_per_col) )                                         
+                                                     ]
+                                        ) 
+                                    for p in range(loss_count) 
+                                ]  
+                                for col in range(w) 
+                            ]
+
                 plist_abs_max = np.mean(loss_history[ len(loss_history) // 5 : ]) * 2
-                
-                if l_per_col >= 1.0:
-                    for col in range(0, w):
-                        for p in range(0,loss_count): 
-                            point_color = [1.0]*c
-                            point_color[0:3] = colorsys.hsv_to_rgb ( p * (1.0/loss_count), 1.0, 1.0 )
-                            
-                            ph_max = int ( (plist_max[col][p] / plist_abs_max) * (lh_height-1) )
-                            ph_max = np.clip( ph_max, 0, lh_height-1 )
-                            
-                            ph_min = int ( (plist_min[col][p] / plist_abs_max) * (lh_height-1) )
-                            ph_min = np.clip( ph_min, 0, lh_height-1 )
-                            
-                            for ph in range(ph_min, ph_max+1):
-                                lh_img[ (lh_height-ph-1), col ] = point_color
-                                
+
+                for col in range(0, w):
+                    for p in range(0,loss_count): 
+                        point_color = [1.0]*c
+                        point_color[0:3] = colorsys.hsv_to_rgb ( p * (1.0/loss_count), 1.0, 1.0 )
+                        
+                        ph_max = int ( (plist_max[col][p] / plist_abs_max) * (lh_height-1) )
+                        ph_max = np.clip( ph_max, 0, lh_height-1 )
+                        
+                        ph_min = int ( (plist_min[col][p] / plist_abs_max) * (lh_height-1) )
+                        ph_min = np.clip( ph_min, 0, lh_height-1 )
+                        
+                        for ph in range(ph_min, ph_max+1):
+                            lh_img[ (lh_height-ph-1), col ] = point_color
+
                 lh_lines = 5
                 lh_line_height = (lh_height-1)/lh_lines
                 for i in range(0,lh_lines+1):
@@ -241,10 +240,7 @@ def previewThread (input_queue, output_queue):
                 last_line_t = int((lh_lines-1)*lh_line_height)
                 last_line_b = int(lh_lines*lh_line_height)
                 
-                if epoch != 0:
-                    lh_text = 'Loss history. Epoch: %d' % (epoch)
-                else:
-                    lh_text = 'Loss history.'
+                lh_text = 'Epoch: %d' % (epoch) if epoch != 0 else ''
                 
                 lh_img[last_line_t:last_line_b, 0:w] += image_utils.get_text_image (  (w,last_line_b-last_line_t,c), lh_text, color=head_text_color )
                 
