@@ -1,5 +1,9 @@
 ## **DeepFaceLab** is a tool that utilizes deep learning to recognize and swap faces in pictures and videos.
 
+If you like this software, please consider a donation.
+
+[![Donate](https://www.paypalobjects.com/en_US/RU/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=KK5ZCH4JXWMQS&source=url) Goal: RTX 2080 TI
+
 ### **Features**:
 
 - new models
@@ -176,7 +180,3 @@ This repo supports only windows build of scripts. If you want to support mac/lin
 Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) prebuilt DeepFaceLab (include GPU and CPU versions) can be downloaded from 
 1) torrent https://rutracker.org/forum/viewtopic.php?p=75318742 (magnet link inside).
 2) https://mega.nz/#F!b9MzCK4B!zEAG9txu7uaRUjXz9PtBqg
-
-If you like this software, please consider a donation.
-
-[![Donate](https://www.paypalobjects.com/en_US/RU/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=KK5ZCH4JXWMQS&source=url) Goal: RTX 2080 TI
