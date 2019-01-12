@@ -27,9 +27,9 @@ class SAEModel(ModelBase):
         default_face_type = 'f'
         
         if is_first_run:
-            self.options['resolution'] = input_int("Resolution (64,128, ?:help skip:128) : ", default_resolution, [64,128], help_message="More resolution requires more VRAM.")
+            self.options['resolution'] = input_int("Resolution (64,128 ?:help skip:128) : ", default_resolution, [64,128], help_message="More resolution requires more VRAM.")
             self.options['archi'] = input_str ("AE architecture (df, liae, ?:help skip:liae) : ", default_archi, ['df','liae'], help_message="DF keeps faces more natural, while LIAE can fix overly different face shapes.").lower()            
-            self.options['lighter_encoder'] = input_bool ("Use lightweight encoder? (y/n, ?:help skip:n) : ", False, help_message="Lightweight encoder is 35% faster, but it is not tested on various scenes.")
+            self.options['lighter_encoder'] = input_bool ("Use lightweight encoder? (y/n, ?:help skip:n) : ", False, help_message="Lightweight encoder is 35% faster, requires less VRAM, sacrificing overall quality.")
         else:
             self.options['resolution'] = self.options.get('resolution', default_resolution)
             self.options['archi'] = self.options.get('archi', default_archi)
@@ -48,23 +48,27 @@ class SAEModel(ModelBase):
             self.options['bg_style_power'] = self.options.get('bg_style_power', 100)
             
         default_ae_dims = 256 if self.options['archi'] == 'liae' else 512
-        
+        default_ed_ch_dims = 42
         if is_first_run:
-            self.options['ae_dims'] = input_int("AutoEncoder dims (128,256,512 ?:help skip:%d) : " % (default_ae_dims) , default_ae_dims, [128,256,512], help_message="More dims are better, but requires more VRAM." )
+            self.options['ae_dims'] = np.clip ( input_int("AutoEncoder dims (128-1024 ?:help skip:%d) : " % (default_ae_dims) , default_ae_dims, help_message="More dims are better, but requires more VRAM. You can fine-tune model size to fit your GPU." ), 128, 1024 )
+            self.options['ed_ch_dims'] = np.clip ( input_int("Encoder/Decoder dims per channel (21-85 ?:help skip:%d) : " % (default_ed_ch_dims) , default_ed_ch_dims, help_message="More dims are better, but requires more VRAM. You can fine-tune model size to fit your GPU." ), 21, 85 )
             self.options['face_type'] = input_str ("Half or Full face? (h/f, ?:help skip:f) : ", default_face_type, ['h','f'], help_message="Half face has better resolution, but covers less area of cheeks.").lower()            
         else:
             self.options['ae_dims'] = self.options.get('ae_dims', default_ae_dims)
+            self.options['ed_ch_dims'] = self.options.get('ed_ch_dims', default_ed_ch_dims)
             self.options['face_type'] = self.options.get('face_type', default_face_type)
-            
+        
+        
 
     #override
     def onInitialize(self, **in_options):
         exec(nnlib.import_all(), locals(), globals())
 
-        self.set_vram_batch_requirements({2:2,3:3,4:4,5:4,6:8,7:12,8:16})
+        self.set_vram_batch_requirements({2:1,3:2,4:3,5:6,6:8,7:12,8:16})
         
         resolution = self.options['resolution']
         ae_dims = self.options['ae_dims']
+        ed_ch_dims = self.options['ed_ch_dims']
         bgr_shape = (resolution, resolution, 3)
         mask_shape = (resolution, resolution, 1)
 
@@ -77,17 +81,18 @@ class SAEModel(ModelBase):
         target_dstm = Input(mask_shape)
             
         if self.options['archi'] == 'liae':
-            self.encoder = modelify(SAEModel.EncFlow(self.options['lighter_encoder'])  ) (Input(bgr_shape))
+            self.encoder = modelify(SAEModel.LIAEEncFlow(resolution, self.options['lighter_encoder'], ed_ch_dims=ed_ch_dims)  ) (Input(bgr_shape))
             
             enc_output_Inputs = [ Input(K.int_shape(x)[1:]) for x in self.encoder.outputs ] 
             
-            self.inter_B = modelify(SAEModel.InterFlow(dims=ae_dims,lowest_dense_res=resolution // 16)) (enc_output_Inputs)
-            self.inter_AB = modelify(SAEModel.InterFlow(dims=ae_dims,lowest_dense_res=resolution // 16)) (enc_output_Inputs)
+            self.inter_B = modelify(SAEModel.LIAEInterFlow(resolution, ae_dims=ae_dims)) (enc_output_Inputs)
+            self.inter_AB = modelify(SAEModel.LIAEInterFlow(resolution, ae_dims=ae_dims)) (enc_output_Inputs)
             
             inter_output_Inputs = [ Input( np.array(K.int_shape(x)[1:])*(1,1,2) ) for x in self.inter_B.outputs ] 
 
-            self.decoder = modelify(SAEModel.DecFlow (bgr_shape[2],dims=ae_dims*2)) (inter_output_Inputs)
-            self.decoderm = modelify(SAEModel.DecFlow (mask_shape[2],dims=ae_dims)) (inter_output_Inputs)
+            self.decoder = modelify(SAEModel.LIAEDecFlow (bgr_shape[2],ed_ch_dims=ed_ch_dims//2)) (inter_output_Inputs)
+            self.decoderm = modelify(SAEModel.LIAEDecFlow (mask_shape[2],ed_ch_dims=int(ed_ch_dims/1.5) )) (inter_output_Inputs)
+            
             
             if not self.is_first_run():
                 self.encoder.load_weights  (self.get_strpath_storage_for_file(self.encoderH5))
@@ -116,15 +121,15 @@ class SAEModel(ModelBase):
             pred_src_dst = self.decoder(warped_src_dst_inter_code)
             pred_src_dstm = self.decoderm(warped_src_dst_inter_code)
         else:
-            self.encoder = modelify(SAEModel.DFEncFlow(self.options['lighter_encoder'], dims=ae_dims,lowest_dense_res=resolution // 16)  ) (Input(bgr_shape))
+            self.encoder = modelify(SAEModel.DFEncFlow(resolution, self.options['lighter_encoder'], ae_dims=ae_dims, ed_ch_dims=ed_ch_dims)  ) (Input(bgr_shape))
             
             dec_Inputs = [ Input(K.int_shape(x)[1:]) for x in self.encoder.outputs ] 
             
-            self.decoder_src = modelify(SAEModel.DFDecFlow (bgr_shape[2],dims=ae_dims)) (dec_Inputs)
-            self.decoder_dst = modelify(SAEModel.DFDecFlow (bgr_shape[2],dims=ae_dims)) (dec_Inputs)
+            self.decoder_src = modelify(SAEModel.DFDecFlow (bgr_shape[2],ed_ch_dims=ed_ch_dims//2)) (dec_Inputs)
+            self.decoder_dst = modelify(SAEModel.DFDecFlow (bgr_shape[2],ed_ch_dims=ed_ch_dims//2)) (dec_Inputs)
             
-            self.decoder_srcm = modelify(SAEModel.DFDecFlow (mask_shape[2],dims=ae_dims//2)) (dec_Inputs)
-            self.decoder_dstm = modelify(SAEModel.DFDecFlow (mask_shape[2],dims=ae_dims//2)) (dec_Inputs)
+            self.decoder_srcm = modelify(SAEModel.DFDecFlow (mask_shape[2],ed_ch_dims=int(ed_ch_dims/1.5))) (dec_Inputs)
+            self.decoder_dstm = modelify(SAEModel.DFDecFlow (mask_shape[2],ed_ch_dims=int(ed_ch_dims/1.5))) (dec_Inputs)
             
         
             if not self.is_first_run():
@@ -323,17 +328,20 @@ class SAEModel(ModelBase):
                                **in_options)
     
     @staticmethod
-    def EncFlow(light_enc):
+    def LIAEEncFlow(resolution, light_enc, ed_ch_dims=42):
         exec (nnlib.import_all(), locals(), globals())
+        
+        k_size = resolution // 16 + 1
+        strides = resolution // 32
         
         def downscale (dim):
             def func(x):
-                return LeakyReLU(0.1)(Conv2D(dim, 5, strides=2, padding='same')(x))
+                return LeakyReLU(0.1)(Conv2D(dim, k_size, strides=strides, padding='same')(x))
             return func 
 
         def downscale_sep (dim):
             def func(x):
-                return LeakyReLU(0.1)(SeparableConv2D(dim, 5, strides=2, padding='same')(x))
+                return LeakyReLU(0.1)(SeparableConv2D(dim, k_size, strides=strides, padding='same')(x))
             return func 
             
         def upscale (dim):
@@ -341,26 +349,29 @@ class SAEModel(ModelBase):
                 return SubpixelUpscaler()(LeakyReLU(0.1)(Conv2D(dim * 4, 3, strides=1, padding='same')(x)))
             return func   
     
-        def func(input):     
-            x = input
+        def func(input):
+            ed_dims = K.int_shape(input)[-1]*ed_ch_dims
             
-            x = downscale(128)(x)
+            x = input            
+            x = downscale(ed_dims)(x)
             if not light_enc:                
-                x = downscale(256)(x)
-                x = downscale(512)(x)
-                x = downscale(1024)(x)
+                x = downscale(ed_dims*2)(x)
+                x = downscale(ed_dims*4)(x)
+                x = downscale(ed_dims*8)(x)
             else:
-                x = downscale_sep(256)(x)
-                x = downscale_sep(512)(x)
-                x = downscale_sep(1024)(x)
+                x = downscale_sep(ed_dims*2)(x)
+                x = downscale_sep(ed_dims*4)(x)
+                x = downscale_sep(ed_dims*8)(x)
             
             x = Flatten()(x)               
             return x
         return func
     
     @staticmethod
-    def InterFlow(dims=256, lowest_dense_res=8):
+    def LIAEInterFlow(resolution, ae_dims=256):
         exec (nnlib.import_all(), locals(), globals())
+        lowest_dense_res=resolution // 16
+        
         def upscale (dim):
             def func(x):
                 return SubpixelUpscaler()(LeakyReLU(0.1)(Conv2D(dim * 4, 3, strides=1, padding='same')(x)))
@@ -368,15 +379,15 @@ class SAEModel(ModelBase):
         
         def func(input):   
             x = input[0]
-            x = Dense(dims)(x)
-            x = Dense(lowest_dense_res * lowest_dense_res * dims*2)(x)
-            x = Reshape((lowest_dense_res, lowest_dense_res, dims*2))(x)
-            x = upscale(dims*2)(x)
+            x = Dense(ae_dims)(x)
+            x = Dense(lowest_dense_res * lowest_dense_res * ae_dims*2)(x)
+            x = Reshape((lowest_dense_res, lowest_dense_res, ae_dims*2))(x)
+            x = upscale(ae_dims*2)(x)
             return x
         return func
         
     @staticmethod
-    def DecFlow(output_nc,dims,activation='tanh'):
+    def LIAEDecFlow(output_nc,ed_ch_dims=21,activation='tanh'):
         exec (nnlib.import_all(), locals(), globals())
         
         def upscale (dim):
@@ -385,10 +396,12 @@ class SAEModel(ModelBase):
             return func   
             
         def func(input):
+            ed_dims = output_nc * ed_ch_dims
+            
             x = input[0]
-            x = upscale(dims)(x)
-            x = upscale(dims//2)(x)
-            x = upscale(dims//4)(x)
+            x = upscale(ed_dims*8)(x)
+            x = upscale(ed_dims*4)(x)
+            x = upscale(ed_dims*2)(x)
                 
             x = Conv2D(output_nc, kernel_size=5, padding='same', activation=activation)(x)
             return x
@@ -397,17 +410,20 @@ class SAEModel(ModelBase):
 
         
     @staticmethod
-    def DFEncFlow(light_enc, dims=512, lowest_dense_res=8):
+    def DFEncFlow(resolution, light_enc, ae_dims=512, ed_ch_dims=42):
         exec (nnlib.import_all(), locals(), globals())
+        k_size = resolution // 16 + 1
+        strides = resolution // 32
+        lowest_dense_res = resolution // 16
         
         def downscale (dim):
             def func(x):
-                return LeakyReLU(0.1)(Conv2D(dim, 5, strides=2, padding='same')(x))
+                return LeakyReLU(0.1)(Conv2D(dim, k_size, strides=strides, padding='same')(x))
             return func 
             
         def downscale_sep (dim):
             def func(x):
-                return LeakyReLU(0.1)(SeparableConv2D(dim, 5, strides=2, padding='same')(x))
+                return LeakyReLU(0.1)(SeparableConv2D(dim, k_size, strides=strides, padding='same')(x))
             return func 
             
         def upscale (dim):
@@ -418,37 +434,40 @@ class SAEModel(ModelBase):
         def func(input):     
             x = input
             
-            x = downscale(128)(x)
+            ed_dims = K.int_shape(input)[-1]*ed_ch_dims
+            
+            x = downscale(ed_dims)(x)
             if not light_enc:
-                x = downscale(256)(x)
-                x = downscale(512)(x)
-                x = downscale(1024)(x)
+                x = downscale(ed_dims*2)(x)
+                x = downscale(ed_dims*4)(x)
+                x = downscale(ed_dims*8)(x)
             else:
-                x = downscale_sep(256)(x)
-                x = downscale_sep(512)(x)
-                x = downscale_sep(1024)(x)
+                x = downscale_sep(ed_dims*2)(x)
+                x = downscale_sep(ed_dims*4)(x)
+                x = downscale_sep(ed_dims*8)(x)
     
-            x = Dense(dims)(Flatten()(x))
-            x = Dense(lowest_dense_res * lowest_dense_res * dims)(x)
-            x = Reshape((lowest_dense_res, lowest_dense_res, dims))(x)
-            x = upscale(dims)(x)
+            x = Dense(ae_dims)(Flatten()(x))
+            x = Dense(lowest_dense_res * lowest_dense_res * ae_dims)(x)
+            x = Reshape((lowest_dense_res, lowest_dense_res, ae_dims))(x)
+            x = upscale(ae_dims)(x)
                
             return x
         return func
     
     @staticmethod
-    def DFDecFlow(output_nc,dims,activation='tanh'):
+    def DFDecFlow(output_nc, ed_ch_dims=21, activation='tanh'):
         exec (nnlib.import_all(), locals(), globals())
+        ed_dims = output_nc * ed_ch_dims
         
         def upscale (dim):
             def func(x):
                 return SubpixelUpscaler()(LeakyReLU(0.1)(Conv2D(dim * 4, 3, strides=1, padding='same')(x)))
             return func   
-        def func(input):
+        def func(input):            
             x = input[0]
-            x = upscale(dims)(x)
-            x = upscale(dims//2)(x)
-            x = upscale(dims//4)(x)
+            x = upscale(ed_dims*8)(x)
+            x = upscale(ed_dims*4)(x)
+            x = upscale(ed_dims*2)(x)
                 
             x = Conv2D(output_nc, kernel_size=5, padding='same', activation=activation)(x)
             return x

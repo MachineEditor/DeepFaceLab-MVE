@@ -70,7 +70,7 @@ LIAEF128 Cage video:
 
 [![Watch the video](https://img.youtube.com/vi/mRsexePEVco/0.jpg)](https://www.youtube.com/watch?v=mRsexePEVco)
 
-- **SAE (2GB+)** - Styled AutoEncoder. It is like LIAEF but with new face style loss. SAE more like face morpher/stylizer rather than direct swapper. Model has several options on start for fine tuning. 
+- **SAE (2GB+)** - Styled AutoEncoder - new superior model based on style loss. Morphing/stylizing done directly by neural network. Face obstructions also reconstructed without any masks. Converter mode 'overlay' should be used. Model has several options on start for fine tuning to fit your GPU.
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_0.jpg)
 
@@ -79,6 +79,8 @@ LIAEF128 Cage video:
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Navalniy_0.jpg)
 
 SAE model Cage-Trump video: https://www.youtube.com/watch?v=2R_aqHBClUQ
+
+SAE model Putin-Navalny video: https://www.youtube.com/watch?v=Jj7b3mqx-Mw
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/DeepFaceLab_convertor_overview.png)
 
