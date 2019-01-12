@@ -105,6 +105,16 @@ Quality of src faceset significantly affects the final face.
 
 Narrow src face is better fakeable than wide. This is why Cage is so popular in deepfakes.
 
+SAE tips:
+
+- if src faceset has number of faces more than dst faceset, model can be not converged. In this case try 'Feed faces to network sorted by yaw' option.
+
+- if src face wider than dst, model can be not converged. In this case try to decrease 'Src face scale modifier' to -5.
+
+- architecture 'df' make predicted face looking more like src, but if model not converges try default 'liae'.
+
+- most scenes converge fine with batch size = 8. In this case better to increase 'encoder/decoder dims per channel' to get more sharp result.
+
 ### **Sort tool**:
 
 `blur` places most blurred faces at end of folder
@@ -141,6 +151,10 @@ Nicolas Cage 4 facesets (1 mix + 3 different), Steve Jobs, Putin
 
 download from here: https://mega.nz/#F!y1ERHDaL!PPwg01PQZk0FhWLVo5_MaQ
 
+### Basic tutorial
+
+https://www.youtube.com/watch?v=K98nTNjXkq8
+
 ### **Build info**
 
 dlib==19.10.0 from pip compiled without CUDA. Therefore you have to compile DLIB manually, orelse use MT extractor only.
@@ -163,13 +177,6 @@ Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) pr
 1) torrent https://rutracker.org/forum/viewtopic.php?p=75318742 (magnet link inside).
 2) https://mega.nz/#F!b9MzCK4B!zEAG9txu7uaRUjXz9PtBqg
 
-Video tutorial: https://www.youtube.com/watch?v=K98nTNjXkq8
+If you like this software, please consider a donation.
 
-### **Windows 10 memory problem:
-
-Windows 10 consumes % of VRAM even if card unused for video output.
-
-### **Problem of the year**:
-
-algorithm of overlaying neural face onto video face located in ConverterMasked.py.
-Can someone implement adaptive histogram matching to prevent glares when a dark eyes face merges onto a light eyes face ?
+[![Donate](https://www.paypalobjects.com/en_US/RU/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=KK5ZCH4JXWMQS&source=url) Goal: RTX 2080 TI
