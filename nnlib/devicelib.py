@@ -143,7 +143,7 @@ class devicelib:
         
     @staticmethod
     def getDeviceVRAMTotalGb (idx):
-        result = 0
+        result = 2
         try:
             nvmlInit()
             if idx < nvmlDeviceGetCount():    
