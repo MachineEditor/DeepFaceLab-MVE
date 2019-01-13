@@ -52,10 +52,17 @@ class SAEModel(ModelBase):
         if is_first_run:
             self.options['ae_dims'] = np.clip ( input_int("AutoEncoder dims (128-1024 ?:help skip:%d) : " % (default_ae_dims) , default_ae_dims, help_message="More dims are better, but requires more VRAM. You can fine-tune model size to fit your GPU." ), 128, 1024 )
             self.options['ed_ch_dims'] = np.clip ( input_int("Encoder/Decoder dims per channel (21-85 ?:help skip:%d) : " % (default_ed_ch_dims) , default_ed_ch_dims, help_message="More dims are better, but requires more VRAM. You can fine-tune model size to fit your GPU." ), 21, 85 )
+            
+            if self.options['resolution'] != 64:
+                self.options['adapt_k_size'] = input_bool("Use adaptive kernel size? (y/n, ?:help skip:n) : ", False, help_message="In some cases, adaptive kernel size can fix bad generalization, for example warping parts of face." )
+            else:
+                self.options['adapt_k_size'] = False
+                
             self.options['face_type'] = input_str ("Half or Full face? (h/f, ?:help skip:f) : ", default_face_type, ['h','f'], help_message="Half face has better resolution, but covers less area of cheeks.").lower()            
         else:
             self.options['ae_dims'] = self.options.get('ae_dims', default_ae_dims)
             self.options['ed_ch_dims'] = self.options.get('ed_ch_dims', default_ed_ch_dims)
+            self.options['adapt_k_size'] = self.options.get('adapt_k_size', False)
             self.options['face_type'] = self.options.get('face_type', default_face_type)
         
         
@@ -69,6 +76,7 @@ class SAEModel(ModelBase):
         resolution = self.options['resolution']
         ae_dims = self.options['ae_dims']
         ed_ch_dims = self.options['ed_ch_dims']
+        adapt_k_size = self.options['adapt_k_size']
         bgr_shape = (resolution, resolution, 3)
         mask_shape = (resolution, resolution, 1)
 
@@ -81,7 +89,7 @@ class SAEModel(ModelBase):
         target_dstm = Input(mask_shape)
             
         if self.options['archi'] == 'liae':
-            self.encoder = modelify(SAEModel.LIAEEncFlow(resolution, self.options['lighter_encoder'], ed_ch_dims=ed_ch_dims)  ) (Input(bgr_shape))
+            self.encoder = modelify(SAEModel.LIAEEncFlow(resolution, adapt_k_size, self.options['lighter_encoder'], ed_ch_dims=ed_ch_dims)  ) (Input(bgr_shape))
             
             enc_output_Inputs = [ Input(K.int_shape(x)[1:]) for x in self.encoder.outputs ] 
             
@@ -121,7 +129,7 @@ class SAEModel(ModelBase):
             pred_src_dst = self.decoder(warped_src_dst_inter_code)
             pred_src_dstm = self.decoderm(warped_src_dst_inter_code)
         else:
-            self.encoder = modelify(SAEModel.DFEncFlow(resolution, self.options['lighter_encoder'], ae_dims=ae_dims, ed_ch_dims=ed_ch_dims)  ) (Input(bgr_shape))
+            self.encoder = modelify(SAEModel.DFEncFlow(resolution, adapt_k_size, self.options['lighter_encoder'], ae_dims=ae_dims, ed_ch_dims=ed_ch_dims)  ) (Input(bgr_shape))
             
             dec_Inputs = [ Input(K.int_shape(x)[1:]) for x in self.encoder.outputs ] 
             
@@ -237,10 +245,8 @@ class SAEModel(ModelBase):
                         sample_process_options=SampleProcessor.Options(random_flip=self.random_flip, normalize_tanh = True, scale_range=np.array([-0.05, 0.05])+self.src_scale_mod / 100.0 ), 
                         output_sample_types=[ [f.WARPED_TRANSFORMED | face_type | f.MODE_BGR, resolution], 
                                               [f.TRANSFORMED | face_type | f.MODE_BGR, resolution], 
-                                              [f.TRANSFORMED | face_type | f.MODE_M | f.FACE_MASK_FULL, resolution],
-                                              #
-                                              
-                                              ] ),
+                                              [f.TRANSFORMED | face_type | f.MODE_M | f.FACE_MASK_FULL, resolution]
+                                            ] ),
                                               
                     SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size,
                         sample_process_options=SampleProcessor.Options(random_flip=self.random_flip, normalize_tanh = True), 
@@ -328,11 +334,11 @@ class SAEModel(ModelBase):
                                **in_options)
     
     @staticmethod
-    def LIAEEncFlow(resolution, light_enc, ed_ch_dims=42):
+    def LIAEEncFlow(resolution, adapt_k_size, light_enc, ed_ch_dims=42):
         exec (nnlib.import_all(), locals(), globals())
         
-        k_size = resolution // 16 + 1
-        strides = resolution // 32
+        k_size = resolution // 16 + 1 if adapt_k_size else 5
+        strides = resolution // 32 if adapt_k_size else 2
         
         def downscale (dim):
             def func(x):
@@ -410,10 +416,10 @@ class SAEModel(ModelBase):
 
         
     @staticmethod
-    def DFEncFlow(resolution, light_enc, ae_dims=512, ed_ch_dims=42):
+    def DFEncFlow(resolution, adapt_k_size, light_enc, ae_dims=512, ed_ch_dims=42):
         exec (nnlib.import_all(), locals(), globals())
-        k_size = resolution // 16 + 1
-        strides = resolution // 32
+        k_size = resolution // 16 + 1 if adapt_k_size else 5
+        strides = resolution // 32 if adapt_k_size else 2
         lowest_dense_res = resolution // 16
         
         def downscale (dim):
