@@ -189,10 +189,6 @@ Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) pr
 
 ### Communication groups of deepfakers:
 
-(Chinese) QQ group 743285272 for beginners
-
-(Chinese) QQ group 951138799 for experts(have ML/AI skills )
-
 [mrdeepfakes (English)](https://mrdeepfakes.com/forums/)
 
 [reddit (English)](https://www.reddit.com/r/GifFakes/new/)
