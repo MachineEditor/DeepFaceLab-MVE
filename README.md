@@ -2,7 +2,11 @@
 
 If you like this software, please consider a donation.
 
-[![Donate](https://www.paypalobjects.com/en_US/RU/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=KK5ZCH4JXWMQS&source=url)  Goal: RTX 2080 TI
+Goal: RTX 2080 TI
+
+Paypal : https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=KK5ZCH4JXWMQS&source=url
+
+Alipay : https://i.imgur.com/JV6gaRS.jpg 
 
 bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr 
 
