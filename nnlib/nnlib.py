@@ -129,9 +129,6 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         if nnlib.tf is not None:
             return nnlib.code_import_tf
 
-        if not nnlib.device.hasNVML():
-            print ("nvml.dll not found. Reinstall Geforce video drivers.")
-        
         if 'TF_SUPPRESS_STD' in os.environ.keys() and os.environ['TF_SUPPRESS_STD'] == '1':
             suppressor = std_utils.suppress_stdout_stderr().__enter__()
         else:

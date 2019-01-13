@@ -24,7 +24,7 @@ class devicelib:
                             **in_options):
 
             self.use_fp16 = use_fp16
-            if cpu_only or not devicelib.hasNVML():
+            if cpu_only:
                 self.cpu_only = True
             else:
                 self.force_best_gpu_idx = force_best_gpu_idx
@@ -34,30 +34,37 @@ class devicelib:
                 self.allow_growth = allow_growth
           
                 self.gpu_idxs = []
-                if force_gpu_idxs is not None:
-                    for idx in force_gpu_idxs.split(','):
-                        idx = int(idx)
-                        if devicelib.isValidDeviceIdx(idx):
-                            self.gpu_idxs.append(idx)     
+                
+                if not devicelib.hasNVML():
+                    self.gpu_idxs = [0]
+                    self.gpu_total_vram_gb = 2
+                    self.gpu_names += ['Generic GeForce GPU']
+                    self.gpu_compute_caps += [ 50 ]
                 else:
-                    gpu_idx = force_best_gpu_idx if (force_best_gpu_idx >= 0 and devicelib.isValidDeviceIdx(force_best_gpu_idx)) else devicelib.getBestDeviceIdx() if not choose_worst_gpu else devicelib.getWorstDeviceIdx()
-                    if gpu_idx != -1:
-                        if self.multi_gpu:
-                            self.gpu_idxs = devicelib.getDeviceIdxsEqualModel( gpu_idx )
-                            if len(self.gpu_idxs) <= 1:
-                                self.multi_gpu = False
-                        else:
-                            self.gpu_idxs = [gpu_idx]
-                            
-                self.cpu_only = (len(self.gpu_idxs) == 0)
- 
-                if not self.cpu_only:
-                    self.gpu_total_vram_gb = devicelib.getDeviceVRAMTotalGb ( self.gpu_idxs[0] )
-                    self.gpu_names = []
-                    self.gpu_compute_caps = []
-                    for gpu_idx in self.gpu_idxs:
-                        self.gpu_names += [devicelib.getDeviceName(gpu_idx)]
-                        self.gpu_compute_caps += [ devicelib.getDeviceComputeCapability ( gpu_idx ) ]
+                    if force_gpu_idxs is not None:
+                        for idx in force_gpu_idxs.split(','):
+                            idx = int(idx)
+                            if devicelib.isValidDeviceIdx(idx):
+                                self.gpu_idxs.append(idx)     
+                    else:
+                        gpu_idx = force_best_gpu_idx if (force_best_gpu_idx >= 0 and devicelib.isValidDeviceIdx(force_best_gpu_idx)) else devicelib.getBestDeviceIdx() if not choose_worst_gpu else devicelib.getWorstDeviceIdx()
+                        if gpu_idx != -1:
+                            if self.multi_gpu:
+                                self.gpu_idxs = devicelib.getDeviceIdxsEqualModel( gpu_idx )
+                                if len(self.gpu_idxs) <= 1:
+                                    self.multi_gpu = False
+                            else:
+                                self.gpu_idxs = [gpu_idx]
+                                
+                    self.cpu_only = (len(self.gpu_idxs) == 0)
+     
+                    if not self.cpu_only:
+                        self.gpu_total_vram_gb = devicelib.getDeviceVRAMTotalGb ( self.gpu_idxs[0] )
+                        self.gpu_names = []
+                        self.gpu_compute_caps = []
+                        for gpu_idx in self.gpu_idxs:
+                            self.gpu_names += [devicelib.getDeviceName(gpu_idx)]
+                            self.gpu_compute_caps += [ devicelib.getDeviceComputeCapability ( gpu_idx ) ]
                     
     @staticmethod
     def hasNVML():
@@ -215,7 +222,7 @@ class devicelib:
         
     @staticmethod
     def getDeviceName (idx):
-        result = ''
+        result = 'Generic GeForce GPU'
         try:
             nvmlInit()    
             if idx < nvmlDeviceGetCount():    
