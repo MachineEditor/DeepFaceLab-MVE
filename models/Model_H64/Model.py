@@ -11,13 +11,25 @@ class Model(ModelBase):
     encoderH5 = 'encoder.h5'
     decoder_srcH5 = 'decoder_src.h5'
     decoder_dstH5 = 'decoder_dst.h5'
+    
+    #override
+    def onInitializeOptions(self, is_first_run, ask_override):        
+        if is_first_run:
+            self.options['lighter_ae'] = input_bool ("Use lightweight autoencoder? (y/n, ?:help skip:n) : ", False, help_message="Lightweight autoencoder is faster, requires less VRAM, sacrificing overall quality. If your GPU VRAM <= 4, you should to choose this option.")
+        else:
+            default_lighter_ae = self.options.get('created_vram_gb', 99) <= 4 #temporally support old models, deprecate in future
+            if 'created_vram_gb' in self.options.keys():
+                self.options.pop ('created_vram_gb')
+            self.options['lighter_ae'] = self.options.get('lighter_ae', default_lighter_ae)
 
     #override
     def onInitialize(self, **in_options):
         exec(nnlib.import_all(), locals(), globals())
         self.set_vram_batch_requirements( {1.5:2,2:2,3:8,4:16,5:24,6:32,7:40,8:48} )
 
-        bgr_shape, mask_shape, self.encoder, self.decoder_src, self.decoder_dst = self.Build(self.created_vram_gb)
+        
+        bgr_shape, mask_shape, self.encoder, self.decoder_src, self.decoder_dst = self.Build(self.options['lighter_ae'])
+        
         if not self.is_first_run():
             self.encoder.load_weights     (self.get_strpath_storage_for_file(self.encoderH5))
             self.decoder_src.load_weights (self.get_strpath_storage_for_file(self.decoder_srcH5))
@@ -27,12 +39,12 @@ class Model(ModelBase):
         input_src_mask = Input(mask_shape)
         input_dst_bgr = Input(bgr_shape)
         input_dst_mask = Input(mask_shape)
-
+        
         rec_src_bgr, rec_src_mask = self.decoder_src( self.encoder(input_src_bgr) )        
         rec_dst_bgr, rec_dst_mask = self.decoder_dst( self.encoder(input_dst_bgr) )
 
         self.ae = Model([input_src_bgr,input_src_mask,input_dst_bgr,input_dst_mask], [rec_src_bgr, rec_src_mask, rec_dst_bgr, rec_dst_mask] )
-            
+        
         self.ae.compile(optimizer=Adam(lr=5e-5, beta_1=0.5, beta_2=0.999),
                         loss=[ DSSIMMaskLoss([input_src_mask]), 'mae', DSSIMMaskLoss([input_dst_mask]), 'mae' ] )
   
@@ -122,7 +134,7 @@ class Model(ModelBase):
                                base_blur_mask_modifier=100,
                                **in_options)
         
-    def Build(self, created_vram_gb):
+    def Build(self, lighter_ae):
         exec(nnlib.code_import_all, locals(), globals())
         
         bgr_shape = (64, 64, 3)
@@ -141,7 +153,7 @@ class Model(ModelBase):
         def Encoder(input_shape):
             input_layer = Input(input_shape)
             x = input_layer
-            if created_vram_gb >= 4:
+            if not lighter_ae:
                 x = downscale(128)(x)
                 x = downscale(256)(x)
                 x = downscale(512)(x)
@@ -162,7 +174,7 @@ class Model(ModelBase):
             return Model(input_layer, x)
 
         def Decoder():
-            if created_vram_gb >= 4:    
+            if not lighter_ae:
                 input_ = Input(shape=(8, 8, 512))
                 x = input_
 

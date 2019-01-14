@@ -18,7 +18,18 @@ You can implement your own model. Check examples.
 class ModelBase(object):
 
     #DONT OVERRIDE
-    def __init__(self, model_path, training_data_src_path=None, training_data_dst_path=None, debug = False, force_best_gpu_idx=-1, **in_options):
+    def __init__(self, model_path, training_data_src_path=None, training_data_dst_path=None, debug = False, force_gpu_idx=-1, **in_options):
+    
+        if force_gpu_idx == -1: 
+            idxs_names_list = nnlib.device.getAllDevicesIdxsWithNamesList()
+            if len(idxs_names_list) > 1:
+                print ("You have multi GPUs in a system: ")
+                for idx, name in idxs_names_list:
+                    print ("[%d] : %s" % (idx, name) )
+
+                force_gpu_idx = input_int("Which GPU idx to choose? ( skip: best GPU ) : ", -1, [ x[0] for x in idxs_names_list] )
+        self.force_gpu_idx = force_gpu_idx
+    
         print ("Loading model...")
         self.model_path = model_path
         self.model_data_path = Path( self.get_strpath_storage_for_file('data.dat') )
@@ -35,7 +46,7 @@ class ModelBase(object):
         self.debug = debug
         self.is_training_mode = (training_data_src_path is not None and training_data_dst_path is not None)
         
-        self.supress_std_once = ('TF_SUPPRESS_STD' in os.environ.keys() and os.environ['TF_SUPPRESS_STD'] == '1')
+        self.supress_std_once = os.environ.get('TF_SUPPRESS_STD', '0') == '1'
         
         self.epoch = 0
         self.options = {}
@@ -48,21 +59,12 @@ class ModelBase(object):
                 self.options = model_data['options']
                 self.loss_history = model_data['loss_history'] if 'loss_history' in model_data.keys() else []
                 self.sample_for_preview = model_data['sample_for_preview']  if 'sample_for_preview' in model_data.keys() else None
-            
+
         ask_override = self.is_training_mode and self.epoch != 0 and input_in_time ("Press enter in 2 seconds to override some model settings.", 2)
         
         if self.epoch == 0: 
             print ("\nModel first run. Enter model options as default for each run.")
         
-        if (self.epoch == 0 or ask_override) and (force_best_gpu_idx == -1): 
-            idxs_names_list = nnlib.device.getAllDevicesIdxsWithNamesList()
-            if len(idxs_names_list) > 1:
-                print ("You have multi GPUs in a system: ")
-                for idx, name in idxs_names_list:
-                    print ("[%d] : %s" % (idx, name) )
-
-                force_best_gpu_idx = input_int("Which GPU idx to choose? ( skip: system choice ) : ", -1)
-            
         if self.epoch == 0 or ask_override: 
             default_write_preview_history = False if self.epoch == 0 else self.options.get('write_preview_history',False)
             self.options['write_preview_history'] = input_bool("Write preview history? (y/n ?:help skip:n/default) : ", default_write_preview_history, help_message="Preview history will be writed to <ModelName>_history folder.")
@@ -119,13 +121,8 @@ class ModelBase(object):
             
         self.onInitializeOptions(self.epoch == 0, ask_override)
         
-        nnlib.import_all ( nnlib.DeviceConfig(allow_growth=False, force_best_gpu_idx=force_best_gpu_idx, **in_options) )
+        nnlib.import_all ( nnlib.DeviceConfig(allow_growth=False, force_gpu_idx=self.force_gpu_idx, **in_options) )
         self.device_config = nnlib.active_DeviceConfig
-        
-        if self.epoch == 0: 
-            self.created_vram_gb = self.options['created_vram_gb'] = self.device_config.gpu_total_vram_gb
-        else:            
-            self.created_vram_gb = self.options['created_vram_gb'] = self.options.get('created_vram_gb',self.device_config.gpu_total_vram_gb)
 
         self.onInitialize(**in_options)
         
@@ -136,7 +133,10 @@ class ModelBase(object):
         
         if self.is_training_mode:
             if self.write_preview_history:
-                self.preview_history_path = self.model_path / ( '%s_history' % (self.get_model_name()) )
+                if self.force_gpu_idx == -1:
+                    self.preview_history_path = self.model_path / ( '%s_history' % (self.get_model_name()) )
+                else:
+                    self.preview_history_path = self.model_path / ( '%d_%s_history' % (self.force_gpu_idx, self.get_model_name()) )
                 
                 if not self.preview_history_path.exists():
                     self.preview_history_path.mkdir(exist_ok=True)
@@ -174,7 +174,7 @@ class ModelBase(object):
             for idx in self.device_config.gpu_idxs:
                 print ("== |== [%d : %s]" % (idx, nnlib.device.getDeviceName(idx)) )
  
-        if not self.device_config.cpu_only and self.device_config.gpu_total_vram_gb == 2:
+        if not self.device_config.cpu_only and self.device_config.gpu_vram_gb[0] == 2:
             print ("==")
             print ("== WARNING: You are using 2GB GPU. Result quality may be significantly decreased.")
             print ("== If training does not start, close all programs and try again.")
@@ -268,7 +268,7 @@ class ModelBase(object):
         
         if self.supress_std_once:
             supressor.__exit__()
-        
+            
         model_data = {
             'epoch': self.epoch,
             'options': self.options,
@@ -367,7 +367,10 @@ class ModelBase(object):
         return self.generator_list
         
     def get_strpath_storage_for_file(self, filename):
-        return str( self.model_path / (self.get_model_name() + '_' + filename) )
+        if self.force_gpu_idx == -1:
+            return str( self.model_path / ( self.get_model_name() + '_' + filename) )
+        else:
+            return str( self.model_path / ( str(self.force_gpu_idx) + '_' + self.get_model_name() + '_' + filename) )
 
     def set_vram_batch_requirements (self, d):
         #example d = {2:2,3:4,4:8,5:16,6:32,7:32,8:32,9:48} 
@@ -379,7 +382,7 @@ class ModelBase(object):
         else:
             if self.batch_size == 0:        
                 for x in keys:
-                    if self.device_config.gpu_total_vram_gb <= x:
+                    if self.device_config.gpu_vram_gb[0] <= x:
                         self.batch_size = d[x]
                         break
                         

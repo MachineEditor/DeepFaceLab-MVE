@@ -65,16 +65,6 @@ if __name__ == "__main__":
     sort_parser.set_defaults (func=process_sort)
     
     def process_train(arguments):      
-    
-        if 'DFL_TARGET_EPOCH' in os.environ.keys():
-            arguments.session_target_epoch = int ( os.environ['DFL_TARGET_EPOCH'] )
-    
-        if 'DFL_BATCH_SIZE' in os.environ.keys():
-            arguments.batch_size = int ( os.environ['DFL_BATCH_SIZE'] )
-
-        if 'DFL_WORST_GPU' in os.environ.keys():
-            arguments.choose_worst_gpu = True
-            
         from mainscripts import Trainer
         Trainer.main (
             training_data_src_dir=arguments.training_data_src_dir, 
@@ -83,10 +73,8 @@ if __name__ == "__main__":
             model_name=arguments.model_name,
             debug              = arguments.debug,
             #**options
-            choose_worst_gpu   = arguments.choose_worst_gpu,
-            force_best_gpu_idx = arguments.force_best_gpu_idx,
-            force_gpu_idxs     = arguments.force_gpu_idxs,
-            cpu_only           = arguments.cpu_only
+            force_gpu_idx = arguments.force_gpu_idx,
+            cpu_only      = arguments.cpu_only
             )
         
     train_parser = subparsers.add_parser( "train", help="Trainer") 
@@ -96,9 +84,7 @@ if __name__ == "__main__":
     train_parser.add_argument('--model', required=True, dest="model_name", choices=Path_utils.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Type of model")
     train_parser.add_argument('--debug', action="store_true", dest="debug", default=False, help="Debug samples.")  
     train_parser.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Train on CPU.")
-    train_parser.add_argument('--force-gpu-idxs', type=str, dest="force_gpu_idxs", default=None, help="Override final GPU idxs. Example: 0,1,2.")
-    train_parser.add_argument('--choose-worst-gpu', action="store_true", dest="choose_worst_gpu", default=False, help="Choose worst GPU instead of best. Environment variable to force True: DFL_WORST_GPU")
-    train_parser.add_argument('--force-best-gpu-idx', type=int, dest="force_best_gpu_idx", default=-1, help="Force to choose this GPU idx as best(worst).")
+    train_parser.add_argument('--force-gpu-idx', type=int, dest="force_gpu_idx", default=-1, help="Force to choose this GPU idx.")
 
     train_parser.set_defaults (func=process_train)
     
@@ -111,7 +97,7 @@ if __name__ == "__main__":
             model_dir=arguments.model_dir, 
             model_name=arguments.model_name, 
             debug = arguments.debug,
-            force_best_gpu_idx = arguments.force_best_gpu_idx,
+            force_gpu_idx = arguments.force_gpu_idx,
             cpu_only = arguments.cpu_only
             )
         
@@ -122,7 +108,7 @@ if __name__ == "__main__":
     convert_parser.add_argument('--model-dir', required=True, action=fixPathAction, dest="model_dir", help="Model dir.")
     convert_parser.add_argument('--model', required=True, dest="model_name", choices=Path_utils.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Type of model")
     convert_parser.add_argument('--debug', action="store_true", dest="debug", default=False, help="Debug converter.")
-    convert_parser.add_argument('--force-best-gpu-idx', type=int, dest="force_best_gpu_idx", default=-1, help="Force to choose this GPU idx as best.")
+    convert_parser.add_argument('--force-gpu-idx', type=int, dest="force_gpu_idx", default=-1, help="Force to choose this GPU idx.")
     convert_parser.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Convert on CPU.")
     
     convert_parser.set_defaults(func=process_convert)

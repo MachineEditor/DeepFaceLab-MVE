@@ -68,7 +68,7 @@ class ExtractSubprocessor(SubprocessorBase):
             if not multi_gpu or len(devices) == 0:
                 devices = [nnlib.device.getBestDeviceIdx()]
                 
-            if len(devices) == 0 or devices[0] == -1:
+            if len(devices) == 0:
                 devices = [0]
                     
             devices = [ (idx, nnlib.device.getDeviceName(idx), nnlib.device.getDeviceVRAMTotalGb(idx) ) for idx in devices]
@@ -263,7 +263,7 @@ class ExtractSubprocessor(SubprocessorBase):
 
         self.e = None
 
-        device_config = nnlib.DeviceConfig ( cpu_only=self.cpu_only, force_best_gpu_idx=self.device_idx, allow_growth=True)
+        device_config = nnlib.DeviceConfig ( cpu_only=self.cpu_only, force_gpu_idx=self.device_idx, allow_growth=True)
         if self.type == 'rects':
             if self.detector is not None:
                 if self.detector == 'mt':
