@@ -4,6 +4,8 @@ If you like this software, please consider a donation.
 
 Goal: RTX 2080 TI
 
+[Donate via Yandex.Money](https://money.yandex.ru/to/41001142318065)
+
 [Donate via Paypal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=KK5ZCH4JXWMQS&source=url)
 
 [Donate via Alipay](https://i.loli.net/2019/01/13/5c3ae3829809f.jpg)
