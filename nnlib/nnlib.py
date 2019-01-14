@@ -33,7 +33,7 @@ class nnlib(object):
     tf_adain = None
     tf_gaussian_blur = None
     tf_style_loss = None
-
+    
     modelify = None
     ReflectionPadding2D = None
     DSSIMLoss = None
@@ -109,6 +109,7 @@ AddUniformNoise = nnlib.AddUniformNoise
 keras_contrib = nnlib.keras_contrib
 GroupNormalization = keras_contrib.layers.GroupNormalization
 InstanceNormalization = keras_contrib.layers.InstanceNormalization
+Padam = keras_contrib.optimizers.Padam
 """
     code_import_dlib_string = \
 """
@@ -378,7 +379,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
             return func
             
         nnlib.tf_style_loss = tf_style_loss
-        
+
     @staticmethod
     def import_keras(device_config = None):
         if nnlib.keras is not None:

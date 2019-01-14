@@ -3,6 +3,25 @@ import sys
 import time
 import multiprocessing
 
+def input_number(s, default_value, valid_list=None, help_message=None):
+    while True:
+        try:
+            inp = input(s)
+            if len(inp) == 0:
+                raise ValueError("")
+                
+            if help_message is not None and inp == '?':
+                print (help_message)
+                continue
+            
+            i = float(inp)
+            if (valid_list is not None) and (i not in valid_list):
+                return default_value
+            return i
+        except:
+            print (default_value)
+            return default_value
+            
 def input_int(s, default_value, valid_list=None, help_message=None):
     while True:
         try:
