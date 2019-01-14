@@ -189,7 +189,9 @@ Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) pr
 1) torrent https://rutracker.org/forum/viewtopic.php?p=75318742 (magnet link inside).
 2) https://mega.nz/#F!b9MzCK4B!zEAG9txu7uaRUjXz9PtBqg
 
-### Communication groups of deepfakers:
+### Communication groups:
+
+(Chinese) QQ group 951138799 for ML/AI experts
 
 [mrdeepfakes (English)](https://mrdeepfakes.com/forums/)
 
