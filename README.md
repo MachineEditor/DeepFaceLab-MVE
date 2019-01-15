@@ -193,6 +193,8 @@ Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) pr
 
 (Chinese) QQ group 951138799 for ML/AI experts
 
+[deepfakes (Chinese)] (https://deepfakes.com.cn/)
+
 [mrdeepfakes (English)](https://mrdeepfakes.com/forums/)
 
 [reddit (English)](https://www.reddit.com/r/GifFakes/new/)
