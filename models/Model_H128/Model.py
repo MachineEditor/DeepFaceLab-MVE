@@ -4,6 +4,7 @@ from nnlib import nnlib
 from models import ModelBase
 from facelib import FaceType
 from samples import *
+from utils.console_utils import *
 
 class Model(ModelBase):
 
