@@ -82,7 +82,9 @@ LIAEF128 Cage video:
 
 [![Watch the video](https://img.youtube.com/vi/mRsexePEVco/0.jpg)](https://www.youtube.com/watch?v=mRsexePEVco)
 
-- **SAE (2GB+)** - Styled AutoEncoder - new superior model based on style loss. Morphing/stylizing done directly by neural network. Face obstructions also reconstructed without any masks. Converter mode 'overlay' should be used. Model has several options on start for fine tuning to fit your GPU.
+- **SAE ( minimum 2GB+, recommended 11GB+ )** - Styled AutoEncoder - new superior model based on style loss. Morphing/stylizing done directly by neural network. Face obstructions also reconstructed without any masks. Converter mode 'overlay' should be used. Model has several options on start for fine tuning to fit your GPU.
+
+SAE actually contains all other models. Just set style powers to 0.0 to get default models.
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_0.jpg)
 
@@ -95,7 +97,6 @@ SAE model Cage-Trump video: https://www.youtube.com/watch?v=2R_aqHBClUQ
 SAE model Putin-Navalny video: https://www.youtube.com/watch?v=Jj7b3mqx-Mw
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/DeepFaceLab_convertor_overview.png)
-
 
 ### **Tips and tricks**:
 
@@ -119,13 +120,17 @@ Narrow src face is better fakeable than wide. This is why Cage is so popular in 
 
 SAE tips:
 
+- SAE actually contains all other models. Just set style power options to 0.0 to get default models.
+
 - if src faceset has number of faces more than dst faceset, model can be not converged. In this case try 'Feed faces to network sorted by yaw' option.
 
 - if src face wider than dst, model can be not converged. In this case try to decrease 'Src face scale modifier' to -5.
 
 - architecture 'df' make predicted face looking more like src, but if model not converges try default 'liae'.
 
-- most scenes converge fine with batch size = 8. In this case better to increase 'encoder/decoder dims per channel' to get more sharp result.
+- if you have a lot of VRAM, you can choose between batch size that affects quality of generalization and enc/dec dims that affects image quality.
+
+- if style speed is too fast, you will get the artifacts before the face becomes sharp.
 
 ### **Sort tool**:
 

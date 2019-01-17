@@ -163,10 +163,10 @@ def previewThread (input_queue, output_queue):
                 
         if update_preview:
             update_preview = False
-            (h,w,c) = previews[0][1].shape
-            
+
             selected_preview_name = previews[selected_preview][0]
             selected_preview_rgb = previews[selected_preview][1]
+            (h,w,c) = selected_preview_rgb.shape
             
             # HEAD
             head_text_color = [0.8]*c

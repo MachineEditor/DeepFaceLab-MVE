@@ -75,6 +75,7 @@ Conv2D = keras.layers.Conv2D
 Conv2DTranspose = keras.layers.Conv2DTranspose
 SeparableConv2D = keras.layers.SeparableConv2D
 MaxPooling2D = keras.layers.MaxPooling2D
+UpSampling2D = keras.layers.UpSampling2D
 BatchNormalization = keras.layers.BatchNormalization
 
 LeakyReLU = keras.layers.LeakyReLU

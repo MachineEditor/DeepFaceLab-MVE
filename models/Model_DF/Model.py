@@ -14,7 +14,7 @@ class Model(ModelBase):
     #override
     def onInitialize(self, **in_options):
         exec(nnlib.import_all(), locals(), globals())
-        self.set_vram_batch_requirements( {4.5:16,5:16,6:16,7:16,8:24,9:24,10:32,11:32,12:32,13:48} )
+        self.set_vram_batch_requirements( {4.5:4,5:6,6:8,7:16,8:24,9:24,10:32,11:32,12:32,13:48} )
                 
         ae_input_layer = Input(shape=(128, 128, 3))
         mask_layer = Input(shape=(128, 128, 1)) #same as output
