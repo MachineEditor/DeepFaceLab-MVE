@@ -15,13 +15,14 @@ class ConverterMasked(ConverterBase):
                         face_type=FaceType.FULL,
                         base_erode_mask_modifier = 0,
                         base_blur_mask_modifier = 0,
-                        
+                        clip_border_mask_per = 0,
                         **in_options):
                         
         super().__init__(predictor)
         self.predictor_input_size = predictor_input_size
         self.output_size = output_size
         self.face_type = face_type 
+        self.clip_border_mask_per = clip_border_mask_per
         self.TFLabConverter = None
         
         mode = input_int ("Choose mode: (1) overlay, (2) hist match, (3) hist match bw, (4) seamless (default), (5) seamless hist match, (6) raw : ", 4)
@@ -77,7 +78,7 @@ class ConverterMasked(ConverterBase):
     def convert_face (self, img_bgr, img_face_landmarks, debug):        
         if debug:        
             debugs = [img_bgr.copy()]
-
+            
         img_size = img_bgr.shape[1], img_bgr.shape[0]
 
         img_face_mask_a = LandmarksProcessor.get_image_hull_mask (img_bgr, img_face_landmarks)
@@ -182,6 +183,16 @@ class ConverterMasked(ConverterBase):
                         
                     img_mask_blurry_aaa = np.clip( img_mask_blurry_aaa, 0, 1.0 )
 
+                    if self.clip_border_mask_per > 0:
+                        prd_border_rect_mask_a = np.ones ( prd_face_mask_a.shape, dtype=prd_face_mask_a.dtype)        
+                        prd_border_size = int ( prd_border_rect_mask_a.shape[1] * self.clip_border_mask_per )
+
+                        prd_border_rect_mask_a[0:prd_border_size,:,:] = 0
+                        prd_border_rect_mask_a[-prd_border_size:,:,:] = 0
+                        prd_border_rect_mask_a[:,0:prd_border_size,:] = 0
+                        prd_border_rect_mask_a[:,-prd_border_size:,:] = 0
+                        prd_border_rect_mask_a = np.expand_dims(cv2.blur(prd_border_rect_mask_a, (prd_border_size, prd_border_size) ),-1)
+                    
                     if self.mode == 'hist-match-bw':
                         prd_face_bgr = cv2.cvtColor(prd_face_bgr, cv2.COLOR_BGR2GRAY)
                         prd_face_bgr = np.repeat( np.expand_dims (prd_face_bgr, -1), (3,), -1 )
@@ -226,6 +237,11 @@ class ConverterMasked(ConverterBase):
                         if debug:
                             debugs += [out_img.copy()]
 
+                    if self.clip_border_mask_per > 0:
+                        img_prd_border_rect_mask_a = cv2.warpAffine( prd_border_rect_mask_a, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
+                        img_prd_border_rect_mask_a = np.expand_dims (img_prd_border_rect_mask_a, -1)
+                        img_mask_blurry_aaa *= img_prd_border_rect_mask_a
+                
                     out_img =  np.clip( img_bgr*(1-img_mask_blurry_aaa) + (out_img*img_mask_blurry_aaa) , 0, 1.0 )
 
                     if self.mode == 'seamless-hist-match':
