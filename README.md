@@ -84,8 +84,6 @@ LIAEF128 Cage video:
 
 - **SAE ( minimum 2GB+, recommended 11GB+ )** - Styled AutoEncoder - new superior model based on style loss. Morphing/stylizing done directly by neural network. Face obstructions also reconstructed without any masks. Converter mode 'overlay' should be used. Model has several options on start for fine tuning to fit your GPU.
 
-SAE actually contains all other models. Just set style powers to 0.0 to get default models.
-
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_0.jpg)
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_1.jpg)
@@ -96,11 +94,21 @@ SAE model Cage-Trump video: https://www.youtube.com/watch?v=2R_aqHBClUQ
 
 SAE model Putin-Navalny video: https://www.youtube.com/watch?v=Jj7b3mqx-Mw
 
+Scene with extremely obstructed face in helmet, that cannot be handled by any other classic faceswap model (how to train it read tips):
+
+![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_2.jpg)
+
+![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_3.jpg)
+
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/DeepFaceLab_convertor_overview.png)
 
 ### **Tips and tricks**:
 
 unfortunately deepfaking is time/eletricpower consuming topic and has a lot of nuances.
+
+Quality of src faceset significantly affects the final face.
+
+Narrow src face is better fakeable than wide. This is why Cage is so popular in deepfakes.
 
 Every model is good for specific scenes and faces.
 
@@ -112,11 +120,7 @@ DF - good for side faces, but results in a lower resolution and details. Covers 
 
 LIAE - can partially fix dissimilar face shapes, but results in a less recognizable face.
 
-SAE - no matter how similar faces, src face will be morphed onto dst face, which can make face absolutely unrecognizable. Model can collapse on some scenes. Easy to overlay final face because dst background is also predicted.
-
-Quality of src faceset significantly affects the final face.
-
-Narrow src face is better fakeable than wide. This is why Cage is so popular in deepfakes.
+SAE - actually contains all other models, but better due to multiscale decoder. Just set style powers to 0.0 to get default models.
 
 SAE tips:
 
@@ -130,7 +134,9 @@ SAE tips:
 
 - if you have a lot of VRAM, you can choose between batch size that affects quality of generalization and enc/dec dims that affects image quality.
 
-- if style speed is too fast, you will get the artifacts before the face becomes sharp.
+- how to train extremely obstructed face model with SAE:
+
+First train it with both style powers at 10.0+ value. When artifacts become appearing at ~30-40k epochs, set face style to 0.0 or 0.01 and bg style to 0.1-0.3 and continue training. You can slightly vary theese values during training if something goes wrong. Track changes in preview history.
 
 ### **Sort tool**:
 
