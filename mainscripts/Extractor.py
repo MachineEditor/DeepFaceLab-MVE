@@ -311,7 +311,7 @@ class ExtractSubprocessor(SubprocessorBase):
                 faces = data[1]
                 
                 if self.debug:
-                    debug_output_file = '{}_{}'.format( str(Path(str(self.output_path) + '_debug') / filename_path.stem),  'debug.png')
+                    debug_output_file = '{}_{}'.format( str(Path(str(self.output_path) + '_debug') / filename_path.stem),  'debug.jpg')
                     debug_image = image.copy()
                     
                 for (face_idx, face) in enumerate(faces):         
