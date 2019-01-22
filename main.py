@@ -38,6 +38,7 @@ if __name__ == "__main__":
             multi_gpu=arguments.multi_gpu,
             cpu_only=arguments.cpu_only,
             manual_fix=arguments.manual_fix,
+            manual_output_debug_fix=arguments.manual_output_debug_fix,
             manual_window_size=arguments.manual_window_size
             )
         
@@ -49,7 +50,8 @@ if __name__ == "__main__":
     extract_parser.add_argument('--detector', dest="detector", choices=['dlib','mt','manual'], default='dlib', help="Type of detector. Default 'dlib'. 'mt' (MTCNNv1) - faster, better, almost no jitter, perfect for gathering thousands faces for src-set. It is also good for dst-set, but can generate false faces in frames where main face not recognized! In this case for dst-set use either 'dlib' with '--manual-fix' or '--detector manual'. Manual detector suitable only for dst-set.")
     extract_parser.add_argument('--multi-gpu', action="store_true", dest="multi_gpu", default=False, help="Enables multi GPU.")
     extract_parser.add_argument('--manual-fix', action="store_true", dest="manual_fix", default=False, help="Enables manual extract only frames where faces were not recognized.")
-    extract_parser.add_argument('--manual-window-size', type=int, dest="manual_window_size", default=0, help="Manual fix window size. Example: 1368. Default: frame size.") 
+    extract_parser.add_argument('--manual-output-debug-fix', action="store_true", dest="manual_output_debug_fix", default=False, help="Performs manual reextract input-dir frames which were deleted from [output_dir]_debug\ dir.")
+    extract_parser.add_argument('--manual-window-size', type=int, dest="manual_window_size", default=1368, help="Manual fix window size. Default: 1368.") 
     extract_parser.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Extract on CPU. Forces to use MT extractor.")    
     
     
@@ -61,7 +63,7 @@ if __name__ == "__main__":
         
     sort_parser = subparsers.add_parser( "sort", help="Sort faces in a directory.")     
     sort_parser.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
-    sort_parser.add_argument('--by', required=True, dest="sort_by_method", choices=("blur", "face", "face-dissim", "face-yaw", "hist", "hist-dissim", "brightness", "hue", "black", "origname", "final"), help="Method of sorting. 'origname' sort by original filename to recover original sequence." )
+    sort_parser.add_argument('--by', required=True, dest="sort_by_method", choices=("blur", "face", "face-dissim", "face-yaw", "hist", "hist-dissim", "brightness", "hue", "black", "origname", "final", "test"), help="Method of sorting. 'origname' sort by original filename to recover original sequence." )
     sort_parser.set_defaults (func=process_sort)
     
     def process_train(arguments):      

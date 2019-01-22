@@ -311,7 +311,7 @@ class ExtractSubprocessor(SubprocessorBase):
                 faces = data[1]
                 
                 if self.debug:
-                    debug_output_file = '{}_{}'.format( str(Path(str(self.output_path) + '_debug') / filename_path.stem),  'debug.jpg')
+                    debug_output_file = '{}{}'.format( str(Path(str(self.output_path) + '_debug') / filename_path.stem),  '.jpg')
                     debug_image = image.copy()
                     
                 for (face_idx, face) in enumerate(faces):         
@@ -397,7 +397,7 @@ face_type
     'full_face'
     'avatar'
 '''
-def main (input_dir, output_dir, debug, detector='mt', multi_gpu=True, cpu_only=False, manual_fix=False, manual_window_size=0, image_size=256, face_type='full_face'):
+def main (input_dir, output_dir, debug, detector='mt', multi_gpu=True, cpu_only=False, manual_fix=False, manual_output_debug_fix=False, manual_window_size=1368, image_size=256, face_type='full_face'):
     print ("Running extractor.\r\n")
 
     input_path = Path(input_dir)
@@ -409,20 +409,44 @@ def main (input_dir, output_dir, debug, detector='mt', multi_gpu=True, cpu_only=
         return
         
     if output_path.exists():
-        for filename in Path_utils.get_image_paths(output_path):
-            Path(filename).unlink()
+        if not manual_output_debug_fix:
+            for filename in Path_utils.get_image_paths(output_path):
+                Path(filename).unlink()
     else:
         output_path.mkdir(parents=True, exist_ok=True)
         
+    if manual_output_debug_fix:
+        debug = True
+        detector = 'manual'
+        print('Performing re-extract frames which were deleted from _debug directory.')
+        
+    input_path_image_paths = Path_utils.get_image_unique_filestem_paths(input_path, verbose=True)
+    
     if debug:
         debug_output_path = Path(str(output_path) + '_debug')
-        if debug_output_path.exists():
-            for filename in Path_utils.get_image_paths(debug_output_path):
-                Path(filename).unlink()
+        
+        if manual_output_debug_fix:
+            if not debug_output_path.exists():
+                print ("%s not found " % ( str(debug_output_path) ))
+                return
+            
+            debug_imgs = Path_utils.get_image_paths(debug_output_path)
+            
+            new_input_path_image_paths = []
+            for i in input_path_image_paths:
+                i_stem = Path(i).stem
+                
+                if not any ( [ i_stem == Path(d).stem for d in debug_imgs] ):
+                    new_input_path_image_paths += [i]
+            
+            input_path_image_paths = new_input_path_image_paths
         else:
-            debug_output_path.mkdir(parents=True, exist_ok=True)
+            if debug_output_path.exists():
+                for filename in Path_utils.get_image_paths(debug_output_path):
+                    Path(filename).unlink()
+            else:
+                debug_output_path.mkdir(parents=True, exist_ok=True)
 
-    input_path_image_paths = Path_utils.get_image_unique_filestem_paths(input_path, verbose=True)
     images_found = len(input_path_image_paths)
     faces_detected = 0
     if images_found != 0:    
