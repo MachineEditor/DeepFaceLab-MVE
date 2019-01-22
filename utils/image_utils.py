@@ -140,7 +140,11 @@ def morphTriangle(dst_img, src_img, st, dt) :
     cv2.fillConvexPoly(d_mask, np.int32(dRect), (1.0,)*c, 8, 0);                                    
     imgRect = src_img[sr[1]:sr[1] + sr[3], sr[0]:sr[0] + sr[2]]                                    
     size = (dr[2], dr[3])                                    
-    warpImage1 = applyAffineTransform(imgRect, sRect, dRect, size)                      
+    warpImage1 = applyAffineTransform(imgRect, sRect, dRect, size) 
+
+    if c == 1:
+        warpImage1 = np.expand_dims( warpImage1, -1 )
+
     dst_img[dr[1]:dr[1]+dr[3], dr[0]:dr[0]+dr[2]] = dst_img[dr[1]:dr[1]+dr[3], dr[0]:dr[0]+dr[2]]*(1-d_mask) + warpImage1 * d_mask
     
 def morph_by_points (image, sp, dp):
@@ -150,6 +154,7 @@ def morph_by_points (image, sp, dp):
 
     result_image = np.zeros(image.shape, dtype = image.dtype)
 
+    
     for tri in Delaunay(dp).simplices:                                    
         morphTriangle(result_image, image, sp[tri], dp[tri])
        

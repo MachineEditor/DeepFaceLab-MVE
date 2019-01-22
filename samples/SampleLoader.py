@@ -23,9 +23,6 @@ class SampleLoader:
         if str(samples_path) not in cache.keys():
             cache[str(samples_path)] = [None]*SampleType.QTY
             
-        if target_samples_path is not None and str(target_samples_path) not in cache.keys():
-            cache[str(target_samples_path)] = [None]*SampleType.QTY
-            
         datas = cache[str(samples_path)]
 
         if            sample_type == SampleType.IMAGE:
@@ -45,7 +42,11 @@ class SampleLoader:
                 if target_samples_path is None:
                     raise Exception('target_samples_path is None for FACE_YAW_SORTED_AS_TARGET')
                 datas[sample_type] = SampleLoader.upgradeToFaceYawSortedAsTargetSamples( SampleLoader.load(SampleType.FACE_YAW_SORTED, samples_path), SampleLoader.load(SampleType.FACE_YAW_SORTED, target_samples_path) )
-            
+        elif          sample_type == SampleType.FACE_WITH_CLOSE_TO_SELF:            
+            if  datas[sample_type] is None:
+                datas[sample_type] = SampleLoader.upgradeToFaceCloseToSelfSamples( SampleLoader.load(SampleType.FACE, samples_path) )
+        
+        
         return datas[sample_type]
         
     @staticmethod
@@ -69,6 +70,39 @@ class SampleLoader:
                                                landmarks=dflpng.get_landmarks(),
                                                yaw=dflpng.get_yaw_value()) )
             
+        return sample_list 
+     
+    @staticmethod
+    def upgradeToFaceCloseToSelfSamples (samples):
+        yaw_samples = SampleLoader.upgradeToFaceYawSortedSamples(samples)
+        yaw_samples_len = len(yaw_samples)
+        
+        sample_list = []
+        for i in tqdm( range(yaw_samples_len), desc="Sorting" ):
+            if yaw_samples[i] is not None:
+                for s in yaw_samples[i]:
+                    s_t = []
+                    
+                    for n in range(2000):                    
+                        yaw_idx = np.clip ( i-10 +np.random.randint(20), 0, yaw_samples_len-1 )
+                        if yaw_samples[yaw_idx] is None:
+                            continue
+                            
+                        yaw_idx_samples_len = len(yaw_samples[yaw_idx])
+                        
+                        yaw_idx_sample = yaw_samples[yaw_idx][ np.random.randint(yaw_idx_samples_len) ]
+                        if s.filename == yaw_idx_sample.filename:
+                            continue
+                            
+                        s_t.append ( yaw_idx_sample )
+                        if len(s_t) >= 50:
+                            break
+                            
+                    if len(s_t) == 0:
+                        s_t = [s]
+                        
+                    sample_list.append( s.copy_and_set(close_target_list = s_t) )
+
         return sample_list
         
     @staticmethod

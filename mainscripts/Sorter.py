@@ -92,7 +92,7 @@ class BlurEstimatorSubprocessor(SubprocessorBase):
         if dflpng is not None:
             image = cv2.imread( str(filename_path) )
             image = ( image * \
-                      LandmarksProcessor.get_image_hull_mask (image, dflpng.get_landmarks()) \
+                      LandmarksProcessor.get_image_hull_mask (image.shape, dflpng.get_landmarks()) \
                      ).astype(np.uint8)
             return [ str(filename_path), estimate_sharpness( image ) ]
         else:
@@ -441,7 +441,7 @@ def sort_by_hist_dissim(input_path):
         
         dflpng = DFLPNG.load( str(filename_path) )
         if dflpng is not None:        
-            face_mask = LandmarksProcessor.get_image_hull_mask (image, dflpng.get_landmarks())
+            face_mask = LandmarksProcessor.get_image_hull_mask (image.shape, dflpng.get_landmarks())
             image = (image*face_mask).astype(np.uint8)
 
         img_list.append ([filename_path, cv2.calcHist([cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)], [0], None, [256], [0, 256]), 0 ])
@@ -524,7 +524,7 @@ class FinalLoaderSubprocessor(SubprocessorBase):
                 raise Exception ("Unable to load %s" % (filepath.name) ) 
                 
             gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)        
-            gray_masked = ( gray * LandmarksProcessor.get_image_hull_mask (bgr, dflpng.get_landmarks() )[:,:,0] ).astype(np.uint8)
+            gray_masked = ( gray * LandmarksProcessor.get_image_hull_mask (bgr.shape, dflpng.get_landmarks() )[:,:,0] ).astype(np.uint8)
             sharpness = estimate_sharpness(gray_masked)
             hist = cv2.calcHist([gray], [0], None, [256], [0, 256])   
         except Exception as e:
@@ -702,7 +702,7 @@ def sort_by_origname(input_path):
     print ("Sorting...")
     img_list = sorted(img_list, key=operator.itemgetter(1))
     return img_list
-    
+
 def main (input_path, sort_by_method):
     input_path = Path(input_path)
     sort_by_method = sort_by_method.lower()

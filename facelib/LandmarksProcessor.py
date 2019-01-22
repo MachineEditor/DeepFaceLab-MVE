@@ -81,11 +81,11 @@ def transform_points(points, mat, invert=False):
     return points
     
     
-def get_image_hull_mask (image, image_landmarks):        
+def get_image_hull_mask (image_shape, image_landmarks):        
     if len(image_landmarks) != 68:
         raise Exception('get_image_hull_mask works only with 68 landmarks')
         
-    hull_mask = np.zeros(image.shape[0:2]+(1,),dtype=np.float32)
+    hull_mask = np.zeros(image_shape[0:2]+(1,),dtype=np.float32)
 
     cv2.fillConvexPoly( hull_mask, cv2.convexHull( np.concatenate ( (image_landmarks[0:17], image_landmarks[48:], [image_landmarks[0]], [image_landmarks[8]], [image_landmarks[16]]))    ), (1,) )
     cv2.fillConvexPoly( hull_mask, cv2.convexHull( np.concatenate ( (image_landmarks[27:31], [image_landmarks[33]]) )                                                                    ), (1,) )
@@ -93,19 +93,19 @@ def get_image_hull_mask (image, image_landmarks):
     
     return hull_mask
     
-def get_image_eye_mask (image, image_landmarks):        
+def get_image_eye_mask (image_shape, image_landmarks):        
     if len(image_landmarks) != 68:
         raise Exception('get_image_eye_mask works only with 68 landmarks')
         
-    hull_mask = np.zeros(image.shape[0:2]+(1,),dtype=np.float32)
+    hull_mask = np.zeros(image_shape[0:2]+(1,),dtype=np.float32)
 
     cv2.fillConvexPoly( hull_mask, cv2.convexHull( image_landmarks[36:42]), (1,) )
     cv2.fillConvexPoly( hull_mask, cv2.convexHull( image_landmarks[42:48]), (1,) )
     
     return hull_mask
     
-def get_image_hull_mask_3D (image, image_landmarks):    
-    result = get_image_hull_mask(image, image_landmarks)
+def get_image_hull_mask_3D (image_shape, image_landmarks):    
+    result = get_image_hull_mask(image_shape, image_landmarks)
     
     return np.repeat ( result, (3,), -1 )
 
@@ -128,8 +128,8 @@ def blur_image_hull_mask (hull_mask):
 
     return hull_mask
     
-def get_blurred_image_hull_mask(image, image_landmarks):        
-    return blur_image_hull_mask ( get_image_hull_mask(image, image_landmarks) )
+def get_blurred_image_hull_mask(image_shape, image_landmarks):        
+    return blur_image_hull_mask ( get_image_hull_mask(image_shape, image_landmarks) )
     
 mirror_idxs = [
     [0,16],

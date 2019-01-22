@@ -9,12 +9,13 @@ class SampleType(IntEnum):
     FACE = 1                      #aligned face unsorted
     FACE_YAW_SORTED = 2           #sorted by yaw
     FACE_YAW_SORTED_AS_TARGET = 3 #sorted by yaw and included only yaws which exist in TARGET also automatic mirrored
-    FACE_END = 3
+    FACE_WITH_CLOSE_TO_SELF = 4
+    FACE_END = 4
     
-    QTY = 4
+    QTY = 5
     
 class Sample(object):    
-    def __init__(self, sample_type=None, filename=None, face_type=None, shape=None, landmarks=None, yaw=None, mirror=None, nearest_target_list=None):
+    def __init__(self, sample_type=None, filename=None, face_type=None, shape=None, landmarks=None, yaw=None, mirror=None, close_target_list=None):
         self.sample_type = sample_type if sample_type is not None else SampleType.IMAGE
         self.filename = filename
         self.face_type = face_type
@@ -22,9 +23,9 @@ class Sample(object):
         self.landmarks = np.array(landmarks) if landmarks is not None else None
         self.yaw = yaw
         self.mirror = mirror
-        self.nearest_target_list = nearest_target_list
+        self.close_target_list = close_target_list
     
-    def copy_and_set(self, sample_type=None, filename=None, face_type=None, shape=None, landmarks=None, yaw=None, mirror=None, nearest_target_list=None):
+    def copy_and_set(self, sample_type=None, filename=None, face_type=None, shape=None, landmarks=None, yaw=None, mirror=None, close_target_list=None):
         return Sample( 
             sample_type=sample_type if sample_type is not None else self.sample_type, 
             filename=filename if filename is not None else self.filename, 
@@ -33,7 +34,7 @@ class Sample(object):
             landmarks=landmarks if landmarks is not None else self.landmarks.copy(), 
             yaw=yaw if yaw is not None else self.yaw, 
             mirror=mirror if mirror is not None else self.mirror, 
-            nearest_target_list=nearest_target_list if nearest_target_list is not None else self.nearest_target_list)
+            close_target_list=close_target_list if close_target_list is not None else self.close_target_list)
     
     def load_bgr(self):
         img = cv2.imread (self.filename).astype(np.float32) / 255.0
@@ -41,7 +42,7 @@ class Sample(object):
             img = img[:,::-1].copy()
         return img
 
-    def get_random_nearest_target_sample(self):
-        if self.nearest_target_list is None:
+    def get_random_close_target_sample(self):
+        if self.close_target_list is None:
             return None
-        return self.nearest_target_list[randint (0, len(self.nearest_target_list)-1)]
+        return self.close_target_list[randint (0, len(self.close_target_list)-1)]

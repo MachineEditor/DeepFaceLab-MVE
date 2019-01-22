@@ -81,7 +81,7 @@ class ConverterMasked(ConverterBase):
             
         img_size = img_bgr.shape[1], img_bgr.shape[0]
 
-        img_face_mask_a = LandmarksProcessor.get_image_hull_mask (img_bgr, img_face_landmarks)
+        img_face_mask_a = LandmarksProcessor.get_image_hull_mask (img_bgr.shape, img_face_landmarks)
         
         face_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, self.output_size, face_type=self.face_type)
         face_output_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, self.output_size, face_type=self.face_type, scale=self.output_face_scale)
