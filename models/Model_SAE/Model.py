@@ -56,17 +56,10 @@ class SAEModel(ModelBase):
         if is_first_run:
             self.options['ae_dims'] = np.clip ( input_int("AutoEncoder dims (128-1024 ?:help skip:%d) : " % (default_ae_dims) , default_ae_dims, help_message="More dims are better, but requires more VRAM. You can fine-tune model size to fit your GPU." ), 128, 1024 )
             self.options['ed_ch_dims'] = np.clip ( input_int("Encoder/Decoder dims per channel (21-85 ?:help skip:%d) : " % (default_ed_ch_dims) , default_ed_ch_dims, help_message="More dims are better, but requires more VRAM. You can fine-tune model size to fit your GPU." ), 21, 85 )
-            
-            if self.options['resolution'] != 64:
-                self.options['adapt_k_size'] = input_bool("Use adaptive kernel size? (y/n, ?:help skip:n) : ", False, help_message="In some cases, adaptive kernel size can fix bad generalization, for example warping parts of face." )
-            else:
-                self.options['adapt_k_size'] = False
-                
             self.options['face_type'] = input_str ("Half or Full face? (h/f, ?:help skip:f) : ", default_face_type, ['h','f'], help_message="Half face has better resolution, but covers less area of cheeks.").lower()            
         else:
             self.options['ae_dims'] = self.options.get('ae_dims', default_ae_dims)
             self.options['ed_ch_dims'] = self.options.get('ed_ch_dims', default_ed_ch_dims)
-            self.options['adapt_k_size'] = self.options.get('adapt_k_size', False)
             self.options['face_type'] = self.options.get('face_type', default_face_type)
         
         
@@ -80,7 +73,7 @@ class SAEModel(ModelBase):
         resolution = self.options['resolution']
         ae_dims = self.options['ae_dims']
         ed_ch_dims = self.options['ed_ch_dims']
-        adapt_k_size = self.options['adapt_k_size']
+        adapt_k_size = False
         bgr_shape = (resolution, resolution, 3)
         mask_shape = (resolution, resolution, 1)
 
