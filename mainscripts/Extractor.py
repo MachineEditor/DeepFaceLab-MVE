@@ -345,7 +345,7 @@ class ExtractSubprocessor(SubprocessorBase):
                     result.append (output_file)
                     
                 if self.debug:
-                    cv2.imwrite(debug_output_file, debug_image )
+                    cv2.imwrite(debug_output_file, debug_image, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )
                     
                 return result       
         return None
