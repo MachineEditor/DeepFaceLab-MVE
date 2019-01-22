@@ -140,6 +140,14 @@ SAE tips:
 
 First train it with both style powers at 10.0+ value. When artifacts become appearing at ~30-40k epochs, set face style to 0.0 or 0.01 and bg style to 0.1-0.3 and continue training. You can slightly vary theese values during training if something goes wrong. Track changes in preview history.
 
+Improperly matched dst landmarks may significantly reduce fake quality:
+
+![](https://github.com/iperov/DeepFaceLab/blob/master/doc/Tips_improperly_dst_landmarks_0.jpg)
+
+![](https://github.com/iperov/DeepFaceLab/blob/master/doc/Tips_improperly_dst_landmarks_1.jpg)
+
+in this case watch "Manual re-extract bad dst aligned frames tutorial" below.
+
 ### **Sort tool**:
 
 `blur` places most blurred faces at end of folder
@@ -176,9 +184,13 @@ Nicolas Cage 4 facesets (1 mix + 3 different), Steve Jobs, Putin
 
 download from here: https://mega.nz/#F!y1ERHDaL!PPwg01PQZk0FhWLVo5_MaQ
 
-### Basic tutorial
+### Video tutorials for prebuilt windows binary
 
-https://www.youtube.com/watch?v=K98nTNjXkq8
+Basic workflow: https://www.youtube.com/watch?v=K98nTNjXkq8
+
+Basic workflow (derpfakes): https://www.youtube.com/watch?v=cVcyghhmQSA
+
+Manual re-extract bad dst aligned frames: https://www.youtube.com/watch?v=7z1ykVVCHhM
 
 ### **Build info**
 
