@@ -84,6 +84,8 @@ LIAEF128 Cage video:
 
 - **SAE ( minimum 2GB+, recommended 11GB+ )** - Styled AutoEncoder - new superior model based on style loss. Morphing/stylizing done directly by neural network. Face obstructions also reconstructed without any masks. Converter mode 'overlay' should be used. Model has several options on start for fine tuning to fit your GPU.
 
+![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Asian_0.jpg)
+
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_0.jpg)
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_1.jpg)
