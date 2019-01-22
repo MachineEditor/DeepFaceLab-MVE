@@ -165,8 +165,8 @@ class ExtractSubprocessor(SubprocessorBase):
                     
                     self.text_lines_img = (image_utils.get_draw_text_lines ( self.original_image, (0,0, self.original_image.shape[1], min(100, self.original_image.shape[0]) ),
                                                     [   'Match landmarks with face exactly. Click to confirm/unconfirm selection',
-                                                        '[Enter] - confirm and continue to next unmarked frame',
-                                                        '[Space] - skip to next unmarked frame',
+                                                        '[Enter] - confirm face landmarks and continue',
+                                                        '[Space] - confirm as unmarked frame and continue',
                                                         '[Mouse wheel] - change rect',
                                                         '[,] [.]- prev frame, next frame',
                                                         '[Q] - skip remaining frames'
