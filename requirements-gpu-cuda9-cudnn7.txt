@@ -1,3 +1,4 @@
+numpy==1.15.4
 pathlib==1.0.1
 scandir==1.6
 h5py==2.7.1
