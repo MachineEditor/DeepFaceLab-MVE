@@ -20,8 +20,6 @@ bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr
 
 - face data embedded to png files
 
-- automatic GPU manager, chooses best gpu(s) and supports --multi-gpu (only for identical cards). Warning: dont use cards in SLI mode.
-
 - cpu mode. 8th gen Intel core CPU able to train H64 model in 2 days.
 
 - new preview window
