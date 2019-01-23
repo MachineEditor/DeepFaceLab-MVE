@@ -387,6 +387,69 @@ class ExtractSubprocessor(SubprocessorBase):
             cv2.destroyAllWindows()
         return self.result
 
+class DeletedFilesSearcherSubprocessor(SubprocessorBase):
+    #override
+    def __init__(self, input_paths, debug_paths ): 
+        self.input_paths = input_paths
+        self.debug_paths_stems = [ Path(d).stem for d in debug_paths]        
+        self.result = []
+        super().__init__('DeletedFilesSearcherSubprocessor', 60)           
+        
+    #override
+    def process_info_generator(self):    
+        for i in range(0, min(multiprocessing.cpu_count(), 8) ):
+            yield 'CPU%d' % (i), {}, {'device_idx': i,
+                                      'device_name': 'CPU%d' % (i), 
+                                      'debug_paths_stems' : self.debug_paths_stems
+                                      }
+
+    #override
+    def get_no_process_started_message(self):
+        print ( 'Unable to start CPU processes.')
+        
+    #override
+    def onHostGetProgressBarDesc(self):
+        return "Searching deleted files"
+        
+    #override
+    def onHostGetProgressBarLen(self):
+        return len (self.input_paths)
+        
+    #override
+    def onHostGetData(self, host_dict):
+        if len (self.input_paths) > 0:        
+            return [self.input_paths.pop(0)]        
+        return None
+    
+    #override
+    def onHostDataReturn (self, host_dict, data):
+        self.input_paths.insert(0, data[0])   
+        
+    #override
+    def onClientInitialize(self, client_dict):
+        self.debug_paths_stems = client_dict['debug_paths_stems']
+        return None
+
+    #override
+    def onClientProcessData(self, data):  
+        input_path_stem = Path(data[0]).stem        
+        return any ( [ input_path_stem == d_stem for d_stem in self.debug_paths_stems] )
+
+    #override
+    def onClientGetDataName (self, data):
+        #return string identificator of your data
+        return data[0]
+        
+    #override
+    def onHostResult (self, host_dict, data, result):
+        if result == False:
+            self.result.append( data[0] )
+        return 1
+
+    #override
+    def onFinalizeAndGetResult(self):
+        return self.result
+        
 '''
 detector
     'dlib'
@@ -430,16 +493,8 @@ def main (input_dir, output_dir, debug, detector='mt', multi_gpu=True, cpu_only=
                 print ("%s not found " % ( str(debug_output_path) ))
                 return
             
-            debug_imgs = Path_utils.get_image_paths(debug_output_path)
-            
-            new_input_path_image_paths = []
-            for i in input_path_image_paths:
-                i_stem = Path(i).stem
-                
-                if not any ( [ i_stem == Path(d).stem for d in debug_imgs] ):
-                    new_input_path_image_paths += [i]
-            
-            input_path_image_paths = new_input_path_image_paths
+            input_path_image_paths = DeletedFilesSearcherSubprocessor ( input_path_image_paths, Path_utils.get_image_paths(debug_output_path) ).process()
+            input_path_image_paths = sorted (input_path_image_paths)            
         else:
             if debug_output_path.exists():
                 for filename in Path_utils.get_image_paths(debug_output_path):
