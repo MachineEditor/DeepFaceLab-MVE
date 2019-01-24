@@ -277,6 +277,11 @@ class ModelBase(object):
         }            
         self.model_data_path.write_bytes( pickle.dumps(model_data) )
 
+    def load_weights_safe(self, model_filename_list):
+        for model, filename in model_filename_list:
+            if Path(filename).exists():        
+                model.load_weights(filename)
+            
     def save_weights_safe(self, model_filename_list):
         for model, filename in model_filename_list:
             model.save_weights( filename + '.tmp' )
