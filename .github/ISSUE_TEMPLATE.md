@@ -1,3 +1,6 @@
+THIS IS NOT TECH SUPPORT FOR NEWBIE FAKERS
+POST ONLY ISSUES RELATED TO BUGS OR CODE
+
 ## Expected behavior
 
 *Describe, in some detail, what you are trying to do and what the output is that you expect from the program.*
@@ -13,4 +16,4 @@
 ## Other relevant information
 - **Command lined used (if not specified in steps to reproduce)**: main.py ...
 - **Operating system and version:** Windows, macOS, Linux 
-- **Python version:** 3.5, 3.6.4, ...
+- **Python version:** 3.5, 3.6.4, ... (if you are not using prebuilt windows binary)
