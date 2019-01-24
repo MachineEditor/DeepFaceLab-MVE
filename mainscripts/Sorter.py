@@ -131,14 +131,14 @@ def sort_by_blur(input_path):
     
 def sort_by_brightness(input_path):
     print ("Sorting by brightness...")
-    img_list = [ [x, np.mean ( cv2.cvtColor(cv2.imread(x), cv2.COLOR_BGR2HSV)[...,2].flatten()  )] for x in tqdm( Path_utils.get_image_paths(input_path), desc="Loading") ]
+    img_list = [ [x, np.mean ( cv2.cvtColor(cv2.imread(x), cv2.COLOR_BGR2HSV)[...,2].flatten()  )] for x in tqdm( Path_utils.get_image_paths(input_path), desc="Loading", ascii=True) ]
     print ("Sorting...")
     img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)    
     return img_list
     
 def sort_by_hue(input_path):
     print ("Sorting by hue...")
-    img_list = [ [x, np.mean ( cv2.cvtColor(cv2.imread(x), cv2.COLOR_BGR2HSV)[...,0].flatten()  )] for x in tqdm( Path_utils.get_image_paths(input_path), desc="Loading") ]
+    img_list = [ [x, np.mean ( cv2.cvtColor(cv2.imread(x), cv2.COLOR_BGR2HSV)[...,0].flatten()  )] for x in tqdm( Path_utils.get_image_paths(input_path), desc="Loading", ascii=True) ]
     print ("Sorting...")
     img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)    
     return img_list
@@ -148,7 +148,7 @@ def sort_by_face(input_path):
     print ("Sorting by face similarity...")
 
     img_list = []
-    for filepath in tqdm( Path_utils.get_image_paths(input_path), desc="Loading"):
+    for filepath in tqdm( Path_utils.get_image_paths(input_path), desc="Loading", ascii=True):
         filepath = Path(filepath)
         
         if filepath.suffix != '.png':
@@ -163,7 +163,7 @@ def sort_by_face(input_path):
         
 
     img_list_len = len(img_list)
-    for i in tqdm ( range(0, img_list_len-1), desc="Sorting"):
+    for i in tqdm ( range(0, img_list_len-1), desc="Sorting", ascii=True):
         min_score = float("inf")
         j_min_score = i+1
         for j in range(i+1,len(img_list)):
@@ -184,7 +184,7 @@ def sort_by_face_dissim(input_path):
     print ("Sorting by face dissimilarity...")
 
     img_list = []
-    for filepath in tqdm( Path_utils.get_image_paths(input_path), desc="Loading"):
+    for filepath in tqdm( Path_utils.get_image_paths(input_path), desc="Loading", ascii=True):
         filepath = Path(filepath)
         
         if filepath.suffix != '.png':
@@ -198,7 +198,7 @@ def sort_by_face_dissim(input_path):
         img_list.append( [str(filepath), dflpng.get_landmarks(), 0 ] )
         
     img_list_len = len(img_list)
-    for i in tqdm( range(0, img_list_len-1), desc="Sorting"):
+    for i in tqdm( range(0, img_list_len-1), desc="Sorting", ascii=True):
         score_total = 0
         for j in range(i+1,len(img_list)):
             if i == j:
@@ -217,7 +217,7 @@ def sort_by_face_dissim(input_path):
 def sort_by_face_yaw(input_path):
     print ("Sorting by face yaw...")
     img_list = []
-    for filepath in tqdm( Path_utils.get_image_paths(input_path), desc="Loading"):
+    for filepath in tqdm( Path_utils.get_image_paths(input_path), desc="Loading", ascii=True):
         filepath = Path(filepath)
         
         if filepath.suffix != '.png':
@@ -436,7 +436,7 @@ def sort_by_hist_dissim(input_path):
     print ("Sorting by histogram dissimilarity...")
 
     img_list = []
-    for filename_path in tqdm( Path_utils.get_image_paths(input_path), desc="Loading"):
+    for filename_path in tqdm( Path_utils.get_image_paths(input_path), desc="Loading", ascii=True):
         image = cv2.imread(filename_path)
         
         dflpng = DFLPNG.load( str(filename_path) )
@@ -563,7 +563,7 @@ def sort_final(input_path):
     grads_space = np.linspace (-255,255,grads)
     
     yaws_sample_list = [None]*grads
-    for g in tqdm ( range(grads), desc="Sort by yaw" ):    
+    for g in tqdm ( range(grads), desc="Sort by yaw", ascii=True ):    
         yaw = grads_space[g]
         next_yaw = grads_space[g+1] if g < grads-1 else yaw
         
@@ -578,7 +578,7 @@ def sort_final(input_path):
             yaws_sample_list[g] = yaw_samples
     
     total_lack = 0
-    for g in tqdm ( range (grads), desc="" ):
+    for g in tqdm ( range (grads), desc="", ascii=True ):
         img_list = yaws_sample_list[g]
         img_list_len = len(img_list) if img_list is not None else 0
         
@@ -588,7 +588,7 @@ def sort_final(input_path):
     imgs_per_grad += total_lack // grads
     sharpned_imgs_per_grad = imgs_per_grad*10
     
-    for g in tqdm ( range (grads), desc="Sort by blur" ):
+    for g in tqdm ( range (grads), desc="Sort by blur", ascii=True ):
         img_list = yaws_sample_list[g]
         if img_list is None:
             continue
@@ -605,7 +605,7 @@ def sort_final(input_path):
             
         yaws_sample_list[g] = img_list
             
-    for g in tqdm ( range (grads), desc="Sort by hist" ):
+    for g in tqdm ( range (grads), desc="Sort by hist", ascii=True ):
         img_list = yaws_sample_list[g]
         if img_list is None:
             continue
@@ -620,7 +620,7 @@ def sort_final(input_path):
             
         yaws_sample_list[g] = sorted(img_list, key=operator.itemgetter(3), reverse=True)    
 
-    for g in tqdm ( range (grads), desc="Fetching best" ):
+    for g in tqdm ( range (grads), desc="Fetching best", ascii=True ):
         img_list = yaws_sample_list[g]
         if img_list is None:
             continue
@@ -634,7 +634,7 @@ def sort_by_black(input_path):
     print ("Sorting by amount of black pixels...")
 
     img_list = []
-    for x in tqdm( Path_utils.get_image_paths(input_path), desc="Loading"):
+    for x in tqdm( Path_utils.get_image_paths(input_path), desc="Loading", ascii=True):
         img = cv2.imread(x)
         img_list.append ([x, img[(img == 0)].size ])
 
@@ -654,7 +654,7 @@ def final_process(input_path, img_list, trash_img_list):
         for filename in Path_utils.get_image_paths(trash_path):
             Path(filename).unlink()
 
-        for i in tqdm( range(len(trash_img_list)), desc="Moving trash" , leave=False):
+        for i in tqdm( range(len(trash_img_list)), desc="Moving trash" , leave=False, ascii=True):
             src = Path (trash_img_list[i][0])        
             dst = trash_path / src.name
             try:
@@ -664,7 +664,7 @@ def final_process(input_path, img_list, trash_img_list):
                 
         print ("")
         
-    for i in tqdm( range(len(img_list)), desc="Renaming" , leave=False):
+    for i in tqdm( range(len(img_list)), desc="Renaming" , leave=False, ascii=True):
         src = Path (img_list[i][0])        
         dst = input_path / ('%.5d_%s' % (i, src.name ))
         try:
@@ -672,7 +672,7 @@ def final_process(input_path, img_list, trash_img_list):
         except:
             print ('fail to rename %s' % (src.name) )
             
-    for i in tqdm( range(len(img_list)) , desc="Renaming" ):
+    for i in tqdm( range(len(img_list)) , desc="Renaming", ascii=True ):
         src = Path (img_list[i][0])
         
         src = input_path / ('%.5d_%s' % (i, src.name))
@@ -686,7 +686,7 @@ def sort_by_origname(input_path):
     print ("Sort by original filename...")
     
     img_list = []
-    for filepath in tqdm( Path_utils.get_image_paths(input_path), desc="Loading"):
+    for filepath in tqdm( Path_utils.get_image_paths(input_path), desc="Loading", ascii=True):
         filepath = Path(filepath)
         
         if filepath.suffix != '.png':

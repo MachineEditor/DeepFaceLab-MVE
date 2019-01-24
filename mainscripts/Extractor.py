@@ -3,7 +3,6 @@ import os
 import sys
 import time
 import multiprocessing
-from tqdm import tqdm
 from pathlib import Path
 import numpy as np
 import cv2

@@ -259,7 +259,7 @@ def main (input_dir, output_dir, model_dir, model_name, aligned_dir=None, **in_o
             alignments = {}
             
             aligned_path_image_paths = Path_utils.get_image_paths(aligned_path)
-            for filename in tqdm(aligned_path_image_paths, desc= "Collecting alignments" ):
+            for filename in tqdm(aligned_path_image_paths, desc="Collecting alignments", ascii=True ):
                 dflpng = DFLPNG.load( str(filename), print_on_no_embedded_data=True )                
                 if dflpng is None:
                     continue

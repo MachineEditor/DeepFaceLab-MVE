@@ -134,7 +134,7 @@ class SubprocessorBase(object):
             print ( self.get_no_process_started_message() )
             return None
         
-        self.progress_bar = tqdm( total=self.onHostGetProgressBarLen(), desc=self.onHostGetProgressBarDesc() )                  
+        self.progress_bar = tqdm( total=self.onHostGetProgressBarLen(), desc=self.onHostGetProgressBarDesc(), ascii=True )                  
         self.onHostClientsInitialized()        
         
         try: 
