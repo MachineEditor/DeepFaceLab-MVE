@@ -106,14 +106,8 @@ class ModelBase(object):
             self.options.pop('target_epoch') 
            
         self.batch_size = self.options['batch_size']
-
-        self.sort_by_yaw = self.options['sort_by_yaw']
-        if not self.sort_by_yaw:
-            self.options.pop('sort_by_yaw') 
-        
+        self.sort_by_yaw = self.options['sort_by_yaw']        
         self.random_flip = self.options['random_flip']
-        if self.random_flip:
-            self.options.pop('random_flip') 
         
         self.src_scale_mod = self.options['src_scale_mod']
         if self.src_scale_mod == 0:
