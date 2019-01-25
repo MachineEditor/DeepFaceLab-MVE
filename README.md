@@ -80,7 +80,7 @@ LIAEF128 Cage video:
 
 [![Watch the video](https://img.youtube.com/vi/mRsexePEVco/0.jpg)](https://www.youtube.com/watch?v=mRsexePEVco)
 
-- **SAE ( minimum 2GB+, recommended 11GB+ )** - Styled AutoEncoder - new superior model based on style loss. Morphing/stylizing done directly by neural network. Face obstructions also reconstructed without any masks. Converter mode 'overlay' should be used. Model has several options on start for fine tuning to fit your GPU.
+- **SAE ( minimum 2GB+, recommended 11GB+ )** - Styled AutoEncoder - new superior model based on style loss. SAE works as stylizer/morpher and does not guarantee that predicted face will look as src. Face obstructions also reconstructed without any masks. Converter mode 'overlay' should be used. Model has several options on start for fine tuning to fit your GPU. For more info read tips below.
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Asian_0.jpg)
 
@@ -120,11 +120,9 @@ DF - good for side faces, but results in a lower resolution and details. Covers 
 
 LIAE - can partially fix dissimilar face shapes, but results in a less recognizable face.
 
-SAE - actually contains all other models, but better due to multiscale decoder. Just set style powers to 0.0 to get default models.
-
 SAE tips:
 
-- SAE actually contains all other models. Just set style power options to 0.0 to get default models.
+- SAE - actually contains all other models, but better due to multiscale decoder + pixel loss. Just set style powers to 0.0 to work as default (H128/DF/LIAE) model.
 
 - if src faceset has number of faces more than dst faceset, model can be not converged. In this case try 'Feed faces to network sorted by yaw' option.
 
