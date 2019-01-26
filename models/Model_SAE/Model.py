@@ -53,7 +53,7 @@ class SAEModel(ModelBase):
         
         if is_first_run or ask_override: 
             default_pixel_loss = False if is_first_run else self.options.get('pixel_loss', False)
-            self.options['pixel_loss'] = input_bool ("Use pixel loss? (y/n, ?:help skip: n/default ) : ", default_pixel_loss, help_message="Default perceptual (DSSIM) loss good for initial understanding structure of faces. Use pixel loss after 30-40k epochs to enhance fine details.")
+            self.options['pixel_loss'] = input_bool ("Use pixel loss? (y/n, ?:help skip: n/default ) : ", default_pixel_loss, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 30-40k epochs to enhance fine details.")
         else:
             self.options['pixel_loss'] = self.options.get('pixel_loss', False)
             
