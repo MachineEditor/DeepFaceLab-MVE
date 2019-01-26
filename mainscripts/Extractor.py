@@ -198,12 +198,9 @@ class ExtractSubprocessor(SubprocessorBase):
                             skip_remaining = True
                             break
                             
-                        new_param_x = self.param['x'] / self.view_scale
-                        new_param_y = self.param['y'] / self.view_scale
-                        new_param_rect_size = self.param['rect_size']
-                        
-                        new_param_x = np.clip (new_param_x, 0, w-1)
-                        new_param_y = np.clip (new_param_y, 0, h-1)
+                        new_param_x = np.clip (self.param['x'], 0, w-1) / self.view_scale
+                        new_param_y = np.clip (self.param['y'], 0, h-1) / self.view_scale
+                        new_param_rect_size = self.param['rect_size']                        
                                 
                         if self.param_x != new_param_x or \
                            self.param_y != new_param_y or \
