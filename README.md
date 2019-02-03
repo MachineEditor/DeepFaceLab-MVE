@@ -134,7 +134,7 @@ SAE tips:
 
 - how to train extremely obstructed face model with SAE:
 
-First train it with both style powers at 10.0+ value. When artifacts become appearing at ~30-40k epochs, set face style to 0.0 or 0.01 and bg style to 0.1-0.3 and continue training. You can slightly vary theese values during training if something goes wrong. Track changes in preview history.
+First train it with both style powers at 10.0+ value. When artifacts become appearing at ~30-40k epochs, set face style to 0.0 or 0.01 and bg style to 0.1-0.3 and continue training. You can slightly vary theese values during training if something goes wrong. If the colors do not match, increase styles to 1.0 - 3.0. Experiment on your own. Track changes in preview history.
 
 Improperly matched dst landmarks may significantly reduce fake quality:
 
