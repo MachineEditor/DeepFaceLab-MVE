@@ -167,9 +167,9 @@ class SampleProcessor(object):
                 if is_face_sample and target_face_type != -1:
                     if target_face_type > sample.face_type:
                         raise Exception ('sample %s type %s does not match model requirement %s. Consider extract necessary type of faces.' % (sample.filename, sample.face_type, target_face_type) )
-                    img = cv2.warpAffine( img, LandmarksProcessor.get_transform_mat (sample.landmarks, size, target_face_type), (size,size), flags=cv2.INTER_LANCZOS4 )
+                    img = cv2.warpAffine( img, LandmarksProcessor.get_transform_mat (sample.landmarks, size, target_face_type), (size,size), flags=cv2.INTER_CUBIC )
                 else:
-                    img = cv2.resize( img, (size,size), cv2.INTER_LANCZOS4 )
+                    img = cv2.resize( img, (size,size), cv2.INTER_CUBIC )
                     
                 if random_sub_size != 0:
                     sub_size = size - random_sub_size                
