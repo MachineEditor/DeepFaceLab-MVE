@@ -6,6 +6,14 @@ import numpy as np
 from utils import image_utils
 from utils.console_utils import *
 
+'''
+default_mode = {1:'overlay',
+             2:'hist-match',
+             3:'hist-match-bw',
+             4:'seamless',
+             5:'seamless-hist-match',
+             6:'raw'}
+'''
 class ConverterMasked(ConverterBase):
 
     #override
@@ -13,8 +21,11 @@ class ConverterMasked(ConverterBase):
                         predictor_input_size=0, 
                         output_size=0, 
                         face_type=FaceType.FULL,
+                        default_mode = 4,
                         base_erode_mask_modifier = 0,
                         base_blur_mask_modifier = 0,
+                        default_erode_mask_modifier = 0,
+                        default_blur_mask_modifier = 0,
                         clip_hborder_mask_per = 0,
                         **in_options):
                         
@@ -25,13 +36,16 @@ class ConverterMasked(ConverterBase):
         self.clip_hborder_mask_per = clip_hborder_mask_per
         self.TFLabConverter = None
         
-        mode = input_int ("Choose mode: (1) overlay, (2) hist match, (3) hist match bw, (4) seamless (default), (5) seamless hist match, (6) raw : ", 4)
-        self.mode = {1:'overlay',
+        mode = input_int ("Choose mode: (1) overlay, (2) hist match, (3) hist match bw, (4) seamless, (5) seamless hist match, (6) raw. Default - %d : " % (default_mode) , default_mode)
+        
+        mode_dict = {1:'overlay',
                      2:'hist-match',
                      3:'hist-match-bw',
                      4:'seamless',
                      5:'seamless-hist-match',
-                     6:'raw'}.get (mode, 'seamless')
+                     6:'raw'}
+        
+        self.mode = mode_dict.get (mode, mode_dict[default_mode] )
         
         if self.mode == 'raw':
             mode = input_int ("Choose raw mode: (1) rgb, (2) rgb+mask (default), (3) mask only, (4) predicted only : ", 2)
@@ -50,8 +64,8 @@ class ConverterMasked(ConverterBase):
         self.use_predicted_mask = input_bool("Use predicted mask? (y/n skip:y) : ", True)
             
         if self.mode != 'raw':
-            self.erode_mask_modifier = base_erode_mask_modifier + np.clip ( input_int ("Choose erode mask modifier [-200..200] (skip:0) : ", 0), -200, 200)
-            self.blur_mask_modifier = base_blur_mask_modifier + np.clip ( input_int ("Choose blur mask modifier [-200..200] (skip:0) : ", 0), -200, 200)
+            self.erode_mask_modifier = base_erode_mask_modifier + np.clip ( input_int ("Choose erode mask modifier [-200..200] (skip:%d) : " % (default_erode_mask_modifier), default_erode_mask_modifier), -200, 200)
+            self.blur_mask_modifier = base_blur_mask_modifier + np.clip ( input_int ("Choose blur mask modifier [-200..200] (skip:%d) : " % (default_blur_mask_modifier), default_blur_mask_modifier), -200, 200)
             
             self.seamless_erode_mask_modifier = 0
             if self.mode == 'seamless' or self.mode == 'seamless-hist-match':

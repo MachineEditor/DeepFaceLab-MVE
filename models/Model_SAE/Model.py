@@ -338,17 +338,24 @@ class SAEModel(ModelBase):
     def get_converter(self, **in_options):
         from models import ConverterMasked
 
-        base_erode_mask_modifier = 40 if self.options['face_type'] == 'f' else 100
-        base_blur_mask_modifier = 10 if self.options['face_type'] == 'f' else 100
+        base_erode_mask_modifier = 30 if self.options['face_type'] == 'f' else 100
+        base_blur_mask_modifier = 0 if self.options['face_type'] == 'f' else 100
+        
+        default_erode_mask_modifier = 0
+        default_blur_mask_modifier = 100 if (self.options['face_style_power'] or self.options['bg_style_power']) and \
+                                                self.options['face_type'] == 'f' else 0
         
         face_type = FaceType.FULL if self.options['face_type'] == 'f' else FaceType.HALF
         
         return ConverterMasked(self.predictor_func, 
-                               predictor_input_size=self.options['resolution'], 
-                               output_size=self.options['resolution'], 
-                               face_type=face_type, 
+                               predictor_input_size=self.options['resolution'],
+                               output_size=self.options['resolution'],
+                               face_type=face_type,
+                               default_mode = 1 if self.options['face_style_power'] or self.options['bg_style_power'] else 4,
                                base_erode_mask_modifier=base_erode_mask_modifier,
                                base_blur_mask_modifier=base_blur_mask_modifier,
+                               default_erode_mask_modifier=default_erode_mask_modifier,
+                               default_blur_mask_modifier=default_blur_mask_modifier,
                                clip_hborder_mask_per=0.0625 if self.options['face_type'] == 'f' else 0,
                                **in_options)
     
