@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import cv2
 from utils import Path_utils
-from utils.DFLPNG import DFLPNG
+from utils.DFLJPG import DFLJPG
 from utils import image_utils
 from facelib import FaceType
 import facelib 
@@ -311,7 +311,7 @@ class ExtractSubprocessor(SubprocessorBase):
                     debug_image = image.copy()
                     
                 for (face_idx, face) in enumerate(faces):         
-                    output_file = '{}_{}{}'.format(str(self.output_path / filename_path.stem), str(face_idx), '.png')
+                    output_file = '{}_{}{}'.format(str(self.output_path / filename_path.stem), str(face_idx), '.jpg')
                     
                     rect = face[0]
                     image_landmarks = np.array(face[1])
@@ -329,7 +329,7 @@ class ExtractSubprocessor(SubprocessorBase):
                     
                     cv2.imwrite(output_file, face_image)
 
-                    DFLPNG.embed_data(output_file, face_type = FaceType.toString(self.face_type),
+                    DFLJPG.embed_data(output_file, face_type = FaceType.toString(self.face_type),
                                                    landmarks = face_image_landmarks.tolist(),
                                                    yaw_value = facelib.LandmarksProcessor.calc_face_yaw (face_image_landmarks),
                                                    pitch_value = facelib.LandmarksProcessor.calc_face_pitch (face_image_landmarks),

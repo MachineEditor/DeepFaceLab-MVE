@@ -111,6 +111,7 @@ keras_contrib = nnlib.keras_contrib
 GroupNormalization = keras_contrib.layers.GroupNormalization
 InstanceNormalization = keras_contrib.layers.InstanceNormalization
 Padam = keras_contrib.optimizers.Padam
+PELU = keras_contrib.layers.advanced_activations.PELU
 """
     code_import_dlib_string = \
 """
@@ -447,20 +448,6 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                     return (1.0 - tf.image.ssim (y_true, y_pred, 1.0)) / 2.0
                 else:
                     return (1.0 - tf.image.ssim ((y_true/2+0.5), (y_pred/2+0.5), 1.0)) / 2.0
-        nnlib.DSSIMLoss = DSSIMLoss
-
-        class DSSIMLoss(object):
-            def __init__(self, is_tanh=False):
-                self.is_tanh = is_tanh
-                
-            def __call__(self,y_true, y_pred):
-
-                if not self.is_tanh:            
-                    loss = (1.0 - tf.image.ssim (y_true, y_pred, 1.0)) / 2.0
-                else:
-                    loss = (1.0 - tf.image.ssim ( (y_true/2+0.5), (y_pred/2+0.5), 1.0)) / 2.0
-
-                return loss
         nnlib.DSSIMLoss = DSSIMLoss
         
         class DSSIMMaskLoss(object):

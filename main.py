@@ -53,8 +53,6 @@ if __name__ == "__main__":
     extract_parser.add_argument('--manual-output-debug-fix', action="store_true", dest="manual_output_debug_fix", default=False, help="Performs manual reextract input-dir frames which were deleted from [output_dir]_debug\ dir.")
     extract_parser.add_argument('--manual-window-size', type=int, dest="manual_window_size", default=1368, help="Manual fix window size. Default: 1368.") 
     extract_parser.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Extract on CPU. Forces to use MT extractor.")    
-    
-    
     extract_parser.set_defaults (func=process_extract)
     
     def process_sort(arguments):        
@@ -65,6 +63,17 @@ if __name__ == "__main__":
     sort_parser.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
     sort_parser.add_argument('--by', required=True, dest="sort_by_method", choices=("blur", "face", "face-dissim", "face-yaw", "hist", "hist-dissim", "brightness", "hue", "black", "origname", "final", "test"), help="Method of sorting. 'origname' sort by original filename to recover original sequence." )
     sort_parser.set_defaults (func=process_sort)
+    
+    def process_util(arguments):        
+        from mainscripts import Util
+        
+        if arguments.convert_png_to_jpg:
+            Util.convert_png_to_jpg_folder (input_path=arguments.input_dir)
+        
+    util_parser = subparsers.add_parser( "util", help="Utilities.")     
+    util_parser.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
+    util_parser.add_argument('--convert-png-to-jpg', action="store_true", dest="convert_png_to_jpg", default=False, help="Convert DeepFaceLAB PNG files to JPEG.")
+    util_parser.set_defaults (func=process_util)
     
     def process_train(arguments):      
         from mainscripts import Trainer

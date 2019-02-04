@@ -6,6 +6,7 @@ from utils import Path_utils
 import cv2
 from tqdm import tqdm
 from utils.DFLPNG import DFLPNG
+from utils.DFLJPG import DFLJPG
 from utils import image_utils
 import shutil
 import numpy as np
@@ -163,7 +164,14 @@ class ConvertSubprocessor(SubprocessorBase):
                         cv2.waitKey(0)
                 faces_processed = 1
             elif self.converter.get_mode() == ConverterBase.MODE_IMAGE_WITH_LANDMARKS:
-                image_landmarks = DFLPNG.load( str(filename_path), throw_on_no_embedded_data=True ).get_landmarks()
+                if filename_path.suffix == '.png':
+                    dflimg = DFLPNG.load( str(filename_path), throw_on_no_embedded_data=True )
+                elif filename_path.suffix == '.jpg':
+                    dflimg = DFLJPG.load ( str(filename_path), throw_on_no_embedded_data=True )
+                else:
+                    raise Exception ("%s is not a dfl image file" % (filename_path.name) ) 
+            
+                image_landmarks = dflimg.get_landmarks()
                         
                 image = self.converter.convert_image(image, image_landmarks, self.debug)
                 if self.debug:
@@ -259,16 +267,21 @@ def main (input_dir, output_dir, model_dir, model_name, aligned_dir=None, **in_o
             alignments = {}
             
             aligned_path_image_paths = Path_utils.get_image_paths(aligned_path)
-            for filename in tqdm(aligned_path_image_paths, desc="Collecting alignments", ascii=True ):
-                dflpng = DFLPNG.load( str(filename), print_on_no_embedded_data=True )                
-                if dflpng is None:
-                    continue
+            for filepath in tqdm(aligned_path_image_paths, desc="Collecting alignments", ascii=True ):
+                filepath = Path(filepath)
                 
-                source_filename_stem = Path( dflpng.get_source_filename() ).stem
+                if filepath.suffix == '.png':
+                    dflimg = DFLPNG.load( str(filepath), print_on_no_embedded_data=True )
+                elif filepath.suffix == '.jpg':
+                    dflimg = DFLJPG.load ( str(filepath), print_on_no_embedded_data=True )
+                else:
+                    print ("%s is not a dfl image file" % (filepath.name) ) 
+                
+                source_filename_stem = Path( dflimg.get_source_filename() ).stem
                 if source_filename_stem not in alignments.keys():
                     alignments[ source_filename_stem ] = []
 
-                alignments[ source_filename_stem ].append (dflpng.get_source_landmarks())
+                alignments[ source_filename_stem ].append (dflimg.get_source_landmarks())
         
             
             #interpolate landmarks
