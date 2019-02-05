@@ -1704,7 +1704,11 @@ def nvmlDeviceGetTopologyCommonAncestor(device1, device2):
 def nvmlDeviceGetCudaComputeCapability(device):
     c_major = c_int()
     c_minor = c_int()
-    fn = _nvmlGetFunctionPointer("nvmlDeviceGetCudaComputeCapability")
+    
+    try:
+        fn = _nvmlGetFunctionPointer("nvmlDeviceGetCudaComputeCapability")
+    except:
+        return 9, 9
     
     # get the count
     ret = fn(device, byref(c_major), byref(c_minor))
