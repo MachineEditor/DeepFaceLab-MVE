@@ -211,6 +211,8 @@ Basic workflow: https://www.youtube.com/watch?v=K98nTNjXkq8
 
 Basic workflow (derpfakes): https://www.youtube.com/watch?v=cVcyghhmQSA
 
+How To Make DeepFakes With DeepFaceLab - An Amatuer's Guide: https://www.youtube.com/watch?v=wBax7_UWXvc
+
 Manual re-extract bad dst aligned frames: https://www.youtube.com/watch?v=7z1ykVVCHhM
 
 ### **Build info**

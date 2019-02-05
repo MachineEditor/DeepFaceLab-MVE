@@ -318,8 +318,8 @@ class SAEModel(ModelBase):
         st = []
         for i in range(0, len(test_A)):
             ar = S[i], SS[i], D[i], DD[i], SD[i]
-            if self.options['learn_mask']:
-                ar += (SDM[i],)            
+            #if self.options['learn_mask']:
+            #    ar += (SDM[i],)            
             st.append ( np.concatenate ( ar, axis=1) )
         
         return [ ('SAE', np.concatenate (st, axis=0 )), ]
