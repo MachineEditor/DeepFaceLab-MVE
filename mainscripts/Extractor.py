@@ -327,7 +327,7 @@ class ExtractSubprocessor(SubprocessorBase):
                         face_image = cv2.warpAffine(image, image_to_face_mat, (self.image_size, self.image_size), cv2.INTER_LANCZOS4)
                         face_image_landmarks = facelib.LandmarksProcessor.transform_points (image_landmarks, image_to_face_mat)
                     
-                    cv2.imwrite(output_file, face_image)
+                    cv2.imwrite(output_file, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 85] )
 
                     DFLJPG.embed_data(output_file, face_type = FaceType.toString(self.face_type),
                                                    landmarks = face_image_landmarks.tolist(),
