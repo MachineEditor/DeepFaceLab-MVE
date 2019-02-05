@@ -11,6 +11,7 @@ from utils import Path_utils
 from utils import image_utils
 from utils.DFLPNG import DFLPNG
 from utils.DFLJPG import DFLJPG
+from utils.cv2_utils import *
 from facelib import LandmarksProcessor
 from utils.SubprocessorBase import SubprocessorBase
 import multiprocessing
@@ -98,7 +99,7 @@ class BlurEstimatorSubprocessor(SubprocessorBase):
             dflimg = None   
             
         if dflimg is not None:
-            image = cv2.imread( str(filepath) )
+            image = cv2_imread( str(filepath) )
             image = ( image * \
                       LandmarksProcessor.get_image_hull_mask (image.shape, dflimg.get_landmarks()) \
                      ).astype(np.uint8)
@@ -139,14 +140,14 @@ def sort_by_blur(input_path):
     
 def sort_by_brightness(input_path):
     print ("Sorting by brightness...")
-    img_list = [ [x, np.mean ( cv2.cvtColor(cv2.imread(x), cv2.COLOR_BGR2HSV)[...,2].flatten()  )] for x in tqdm( Path_utils.get_image_paths(input_path), desc="Loading", ascii=True) ]
+    img_list = [ [x, np.mean ( cv2.cvtColor(cv2_imread(x), cv2.COLOR_BGR2HSV)[...,2].flatten()  )] for x in tqdm( Path_utils.get_image_paths(input_path), desc="Loading", ascii=True) ]
     print ("Sorting...")
     img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)    
     return img_list
     
 def sort_by_hue(input_path):
     print ("Sorting by hue...")
-    img_list = [ [x, np.mean ( cv2.cvtColor(cv2.imread(x), cv2.COLOR_BGR2HSV)[...,0].flatten()  )] for x in tqdm( Path_utils.get_image_paths(input_path), desc="Loading", ascii=True) ]
+    img_list = [ [x, np.mean ( cv2.cvtColor(cv2_imread(x), cv2.COLOR_BGR2HSV)[...,0].flatten()  )] for x in tqdm( Path_utils.get_image_paths(input_path), desc="Loading", ascii=True) ]
     print ("Sorting...")
     img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)    
     return img_list
@@ -316,7 +317,7 @@ class HistSsimSubprocessor(SubprocessorBase):
 
         img_list = []
         for x in data:
-            img = cv2.imread(x)    
+            img = cv2_imread(x)    
             img_list.append ([x, cv2.calcHist([img], [0], None, [256], [0, 256]),
                                  cv2.calcHist([img], [1], None, [256], [0, 256]),
                                  cv2.calcHist([img], [2], None, [256], [0, 256])
@@ -455,7 +456,7 @@ def sort_by_hist_dissim(input_path):
             print ("%s is not a dfl image file" % (filepath.name) ) 
             continue
             
-        image = cv2.imread(str(filepath))
+        image = cv2_imread(str(filepath))
         face_mask = LandmarksProcessor.get_image_hull_mask (image.shape, dflimg.get_landmarks())
         image = (image*face_mask).astype(np.uint8)
 
@@ -535,7 +536,7 @@ class FinalLoaderSubprocessor(SubprocessorBase):
                 print ("%s is not a dfl image file" % (filepath.name) ) 
                 raise Exception("")
             
-            bgr = cv2.imread(str(filepath))
+            bgr = cv2_imread(str(filepath))
             if bgr is None:
                 raise Exception ("Unable to load %s" % (filepath.name) ) 
                 
@@ -651,7 +652,7 @@ def sort_by_black(input_path):
 
     img_list = []
     for x in tqdm( Path_utils.get_image_paths(input_path), desc="Loading", ascii=True):
-        img = cv2.imread(x)
+        img = cv2_imread(x)
         img_list.append ([x, img[(img == 0)].size ])
 
     print ("Sorting...")

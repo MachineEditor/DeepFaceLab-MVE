@@ -11,6 +11,7 @@ from utils import Path_utils
 from utils import image_utils
 from utils.DFLPNG import DFLPNG
 from utils.DFLJPG import DFLJPG
+from utils.cv2_utils import *
 from facelib import LandmarksProcessor
 from utils.SubprocessorBase import SubprocessorBase
 import multiprocessing
@@ -26,9 +27,9 @@ def convert_png_to_jpg_file (filepath):
     
     dfl_dict = dflpng.getDFLDictData()
     
-    img = cv2.imread (str(filepath))
+    img = cv2_imread (str(filepath))
     new_filepath = str(filepath.parent / (filepath.stem + '.jpg'))
-    cv2.imwrite ( new_filepath, img, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+    cv2_imwrite ( new_filepath, img, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
 
     DFLJPG.embed_data( new_filepath, 
                        face_type=dfl_dict.get('face_type', None),
@@ -40,12 +41,8 @@ def convert_png_to_jpg_file (filepath):
                        source_landmarks=dfl_dict.get('source_landmarks', None) )
                        
     filepath.unlink()
-
         
 def convert_png_to_jpg_folder (input_path):
-    if not all(ord(c) < 128 for c in input_path):
-        print ("Path to directory must contain only non unicode characters.")
-        return
     input_path = Path(input_path)
 
     print ("Converting PNG to JPG...\r\n")

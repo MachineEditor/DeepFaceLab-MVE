@@ -1,7 +1,8 @@
 from enum import IntEnum
 import cv2
 import numpy as np
-    
+from utils.cv2_utils import *
+
 class SampleType(IntEnum):
     IMAGE = 0 #raw image
     
@@ -37,7 +38,7 @@ class Sample(object):
             close_target_list=close_target_list if close_target_list is not None else self.close_target_list)
     
     def load_bgr(self):
-        img = cv2.imread (self.filename).astype(np.float32) / 255.0
+        img = cv2_imread (self.filename).astype(np.float32) / 255.0
         if self.mirror:
             img = img[:,::-1].copy()
         return img

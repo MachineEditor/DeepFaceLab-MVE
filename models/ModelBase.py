@@ -8,6 +8,7 @@ from utils import Path_utils
 from utils import std_utils
 from utils import image_utils
 from utils.console_utils import *
+from utils.cv2_utils import *
 import numpy as np
 import cv2
 from samples import SampleGeneratorBase
@@ -321,7 +322,7 @@ class ModelBase(object):
         if self.write_preview_history:
             if self.epoch % 10 == 0:
                 img = (self.get_static_preview() * 255).astype(np.uint8)
-                cv2.imwrite ( str (self.preview_history_path / ('%.6d.jpg' %( self.epoch) )), img )     
+                cv2_imwrite ( str (self.preview_history_path / ('%.6d.jpg' %( self.epoch) )), img )     
                 
         self.epoch += 1
 

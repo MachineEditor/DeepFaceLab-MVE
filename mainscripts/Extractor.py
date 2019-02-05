@@ -8,6 +8,7 @@ import numpy as np
 import cv2
 from utils import Path_utils
 from utils.DFLJPG import DFLJPG
+from utils.cv2_utils import *
 from utils import image_utils
 from facelib import FaceType
 import facelib 
@@ -154,7 +155,7 @@ class ExtractSubprocessor(SubprocessorBase):
                         self.param['y'] = ( ( prev_rect[1] + prev_rect[3] ) / 2 ) * self.view_scale
 
                 if len(faces) == 0:
-                    self.original_image = cv2.imread(filename)
+                    self.original_image = cv2_imread(filename)
                     
                     (h,w,c) = self.original_image.shape
  
@@ -289,9 +290,9 @@ class ExtractSubprocessor(SubprocessorBase):
     def onClientProcessData(self, data):
         filename_path = Path( data[0] )
 
-        image = cv2.imread( str(filename_path) )
+        image = cv2_imread( str(filename_path) )
         if image is None:
-            print ( 'Failed to extract %s, reason: cv2.imread() fail.' % ( str(filename_path) ) )
+            print ( 'Failed to extract %s, reason: cv2_imread() fail.' % ( str(filename_path) ) )
         else:
             if self.type == 'rects':
                 rects = self.e.extract_from_bgr (image)
@@ -327,7 +328,7 @@ class ExtractSubprocessor(SubprocessorBase):
                         face_image = cv2.warpAffine(image, image_to_face_mat, (self.image_size, self.image_size), cv2.INTER_LANCZOS4)
                         face_image_landmarks = facelib.LandmarksProcessor.transform_points (image_landmarks, image_to_face_mat)
                     
-                    cv2.imwrite(output_file, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 85] )
+                    cv2_imwrite(output_file, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 85] )
 
                     DFLJPG.embed_data(output_file, face_type = FaceType.toString(self.face_type),
                                                    landmarks = face_image_landmarks.tolist(),
@@ -341,7 +342,7 @@ class ExtractSubprocessor(SubprocessorBase):
                     result.append (output_file)
                     
                 if self.debug:
-                    cv2.imwrite(debug_output_file, debug_image, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )
+                    cv2_imwrite(debug_output_file, debug_image, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )
                     
                 return result       
         return None

@@ -7,6 +7,7 @@ import cv2
 from tqdm import tqdm
 from utils.DFLPNG import DFLPNG
 from utils.DFLJPG import DFLJPG
+from utils.cv2_utils import *
 from utils import image_utils
 import shutil
 import numpy as np
@@ -154,7 +155,7 @@ class ConvertSubprocessor(SubprocessorBase):
                 print ( 'no faces found for %s, copying without faces' % (filename_path.name) )
                 shutil.copy ( str(filename_path), str(output_filename_path) )
         else:
-            image = (cv2.imread(str(filename_path)) / 255.0).astype(np.float32)
+            image = (cv2_imread(str(filename_path)) / 255.0).astype(np.float32)
 
             if self.converter.get_mode() == ConverterBase.MODE_IMAGE:
                 image = self.converter.convert_image(image, None, self.debug)
@@ -197,7 +198,7 @@ class ConvertSubprocessor(SubprocessorBase):
                 faces_processed = len(faces)
                     
             if not self.debug:
-                cv2.imwrite (str(output_filename_path), (image*255).astype(np.uint8) )
+                cv2_imwrite (str(output_filename_path), (image*255).astype(np.uint8) )
             
             
         return (files_processed, faces_processed)
