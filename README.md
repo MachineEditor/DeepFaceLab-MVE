@@ -234,7 +234,8 @@ This repo supports only windows build of scripts. If you want to support mac/lin
 ### Prebuilt windows app:
 
 Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) prebuilt DeepFaceLab (include GPU and CPU versions) can be downloaded from 
-1) https://mega.nz/#F!b9MzCK4B!zEAG9txu7uaRUjXz9PtBqg
+1) torrent https://rutracker.org/forum/viewtopic.php?p=75318742 (magnet link inside).
+2) https://mega.nz/#F!b9MzCK4B!zEAG9txu7uaRUjXz9PtBqg
 
 ### Communication groups:
 
