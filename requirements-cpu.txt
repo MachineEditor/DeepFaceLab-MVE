@@ -3,7 +3,7 @@ pathlib==1.0.1
 scandir==1.6
 h5py==2.7.1
 Keras==2.2.4
-opencv-python==3.4.0.12
+opencv-python==4.0.0.21
 tensorflow==1.11.0
 scikit-image
 dlib==19.10.0
