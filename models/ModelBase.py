@@ -61,7 +61,7 @@ class ModelBase(object):
                 self.loss_history = model_data['loss_history'] if 'loss_history' in model_data.keys() else []
                 self.sample_for_preview = model_data['sample_for_preview']  if 'sample_for_preview' in model_data.keys() else None
 
-        ask_override = self.is_training_mode and self.epoch != 0 and input_in_time ("Press enter in 2 seconds to override some model settings.", 2)
+        ask_override = self.is_training_mode and self.epoch != 0 and input_in_time ("Press enter in 2 seconds to override model settings.", 2)
         
         if self.epoch == 0: 
             print ("\nModel first run. Enter model options as default for each run.")
