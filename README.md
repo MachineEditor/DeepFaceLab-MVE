@@ -86,8 +86,6 @@ LIAEF128 Cage video:
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_0.jpg)
 
-![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_1.jpg)
-
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Musk_0.jpg)
 
 SAE model Cage-Trump video: https://www.youtube.com/watch?v=2R_aqHBClUQ
@@ -96,9 +94,9 @@ SAE model Putin-Navalny video: https://www.youtube.com/watch?v=Jj7b3mqx-Mw
 
 Scene with extremely obstructed face in helmet, that cannot be handled by any other classic faceswap model (how to train it read tips):
 
-![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_2.jpg)
+![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_1.jpg)
 
-![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_3.jpg)
+![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_2.jpg)
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/DeepFaceLab_convertor_overview.png)
 
