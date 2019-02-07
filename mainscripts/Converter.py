@@ -190,7 +190,7 @@ class ConvertSubprocessor(SubprocessorBase):
                         image = self.converter.convert_face(image, image_landmarks, self.debug)     
                         if self.debug:
                             for img in image:
-                                cv2.imshow ('Debug convert', img )
+                                cv2.imshow ('Debug convert', (img*255).astype(np.uint8) )
                                 cv2.waitKey(0)
                     except Exception as e:
                         print ( 'Error while converting face_num [%d] in file [%s]: %s' % (face_num, filename_path, str(e)) )
