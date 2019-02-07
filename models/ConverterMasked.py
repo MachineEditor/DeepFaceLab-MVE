@@ -198,7 +198,8 @@ class ConverterMasked(ConverterBase):
                         img_prd_hborder_rect_mask_a = cv2.warpAffine( prd_hborder_rect_mask_a, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4 )
                         img_prd_hborder_rect_mask_a = np.expand_dims (img_prd_hborder_rect_mask_a, -1)
                         img_mask_blurry_aaa *= img_prd_hborder_rect_mask_a
-                            
+                        img_mask_blurry_aaa = np.clip( img_mask_blurry_aaa, 0, 1.0 )
+                        
                         if debug:
                             debugs += [img_mask_blurry_aaa.copy()]
                             
