@@ -88,7 +88,7 @@ LIAEF128 Cage video:
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Cage_1.jpg)
 
-![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Navalniy_0.jpg)
+![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Musk_0.jpg)
 
 SAE model Cage-Trump video: https://www.youtube.com/watch?v=2R_aqHBClUQ
 
