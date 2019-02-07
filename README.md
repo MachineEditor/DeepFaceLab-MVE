@@ -14,11 +14,13 @@ bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr
 
 ### **Features**:
 
+- standalone zero dependencies ready to work prebuilt binary for all windows versions, see below
+
 - new models
 
 - new architecture, easy to experiment with models
 
-- face data embedded to png files
+- face data embedded to JPG files
 
 - cpu mode. 8th gen Intel core CPU able to train H64 model in 2 days.
 
@@ -28,19 +30,15 @@ bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr
 
 - converter in parallel
 
-- added **--debug** option for all stages
+- **--debug** option for all stages
 
-- added **MTCNN extractor** which produce less jittered aligned face than DLIBCNN, but can produce more false faces. Comparison dlib (at left) vs mtcnn on hard case:
+- **MTCNN extractor** which produce less jittered aligned face than DLIBCNN, but can produce more false faces. Comparison dlib (at left) vs mtcnn on hard case:
 ![](https://i.imgur.com/5qLiiOV.gif)
 MTCNN produces less jitter.
 
-- added **Manual extractor**. You can fix missed faces manually or do full manual extract:
+- **Manual extractor**. You can fix missed faces manually or do full manual extract:
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/manual_extractor_0.jpg)
 ![Result](https://user-images.githubusercontent.com/8076202/38454756-0fa7a86c-3a7e-11e8-9065-182b4a8a7a43.gif)
-
-- standalone zero dependencies ready to work prebuilt binary for all windows versions, see below
-
-### Warning: **Facesets** of FaceSwap or FakeApp are **not compatible** with this repo. You should to run extract again.
 
 ### **Model types**:
 
@@ -199,11 +197,21 @@ Best practice for dst faces:
 
 ### **Ready to work facesets**:
 
-Nicolas Cage 4 facesets (1 mix + 3 different), Steve Jobs, Putin
+Nicolas Cage, Steve Jobs, Putin, Elon Musk. https://mega.nz/#F!y1ERHDaL!PPwg01PQZk0FhWLVo5_MaQ
 
-download from here: https://mega.nz/#F!y1ERHDaL!PPwg01PQZk0FhWLVo5_MaQ
+### **CPU only mode**
 
-### Video tutorials for prebuilt windows binary
+CPU mode enabled by arg --cpu-only for all stages. Follow requirements-cpu.txt to install req packages.
+Do not use DLIB extractor in CPU mode, it's too slow.
+Only H64 or SAE (with low settings) models reasonable to train on home CPU.
+
+### Prebuilt windows app:
+
+Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) prebuilt DeepFaceLab (include GPU and CPU versions) can be downloaded from 
+1) torrent https://rutracker.org/forum/viewtopic.php?p=75318742 (magnet link inside).
+2) https://mega.nz/#F!b9MzCK4B!zEAG9txu7uaRUjXz9PtBqg
+
+### Video tutorials for prebuilt windows app:
 
 Basic workflow: https://www.youtube.com/watch?v=K98nTNjXkq8
 
@@ -219,21 +227,9 @@ dlib==19.10.0 from pip compiled without CUDA. Therefore you have to compile DLIB
 
 Command line example for windows: `python setup.py install -G "Visual Studio 14 2015" --yes DLIB_USE_CUDA`
 
-### **CPU only mode**
-
-CPU mode enabled by arg --cpu-only for all stages. Follow requirements-cpu.txt to install req packages.
-Do not use DLIB extractor in CPU mode, its too slow.
-Only H64 model reasonable to train on home CPU.
-
 ### Mac/linux/docker script support.
 
-This repo supports only windows build of scripts. If you want to support mac/linux/docker - create fork, it will be referenced here.
-
-### Prebuilt windows app:
-
-Windows 7,8,8.1,10 zero dependency (just install/update your GeForce Drivers) prebuilt DeepFaceLab (include GPU and CPU versions) can be downloaded from 
-1) torrent https://rutracker.org/forum/viewtopic.php?p=75318742 (magnet link inside).
-2) https://mega.nz/#F!b9MzCK4B!zEAG9txu7uaRUjXz9PtBqg
+If you want to support mac/linux/docker - create fork, it will be referenced here.
 
 ### Communication groups:
 
