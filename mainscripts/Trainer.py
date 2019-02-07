@@ -247,8 +247,9 @@ def previewThread (input_queue, output_queue):
                 final = np.concatenate ( [final, lh_img], axis=0 )
                 
             final = np.concatenate ( [final, selected_preview_rgb], axis=0 )
+            final = np.clip(final, 0, 1)
             
-            cv2.imshow ( 'Training preview', final)
+            cv2.imshow ( 'Training preview', (final*255).astype(np.uint8) )
             is_showing = True
         
         if is_showing:
