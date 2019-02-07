@@ -1,8 +1,8 @@
 import os
 import time
 import inspect
-import operator
 import pickle
+import colorsys
 from pathlib import Path
 from utils import Path_utils
 from utils import std_utils
@@ -320,8 +320,10 @@ class ModelBase(object):
             self.supress_std_once = False
                   
         if self.write_preview_history:
-            if self.epoch % 10 == 0:
-                img = (self.get_static_preview() * 255).astype(np.uint8)
+            if self.epoch % 10 == 0:            
+                preview = self.get_static_preview()
+                preview_lh = ModelBase.get_loss_history_preview(self.loss_history, self.epoch, preview.shape[1], preview.shape[2])
+                img = (np.concatenate ( [preview_lh, preview], axis=0 ) * 255).astype(np.uint8)
                 cv2_imwrite ( str (self.preview_history_path / ('%.6d.jpg' %( self.epoch) )), img )     
                 
         self.epoch += 1
@@ -388,3 +390,62 @@ class ModelBase(object):
                         
                 if self.batch_size == 0:
                     self.batch_size = d[ keys[-1] ]
+                    
+    @staticmethod
+    def get_loss_history_preview(loss_history, epoch, w, c):
+        loss_history = np.array (loss_history.copy())
+                
+        lh_height = 100
+        lh_img = np.ones ( (lh_height,w,c) ) * 0.1
+        loss_count = len(loss_history[0])
+        lh_len = len(loss_history)
+        
+        l_per_col = lh_len / w                
+        plist_max = [   [   max (0.0, loss_history[int(col*l_per_col)][p],
+                                            *[  loss_history[i_ab][p] 
+                                                for i_ab in range( int(col*l_per_col), int((col+1)*l_per_col) )                                         
+                                             ]
+                                ) 
+                            for p in range(loss_count)
+                        ]  
+                        for col in range(w)
+                    ]
+
+        plist_min = [   [   min (plist_max[col][p], loss_history[int(col*l_per_col)][p],
+                                            *[  loss_history[i_ab][p] 
+                                                for i_ab in range( int(col*l_per_col), int((col+1)*l_per_col) )                                         
+                                             ]
+                                ) 
+                            for p in range(loss_count) 
+                        ]  
+                        for col in range(w) 
+                    ]
+
+        plist_abs_max = np.mean(loss_history[ len(loss_history) // 5 : ]) * 2
+
+        for col in range(0, w):
+            for p in range(0,loss_count): 
+                point_color = [1.0]*c
+                point_color[0:3] = colorsys.hsv_to_rgb ( p * (1.0/loss_count), 1.0, 1.0 )
+                
+                ph_max = int ( (plist_max[col][p] / plist_abs_max) * (lh_height-1) )
+                ph_max = np.clip( ph_max, 0, lh_height-1 )
+                
+                ph_min = int ( (plist_min[col][p] / plist_abs_max) * (lh_height-1) )
+                ph_min = np.clip( ph_min, 0, lh_height-1 )
+                
+                for ph in range(ph_min, ph_max+1):
+                    lh_img[ (lh_height-ph-1), col ] = point_color
+
+        lh_lines = 5
+        lh_line_height = (lh_height-1)/lh_lines
+        for i in range(0,lh_lines+1):
+            lh_img[ int(i*lh_line_height), : ] = (0.8,)*c
+            
+        last_line_t = int((lh_lines-1)*lh_line_height)
+        last_line_b = int(lh_lines*lh_line_height)
+        
+        lh_text = 'Epoch: %d' % (epoch) if epoch != 0 else ''
+        
+        lh_img[last_line_t:last_line_b, 0:w] += image_utils.get_text_image (  (w,last_line_b-last_line_t,c), lh_text, color=[0.8]*c )
+        return lh_img
