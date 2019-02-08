@@ -88,7 +88,7 @@ LIAEF128 Cage video:
 
 SAE model Cage-Trump video: https://www.youtube.com/watch?v=2R_aqHBClUQ
 
-SAE model Putin-Navalny video: https://www.youtube.com/watch?v=Jj7b3mqx-Mw
+SAE model Elon Musk - Robert Downey jr video: https://www.youtube.com/watch?v=OLWFnPwzgEY
 
 Scene with extremely obstructed face in helmet, that cannot be handled by any other classic faceswap model (how to train it read tips):
 
