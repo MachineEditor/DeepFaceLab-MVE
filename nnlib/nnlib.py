@@ -52,6 +52,7 @@ class nnlib(object):
 tf = nnlib.tf
 tf_sess = nnlib.tf_sess
 
+tf_reduce_mean = tf.reduce_mean # todo tf 12+ = tf.math.reduce_mean
 tf_total_variation = tf.image.total_variation
 tf_dssim = nnlib.tf_dssim
 tf_ssim = nnlib.tf_ssim

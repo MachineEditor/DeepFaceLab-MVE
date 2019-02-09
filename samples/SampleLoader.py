@@ -1,3 +1,4 @@
+import traceback
 from enum import IntEnum
 import cv2
 import numpy as np
@@ -56,22 +57,25 @@ class SampleLoader:
         
         for s in tqdm( samples, desc="Loading", ascii=True ):
             s_filename_path = Path(s.filename)
-            if s_filename_path.suffix == '.png':
-                dflimg = DFLPNG.load ( str(s_filename_path), print_on_no_embedded_data=True )
-                if dflimg is None: continue
-            elif s_filename_path.suffix == '.jpg':
-                dflimg = DFLJPG.load ( str(s_filename_path), print_on_no_embedded_data=True )
-                if dflimg is None: continue
-            else:
-                print ("%s is not a dfl image file required for training" % (s_filename_path.name) ) 
-                continue
+            try:
+                if s_filename_path.suffix == '.png':
+                    dflimg = DFLPNG.load ( str(s_filename_path), print_on_no_embedded_data=True )
+                    if dflimg is None: continue
+                elif s_filename_path.suffix == '.jpg':
+                    dflimg = DFLJPG.load ( str(s_filename_path), print_on_no_embedded_data=True )
+                    if dflimg is None: continue
+                else:
+                    print ("%s is not a dfl image file required for training" % (s_filename_path.name) ) 
+                    continue
 
-            sample_list.append( s.copy_and_set(sample_type=SampleType.FACE,
-                                               face_type=FaceType.fromString (dflimg.get_face_type()),
-                                               shape=dflimg.get_shape(), 
-                                               landmarks=dflimg.get_landmarks(),
-                                               yaw=dflimg.get_yaw_value()) )
-            
+                sample_list.append( s.copy_and_set(sample_type=SampleType.FACE,
+                                                   face_type=FaceType.fromString (dflimg.get_face_type()),
+                                                   shape=dflimg.get_shape(), 
+                                                   landmarks=dflimg.get_landmarks(),
+                                                   yaw=dflimg.get_yaw_value()) )
+            except:
+                print ("Unable to load %s , error: %s" % (str(s_filename_path), traceback.format_exc() ) )
+                
         return sample_list 
      
     @staticmethod
@@ -120,7 +124,7 @@ class SampleLoader:
             yaw = lowest_yaw + i*diff_rot_per_grad
             next_yaw = lowest_yaw + (i+1)*diff_rot_per_grad
 
-            yaw_samples = []        
+            yaw_samples = []
             for s in samples:                
                 s_yaw = s.yaw
                 if (i == 0            and s_yaw < next_yaw) or \

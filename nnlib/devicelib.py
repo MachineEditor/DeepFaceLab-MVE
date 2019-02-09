@@ -68,7 +68,7 @@ class devicelib:
                         
     @staticmethod
     def getDevicesWithAtLeastTotalMemoryGB(totalmemsize_gb):
-        if not hasNVML and totalmemsize_gb <= 2:
+        if not hasNVML:
             return [0]
             
         result = []

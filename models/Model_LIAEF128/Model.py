@@ -64,7 +64,7 @@ class Model(ModelBase):
                                 [self.inter_AB, self.get_strpath_storage_for_file(self.inter_ABH5)]] )
         
     #override
-    def onTrainOneEpoch(self, sample):
+    def onTrainOneEpoch(self, sample, generators_list):
         warped_src, target_src, target_src_mask = sample[0]
         warped_dst, target_dst, target_dst_mask = sample[1]    
 

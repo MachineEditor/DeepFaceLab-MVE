@@ -10,6 +10,7 @@ class DFLJPG(object):
         self.length = 0
         self.chunks = []
         self.dfl_dict = None
+        self.shape = (0,0,0)
         
     @staticmethod
     def load_raw(filename):
@@ -123,13 +124,16 @@ class DFLJPG(object):
                 
                 if id == b"JFIF":
                     c, ver_major, ver_minor, units, Xdensity, Ydensity, Xthumbnail, Ythumbnail = struct_unpack (d, c, "=BBBHHBB")
-                    if units != 0:
-                        raise Exception("JPG must be in pixel units.")
-                    inst.shape = (Ydensity, Xdensity, 3)
+                    #if units == 0:
+                    #    inst.shape = (Ydensity, Xdensity, 3)
                 else:
                     raise Exception("Unknown jpeg ID: %s" % (id) )
-     
-            if chunk['name'] == 'APP15':
+            elif chunk['name'] == 'SOF0' or chunk['name'] == 'SOF2':
+                d, c = chunk['data'], 0
+                c, precision, height, width = struct_unpack (d, c, ">BHH")
+                inst.shape = (height, width, 3)
+                
+            elif chunk['name'] == 'APP15':
                 if type(chunk['data']) == bytes:
                     inst.dfl_dict = pickle.loads(chunk['data'])
 
