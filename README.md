@@ -74,7 +74,7 @@ LIAEF128 Cage:
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/LIAEF128_Cage_1.jpg)
 
-- **SAE ( minimum 2GB+, recommended 11GB+ )** - Styled AutoEncoder - new superior model based on style loss. SAE works as stylizer/morpher and does not guarantee that predicted face will look as src. Face obstructions also reconstructed without any masks. Converter mode 'overlay' should be used. Model has several options on start for fine tuning to fit your GPU. For more info read tips below.
+- **SAE ( minimum 2GB+, recommended 11GB+ )** - Styled AutoEncoder - new superior model based on style loss. SAE is very flexible model, contains all other models, by default works as stylizer/morpher and does not guarantee that predicted face will look as src, but you can disable styling values to work as classic model. SAE is better than classic models due to multiscale decoder and smooth transition from DSSIM to MSE(pixel) loss. Face obstructions can be reconstructed without any masks. Converter mode 'overlay' should be used if styling enabled. Model has several options on start for fine tuning to fit your GPU. For more info read tips below.
 
 ![](https://github.com/iperov/DeepFaceLab/blob/master/doc/SAE_Asian_0.jpg)
 
@@ -120,13 +120,11 @@ SAE tips:
 
 - if src face wider than dst, model can be not converged. In this case try to decrease 'Src face scale modifier' to -5.
 
-- architecture 'df' make predicted face looking more like src, but if model not converges try default 'liae'.
+- default architecture 'df' make predicted face looking more like src, but if model not converges try 'liae'.
 
 - if you have a lot of VRAM, you can choose between batch size that affects quality of generalization and enc/dec dims that affects image quality.
 
-- how to train extremely obstructed face model with SAE:
-
-First train it with both style powers at 10.0+ value. When artifacts become appearing at ~30-40k epochs, set face style to 0.0 or 0.01 and bg style to 0.1-0.3 and continue training. You can slightly vary theese values during training if something goes wrong. If the colors do not match, increase styles to 1.0 - 3.0. Experiment on your own. Track changes in preview history.
+- how to train extremely obstructed face model with SAE? There are no absolute best solution for that. All depends on scene. Experiment with styling values on your own during training. Enable 'write preview history' and track changes. Backup model files every 10k epochs. You can revert model files and change values if something goes wrong.
 
 Improperly matched dst landmarks may significantly reduce fake quality:
 
