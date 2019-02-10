@@ -364,16 +364,16 @@ class ExtractSubprocessor(SubprocessorBase):
             view_rect = (np.array(self.rect) * self.view_scale).astype(np.int).tolist()
             view_landmarks  = (np.array(self.landmarks) * self.view_scale).astype(np.int).tolist()
             
-            if self.param_rect_size <= 40:
+            if self.param_rect_size <= 25:
                 scaled_rect_size = h // 3 if w > h else w // 3
 
-                p1 = (self.param_x - self.param_rect_size // 2, self.param_y - self.param_rect_size // 2)
-                p2 = (self.param_x + self.param_rect_size // 2, self.param_y - self.param_rect_size // 2)
-                p3 = (self.param_x - self.param_rect_size // 2, self.param_y + self.param_rect_size // 2)
+                p1 = (self.param_x - self.param_rect_size, self.param_y - self.param_rect_size)
+                p2 = (self.param_x + self.param_rect_size, self.param_y - self.param_rect_size)
+                p3 = (self.param_x - self.param_rect_size, self.param_y + self.param_rect_size)
                 
-                np1 = (self.param_x - scaled_rect_size // 2, self.param_y - scaled_rect_size // 2)
-                np2 = (self.param_x + scaled_rect_size // 2, self.param_y - scaled_rect_size // 2)
-                np3 = (self.param_x - scaled_rect_size // 2, self.param_y + scaled_rect_size // 2)
+                np1 = (self.param_x - scaled_rect_size, self.param_y - scaled_rect_size)
+                np2 = (self.param_x + scaled_rect_size, self.param_y - scaled_rect_size)
+                np3 = (self.param_x - scaled_rect_size, self.param_y + scaled_rect_size)
            
                 mat = cv2.getAffineTransform( np.float32([p1,p2,p3])*self.view_scale, np.float32([np1,np2,np3])*self.view_scale )
                 image = cv2.warpAffine(image, mat,(w,h) )                
