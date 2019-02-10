@@ -46,12 +46,13 @@ class ExtractSubprocessor(SubprocessorBase):
             self.param_x = -1
             self.param_y = -1
             self.param_rect_size = -1
-            self.param = {'x': 0, 'y': 0, 'rect_size' : 5, 'rect_locked' : False, 'redraw_needed' : False }
+            self.param = {'x': 0, 'y': 0, 'rect_size' : 100, 'rect_locked' : False, 'redraw_needed' : False }
             
             def onMouse(event, x, y, flags, param):        
                 if event == cv2.EVENT_MOUSEWHEEL:
-                    mod = 1 if flags > 0 else -1            
-                    param['rect_size'] = max (5, param['rect_size'] + 10*mod)
+                    mod = 1 if flags > 0 else -1 
+                    diff = 1 if param['rect_size'] <= 40 else np.clip(param['rect_size'] / 10, 1, 10)
+                    param['rect_size'] = max (5, param['rect_size'] + diff*mod)                    
                 elif event == cv2.EVENT_LBUTTONDOWN:
                     param['rect_locked'] = not param['rect_locked']
                     param['redraw_needed'] = True
@@ -358,9 +359,26 @@ class ExtractSubprocessor(SubprocessorBase):
         if self.manual == True:
             self.landmarks = result[1][0][1]
                                         
-            image = cv2.addWeighted (self.original_image,1.0,self.text_lines_img,1.0,0)                    
+            (h,w,c) = self.original_image.shape
+            image = cv2.addWeighted (self.original_image,1.0,self.text_lines_img,1.0,0)                                
             view_rect = (np.array(self.rect) * self.view_scale).astype(np.int).tolist()
             view_landmarks  = (np.array(self.landmarks) * self.view_scale).astype(np.int).tolist()
+            
+            if self.param_rect_size <= 40:
+                scaled_rect_size = h // 3 if w > h else w // 3
+
+                p1 = (self.param_x - self.param_rect_size // 2, self.param_y - self.param_rect_size // 2)
+                p2 = (self.param_x + self.param_rect_size // 2, self.param_y - self.param_rect_size // 2)
+                p3 = (self.param_x - self.param_rect_size // 2, self.param_y + self.param_rect_size // 2)
+                
+                np1 = (self.param_x - scaled_rect_size // 2, self.param_y - scaled_rect_size // 2)
+                np2 = (self.param_x + scaled_rect_size // 2, self.param_y - scaled_rect_size // 2)
+                np3 = (self.param_x - scaled_rect_size // 2, self.param_y + scaled_rect_size // 2)
+           
+                mat = cv2.getAffineTransform( np.float32([p1,p2,p3])*self.view_scale, np.float32([np1,np2,np3])*self.view_scale )
+                image = cv2.warpAffine(image, mat,(w,h) )                
+                view_landmarks = LandmarksProcessor.transform_points (view_landmarks, mat)
+     
             LandmarksProcessor.draw_rect_landmarks (image, view_rect, view_landmarks, self.image_size, self.face_type)
 
             if self.param['rect_locked']:
