@@ -10,8 +10,9 @@ from utils import Path_utils
 from utils.DFLJPG import DFLJPG
 from utils.cv2_utils import *
 from utils import image_utils
+import facelib
 from facelib import FaceType
-import facelib 
+from facelib import LandmarksProcessor
 from nnlib import nnlib
 
 from utils.SubprocessorBase import SubprocessorBase
@@ -318,22 +319,22 @@ class ExtractSubprocessor(SubprocessorBase):
                     image_landmarks = np.array(face[1])
 
                     if self.debug:
-                        facelib.LandmarksProcessor.draw_rect_landmarks (debug_image, rect, image_landmarks, self.image_size, self.face_type)
+                        LandmarksProcessor.draw_rect_landmarks (debug_image, rect, image_landmarks, self.image_size, self.face_type)
 
                     if self.face_type == FaceType.MARK_ONLY:                        
                         face_image = image
                         face_image_landmarks = image_landmarks
                     else:
-                        image_to_face_mat = facelib.LandmarksProcessor.get_transform_mat (image_landmarks, self.image_size, self.face_type)       
+                        image_to_face_mat = LandmarksProcessor.get_transform_mat (image_landmarks, self.image_size, self.face_type)       
                         face_image = cv2.warpAffine(image, image_to_face_mat, (self.image_size, self.image_size), cv2.INTER_LANCZOS4)
-                        face_image_landmarks = facelib.LandmarksProcessor.transform_points (image_landmarks, image_to_face_mat)
+                        face_image_landmarks = LandmarksProcessor.transform_points (image_landmarks, image_to_face_mat)
                     
                     cv2_imwrite(output_file, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 85] )
 
                     DFLJPG.embed_data(output_file, face_type = FaceType.toString(self.face_type),
                                                    landmarks = face_image_landmarks.tolist(),
-                                                   yaw_value = facelib.LandmarksProcessor.calc_face_yaw (face_image_landmarks),
-                                                   pitch_value = facelib.LandmarksProcessor.calc_face_pitch (face_image_landmarks),
+                                                   yaw_value = LandmarksProcessor.calc_face_yaw (face_image_landmarks),
+                                                   pitch_value = LandmarksProcessor.calc_face_pitch (face_image_landmarks),
                                                    source_filename = filename_path.name,
                                                    source_rect=  rect,
                                                    source_landmarks = image_landmarks.tolist()
@@ -360,10 +361,10 @@ class ExtractSubprocessor(SubprocessorBase):
             image = cv2.addWeighted (self.original_image,1.0,self.text_lines_img,1.0,0)                    
             view_rect = (np.array(self.rect) * self.view_scale).astype(np.int).tolist()
             view_landmarks  = (np.array(self.landmarks) * self.view_scale).astype(np.int).tolist()
-            facelib.LandmarksProcessor.draw_rect_landmarks (image, view_rect, view_landmarks, self.image_size, self.face_type)
+            LandmarksProcessor.draw_rect_landmarks (image, view_rect, view_landmarks, self.image_size, self.face_type)
 
             if self.param['rect_locked']:
-                facelib.draw_landmarks(image, view_landmarks, (255,255,0) )
+                LandmarksProcessor.draw_landmarks(image, view_landmarks, (255,255,0) )
             self.param['redraw_needed'] = False
             
             cv2.imshow (self.wnd_name, image)
