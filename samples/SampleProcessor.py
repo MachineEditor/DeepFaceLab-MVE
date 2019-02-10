@@ -197,9 +197,12 @@ class SampleProcessor(object):
                 else:
                     raise ValueError ('expected SampleTypeFlags mode')
          
-                if not debug and sample_process_options.normalize_tanh:
-                    img = img * 2.0 - 1.0
-                
+                if not debug:
+                    if sample_process_options.normalize_tanh:
+                        img = np.clip (img * 2.0 - 1.0, -1.0, 1.0)
+                    else:
+                        img = np.clip (img, 0.0, 1.0)
+
             outputs.append ( img )
 
         if debug:

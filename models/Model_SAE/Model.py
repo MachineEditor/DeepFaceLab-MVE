@@ -345,10 +345,10 @@ class SAEModel(ModelBase):
         test_B_m = sample[1][2][0:4]
 
         if self.options['learn_mask']:
-            S, D, SS, DD, SD, SDM = [ x / 2 + 0.5 for x in ([test_A,test_B] + self.AE_view ([test_A, test_B]) ) ]
+            S, D, SS, DD, SD, SDM = [ np.clip(x / 2 + 0.5, 0.0, 1.0) for x in ([test_A,test_B] + self.AE_view ([test_A, test_B]) ) ]
             SDM, = [ np.repeat (x, (3,), -1) for x in [SDM] ]
         else:
-            S, D, SS, DD, SD, = [ x / 2 + 0.5 for x in ([test_A,test_B] + self.AE_view ([test_A, test_B]) ) ]
+            S, D, SS, DD, SD, = [ np.clip(x / 2 + 0.5, 0.0, 1.0) for x in ([test_A,test_B] + self.AE_view ([test_A, test_B]) ) ]
 
         st = []
         for i in range(0, len(test_A)):
@@ -360,7 +360,8 @@ class SAEModel(ModelBase):
         return [ ('SAE', np.concatenate (st, axis=0 )), ]
     
     def predictor_func (self, face):
-        face_tanh = face * 2.0 - 1.0        
+        face_tanh = np.clip(face * 2.0 - 1.0, -1.0, 1.0)
+        
         face_bgr = face_tanh[...,0:3] 
         prd = [ (x[0] + 1.0) / 2.0 for x in self.AE_convert ( [ np.expand_dims(face_bgr,0) ] ) ]
  

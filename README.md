@@ -106,15 +106,17 @@ Every model is good for specific scenes and faces.
 
 H64 - good for straight faces as a demo and for low vram.
 
-H128 - good for straight faces, gives highest resolution and details possible in 2019. Absolute best for asian faces, because they are flat, similar and evenly lighted with clear skin.
+H128 - good for straight faces, gives higher resolution and details.
 
 DF - good for side faces, but results in a lower resolution and details. Covers more area of cheeks. Keeps face unmorphed. Good for similar face shapes.
 
 LIAE - can partially fix dissimilar face shapes, but results in a less recognizable face.
 
+SAE - new flexible model. Absolute best in 2019.
+
 SAE tips:
 
-- SAE - actually contains all other models, but better due to multiscale decoder + pixel loss. Just set style powers to 0.0 to work as default (H128/DF/LIAE) model.
+- SAE - actually contains all other models, but better due to smooth DSSIM-MSE(pixel loss) transition. Just set style powers to 0.0 to work as default (H128/DF/LIAE) model.
 
 - if src faceset has number of faces more than dst faceset, model can be not converged. In this case try 'Feed faces to network sorted by yaw' option.
 
@@ -123,6 +125,8 @@ SAE tips:
 - default architecture 'df' make predicted face looking more like src, but if model not converges try 'liae'.
 
 - if you have a lot of VRAM, you can choose between batch size that affects quality of generalization and enc/dec dims that affects image quality.
+
+- common training algorithm for styled face: set initial face and bg style values to 10.0, train it to 15k-20k epochs, then overwrite settings and set face style to 0.1, bg style to 4.0, and train it up to clear result.
 
 - how to train extremely obstructed face model with SAE? There are no absolute best solution for that. All depends on scene. Experiment with styling values on your own during training. Enable 'write preview history' and track changes. Backup model files every 10k epochs. You can revert model files and change values if something goes wrong.
 
