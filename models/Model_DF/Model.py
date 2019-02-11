@@ -4,13 +4,21 @@ from nnlib import nnlib
 from models import ModelBase
 from facelib import FaceType
 from samples import *
+from utils.console_utils import *
 
 class Model(ModelBase):
 
     encoderH5 = 'encoder.h5'
     decoder_srcH5 = 'decoder_src.h5'
     decoder_dstH5 = 'decoder_dst.h5'
-
+    
+    #override
+    def onInitializeOptions(self, is_first_run, ask_override):        
+        if is_first_run or ask_override:
+            self.options['pixel_loss'] = self.options['pixel_loss'] = input_bool ("Use pixel loss? (y/n, ?:help skip: n/default ) : ", False, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 30-40k epochs to enhance fine details and remove face jitter.")
+        else:
+            self.options['pixel_loss'] = self.options.get('pixel_loss', False)
+            
     #override
     def onInitialize(self, **in_options):
         exec(nnlib.import_all(), locals(), globals())
@@ -29,8 +37,8 @@ class Model(ModelBase):
         self.autoencoder_src = Model([ae_input_layer,mask_layer], self.decoder_src(self.encoder(ae_input_layer)))
         self.autoencoder_dst = Model([ae_input_layer,mask_layer], self.decoder_dst(self.encoder(ae_input_layer)))
 
-        self.autoencoder_src.compile(optimizer=Adam(lr=5e-5, beta_1=0.5, beta_2=0.999), loss=[DSSIMMaskLoss([mask_layer]), 'mse'] )
-        self.autoencoder_dst.compile(optimizer=Adam(lr=5e-5, beta_1=0.5, beta_2=0.999), loss=[DSSIMMaskLoss([mask_layer]), 'mse'] )
+        self.autoencoder_src.compile(optimizer=Adam(lr=5e-5, beta_1=0.5, beta_2=0.999), loss=[DSSIMMSEMaskLoss(mask_layer, is_mse=self.options['pixel_loss']), 'mse'] )
+        self.autoencoder_dst.compile(optimizer=Adam(lr=5e-5, beta_1=0.5, beta_2=0.999), loss=[DSSIMMSEMaskLoss(mask_layer, is_mse=self.options['pixel_loss']), 'mse'] )
   
         if self.is_training_mode:
             f = SampleProcessor.TypeFlags

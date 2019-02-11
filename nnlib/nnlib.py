@@ -37,7 +37,7 @@ class nnlib(object):
     modelify = None
     ReflectionPadding2D = None
     DSSIMLoss = None
-    DSSIMMaskLoss = None
+    DSSIMMSEMaskLoss = None
     PixelShuffler = None  
     SubpixelUpscaler = None
     AddUniformNoise = None
@@ -101,7 +101,7 @@ Adam = keras.optimizers.Adam
 modelify = nnlib.modelify
 ReflectionPadding2D = nnlib.ReflectionPadding2D
 DSSIMLoss = nnlib.DSSIMLoss
-DSSIMMaskLoss = nnlib.DSSIMMaskLoss
+DSSIMMSEMaskLoss = nnlib.DSSIMMSEMaskLoss
 PixelShuffler = nnlib.PixelShuffler
 SubpixelUpscaler = nnlib.SubpixelUpscaler
 AddUniformNoise = nnlib.AddUniformNoise
@@ -417,7 +417,8 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         tf = nnlib.tf
         keras = nnlib.keras
         K = keras.backend
-
+        exec (nnlib.code_import_tf, locals(), globals())
+        
         def modelify(model_functor):
             def func(tensor):
                 return keras.models.Model (tensor, model_functor(tensor))
@@ -451,29 +452,21 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                     return (1.0 - tf.image.ssim ((y_true/2+0.5), (y_pred/2+0.5), 1.0)) / 2.0
         nnlib.DSSIMLoss = DSSIMLoss
         
-        class DSSIMMaskLoss(object):
-            def __init__(self, mask_list, is_tanh=False):
-                self.mask_list = mask_list
-                self.is_tanh = is_tanh
+        class DSSIMMSEMaskLoss(object):
+            def __init__(self, mask, is_mse=False):
+                self.mask = mask
+                self.is_mse = is_mse
                 
             def __call__(self,y_true, y_pred):
                 total_loss = None
-                for mask in self.mask_list:
-                
-                    if not self.is_tanh:            
-                        loss = (1.0 - (tf.image.ssim (y_true*mask, y_pred*mask, 1.0))) / 2.0
-                    else:
-                        loss = (1.0 - tf.image.ssim ( (y_true/2+0.5)*(mask/2+0.5), (y_pred/2+0.5)*(mask/2+0.5), 1.0)) / 2.0
-                    
-                    loss = K.cast (loss, K.floatx())
-                    
-                    if total_loss is None:
-                        total_loss = loss
-                    else:
-                        total_loss += loss
-                        
-                return total_loss
-        nnlib.DSSIMMaskLoss = DSSIMMaskLoss
+       
+                mask = self.mask
+                if self.is_mse:                
+                    blur_mask = tf_gaussian_blur(max(1, mask.get_shape().as_list()[1] // 32))(mask)
+                    return K.mean ( 100*K.square( y_true*blur_mask - y_pred*blur_mask ) )
+                else:
+                    return (1.0 - (tf.image.ssim (y_true*mask, y_pred*mask, 1.0))) / 2.0
+        nnlib.DSSIMMSEMaskLoss = DSSIMMSEMaskLoss
         
         class PixelShuffler(keras.layers.Layer):
             def __init__(self, size=(2, 2), data_format=None, **kwargs):

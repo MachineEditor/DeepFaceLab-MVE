@@ -22,6 +22,11 @@ class Model(ModelBase):
                 self.options.pop ('created_vram_gb')
             self.options['lighter_ae'] = self.options.get('lighter_ae', default_lighter_ae)
             
+        if is_first_run or ask_override:
+            self.options['pixel_loss'] = self.options['pixel_loss'] = input_bool ("Use pixel loss? (y/n, ?:help skip: n/default ) : ", False, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 30-40k epochs to enhance fine details and remove face jitter.")
+        else:
+            self.options['pixel_loss'] = self.options.get('pixel_loss', False)
+            
     #override
     def onInitialize(self, **in_options):
         exec(nnlib.import_all(), locals(), globals())        
@@ -44,7 +49,7 @@ class Model(ModelBase):
         self.ae = Model([input_src_bgr,input_src_mask,input_dst_bgr,input_dst_mask], [rec_src_bgr, rec_src_mask, rec_dst_bgr, rec_dst_mask] )
             
         self.ae.compile(optimizer=Adam(lr=5e-5, beta_1=0.5, beta_2=0.999),
-                        loss=[ DSSIMMaskLoss([input_src_mask]), 'mae', DSSIMMaskLoss([input_dst_mask]), 'mae' ] )
+                        loss=[ DSSIMMSEMaskLoss(input_src_mask, is_mse=self.options['pixel_loss']), 'mae', DSSIMMSEMaskLoss(input_dst_mask, is_mse=self.options['pixel_loss']), 'mae' ] )
   
         self.src_view = K.function([input_src_bgr],[rec_src_bgr, rec_src_mask])
         self.dst_view = K.function([input_dst_bgr],[rec_dst_bgr, rec_dst_mask])
