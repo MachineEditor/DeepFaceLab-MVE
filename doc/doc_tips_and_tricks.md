@@ -32,7 +32,7 @@ SAE tips:
 
 - common training algorithm for styled face: set initial face and bg style values to 10.0, train it to 15k-20k epochs, then overwrite settings and set face style to 0.1, bg style to 4.0, and train it up to clear result.
 
-- how to train extremely obstructed face model with SAE? First train the styled model on clean dst faces without obstructions. Then reuse model files or replace dst images to train your target video. Experiment with styling values on your own during training. Enable 'write preview history' and track changes. Backup model files every 10k epochs. You can revert model files and change values if something goes wrong.
+- how to train extremely obstructed face model with SAE? First train the styled model on clean dst faces without obstructions. Then start new training on your target video, save it on 1+ epoch, replace model files with pretrained model and continue training. Experiment with styling values on your own during training. Enable 'write preview history' and track changes. Backup model files every 10k epochs. You can revert model files and change values if something goes wrong.
 
 Improperly matched dst landmarks may significantly reduce fake quality:
 
