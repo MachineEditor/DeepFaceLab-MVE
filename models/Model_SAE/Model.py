@@ -31,14 +31,12 @@ class SAEModel(ModelBase):
             self.options['face_type'] = input_str ("Half or Full face? (h/f, ?:help skip:f) : ", default_face_type, ['h','f'], help_message="Half face has better resolution, but covers less area of cheeks.").lower()            
             self.options['archi'] = input_str ("AE architecture (df, liae, ?:help skip:%s) : " % (default_archi) , default_archi, ['df','liae'], help_message="DF keeps faces more natural, while LIAE can fix overly different face shapes.").lower()            
             self.options['lighter_encoder'] = input_bool ("Use lightweight encoder? (y/n, ?:help skip:n) : ", False, help_message="Lightweight encoder is 35% faster, requires less VRAM, sacrificing overall quality.")
-            self.options['multiscale_decoder'] = input_bool ("Use multiscale decoder? (y/n, ?:help skip:n) : ", False, help_message="This option forces decoder to produce higher detailed image and make final face look more like dst.")
             self.options['learn_mask'] = input_bool ("Learn mask? (y/n, ?:help skip:y) : ", True, help_message="Choose NO to reduce model size. In this case converter forced to use 'not predicted mask' that is not smooth as predicted. Styled SAE can learn without mask and produce same quality fake.")
         else:
             self.options['resolution'] = self.options.get('resolution', default_resolution)
             self.options['face_type'] = self.options.get('face_type', default_face_type)
             self.options['archi'] = self.options.get('archi', default_archi)
             self.options['lighter_encoder'] = self.options.get('lighter_encoder', False)
-            self.options['multiscale_decoder'] = self.options.get('multiscale_decoder', False)
             self.options['learn_mask'] = self.options.get('learn_mask', True)
             
         default_face_style_power = 10.0
@@ -98,7 +96,7 @@ class SAEModel(ModelBase):
             
             inter_output_Inputs = [ Input( np.array(K.int_shape(x)[1:])*(1,1,2) ) for x in self.inter_B.outputs ] 
 
-            self.decoder = modelify(SAEModel.LIAEDecFlow (bgr_shape[2],ed_ch_dims=ed_ch_dims//2, multiscale_decoder=self.options['multiscale_decoder'])) (inter_output_Inputs)
+            self.decoder = modelify(SAEModel.LIAEDecFlow (bgr_shape[2],ed_ch_dims=ed_ch_dims//2, multiscale_decoder=True)) (inter_output_Inputs)
             
             if self.options['learn_mask']:
                 self.decoderm = modelify(SAEModel.LIAEDecFlow (mask_shape[2],ed_ch_dims=int(ed_ch_dims/1.5), multiscale_decoder=False )) (inter_output_Inputs)
@@ -138,8 +136,8 @@ class SAEModel(ModelBase):
 
             dec_Inputs = [ Input(K.int_shape(x)[1:]) for x in self.encoder.outputs ] 
             
-            self.decoder_src = modelify(SAEModel.DFDecFlow (bgr_shape[2],ed_ch_dims=ed_ch_dims//2, multiscale_decoder=self.options['multiscale_decoder'])) (dec_Inputs)
-            self.decoder_dst = modelify(SAEModel.DFDecFlow (bgr_shape[2],ed_ch_dims=ed_ch_dims//2, multiscale_decoder=self.options['multiscale_decoder'])) (dec_Inputs)
+            self.decoder_src = modelify(SAEModel.DFDecFlow (bgr_shape[2],ed_ch_dims=ed_ch_dims//2, multiscale_decoder=True)) (dec_Inputs)
+            self.decoder_dst = modelify(SAEModel.DFDecFlow (bgr_shape[2],ed_ch_dims=ed_ch_dims//2, multiscale_decoder=True)) (dec_Inputs)
             
             if self.options['learn_mask']:
                 self.decoder_srcm = modelify(SAEModel.DFDecFlow (mask_shape[2],ed_ch_dims=int(ed_ch_dims/1.5), multiscale_decoder=False)) (dec_Inputs)
