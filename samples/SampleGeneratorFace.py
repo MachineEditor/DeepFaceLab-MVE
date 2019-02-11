@@ -54,6 +54,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
         generator = self.generators[self.generator_counter % len(self.generators) ]
         return next(generator)
     
+    #forces to repeat these sample idxs as fast as possible
     def repeat_sample_idxs(self, idxs): # [ idx, ... ]
         #send idxs list to all sub generators.
         for gen_sq in self.generators_sq:
