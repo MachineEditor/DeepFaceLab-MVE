@@ -34,8 +34,6 @@ def convert_png_to_jpg_file (filepath):
     DFLJPG.embed_data( new_filepath, 
                        face_type=dfl_dict.get('face_type', None),
                        landmarks=dfl_dict.get('landmarks', None),
-                       yaw_value=dfl_dict.get('yaw_value', None),
-                       pitch_value=dfl_dict.get('pitch_value', None),
                        source_filename=dfl_dict.get('source_filename', None),
                        source_rect=dfl_dict.get('source_rect', None),
                        source_landmarks=dfl_dict.get('source_landmarks', None) )

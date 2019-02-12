@@ -4,6 +4,7 @@ import random
 import cv2
 import multiprocessing
 from utils import iter_utils
+from facelib import LandmarksProcessor
 
 from samples import SampleType
 from samples import SampleProcessor
@@ -18,11 +19,13 @@ output_sample_types = [
                       ]
 '''
 class SampleGeneratorFace(SampleGeneratorBase):
-    def __init__ (self, samples_path, debug, batch_size, sort_by_yaw=False, sort_by_yaw_target_samples_path=None, with_close_to_self=False, sample_process_options=SampleProcessor.Options(), output_sample_types=[], add_sample_idx=False, generators_count=2, **kwargs):
+    def __init__ (self, samples_path, debug, batch_size, sort_by_yaw=False, sort_by_yaw_target_samples_path=None, with_close_to_self=False, sample_process_options=SampleProcessor.Options(), output_sample_types=[], add_sample_idx=False, add_pitch=False, add_yaw=False, generators_count=2, **kwargs):
         super().__init__(samples_path, debug, batch_size)
         self.sample_process_options = sample_process_options
         self.output_sample_types = output_sample_types
         self.add_sample_idx = add_sample_idx
+        self.add_pitch = add_pitch
+        self.add_yaw = add_yaw
                
         if sort_by_yaw_target_samples_path is not None:
             self.sample_type = SampleType.FACE_YAW_SORTED_AS_TARGET
@@ -131,17 +134,33 @@ class SampleGeneratorFace(SampleGeneratorBase):
                         
                         if type(x) != tuple and type(x) != list:
                             raise Exception('SampleProcessor.process returns NOT tuple/list')
-                            
+
                         if batches is None:
                             batches = [ [] for _ in range(len(x)) ]
                             if self.add_sample_idx:
                                 batches += [ [] ]
-
+                                i_sample_idx = len(batches)-1
+                            if self.add_pitch:
+                                batches += [ [] ]
+                                i_pitch = len(batches)-1
+                            if self.add_yaw:
+                                batches += [ [] ]    
+                                i_yaw = len(batches)-1
+                                
                         for i in range(len(x)):
                             batches[i].append ( x[i] )
-                            
+
                         if self.add_sample_idx:
-                            batches[-1].append (idx)
+                            batches[i_sample_idx].append (idx)
+                        
+                        if self.add_pitch or self.add_yaw:
+                            pitch, yaw = LandmarksProcessor.estimate_pitch_yaw (sample.landmarks)
+                            
+                        if self.add_pitch:
+                            batches[i_pitch].append (pitch)
+                            
+                        if self.add_yaw:
+                            batches[i_yaw].append (yaw)
                             
                         break
             yield [ np.array(batch) for batch in batches]

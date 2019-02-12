@@ -267,8 +267,6 @@ class DFLPNG(object):
     @staticmethod
     def embed_data(filename, face_type=None,
                              landmarks=None,
-                             yaw_value=None,
-                             pitch_value=None,
                              source_filename=None,
                              source_rect=None,
                              source_landmarks=None
@@ -278,8 +276,6 @@ class DFLPNG(object):
         inst.setDFLDictData ({
                                 'face_type': face_type,
                                 'landmarks': landmarks,
-                                'yaw_value': yaw_value,
-                                'pitch_value': pitch_value,
                                 'source_filename': source_filename,
                                 'source_rect': source_rect,
                                 'source_landmarks': source_landmarks
@@ -333,13 +329,7 @@ class DFLPNG(object):
         
     def get_landmarks(self):                   
         return np.array ( self.fcwp_dict['landmarks'] )
-        
-    def get_yaw_value(self):                   
-        return self.fcwp_dict['yaw_value']
-        
-    def get_pitch_value(self):                   
-        return self.fcwp_dict['pitch_value']    
-        
+
     def get_source_filename(self):                   
         return self.fcwp_dict['source_filename']    
         

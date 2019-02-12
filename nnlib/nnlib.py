@@ -85,6 +85,7 @@ tanh = keras.layers.Activation('tanh')
 sigmoid = keras.layers.Activation('sigmoid')
 Dropout = keras.layers.Dropout
 
+Lambda = keras.layers.Lambda
 Add = keras.layers.Add
 Concatenate = keras.layers.Concatenate
 

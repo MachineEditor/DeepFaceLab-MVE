@@ -152,8 +152,6 @@ class DFLJPG(object):
     @staticmethod
     def embed_data(filename, face_type=None,
                              landmarks=None,
-                             yaw_value=None,
-                             pitch_value=None,
                              source_filename=None,
                              source_rect=None,
                              source_landmarks=None
@@ -163,8 +161,6 @@ class DFLJPG(object):
         inst.setDFLDictData ({
                                 'face_type': face_type,
                                 'landmarks': landmarks,
-                                'yaw_value': yaw_value,
-                                'pitch_value': pitch_value,
                                 'source_filename': source_filename,
                                 'source_rect': source_rect,
                                 'source_landmarks': source_landmarks
@@ -225,9 +221,7 @@ class DFLJPG(object):
         self.chunks.insert (last_app_chunk+1, dflchunk)
        
     def get_face_type(self): return self.dfl_dict['face_type']
-    def get_landmarks(self): return np.array ( self.dfl_dict['landmarks'] )
-    def get_yaw_value(self): return self.dfl_dict['yaw_value']
-    def get_pitch_value(self): return self.dfl_dict['pitch_value']        
+    def get_landmarks(self): return np.array ( self.dfl_dict['landmarks'] )   
     def get_source_filename(self): return self.dfl_dict['source_filename']        
     def get_source_rect(self): return self.dfl_dict['source_rect']        
     def get_source_landmarks(self): return np.array ( self.dfl_dict['source_landmarks'] )

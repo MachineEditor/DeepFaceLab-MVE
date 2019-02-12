@@ -8,6 +8,10 @@
 
 `hist-blur` sort by blur in groups of similar content
 
+`face-pitch` sort by face pitch direction
+
+`face-yaw` sort by face yaw direction
+
 `brightness` 
 
 `hue`

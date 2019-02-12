@@ -67,12 +67,15 @@ class SampleLoader:
                 else:
                     print ("%s is not a dfl image file required for training" % (s_filename_path.name) ) 
                     continue
+                    
+                pitch, yaw = LandmarksProcessor.estimate_pitch_yaw ( dflimg.get_landmarks() )
 
                 sample_list.append( s.copy_and_set(sample_type=SampleType.FACE,
                                                    face_type=FaceType.fromString (dflimg.get_face_type()),
                                                    shape=dflimg.get_shape(), 
                                                    landmarks=dflimg.get_landmarks(),
-                                                   yaw=dflimg.get_yaw_value()) )
+                                                   pitch=pitch,
+                                                   yaw=yaw) )
             except:
                 print ("Unable to load %s , error: %s" % (str(s_filename_path), traceback.format_exc() ) )
                 
@@ -114,7 +117,7 @@ class SampleLoader:
     @staticmethod
     def upgradeToFaceYawSortedSamples( samples ):
 
-        lowest_yaw, highest_yaw = -256, +256      
+        lowest_yaw, highest_yaw = -1.0, 1.0
         gradations = 64
         diff_rot_per_grad = abs(highest_yaw-lowest_yaw) / gradations
 

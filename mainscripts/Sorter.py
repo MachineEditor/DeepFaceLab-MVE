@@ -237,7 +237,32 @@ def sort_by_face_yaw(input_path):
             print ("%s is not a dfl image file" % (filepath.name) ) 
             continue
         
-        img_list.append( [str(filepath), np.array( dflimg.get_yaw_value() ) ] )
+        pitch, yaw = LandmarksProcessor.estimate_pitch_yaw ( dflimg.get_landmarks() )
+       
+        img_list.append( [str(filepath), yaw ] )
+
+    print ("Sorting...")
+    img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)
+    
+    return img_list
+    
+def sort_by_face_pitch(input_path):
+    print ("Sorting by face pitch...")
+    img_list = []
+    for filepath in tqdm( Path_utils.get_image_paths(input_path), desc="Loading", ascii=True):
+        filepath = Path(filepath)
+        
+        if filepath.suffix == '.png':
+            dflimg = DFLPNG.load( str(filepath), print_on_no_embedded_data=True )
+        elif filepath.suffix == '.jpg':
+            dflimg = DFLJPG.load ( str(filepath), print_on_no_embedded_data=True )
+        else:
+            print ("%s is not a dfl image file" % (filepath.name) ) 
+            continue
+        
+        pitch, yaw = LandmarksProcessor.estimate_pitch_yaw ( dflimg.get_landmarks() )
+       
+        img_list.append( [str(filepath), pitch ] )
 
     print ("Sorting...")
     img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)
@@ -543,12 +568,14 @@ class FinalLoaderSubprocessor(SubprocessorBase):
             gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)        
             gray_masked = ( gray * LandmarksProcessor.get_image_hull_mask (bgr.shape, dflimg.get_landmarks() )[:,:,0] ).astype(np.uint8)
             sharpness = estimate_sharpness(gray_masked)
-            hist = cv2.calcHist([gray], [0], None, [256], [0, 256])   
+            pitch, yaw = LandmarksProcessor.estimate_pitch_yaw ( dflimg.get_landmarks() )
+            
+            hist = cv2.calcHist([gray], [0], None, [256], [0, 256])
         except Exception as e:
             print (e)
             return [ 1, [str(filepath)] ]
             
-        return [ 0, [str(filepath), sharpness, hist, dflimg.get_yaw_value() ] ]
+        return [ 0, [str(filepath), sharpness, hist, yaw ] ]
         
 
     #override
@@ -577,7 +604,7 @@ def sort_final(input_path):
     grads = 128
     imgs_per_grad = 15 
 
-    grads_space = np.linspace (-255,255,grads)
+    grads_space = np.linspace (-1.0,1.0,grads)
     
     yaws_sample_list = [None]*grads
     for g in tqdm ( range(grads), desc="Sort by yaw", ascii=True ):    
@@ -732,6 +759,7 @@ def main (input_path, sort_by_method):
     elif sort_by_method == 'face':          img_list = sort_by_face (input_path)
     elif sort_by_method == 'face-dissim':   img_list = sort_by_face_dissim (input_path)
     elif sort_by_method == 'face-yaw':      img_list = sort_by_face_yaw (input_path)
+    elif sort_by_method == 'face-pitch':    img_list = sort_by_face_pitch (input_path)
     elif sort_by_method == 'hist':          img_list = sort_by_hist (input_path)
     elif sort_by_method == 'hist-dissim':   img_list = sort_by_hist_dissim (input_path)
     elif sort_by_method == 'brightness':    img_list = sort_by_brightness (input_path)

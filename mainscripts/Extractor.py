@@ -334,8 +334,6 @@ class ExtractSubprocessor(SubprocessorBase):
 
                     DFLJPG.embed_data(output_file, face_type = FaceType.toString(self.face_type),
                                                    landmarks = face_image_landmarks.tolist(),
-                                                   yaw_value = LandmarksProcessor.calc_face_yaw (face_image_landmarks),
-                                                   pitch_value = LandmarksProcessor.calc_face_pitch (face_image_landmarks),
                                                    source_filename = filename_path.name,
                                                    source_rect=  rect,
                                                    source_landmarks = image_landmarks.tolist()
