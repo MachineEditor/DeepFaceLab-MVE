@@ -463,7 +463,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 mask = self.mask
                 if self.is_mse:                
                     blur_mask = tf_gaussian_blur(max(1, mask.get_shape().as_list()[1] // 32))(mask)
-                    return K.mean ( 10*K.square( y_true*blur_mask - y_pred*blur_mask ) )
+                    return K.mean ( 100*K.square( y_true*blur_mask - y_pred*blur_mask ) )
                 else:
                     return (1.0 - (tf.image.ssim (y_true*mask, y_pred*mask, 1.0))) / 2.0
         nnlib.DSSIMMSEMaskLoss = DSSIMMSEMaskLoss

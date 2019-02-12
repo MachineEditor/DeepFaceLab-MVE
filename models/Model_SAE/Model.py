@@ -317,7 +317,7 @@ class SAEModel(ModelBase):
         #    x = np.array (self.src_sample_losses)
         #    self.src_sample_losses = []
         #    b = x[:,1]
-        #    idxs = (x[:,0][ np.argwhere ( b [ b > np.mean(b) ] )[:,0] ]).astype(np.uint)
+        #    idxs = (x[:,0][ np.argwhere ( b [ b > (np.mean(b)+np.std(b)) ] )[:,0] ]).astype(np.uint)
         #    generators_list[0].repeat_sample_idxs(idxs) #ask generator to repeat these sample idxs
         #    
         #    
@@ -326,7 +326,7 @@ class SAEModel(ModelBase):
         #    x = np.array (self.dst_sample_losses)
         #    self.dst_sample_losses = []
         #    b = x[:,1]
-        #    idxs = (x[:,0][ np.argwhere ( b [ b > np.mean(b) ] )[:,0] ]).astype(np.uint)
+        #    idxs = (x[:,0][ np.argwhere ( b [ b > (np.mean(b)+np.std(b)) ] )[:,0] ]).astype(np.uint)
         #    generators_list[1].repeat_sample_idxs(idxs) #ask generator to repeat these sample idxs
             
         if self.options['learn_mask']:
