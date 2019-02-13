@@ -48,3 +48,26 @@ def convert_png_to_jpg_folder (input_path):
     for filepath in tqdm( Path_utils.get_image_paths(input_path), desc="Converting", ascii=True):
         filepath = Path(filepath)
         convert_png_to_jpg_file(filepath)
+        
+def add_landmarks_debug_images(input_path):
+    print ("Adding landmarks debug images...")
+
+    for filepath in tqdm( Path_utils.get_image_paths(input_path), desc="Processing", ascii=True):
+        filepath = Path(filepath)
+ 
+        img = cv2_imread(str(filepath))
+ 
+        if filepath.suffix == '.png':
+            dflimg = DFLPNG.load( str(filepath), print_on_no_embedded_data=True )
+        elif filepath.suffix == '.jpg':
+            dflimg = DFLJPG.load ( str(filepath), print_on_no_embedded_data=True )
+        else:
+            print ("%s is not a dfl image file" % (filepath.name) ) 
+            continue
+
+        if not (dflimg is None or img is None):
+            face_landmarks = dflimg.get_landmarks()
+            LandmarksProcessor.draw_landmarks(img, face_landmarks)
+            
+            output_file = '{}{}'.format( str(Path(str(input_path)) / filepath.stem),  '_debug.jpg')
+            cv2_imwrite(output_file, img, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )

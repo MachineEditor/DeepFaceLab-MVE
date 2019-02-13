@@ -70,9 +70,13 @@ if __name__ == "__main__":
         if arguments.convert_png_to_jpg:
             Util.convert_png_to_jpg_folder (input_path=arguments.input_dir)
         
+        if arguments.add_landmarks_debug_images:
+            Util.add_landmarks_debug_images (input_path=arguments.input_dir)
+        
     util_parser = subparsers.add_parser( "util", help="Utilities.")     
     util_parser.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
     util_parser.add_argument('--convert-png-to-jpg', action="store_true", dest="convert_png_to_jpg", default=False, help="Convert DeepFaceLAB PNG files to JPEG.")
+    util_parser.add_argument('--add-landmarks-debug-images', action="store_true", dest="add_landmarks_debug_images", default=False, help="Add landmarks debug image for aligned faces.")
     util_parser.set_defaults (func=process_util)
     
     def process_train(arguments):      
