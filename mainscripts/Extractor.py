@@ -149,12 +149,14 @@ class ExtractSubprocessor(SubprocessorBase):
                     allow_remark_faces = False
                     # If there was already a face then lock the rectangle to it until the mouse is clicked
                     if len(faces) > 0:
-                        prev_rect = faces.pop()[0]
+                        self.rect, self.landmarks = faces.pop()
+                        
                         self.param['rect_locked'] = True
                         faces.clear()
-                        self.param['rect_size'] = ( prev_rect[2] - prev_rect[0] ) / 2
-                        self.param['x'] = ( ( prev_rect[0] + prev_rect[2] ) / 2 ) * self.view_scale
-                        self.param['y'] = ( ( prev_rect[1] + prev_rect[3] ) / 2 ) * self.view_scale
+                        self.param['rect_size'] = ( self.rect[2] - self.rect[0] ) / 2
+                        self.param['x'] = ( ( self.rect[0] + self.rect[2] ) / 2 ) * self.view_scale
+                        self.param['y'] = ( ( self.rect[1] + self.rect[3] ) / 2 ) * self.view_scale
+                        
 
                 if len(faces) == 0:
                     self.original_image = cv2_imread(filename)
@@ -237,6 +239,8 @@ class ExtractSubprocessor(SubprocessorBase):
                     self.param['redraw_needed'] = True
                     self.param['rect_locked'] = False
                 elif skip_remaining:
+                    if self.param['rect_locked']:
+                        faces.append ( [(self.rect), self.landmarks] )
                     while len(self.input_data) > 0:
                         self.result.append( self.input_data.pop(0) )
                         self.inc_progress_bar(1)
@@ -362,18 +366,19 @@ class ExtractSubprocessor(SubprocessorBase):
             view_rect = (np.array(self.rect) * self.view_scale).astype(np.int).tolist()
             view_landmarks  = (np.array(self.landmarks) * self.view_scale).astype(np.int).tolist()
             
-            if self.param_rect_size <= 25:
+            if self.param_rect_size <= 40:
                 scaled_rect_size = h // 3 if w > h else w // 3
 
                 p1 = (self.param_x - self.param_rect_size, self.param_y - self.param_rect_size)
                 p2 = (self.param_x + self.param_rect_size, self.param_y - self.param_rect_size)
                 p3 = (self.param_x - self.param_rect_size, self.param_y + self.param_rect_size)
                 
-                np1 = (self.param_x - scaled_rect_size, self.param_y - scaled_rect_size)
-                np2 = (self.param_x + scaled_rect_size, self.param_y - scaled_rect_size)
-                np3 = (self.param_x - scaled_rect_size, self.param_y + scaled_rect_size)
-           
-                mat = cv2.getAffineTransform( np.float32([p1,p2,p3])*self.view_scale, np.float32([np1,np2,np3])*self.view_scale )
+                wh = h if h < w else w                
+                np1 = (w / 2 - wh / 4, h / 2 - wh / 4)
+                np2 = (w / 2 + wh / 4, h / 2 - wh / 4)
+                np3 = (w / 2 - wh / 4, h / 2 + wh / 4)
+                
+                mat = cv2.getAffineTransform( np.float32([p1,p2,p3])*self.view_scale, np.float32([np1,np2,np3]) )
                 image = cv2.warpAffine(image, mat,(w,h) )                
                 view_landmarks = LandmarksProcessor.transform_points (view_landmarks, mat)
      
