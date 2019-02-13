@@ -34,7 +34,6 @@ class ConverterMasked(ConverterBase):
         self.output_size = output_size
         self.face_type = face_type 
         self.clip_hborder_mask_per = clip_hborder_mask_per
-        self.TFLabConverter = None
         
         mode = input_int ("Choose mode: (1) overlay, (2) hist match, (3) hist match bw, (4) seamless, (5) seamless hist match, (6) raw. Default - %d : " % (default_mode) , default_mode)
         
@@ -72,9 +71,9 @@ class ConverterMasked(ConverterBase):
                 self.seamless_erode_mask_modifier = np.clip ( input_int ("Choose seamless erode mask modifier [-100..100] (skip:0) : ", 0), -100, 100)
           
         self.output_face_scale = np.clip ( 1.0 + input_int ("Choose output face scale modifier [-50..50] (skip:0) : ", 0)*0.01, 0.5, 1.5)
-        
+        self.color_transfer_mode = input_str ("Apply color transfer to predicted face? Choose mode ( rct/lct skip:None ) : ", None, ['rct','lct'])
+
         if self.mode != 'raw':
-            self.transfercolor = input_bool("Transfer color from dst face to converted final face? (y/n skip:n) : ", False)
             self.final_image_color_degrade_power = np.clip (  input_int ("Degrade color power of final image [0..100] (skip:0) : ", 0), 0, 100)
             self.alpha = input_bool("Export png with alpha channel? (y/n skip:n) : ", False)
             
@@ -215,6 +214,29 @@ class ConverterMasked(ConverterBase):
                     if debug:
                         debugs += [img_mask_blurry_aaa.copy()]
                         
+                    if self.color_transfer_mode is not None:
+                        if self.color_transfer_mode == 'rct':
+                            if debug:
+                                debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
+                          
+                            prd_face_bgr = image_utils.reinhard_color_transfer ( np.clip( (prd_face_bgr*255).astype(np.uint8), 0, 255),
+                                                                                 np.clip( (dst_face_bgr*255).astype(np.uint8), 0, 255) )
+                            prd_face_bgr = np.clip( prd_face_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
+
+                            if debug:
+                                debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
+                          
+                            
+                        elif self.color_transfer_mode == 'lct':
+                            if debug:
+                                debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
+
+                            prd_face_bgr = image_utils.linear_color_transfer (prd_face_bgr, dst_face_bgr)
+                            prd_face_bgr = np.clip( prd_face_bgr, 0.0, 1.0)
+                            
+                            if debug:
+                                debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
+ 
                     if self.mode == 'hist-match-bw':
                         prd_face_bgr = cv2.cvtColor(prd_face_bgr, cv2.COLOR_BGR2GRAY)
                         prd_face_bgr = np.repeat( np.expand_dims (prd_face_bgr, -1), (3,), -1 )
@@ -238,9 +260,10 @@ class ConverterMasked(ConverterBase):
                             
                     if self.mode == 'hist-match-bw':
                         prd_face_bgr = prd_face_bgr.astype(dtype=np.float32)
-
+                        
                     out_img = cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, out_img, cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
-            
+                    out_img = np.clip(out_img, 0.0, 1.0)
+                    
                     if debug:
                         debugs += [out_img.copy()]
 
@@ -265,16 +288,7 @@ class ConverterMasked(ConverterBase):
                         new_out_face_bgr = image_utils.color_hist_match(out_face_bgr, dst_face_bgr, self.hist_match_threshold)                
                         new_out = cv2.warpAffine( new_out_face_bgr, face_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
                         out_img =  np.clip( img_bgr*(1-img_mask_blurry_aaa) + (new_out*img_mask_blurry_aaa) , 0, 1.0 )
-                        
-                    if self.transfercolor:  
-                        if self.TFLabConverter is None:
-                            self.TFLabConverter = image_utils.TFLabConverter() 
-                            
-                        img_lab_l, img_lab_a, img_lab_b = np.split ( self.TFLabConverter.bgr2lab (img_bgr), 3, axis=-1 )
-                        out_img_lab_l, out_img_lab_a, out_img_lab_b = np.split ( self.TFLabConverter.bgr2lab (out_img), 3, axis=-1 )      
-                        
-                        out_img = self.TFLabConverter.lab2bgr ( np.concatenate([out_img_lab_l, img_lab_a, img_lab_b], axis=-1) )
-         
+                    
                     if self.final_image_color_degrade_power != 0:
                         if debug:
                             debugs += [out_img.copy()]                    
