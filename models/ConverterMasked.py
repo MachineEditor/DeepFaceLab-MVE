@@ -220,7 +220,8 @@ class ConverterMasked(ConverterBase):
                                 debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
                           
                             prd_face_bgr = image_utils.reinhard_color_transfer ( np.clip( (prd_face_bgr*255).astype(np.uint8), 0, 255),
-                                                                                 np.clip( (dst_face_bgr*255).astype(np.uint8), 0, 255) )
+                                                                                 np.clip( (dst_face_bgr*255).astype(np.uint8), 0, 255),
+                                                                                 source_mask=prd_face_mask_a, target_mask=prd_face_mask_a)
                             prd_face_bgr = np.clip( prd_face_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
 
                             if debug:

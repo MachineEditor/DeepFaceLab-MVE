@@ -157,10 +157,10 @@ class SampleGeneratorFace(SampleGeneratorBase):
                             pitch, yaw = LandmarksProcessor.estimate_pitch_yaw (sample.landmarks)
                             
                         if self.add_pitch:
-                            batches[i_pitch].append (pitch)
+                            batches[i_pitch].append ([pitch])
                             
                         if self.add_yaw:
-                            batches[i_yaw].append (yaw)
+                            batches[i_yaw].append ([yaw])
                             
                         break
             yield [ np.array(batch) for batch in batches]
