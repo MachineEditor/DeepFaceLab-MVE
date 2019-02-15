@@ -126,6 +126,7 @@ def previewThread (input_queue, output_queue):
     update_preview = False
     is_showing = False
     is_waiting_preview = False
+    show_last_history_epochs_count = 0    
     epoch = 0
     while True:      
         if not input_queue.empty():
@@ -171,7 +172,7 @@ def previewThread (input_queue, output_queue):
             # HEAD
             head_lines = [
                 '[s]:save [enter]:exit',
-                '[p]:update [space]:next preview',
+                '[p]:update [space]:next preview [l]:change history range',
                 'Preview: "%s" [%d/%d]' % (selected_preview_name,selected_preview+1, len(previews) )
                 ] 
             head_line_height = 15
@@ -185,9 +186,13 @@ def previewThread (input_queue, output_queue):
                 
             final = head
    
-            if loss_history is not None:
-                # LOSS HISTORY
-                lh_img = models.ModelBase.get_loss_history_preview(loss_history, epoch, w, c)
+            if loss_history is not None:                
+                if show_last_history_epochs_count == 0:
+                    loss_history_to_show = loss_history
+                else:
+                    loss_history_to_show = loss_history[-show_last_history_epochs_count:]
+                    
+                lh_img = models.ModelBase.get_loss_history_preview(loss_history_to_show, epoch, w, c)
                 final = np.concatenate ( [final, lh_img], axis=0 )
 
             final = np.concatenate ( [final, selected_preview_rgb], axis=0 )
@@ -210,6 +215,18 @@ def previewThread (input_queue, output_queue):
             if not is_waiting_preview:
                 is_waiting_preview = True
                 output_queue.put ( {'op': 'preview'} )
+        elif key == ord('l'):
+            if show_last_history_epochs_count == 0:
+                show_last_history_epochs_count = 5000
+            elif show_last_history_epochs_count == 5000:
+                show_last_history_epochs_count = 10000
+            elif show_last_history_epochs_count == 10000:
+                show_last_history_epochs_count = 50000
+            elif show_last_history_epochs_count == 50000:
+                show_last_history_epochs_count = 100000    
+            elif show_last_history_epochs_count == 100000:
+                show_last_history_epochs_count = 0                
+            update_preview = True
         elif key == ord(' '):
             selected_preview = (selected_preview + 1) % len(previews)
             update_preview = True
