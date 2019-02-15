@@ -1,4 +1,6 @@
-### **Ready to work facesets**:
+### **Example Face Sets**:
+
+Faces sets for the following have been pre-extracted,
 
 - Nicolas Cage
 - Steve Jobs
@@ -6,4 +8,4 @@
 - Elon Musk
 - Harrison Ford
 
-download from https://mega.nz/#F!y1ERHDaL!PPwg01PQZk0FhWLVo5_MaQ
+[Download from Mega](https://mega.nz/#F!y1ERHDaL!PPwg01PQZk0FhWLVo5_MaQ)

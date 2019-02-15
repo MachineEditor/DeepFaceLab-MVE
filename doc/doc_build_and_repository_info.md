@@ -1,15 +1,16 @@
-### **CPU only mode**
+## Build and Repository Info
 
-CPU mode enabled by arg --cpu-only for all stages. Follow requirements-cpu.txt to install req packages.
-Do not use DLIB extractor in CPU mode, it's too slow.
-Only H64 or SAE (with low settings) models reasonable to train on home CPU.
+DeepFaceLab officially supports Windows-only. If you want to support Mac/Linux/Docker - create a fork, it will be referenced here.
 
-### **Build info**
 
-dlib==19.10.0 from pip compiled without CUDA. Therefore you have to compile DLIB manually, orelse use MT extractor only.
+#### **Installing dlib on Windows**
 
-Command line example for windows: `python setup.py install -G "Visual Studio 14 2015" --yes DLIB_USE_CUDA`
+The version of `dlib` in pip is compiled without CUDA support. Therefore you have to compile it manually in order to use the `dlib` face extractor.
 
-### Mac/linux/docker script support.
+Command line example for Windows: `python setup.py install -G "Visual Studio 14 2015" --yes DLIB_USE_CUDA`
 
-If you want to support mac/linux/docker - create fork, it will be referenced here.
+#### **CPU mode**
+
+It is possible to run from script for all stages using the `--cpu-only` flag. To run from script, install the separate dependencies for CPU mode using `pip -r requirements-cpu.txt`.
+
+Please note that extraction and training will take much long without a GPU and performance will greatly suffer without one. In particular, do not use DLIB extractor in CPU mode, it's too slow to run without a GPU. Train only on 64px resolution models like H64 or SAE (with low settings) and the lightweight encoder.

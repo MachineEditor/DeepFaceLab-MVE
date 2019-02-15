@@ -1,27 +1,39 @@
 ### **Features**:
 
-- standalone zero dependencies ready to work prebuilt binary for all windows versions, see below
+- Windows binary containing pre-compiled dependencies, including CUDA libraries.
 
-- new models
+- New models expanding upon the original faceswap model.
 
-- new architecture, easy to experiment with models
+- Model architecture designed with experimentation in mind.
 
-- face data embedded to JPG files
+- Face metadata embedded into extracted JPG files.
 
-- cpu mode. 8th gen Intel core CPU able to train H64 model in 2 days.
+- CPU-only mode [`--cpu-mode`]. 8th gen Intel core CPU able to train H64 model in 2 days.
 
-- new preview window
+- Preview window
 
-- extractor in parallel
+- Extractor and Converter run in parallel.
 
-- converter in parallel
+- Debug mode option for all stages: [`--debug`]
 
-- **--debug** option for all stages
+- Multiple extraction modes: MTCNN, dlib, or manual.
 
-- **MTCNN extractor** which produce less jittered aligned face than DLIBCNN, but can produce more false faces. Comparison dlib (at left) vs mtcnn on hard case:
+#### Extractor Examples
+##### MTCNN
+
+Predicts faces more uniformly than dlib, resulting in a less jittered aligned output. However, MTCNN extraction will produce more false positives.
+
+
+Comparison dlib (at left) vs mtcnn on hard case:
 ![](https://i.imgur.com/5qLiiOV.gif)
-MTCNN produces less jitter.
 
-- **Manual extractor**. You can fix missed faces manually or do full manual extract:
+- **Manual Extractor**
+
+A manual extractor is available. This extractor uses the preview GUI to allow the user to properly align detected faces. 
+
 ![](manual_extractor_0.jpg)
+
+This mode can also be used to fix incorrectly extracted faces. Manual extraction can be used to greatly improve training on face sets that are heavily obstructed. 
+
 ![Result](https://user-images.githubusercontent.com/8076202/38454756-0fa7a86c-3a7e-11e8-9065-182b4a8a7a43.gif)
+
