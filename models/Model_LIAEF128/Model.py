@@ -16,7 +16,8 @@ class Model(ModelBase):
     #override
     def onInitializeOptions(self, is_first_run, ask_override):        
         if is_first_run or ask_override:
-            self.options['pixel_loss'] = self.options['pixel_loss'] = input_bool ("Use pixel loss? (y/n, ?:help skip: n/default ) : ", False, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 20k epochs to enhance fine details and remove face jitter.")
+            def_pixel_loss = self.options.get('pixel_loss', False)
+            self.options['pixel_loss'] = input_bool ("Use pixel loss? (y/n, ?:help skip: n/default ) : ", def_pixel_loss, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 20k epochs to enhance fine details and remove face jitter.")
         else:
             self.options['pixel_loss'] = self.options.get('pixel_loss', False)
             
