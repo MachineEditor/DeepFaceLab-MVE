@@ -17,14 +17,14 @@ class Model(ModelBase):
     def onInitializeOptions(self, is_first_run, ask_override):        
         if is_first_run or ask_override:
             def_pixel_loss = self.options.get('pixel_loss', False)
-            self.options['pixel_loss'] = input_bool ("Use pixel loss? (y/n, ?:help skip: n/default ) : ", def_pixel_loss, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 20k epochs to enhance fine details and remove face jitter.")
+            self.options['pixel_loss'] = input_bool ("Use pixel loss? (y/n, ?:help skip: n/default ) : ", def_pixel_loss, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 20k epochs to enhance fine details and decrease face jitter.")
         else:
             self.options['pixel_loss'] = self.options.get('pixel_loss', False)
             
     #override
     def onInitialize(self, **in_options):
         exec(nnlib.import_all(), locals(), globals())
-        self.set_vram_batch_requirements( {4.5:4,5:4,6:8,7:12,8:16,9:20,10:24,11:24,12:32,13:48} )
+        self.set_vram_batch_requirements( {4.5:4} )
 
         ae_input_layer = Input(shape=(128, 128, 3))
         mask_layer = Input(shape=(128, 128, 1)) #same as output

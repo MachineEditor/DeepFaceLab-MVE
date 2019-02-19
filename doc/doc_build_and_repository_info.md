@@ -2,6 +2,7 @@
 
 DeepFaceLab officially supports Windows-only. If you want to support Mac/Linux/Docker - create a fork, it will be referenced here.
 
+[Linux fork](https://github.com/lbfs/DeepFaceLab_Linux) by @lbfs
 
 #### **Installing dlib on Windows**
 

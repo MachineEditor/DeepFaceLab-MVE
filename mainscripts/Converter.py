@@ -149,7 +149,8 @@ class ConvertSubprocessor(SubprocessorBase):
         files_processed = 1
         faces_processed = 0
             
-        output_filename_path = self.output_path / filename_path.name
+        output_filename_path = self.output_path / (filename_path.stem + '.png')
+
         if self.converter.get_mode() == ConverterBase.MODE_FACE and filename_path.stem not in self.alignments.keys():                    
             if not self.debug:
                 print ( 'no faces found for %s, copying without faces' % (filename_path.name) )

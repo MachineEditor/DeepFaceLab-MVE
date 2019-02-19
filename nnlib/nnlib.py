@@ -4,66 +4,37 @@ import contextlib
 import numpy as np
 
 from utils import std_utils
-from .devicelib import devicelib
+from .device import device
 
 class nnlib(object):
-    device = devicelib #forwards nnlib.devicelib to device in order to use nnlib as standalone lib
-    DeviceConfig = devicelib.Config
+    device = device #forwards nnlib.devicelib to device in order to use nnlib as standalone lib
+    DeviceConfig = device.Config
     active_DeviceConfig = DeviceConfig() #default is one best GPU
 
     dlib = None
+    
     keras = None
     keras_contrib = None
+    
     tf = None
     tf_sess = None
     
-    code_import_tf = None
+    PML = None
+    PMLK = None
+    PMLTile= None
+    
     code_import_keras = None
     code_import_keras_contrib = None
     code_import_all = None
     
     code_import_dlib = None
 
-    tf_dssim = None
-    tf_ssim = None
-    tf_resize_like = None
-    tf_image_histogram = None
-    tf_rgb_to_lab = None
-    tf_lab_to_rgb = None
-    tf_adain = None
-    tf_gaussian_blur = None
-    tf_style_loss = None
-    
-    modelify = None
-    ReflectionPadding2D = None
-    DSSIMLoss = None
-    DSSIMMSEMaskLoss = None
-    PixelShuffler = None  
-    SubpixelUpscaler = None
-    AddUniformNoise = None
     
     ResNet = None
     UNet = None
     UNetTemporalPredictor = None
     NLayerDiscriminator = None
-    
-    code_import_tf_string = \
-"""
-tf = nnlib.tf
-tf_sess = nnlib.tf_sess
 
-tf_reduce_mean = tf.reduce_mean # todo tf 12+ = tf.math.reduce_mean
-tf_total_variation = tf.image.total_variation
-tf_dssim = nnlib.tf_dssim
-tf_ssim = nnlib.tf_ssim
-tf_resize_like = nnlib.tf_resize_like
-tf_image_histogram = nnlib.tf_image_histogram
-tf_rgb_to_lab = nnlib.tf_rgb_to_lab
-tf_lab_to_rgb = nnlib.tf_lab_to_rgb
-tf_adain = nnlib.tf_adain
-tf_gaussian_blur = nnlib.tf_gaussian_blur
-tf_style_loss = nnlib.tf_style_loss
-"""
     code_import_keras_string = \
 """
 keras = nnlib.keras
@@ -81,9 +52,11 @@ BatchNormalization = keras.layers.BatchNormalization
 
 LeakyReLU = keras.layers.LeakyReLU
 ReLU = keras.layers.ReLU
+PReLU = keras.layers.PReLU
 tanh = keras.layers.Activation('tanh')
 sigmoid = keras.layers.Activation('sigmoid')
 Dropout = keras.layers.Dropout
+Softmax = keras.layers.Softmax
 
 Lambda = keras.layers.Lambda
 Add = keras.layers.Add
@@ -100,12 +73,14 @@ Model = keras.models.Model
 Adam = keras.optimizers.Adam
 
 modelify = nnlib.modelify
-ReflectionPadding2D = nnlib.ReflectionPadding2D
-DSSIMLoss = nnlib.DSSIMLoss
-DSSIMMSEMaskLoss = nnlib.DSSIMMSEMaskLoss
+gaussian_blur = nnlib.gaussian_blur
+style_loss = nnlib.style_loss
+dssim = nnlib.dssim
+
+#ReflectionPadding2D = nnlib.ReflectionPadding2D
 PixelShuffler = nnlib.PixelShuffler
 SubpixelUpscaler = nnlib.SubpixelUpscaler
-AddUniformNoise = nnlib.AddUniformNoise
+#AddUniformNoise = nnlib.AddUniformNoise
 """
     code_import_keras_contrib_string = \
 """
@@ -113,7 +88,6 @@ keras_contrib = nnlib.keras_contrib
 GroupNormalization = keras_contrib.layers.GroupNormalization
 InstanceNormalization = keras_contrib.layers.InstanceNormalization
 Padam = keras_contrib.optimizers.Padam
-PELU = keras_contrib.layers.advanced_activations.PELU
 """
     code_import_dlib_string = \
 """
@@ -122,6 +96,7 @@ dlib = nnlib.dlib
 
     code_import_all_string = \
 """
+DSSIMMSEMaskLoss = nnlib.DSSIMMSEMaskLoss
 ResNet = nnlib.ResNet
 UNet = nnlib.UNet
 UNetTemporalPredictor = nnlib.UNetTemporalPredictor
@@ -130,7 +105,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
     
             
     @staticmethod
-    def import_tf(device_config = None):
+    def _import_tf(device_config):
         if nnlib.tf is not None:
             return nnlib.code_import_tf
 
@@ -147,263 +122,63 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         import tensorflow as tf
         nnlib.tf = tf
         
-        if device_config is None:
-            device_config = nnlib.active_DeviceConfig
-        
-        tf_ver = [int(x) for x in tf.VERSION.split('.')]
-        req_cap = 35
-        if tf_ver[0] > 1 or (tf_ver[0] == 1 and tf_ver[1] >= 11):
-            req_cap = 37
-            
-        if not device_config.cpu_only and device_config.gpu_compute_caps[0] < req_cap:
-            if suppressor is not None:  
-                suppressor.__exit__()
-            
-            print ("%s does not meet minimum required compute capability: %d.%d. Falling back to CPU mode." % ( device_config.gpu_names[0], req_cap // 10, req_cap % 10 ) )
-            device_config = nnlib.DeviceConfig(cpu_only=True)
-            
-            if suppressor is not None:  
-                suppressor.__enter__()
-
-        nnlib.active_DeviceConfig = device_config
-        
         if device_config.cpu_only:
-            config = tf.ConfigProto( device_count = {'GPU': 0} )
-        else:     
+            config = tf.ConfigProto(device_count={'GPU': 0})
+        else:   
             config = tf.ConfigProto()
-            visible_device_list = ''
-            for idx in device_config.gpu_idxs:
-                visible_device_list += str(idx) + ','
-            config.gpu_options.visible_device_list=visible_device_list[:-1]
+            
+            if device_config.backend != "tensorflow-generic":
+                #tensorflow-generic is system with NVIDIA card, but w/o NVSMI
+                #so dont hide devices and let tensorflow to choose best card
+                visible_device_list = ''
+                for idx in device_config.gpu_idxs:
+                    visible_device_list += str(idx) + ','
+                config.gpu_options.visible_device_list=visible_device_list[:-1]
             
         config.gpu_options.force_gpu_compatible = True            
         config.gpu_options.allow_growth = device_config.allow_growth
-        
+
         nnlib.tf_sess = tf.Session(config=config)
             
         if suppressor is not None:  
             suppressor.__exit__()
-
-        nnlib.__initialize_tf_functions()
-        nnlib.code_import_tf = compile (nnlib.code_import_tf_string,'','exec')
-        return nnlib.code_import_tf
         
-    @staticmethod
-    def __initialize_tf_functions():
-        tf = nnlib.tf
-
-        def tf_dssim_(max_value=1.0):
-            def func(t1,t2):
-                return (1.0 - tf.image.ssim (t1, t2, max_value)) / 2.0
-            return func
-        nnlib.tf_dssim = tf_dssim_
-         
-        def tf_ssim_(max_value=1.0):            
-            def func(t1,t2):
-                return tf.image.ssim (t1, t2, max_value)
-            return func
-        nnlib.tf_ssim = tf_ssim_
-        
-        def tf_resize_like_(ref_tensor):
-            def func(input_tensor):
-                H, W = ref_tensor.get_shape()[1], ref_tensor.get_shape()[2]
-                return tf.image.resize_bilinear(input_tensor, [H.value, W.value])
-            return func
-        nnlib.tf_resize_like = tf_resize_like_
-
-        def tf_rgb_to_lab():
-            def func(rgb_input):
-                with tf.name_scope("rgb_to_lab"):
-                    srgb_pixels = tf.reshape(rgb_input, [-1, 3])
-
-                    with tf.name_scope("srgb_to_xyz"):
-                        linear_mask = tf.cast(srgb_pixels <= 0.04045, dtype=tf.float32)
-                        exponential_mask = tf.cast(srgb_pixels > 0.04045, dtype=tf.float32)
-                        rgb_pixels = (srgb_pixels / 12.92 * linear_mask) + (((srgb_pixels + 0.055) / 1.055) ** 2.4) * exponential_mask
-                        rgb_to_xyz = tf.constant([
-                            #    X        Y          Z
-                            [0.412453, 0.212671, 0.019334], # R
-                            [0.357580, 0.715160, 0.119193], # G
-                            [0.180423, 0.072169, 0.950227], # B
-                        ])
-                        xyz_pixels = tf.matmul(rgb_pixels, rgb_to_xyz)
-
-                    # https://en.wikipedia.org/wiki/Lab_color_space#CIELAB-CIEXYZ_conversions
-                    with tf.name_scope("xyz_to_cielab"):
-                        # convert to fx = f(X/Xn), fy = f(Y/Yn), fz = f(Z/Zn)
-
-                        # normalize for D65 white point
-                        xyz_normalized_pixels = tf.multiply(xyz_pixels, [1/0.950456, 1.0, 1/1.088754])
-
-                        epsilon = 6/29
-                        linear_mask = tf.cast(xyz_normalized_pixels <= (epsilon**3), dtype=tf.float32)
-                        exponential_mask = tf.cast(xyz_normalized_pixels > (epsilon**3), dtype=tf.float32)
-                        fxfyfz_pixels = (xyz_normalized_pixels / (3 * epsilon**2) + 4/29) * linear_mask + (xyz_normalized_pixels ** (1/3)) * exponential_mask
-
-                        # convert to lab
-                        fxfyfz_to_lab = tf.constant([
-                            #  l       a       b
-                            [  0.0,  500.0,    0.0], # fx
-                            [116.0, -500.0,  200.0], # fy
-                            [  0.0,    0.0, -200.0], # fz
-                        ])
-                        lab_pixels = tf.matmul(fxfyfz_pixels, fxfyfz_to_lab) + tf.constant([-16.0, 0.0, 0.0])
-                    return tf.reshape(lab_pixels, tf.shape(rgb_input))
-            return func
-        nnlib.tf_rgb_to_lab = tf_rgb_to_lab
-        
-        def tf_lab_to_rgb():
-            def func(lab):
-                with tf.name_scope("lab_to_rgb"):
-                    lab_pixels = tf.reshape(lab, [-1, 3])
-
-                    # https://en.wikipedia.org/wiki/Lab_color_space#CIELAB-CIEXYZ_conversions
-                    with tf.name_scope("cielab_to_xyz"):
-                        # convert to fxfyfz
-                        lab_to_fxfyfz = tf.constant([
-                            #   fx      fy        fz
-                            [1/116.0, 1/116.0,  1/116.0], # l
-                            [1/500.0,     0.0,      0.0], # a
-                            [    0.0,     0.0, -1/200.0], # b
-                        ])
-                        fxfyfz_pixels = tf.matmul(lab_pixels + tf.constant([16.0, 0.0, 0.0]), lab_to_fxfyfz)
-
-                        # convert to xyz
-                        epsilon = 6/29
-                        linear_mask = tf.cast(fxfyfz_pixels <= epsilon, dtype=tf.float32)
-                        exponential_mask = tf.cast(fxfyfz_pixels > epsilon, dtype=tf.float32)
-                        xyz_pixels = (3 * epsilon**2 * (fxfyfz_pixels - 4/29)) * linear_mask + (fxfyfz_pixels ** 3) * exponential_mask
-
-                        # denormalize for D65 white point
-                        xyz_pixels = tf.multiply(xyz_pixels, [0.950456, 1.0, 1.088754])
-
-                    with tf.name_scope("xyz_to_srgb"):
-                        xyz_to_rgb = tf.constant([
-                            #     r           g          b
-                            [ 3.2404542, -0.9692660,  0.0556434], # x
-                            [-1.5371385,  1.8760108, -0.2040259], # y
-                            [-0.4985314,  0.0415560,  1.0572252], # z
-                        ])
-                        rgb_pixels = tf.matmul(xyz_pixels, xyz_to_rgb)
-                        # avoid a slightly negative number messing up the conversion
-                        rgb_pixels = tf.clip_by_value(rgb_pixels, 0.0, 1.0)
-                        linear_mask = tf.cast(rgb_pixels <= 0.0031308, dtype=tf.float32)
-                        exponential_mask = tf.cast(rgb_pixels > 0.0031308, dtype=tf.float32)
-                        srgb_pixels = (rgb_pixels * 12.92 * linear_mask) + ((rgb_pixels ** (1/2.4) * 1.055) - 0.055) * exponential_mask
-
-                    return tf.reshape(srgb_pixels, tf.shape(lab))
-            return func
-        nnlib.tf_lab_to_rgb = tf_lab_to_rgb
-
-        def tf_image_histogram():
-            def func(input):
-                x = input
-                x += 1 / 255.0
-                
-                output = []
-                for i in range(256, 0, -1):
-                    v = i / 255.0
-                    y = (x - v) * 1000
-                    
-                    y = tf.clip_by_value (y, -1.0, 0.0) + 1
-
-                    output.append ( tf.reduce_sum (y) )
-                    x -= y*v
-
-                return tf.stack ( output[::-1] )
-            return func
-        nnlib.tf_image_histogram = tf_image_histogram
-     
-        def tf_adain(epsilon=1e-5):
-            def func(content, style):
-                axes = [1,2]
-                c_mean, c_var = tf.nn.moments(content, axes=axes, keep_dims=True)
-                s_mean, s_var = tf.nn.moments(style, axes=axes, keep_dims=True)
-                c_std, s_std = tf.sqrt(c_var + epsilon), tf.sqrt(s_var + epsilon)
-                return s_std * (content - c_mean) / c_std + s_mean
-            return func
-        nnlib.tf_adain = tf_adain
-        
-        def tf_gaussian_blur(radius=2.0):
-            def gaussian_kernel(size,mean,std):
-                d = tf.distributions.Normal( float(mean), float(std) )
-
-                vals = d.prob(tf.range(start = -int(size), limit = int(size) + 1, dtype = tf.float32))
-
-                gauss_kernel = tf.einsum('i,j->ij',
-                                              vals,
-                                              vals)
-
-                return gauss_kernel / tf.reduce_sum(gauss_kernel)
-
-            gauss_kernel = gaussian_kernel(radius, 1.0, radius )
-            gauss_kernel = gauss_kernel[:, :, tf.newaxis, tf.newaxis]
-            
-            def func(input):
-                input_nc = input.get_shape().as_list()[-1]
-                inputs = tf.split(input, input_nc, -1)
-                
-                outputs = []
-                for i in range(len(inputs)):
-                    outputs += [ tf.nn.conv2d( inputs[i] , gauss_kernel, strides=[1, 1, 1, 1], padding="SAME") ]
-
-                return tf.concat (outputs, axis=-1)
-            return func
-        nnlib.tf_gaussian_blur = tf_gaussian_blur
-
-        #any channel count style diff
-        #outputs 0.0 .. 1.0 style difference*loss_weight , 0.0 - no diff
-        def tf_style_loss(gaussian_blur_radius=0.0, loss_weight=1.0, batch_normalize=False, epsilon=1e-5):
-            gblur = tf_gaussian_blur(gaussian_blur_radius)
-            
-            def sd(content, style):
-                content_nc = content.get_shape().as_list()[-1]
-                style_nc = style.get_shape().as_list()[-1]
-                if content_nc != style_nc:
-                    raise Exception("tf_style_loss() content_nc != style_nc")
-                    
-                axes = [1,2]
-                c_mean, c_var = tf.nn.moments(content, axes=axes, keep_dims=True)
-                s_mean, s_var = tf.nn.moments(style, axes=axes, keep_dims=True)
-                c_std, s_std = tf.sqrt(c_var + epsilon), tf.sqrt(s_var + epsilon)
-
-                mean_loss = tf.reduce_sum(tf.squared_difference(c_mean, s_mean))
-                std_loss = tf.reduce_sum(tf.squared_difference(c_std, s_std))
-
-                if batch_normalize:
-                    #normalize w.r.t batch size
-                    n = tf.cast(tf.shape(content)[0], dtype=tf.float32)
-                    mean_loss /= n
-                    std_loss /= n
-                
-                return (mean_loss + std_loss) * loss_weight
-                
-            def func(target, style):
-                if gaussian_blur_radius > 0.0:
-                    return sd( gblur(target), gblur(style))
-                else:
-                    return sd( target, style )
-            return func
-            
-        nnlib.tf_style_loss = tf_style_loss
-
     @staticmethod
     def import_keras(device_config = None):
         if nnlib.keras is not None:
             return nnlib.code_import_keras
 
-        nnlib.import_tf(device_config)
-        device_config = nnlib.active_DeviceConfig
+        if device_config is None:
+            device_config = nnlib.active_DeviceConfig
+            
+        nnlib.active_DeviceConfig = device_config
+
+        if "tensorflow" in device_config.backend:
+            nnlib._import_tf(device_config)
+            device_config = nnlib.active_DeviceConfig
+        elif device_config.backend == "plaidML":
+            os.environ["KERAS_BACKEND"] = "plaidml.keras.backend"
+            os.environ["PLAIDML_DEVICE_IDS"] = ",".join ( [ nnlib.device.getDeviceID(idx) for idx in device_config.gpu_idxs] )
+
         if 'TF_SUPPRESS_STD' in os.environ.keys() and os.environ['TF_SUPPRESS_STD'] == '1':
             suppressor = std_utils.suppress_stdout_stderr().__enter__()
-            
+ 
         import keras as keras_
         nnlib.keras = keras_
         
+        if device_config.backend == "plaidML":
+            import plaidml
+            import plaidml.tile
+            nnlib.PML = plaidml
+            nnlib.PMLK = plaidml.keras.backend
+            nnlib.PMLTile = plaidml.tile
+            
         if device_config.use_fp16:
             nnlib.keras.backend.set_floatx('float16')
         
-        nnlib.keras.backend.set_session(nnlib.tf_sess)
+        if "tensorflow" in device_config.backend:
+            nnlib.keras.backend.set_session(nnlib.tf_sess)
+            
         nnlib.keras.backend.set_image_data_format('channels_last')
         
         if 'TF_SUPPRESS_STD' in os.environ.keys() and os.environ['TF_SUPPRESS_STD'] == '1':        
@@ -411,14 +186,12 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
 
         nnlib.__initialize_keras_functions()  
         nnlib.code_import_keras = compile (nnlib.code_import_keras_string,'','exec')
-
+        return nnlib.code_import_keras
         
     @staticmethod
     def __initialize_keras_functions():
-        tf = nnlib.tf
         keras = nnlib.keras
         K = keras.backend
-        exec (nnlib.code_import_tf, locals(), globals())
         
         def modelify(model_functor):
             def func(tensor):
@@ -427,68 +200,172 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         
         nnlib.modelify = modelify
         
-        class ReflectionPadding2D(keras.layers.Layer):
-            def __init__(self, padding=(1, 1), **kwargs):
-                self.padding = tuple(padding)
-                self.input_spec = [keras.layers.InputSpec(ndim=4)]
-                super(ReflectionPadding2D, self).__init__(**kwargs)
+        def gaussian_blur(radius=2.0):
+            def gaussian(x, mu, sigma):
+                return np.exp(-(float(x) - float(mu)) ** 2 / (2 * sigma ** 2))
 
-            def compute_output_shape(self, s):
-                """ If you are using "channels_last" configuration"""
-                return (s[0], s[1] + 2 * self.padding[0], s[2] + 2 * self.padding[1], s[3])
+            def make_kernel(sigma):
+                kernel_size = max(3, int(2 * 2 * sigma + 1))
+                mean = np.floor(0.5 * kernel_size)
+                kernel_1d = np.array([gaussian(x, mean, sigma) for x in range(kernel_size)])
+                np_kernel = np.outer(kernel_1d, kernel_1d).astype(dtype=K.floatx())
+                kernel = np_kernel / np.sum(np_kernel)
+                return kernel
+          
+            gauss_kernel = make_kernel(radius)
+            gauss_kernel = gauss_kernel[:, :,np.newaxis, np.newaxis]
 
-            def call(self, x, mask=None):
-                w_pad,h_pad = self.padding
-                return tf.pad(x, [[0,0], [h_pad,h_pad], [w_pad,w_pad], [0,0] ], 'REFLECT')
-        nnlib.ReflectionPadding2D = ReflectionPadding2D
+            def func(input):
+                inputs = [ input[:,:,:,i:i+1]  for i in range( K.int_shape( input )[-1] ) ]
 
-        class DSSIMLoss(object):
-            def __init__(self, is_tanh=False):
-                self.is_tanh = is_tanh
-                
-            def __call__(self,y_true, y_pred):
-                if not self.is_tanh:            
-                    return (1.0 - tf.image.ssim (y_true, y_pred, 1.0)) / 2.0
-                else:
-                    return (1.0 - tf.image.ssim ((y_true/2+0.5), (y_pred/2+0.5), 1.0)) / 2.0
-        nnlib.DSSIMLoss = DSSIMLoss
+                outputs = []
+                for i in range(len(inputs)):
+                    outputs += [ K.conv2d( inputs[i] , K.constant(gauss_kernel) , strides=(1,1), padding="same") ]
+
+                return K.concatenate (outputs, axis=-1)
+            return func
+        nnlib.gaussian_blur = gaussian_blur
         
-        class DSSIMMSEMaskLoss(object):
-            def __init__(self, mask, is_mse=False):
-                self.mask = mask
-                self.is_mse = is_mse
+        def style_loss(gaussian_blur_radius=0.0, loss_weight=1.0, wnd_size=0, step_size=1):
+            if gaussian_blur_radius > 0.0:
+                gblur = gaussian_blur(gaussian_blur_radius)
+            
+            def sd(content, style, loss_weight):
+                content_nc = K.int_shape(content)[-1]
+                style_nc = K.int_shape(style)[-1]
+                if content_nc != style_nc:
+                    raise Exception("style_loss() content_nc != style_nc")
+                    
+                axes = [1,2]
+                c_mean, c_var = K.mean(content, axis=axes, keepdims=True), K.var(content, axis=axes, keepdims=True)
+                s_mean, s_var = K.mean(style, axis=axes, keepdims=True), K.var(style, axis=axes, keepdims=True)
+                c_std, s_std = K.sqrt(c_var + 1e-5), K.sqrt(s_var + 1e-5)
+
+                mean_loss = K.sum(K.square(c_mean-s_mean))
+                std_loss = K.sum(K.square(c_std-s_std))
                 
-            def __call__(self,y_true, y_pred):
-                total_loss = None
-       
-                mask = self.mask
-                if self.is_mse:                
-                    blur_mask = tf_gaussian_blur(max(1, mask.get_shape().as_list()[1] // 32))(mask)
-                    return K.mean ( 100*K.square( y_true*blur_mask - y_pred*blur_mask ) )
+                return (mean_loss + std_loss) * ( loss_weight / float(content_nc) )
+                
+            def func(target, style):
+                if wnd_size == 0:
+                    if gaussian_blur_radius > 0.0:
+                        return sd( gblur(target), gblur(style), loss_weight=loss_weight)
+                    else:
+                        return sd( target, style, loss_weight=loss_weight )
                 else:
-                    return (1.0 - (tf.image.ssim (y_true*mask, y_pred*mask, 1.0))) / 2.0
-        nnlib.DSSIMMSEMaskLoss = DSSIMMSEMaskLoss
+                    #currently unused
+                    if nnlib.tf is not None:
+                        sh = K.int_shape(target)[1]
+                        k = (sh-wnd_size) // step_size + 1                        
+                        if gaussian_blur_radius > 0.0:
+                            target, style = gblur(target), gblur(style)                        
+                        target = nnlib.tf.image.extract_image_patches(target, [1,k,k,1], [1,1,1,1], [1,step_size,step_size,1], 'VALID')
+                        style  = nnlib.tf.image.extract_image_patches(style,  [1,k,k,1], [1,1,1,1], [1,step_size,step_size,1], 'VALID')
+                        return sd( target, style, loss_weight )
+                    if nnlib.PML is not None:
+                        print ("Sorry, plaidML backend does not support style_loss")
+                        return 0
+            return func
+        nnlib.style_loss = style_loss  
+        
+        
+        def dssim(k1=0.01, k2=0.03, max_value=1.0):
+            # port of tf.image.ssim to pure keras in order to work on plaidML backend.
+
+            def func(y_true, y_pred):
+                ch = K.int_shape(y_pred)[-1]
+                
+                def softmax(x, axis=-1): #from K numpy backend
+                    y = np.exp(x - np.max(x, axis, keepdims=True))
+                    return y / np.sum(y, axis, keepdims=True)
+                    
+                def gauss_kernel(size, sigma):
+                    coords = np.arange(0,size, dtype=K.floatx() )                  
+                    coords -= (size - 1 ) / 2.0
+                    g = coords**2
+                    g *= ( -0.5 / (sigma**2) )
+                    g = np.reshape (g, (1,-1)) + np.reshape(g, (-1,1) )
+                    g = np.reshape (g, (1,-1))
+                    g = softmax(g)
+                    g = np.reshape (g, (size, size, 1, 1))  
+                    g = np.tile (g, (1,1,ch,1))                
+                    return K.constant(g, dtype=K.floatx() )
+    
+                kernel = gauss_kernel(11,1.5)                
+              
+                def reducer(x):
+                    shape = K.shape(x)
+                    x = K.reshape(x, (-1, shape[-3] , shape[-2], shape[-1]) )                  
+                    y = K.depthwise_conv2d(x, kernel, strides=(1, 1), padding='valid')
+                    y_shape = K.shape(y)
+                    return K.reshape(y, (shape[0], y_shape[1], y_shape[2], y_shape[3] ) )
+
+                def _ssim_helper(x, y, reducer, compensation=1.0):
+                    c1 = (k1 * max_value) ** 2
+                    c2 = (k2 * max_value) ** 2
+                    
+                    mean0 = reducer(x)
+                    mean1 = reducer(y)
+                    num0 = mean0 * mean1 * 2.0
+                    den0 = K.square(mean0) + K.square(mean1)
+                    luminance = (num0 + c1) / (den0 + c1)
+                    
+                    num1 = reducer(x * y) * 2.0
+                    den1 = reducer(K.square(x) + K.square(y))
+                    c2 *= compensation
+                    cs = (num1 - num0 + c2) / (den1 - den0 + c2)
+                    
+                    return luminance, cs
+
+                luminance, cs = _ssim_helper(y_true, y_pred, reducer)
+                ssim_val = K.mean(luminance * cs, axis=(-3, -2) )
+                return K.mean( (1.0 - ssim_val ) / 2.0 )
+
+            return func
+        nnlib.dssim = dssim
         
         class PixelShuffler(keras.layers.Layer):
             def __init__(self, size=(2, 2), data_format=None, **kwargs):
                 super(PixelShuffler, self).__init__(**kwargs)
-                self.data_format = keras.backend.common.normalize_data_format(data_format)
+                self.data_format = K.normalize_data_format(data_format)
                 self.size = keras.utils.conv_utils.normalize_tuple(size, 2, 'size')
 
             def call(self, inputs):
-                input_shape = keras.backend.int_shape(inputs)
+
+                input_shape = K.int_shape(inputs)
                 if len(input_shape) != 4:
                     raise ValueError('Inputs should have rank ' +
                                      str(4) +
                                      '; Received input shape:', str(input_shape))
 
                 if self.data_format == 'channels_first':
-                    return tf.depth_to_space(inputs, self.size[0], 'NCHW')
+                    batch_size, c, h, w = input_shape
+                    if batch_size is None:
+                        batch_size = -1
+                    rh, rw = self.size
+                    oh, ow = h * rh, w * rw
+                    oc = c // (rh * rw)
+
+                    out = K.reshape(inputs, (batch_size, rh, rw, oc, h, w))
+                    out = K.permute_dimensions(out, (0, 3, 4, 1, 5, 2))
+                    out = K.reshape(out, (batch_size, oc, oh, ow))
+                    return out
 
                 elif self.data_format == 'channels_last':
-                    return tf.depth_to_space(inputs, self.size[0], 'NHWC')
+                    batch_size, h, w, c = input_shape
+                    if batch_size is None:
+                        batch_size = -1
+                    rh, rw = self.size
+                    oh, ow = h * rh, w * rw
+                    oc = c // (rh * rw)
+
+                    out = K.reshape(inputs, (batch_size, h, w, rh, rw, oc))
+                    out = K.permute_dimensions(out, (0, 1, 3, 2, 4, 5))
+                    out = K.reshape(out, (batch_size, oh, ow, oc))
+                    return out
 
             def compute_output_shape(self, input_shape):
+
                 if len(input_shape) != 4:
                     raise ValueError('Inputs should have rank ' +
                                      str(4) +
@@ -525,11 +402,28 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                           'data_format': self.data_format}
                 base_config = super(PixelShuffler, self).get_config()
 
-                return dict(list(base_config.items()) + list(config.items()))
-
-        nnlib.PixelShuffler = PixelShuffler
-        nnlib.SubpixelUpscaler = PixelShuffler
+                return dict(list(base_config.items()) + list(config.items()))        
         
+        nnlib.PixelShuffler = PixelShuffler
+        nnlib.SubpixelUpscaler = PixelShuffler    
+        '''
+        
+        class ReflectionPadding2D(keras.layers.Layer):
+            def __init__(self, padding=(1, 1), **kwargs):
+                self.padding = tuple(padding)
+                self.input_spec = [keras.layers.InputSpec(ndim=4)]
+                super(ReflectionPadding2D, self).__init__(**kwargs)
+
+            def compute_output_shape(self, s):
+                """ If you are using "channels_last" configuration"""
+                return (s[0], s[1] + 2 * self.padding[0], s[2] + 2 * self.padding[1], s[3])
+
+            def call(self, x, mask=None):
+                w_pad,h_pad = self.padding
+                return tf.pad(x, [[0,0], [h_pad,h_pad], [w_pad,w_pad], [0,0] ], 'REFLECT')
+        nnlib.ReflectionPadding2D = ReflectionPadding2D
+
+       
         class AddUniformNoise(keras.layers.Layer):
             def __init__(self, power=1.0, minval=-1.0, maxval=1.0, **kwargs):
                 super(AddUniformNoise, self).__init__(**kwargs)
@@ -548,7 +442,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 base_config = super(AddUniformNoise, self).get_config()
                 return dict(list(base_config.items()) + list(config.items()))
         nnlib.AddUniformNoise = AddUniformNoise       
-                
+        '''        
     @staticmethod
     def import_keras_contrib(device_config = None):
         if nnlib.keras_contrib is not None:
@@ -570,20 +464,17 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
 
         import dlib as dlib_
         nnlib.dlib = dlib_
-        if not device_config.cpu_only and len(device_config.gpu_idxs) > 0:
-            nnlib.dlib.cuda.set_device(device_config.gpu_idxs[0])
-            
+        if not device_config.cpu_only and "tensorflow" in device_config.backend and len(device_config.gpu_idxs) > 0:
+            nnlib.dlib.cuda.set_device(device_config.gpu_idxs[0])           
         
         nnlib.code_import_dlib = compile (nnlib.code_import_dlib_string,'','exec')
     
     @staticmethod
     def import_all(device_config = None):
-        if nnlib.code_import_all is None:
-            nnlib.import_tf(device_config)        
+        if nnlib.code_import_all is None:  
             nnlib.import_keras(device_config)
-            nnlib.import_keras_contrib(device_config)        
-            nnlib.code_import_all = compile (nnlib.code_import_tf_string + '\n' 
-                                            + nnlib.code_import_keras_string + '\n'
+            nnlib.import_keras_contrib(device_config)                                                
+            nnlib.code_import_all = compile (nnlib.code_import_keras_string + '\n'
                                             + nnlib.code_import_keras_contrib_string 
                                             + nnlib.code_import_all_string,'','exec')        
             nnlib.__initialize_all_functions()
@@ -592,6 +483,24 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
     
     @staticmethod
     def __initialize_all_functions():
+        exec (nnlib.import_keras(), locals(), globals())
+        exec (nnlib.import_keras_contrib(), locals(), globals())
+        
+        class DSSIMMSEMaskLoss(object):
+            def __init__(self, mask, is_mse=False):
+                self.mask = mask
+                self.is_mse = is_mse                
+            def __call__(self,y_true, y_pred):
+                total_loss = None
+                mask = self.mask
+                if self.is_mse:                
+                    blur_mask = gaussian_blur(max(1, K.int_shape(mask)[1] // 64))(mask)
+                    return K.mean ( 50*K.square( y_true*blur_mask - y_pred*blur_mask ) )
+                else:
+                    return 10*dssim() (y_true*mask, y_pred*mask)                    
+        nnlib.DSSIMMSEMaskLoss = DSSIMMSEMaskLoss
+        
+        '''
         def ResNet(output_nc, use_batch_norm, ngf=64, n_blocks=6, use_dropout=False):
             exec (nnlib.import_all(), locals(), globals())
 
@@ -775,7 +684,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 return Conv2D( 1, 4, 1, 'valid')(x)
             return func
         nnlib.NLayerDiscriminator = NLayerDiscriminator
-        
+        '''
     @staticmethod
     def finalize_all():
         if nnlib.keras_contrib is not None:
@@ -786,7 +695,6 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
             nnlib.keras = None
 
         if nnlib.tf is not None:
-            nnlib.tf_sess.close()
             nnlib.tf_sess = None
             nnlib.tf = None
 

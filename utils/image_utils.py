@@ -5,7 +5,6 @@ import cv2
 import localization
 from scipy.spatial import Delaunay
 from PIL import Image, ImageDraw, ImageFont
-from nnlib import nnlib
 
 def reinhard_color_transfer(target, source, clip=False, preserve_paper=False, source_mask=None, target_mask=None):
 	"""
@@ -423,24 +422,4 @@ def reduce_colors (img_bgr, n_colors):
     img_bgr = cv2.cvtColor( np.array(img_rgb_p, dtype=np.float32) / 255.0, cv2.COLOR_RGB2BGR )
     
     return img_bgr
-    
-    
-class TFLabConverter():
-    def __init__(self):        
-        exec (nnlib.import_tf(), locals(), globals())
-        self.tf_sess = tf_sess
-        
-        self.bgr_input_tensor = tf.placeholder("float", [None, None, 3])
-        self.lab_input_tensor = tf.placeholder("float", [None, None, 3])
-        
-        self.lab_output_tensor = tf_rgb_to_lab()(self.bgr_input_tensor)        
-        self.bgr_output_tensor = tf_lab_to_rgb()(self.lab_input_tensor)
-        
-        
-    def bgr2lab(self, bgr):    
-        return self.tf_sess.run(self.lab_output_tensor, feed_dict={self.bgr_input_tensor: bgr})
-        
-    def lab2bgr(self, lab):    
-        return self.tf_sess.run(self.bgr_output_tensor, feed_dict={self.lab_input_tensor: lab})    
-        
-    
+  

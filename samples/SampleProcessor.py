@@ -8,29 +8,28 @@ from facelib import FaceType
 
 class SampleProcessor(object):
     class TypeFlags(IntEnum):
-        SOURCE               = 0x00000001,
-        WARPED               = 0x00000002,
-        WARPED_TRANSFORMED   = 0x00000004,
-        TRANSFORMED          = 0x00000008,
-        LANDMARKS_ARRAY      = 0x00000010, #currently unused
-        
-        RANDOM_CLOSE       = 0x00000020,
-        MORPH_TO_RANDOM_CLOSE \
-                             = 0x00000040,
-        
-        FACE_ALIGN_HALF      = 0x00000100,
-        FACE_ALIGN_FULL      = 0x00000200,
-        FACE_ALIGN_HEAD      = 0x00000400,
-        FACE_ALIGN_AVATAR    = 0x00000800,    
-        
-        FACE_MASK_FULL       = 0x00001000,
-        FACE_MASK_EYES       = 0x00002000,
-        
-        MODE_BGR             = 0x01000000,  #BGR
-        MODE_G               = 0x02000000,  #Grayscale
-        MODE_GGG             = 0x04000000,  #3xGrayscale 
-        MODE_M               = 0x08000000,  #mask only
-        MODE_BGR_SHUFFLE     = 0x10000000,  #BGR shuffle
+        SOURCE                = 0x00000001,
+        WARPED                = 0x00000002,
+        WARPED_TRANSFORMED    = 0x00000004,
+        TRANSFORMED           = 0x00000008,
+        LANDMARKS_ARRAY       = 0x00000010, #currently unused
+                              
+        RANDOM_CLOSE          = 0x00000020,
+        MORPH_TO_RANDOM_CLOSE = 0x00000040,
+                              
+        FACE_ALIGN_HALF       = 0x00000100,
+        FACE_ALIGN_FULL       = 0x00000200,
+        FACE_ALIGN_HEAD       = 0x00000400,
+        FACE_ALIGN_AVATAR     = 0x00000800,    
+                              
+        FACE_MASK_FULL        = 0x00001000,
+        FACE_MASK_EYES        = 0x00002000,
+                              
+        MODE_BGR              = 0x01000000,  #BGR
+        MODE_G                = 0x02000000,  #Grayscale
+        MODE_GGG              = 0x04000000,  #3xGrayscale 
+        MODE_M                = 0x08000000,  #mask only
+        MODE_BGR_SHUFFLE      = 0x10000000,  #BGR shuffle
    
     class Options(object):     
         def __init__(self, random_flip = True, normalize_tanh = False, rotation_range=[-10,10], scale_range=[-0.05, 0.05], tx_range=[-0.05, 0.05], ty_range=[-0.05, 0.05]):

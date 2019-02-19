@@ -62,23 +62,35 @@ class ExtractSubprocessor(SubprocessorBase):
                     
             cv2.setMouseCallback(self.wnd_name, onMouse, self.param)
     
-    def get_devices_for_type (self, type, multi_gpu):
-        if (type == 'rects' or type == 'landmarks'):
-            if multi_gpu:
-                devices = nnlib.device.getDevicesWithAtLeastTotalMemoryGB(2)
-            
-            if not multi_gpu or len(devices) == 0:
-                devices = [nnlib.device.getBestDeviceIdx()]
-                
-            if len(devices) == 0:
-                devices = [0]
+    def get_devices_for_type (self, type, multi_gpu, cpu_only):
+        if not cpu_only and (type == 'rects' or type == 'landmarks'):
+            if type == 'rects' and self.detector == 'mt' and nnlib.device.backend == "plaidML":
+                cpu_only = True
+            else:
+                if multi_gpu:
+                    devices = nnlib.device.getValidDevicesWithAtLeastTotalMemoryGB(2)
+                if not multi_gpu or len(devices) == 0:
+                    devices = [nnlib.device.getBestValidDeviceIdx()]                    
+                if len(devices) == 0:
+                    devices = [0]
                     
-            devices = [ (idx, nnlib.device.getDeviceName(idx), nnlib.device.getDeviceVRAMTotalGb(idx) ) for idx in devices]
+                for idx in devices:
+                    dev_name = nnlib.device.getDeviceName(idx)
+                    dev_vram = nnlib.device.getDeviceVRAMTotalGb(idx)
+                    
+                    if not self.manual and self.type == 'rects' and self.detector == 'mt':
+                        for i in range ( int (max (1, dev_vram / 2) ) ):
+                            yield (idx, 'GPU', '%s #%d' % (dev_name,i) , dev_vram)
+                    else:
+                        yield (idx, 'GPU', dev_name, dev_vram)
 
-        elif type == 'final':
-            devices = [ (i, 'CPU%d' % (i), 0 ) for i in range(0, multiprocessing.cpu_count()) ]
-            
-        return devices 
+        if cpu_only and (type == 'rects' or type == 'landmarks'):
+            for i in range( min(8, multiprocessing.cpu_count() // 2) ):
+                yield (i, 'CPU', 'CPU%d' % (i), 0 )
+                
+        if type == 'final':
+            for i in range( min(8, multiprocessing.cpu_count()) ):
+                yield (i, 'CPU', 'CPU%d' % (i), 0 ) 
         
     #override
     def process_info_generator(self):
@@ -89,31 +101,13 @@ class ExtractSubprocessor(SubprocessorBase):
                      'output_dir': str(self.output_path), 
                      'detector': self.detector}
     
-        if not self.cpu_only:
-            for (device_idx, device_name, device_total_vram_gb) in self.get_devices_for_type(self.type, self.multi_gpu): 
-                num_processes = 1
-                if not self.manual and self.type == 'rects' and self.detector == 'mt':
-                    num_processes = int ( max (1, device_total_vram_gb / 2) )
-                    
-                for i in range(0, num_processes ):
-                    client_dict = base_dict.copy()
-                    client_dict['device_idx'] = device_idx
-                    client_dict['device_name'] = device_name if num_processes == 1 else '%s #%d' % (device_name,i)
-                    client_dict['device_type'] = 'GPU'
-                    
-                    yield client_dict['device_name'], {}, client_dict
-        else:
-            num_processes = 1
-            if not self.manual and self.type == 'rects' and self.detector == 'mt':
-                num_processes = int ( max (1, multiprocessing.cpu_count() / 2 ) )
-            
-            for i in range(0, num_processes ):
-                client_dict = base_dict.copy()
-                client_dict['device_idx'] = 0
-                client_dict['device_name'] = 'CPU' if num_processes == 1 else 'CPU #%d' % (i),
-                client_dict['device_type'] = 'CPU'
-                
-                yield client_dict['device_name'], {}, client_dict
+        for (device_idx, device_type, device_name, device_total_vram_gb) in self.get_devices_for_type(self.type, self.multi_gpu, self.cpu_only): 
+            client_dict = base_dict.copy()
+            client_dict['device_idx'] = device_idx
+            client_dict['device_name'] = device_name
+            client_dict['device_type'] = device_type            
+            yield client_dict['device_name'], {}, client_dict
+    
                     
     #override
     def get_no_process_started_message(self):
@@ -265,18 +259,17 @@ class ExtractSubprocessor(SubprocessorBase):
         self.detector     = client_dict['detector']
 
         self.e = None
-
         device_config = nnlib.DeviceConfig ( cpu_only=self.cpu_only, force_gpu_idx=self.device_idx, allow_growth=True)
         if self.type == 'rects':
             if self.detector is not None:
                 if self.detector == 'mt':
                     nnlib.import_all (device_config)
-                    self.e = facelib.MTCExtractor(nnlib.keras, nnlib.tf, nnlib.tf_sess)                            
+                    self.e = facelib.MTCExtractor()                            
                 elif self.detector == 'dlib':
                     nnlib.import_dlib (device_config)
                     self.e = facelib.DLIBExtractor(nnlib.dlib)
                 self.e.__enter__()
-
+                
         elif self.type == 'landmarks':
             nnlib.import_all (device_config)
             self.e = facelib.LandmarksExtractor(nnlib.keras)
