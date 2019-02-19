@@ -270,6 +270,8 @@ try:
     ctx = plaidml.Context()
     for d in plaidml.devices(ctx, return_all=True)[0]:
         details = json.loads(d.details)
+        if details['type'] == 'CPU': #skipping opencl-CPU
+            continue
         if 'nvidia' in details['vendor'].lower():
             has_nvidia_device = True
         plaidML_devices += [ {'id':d.id,

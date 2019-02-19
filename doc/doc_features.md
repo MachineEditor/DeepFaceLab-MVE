@@ -1,16 +1,16 @@
 ### **Features**:
 
-- Windows binary containing pre-compiled dependencies, including CUDA libraries.
+- works on AMD, NVIDIA, IntelHD graphics and all OpenCL1.2-compatible videocards with at least 512M video memory
+
+- CPU-only mode [`--cpu-mode`]. 8th gen Intel core CPU able to train H64 model in 2 days.
+
+- Windows build is standalone ready to work program and contains all dependencies (CUDA, OpenCL, ffmpeg, .bat script etc) to start working
 
 - New models expanding upon the original faceswap model.
 
 - Model architecture designed with experimentation in mind.
 
 - Face metadata embedded into extracted JPG files.
-
-- CPU-only mode [`--cpu-mode`]. 8th gen Intel core CPU able to train H64 model in 2 days.
-
-- Preview window
 
 - Extractor and Converter run in parallel.
 
@@ -22,7 +22,6 @@
 ##### MTCNN
 
 Predicts faces more uniformly than dlib, resulting in a less jittered aligned output. However, MTCNN extraction will produce more false positives.
-
 
 Comparison dlib (at left) vs mtcnn on hard case:
 ![](https://i.imgur.com/5qLiiOV.gif)
