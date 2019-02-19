@@ -1,5 +1,7 @@
 ![](doc/DFL_welcome.jpg)
 
+![](logo_cuda.jpg)![](logo_opencl.jpg)![](logo_keras.jpg)![](logo_tensorflow.jpg)![](logo_plaidml.jpg)
+
 ## **DeepFaceLab** is a tool that utilizes deep learning to recognize and swap faces in pictures and videos.
 
 If you like this software, please consider a donation.
