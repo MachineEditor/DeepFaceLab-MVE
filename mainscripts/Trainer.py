@@ -21,11 +21,11 @@ def trainerThread (input_queue, output_queue, training_data_src_dir, training_da
             model_path = Path(model_path)
             
             if not training_data_src_path.exists():
-                print( 'Training data src directory is not exists.')
+                print( 'Training data src directory does not exist.')
                 return
                 
             if not training_data_dst_path.exists():
-                print( 'Training data dst directory is not exists.')
+                print( 'Training data dst directory does not exist.')
                 return
                 
             if not model_path.exists():
