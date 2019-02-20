@@ -268,60 +268,49 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
             return func
         nnlib.style_loss = style_loss  
         
-        
         def dssim(k1=0.01, k2=0.03, max_value=1.0):
             # port of tf.image.ssim to pure keras in order to work on plaidML backend.
 
             def func(y_true, y_pred):
-                ch = K.int_shape(y_pred)[-1]
-                
-                def softmax(x, axis=-1): #from K numpy backend
-                    y = np.exp(x - np.max(x, axis, keepdims=True))
-                    return y / np.sum(y, axis, keepdims=True)
-                    
-                def gauss_kernel(size, sigma):
-                    coords = np.arange(0,size, dtype=K.floatx() )                  
+                ch = K.shape(y_pred)[-1]
+
+                def _fspecial_gauss(size, sigma):
+                    #Function to mimic the 'fspecial' gaussian MATLAB function.
+                    coords = np.arange(0, size, dtype=K.floatx())
                     coords -= (size - 1 ) / 2.0
                     g = coords**2
                     g *= ( -0.5 / (sigma**2) )
                     g = np.reshape (g, (1,-1)) + np.reshape(g, (-1,1) )
-                    g = np.reshape (g, (1,-1))
-                    g = softmax(g)
-                    g = np.reshape (g, (size, size, 1, 1))  
-                    g = np.tile (g, (1,1,ch,1))                
-                    return K.constant(g, dtype=K.floatx() )
-    
-                kernel = gauss_kernel(11,1.5)                
-              
+                    g = K.constant ( np.reshape (g, (1,-1)) )
+                    g = K.softmax(g)
+                    g = K.reshape (g, (size, size, 1, 1)) 
+                    g = K.tile (g, (1,1,ch,1))
+                    return g
+                              
+                kernel = _fspecial_gauss(11,1.5)
+
                 def reducer(x):
-                    shape = K.shape(x)
-                    x = K.reshape(x, (-1, shape[-3] , shape[-2], shape[-1]) )                  
-                    y = K.depthwise_conv2d(x, kernel, strides=(1, 1), padding='valid')
-                    y_shape = K.shape(y)
-                    return K.reshape(y, (shape[0], y_shape[1], y_shape[2], y_shape[3] ) )
+                    return K.depthwise_conv2d(x, kernel, strides=(1, 1), padding='valid')
 
-                def _ssim_helper(x, y, reducer, compensation=1.0):
-                    c1 = (k1 * max_value) ** 2
-                    c2 = (k2 * max_value) ** 2
-                    
-                    mean0 = reducer(x)
-                    mean1 = reducer(y)
-                    num0 = mean0 * mean1 * 2.0
-                    den0 = K.square(mean0) + K.square(mean1)
-                    luminance = (num0 + c1) / (den0 + c1)
-                    
-                    num1 = reducer(x * y) * 2.0
-                    den1 = reducer(K.square(x) + K.square(y))
-                    c2 *= compensation
-                    cs = (num1 - num0 + c2) / (den1 - den0 + c2)
-                    
-                    return luminance, cs
+                c1 = (k1 * max_value) ** 2
+                c2 = (k2 * max_value) ** 2
+                
+                mean0 = reducer(y_true)
+                mean1 = reducer(y_pred)
+                num0 = mean0 * mean1 * 2.0
+                den0 = K.square(mean0) + K.square(mean1)
+                luminance = (num0 + c1) / (den0 + c1)
+                
+                num1 = reducer(y_true * y_pred) * 2.0
+                den1 = reducer(K.square(y_true) + K.square(y_pred))
+                c2 *= 1.0 #compensation factor
+                cs = (num1 - num0 + c2) / (den1 - den0 + c2)
 
-                luminance, cs = _ssim_helper(y_true, y_pred, reducer)
                 ssim_val = K.mean(luminance * cs, axis=(-3, -2) )
                 return K.mean( (1.0 - ssim_val ) / 2.0 )
 
             return func
+        
         nnlib.dssim = dssim
         
         class PixelShuffler(keras.layers.Layer):
