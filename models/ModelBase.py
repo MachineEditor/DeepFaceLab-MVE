@@ -327,9 +327,9 @@ class ModelBase(object):
                 
         self.epoch += 1
 
-        if epoch_time >= 10000:
+        if epoch_time >= 10:
             #............."Saving... 
-            loss_string = "Training [#{0:06d}][{1:.5s}s]".format ( self.epoch, '{:0.4f}'.format(epoch_time / 1000) )
+            loss_string = "Training [#{0:06d}][{1:.5s}s]".format ( self.epoch, '{:0.4f}'.format(epoch_time) )
         else:
             loss_string = "Training [#{0:06d}][{1:04d}ms]".format ( self.epoch, int(epoch_time*1000) )
         for (loss_name, loss_value) in losses:

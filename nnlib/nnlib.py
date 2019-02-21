@@ -62,6 +62,7 @@ Lambda = keras.layers.Lambda
 Add = keras.layers.Add
 Concatenate = keras.layers.Concatenate
 
+
 Flatten = keras.layers.Flatten
 Reshape = keras.layers.Reshape
 
@@ -77,9 +78,11 @@ gaussian_blur = nnlib.gaussian_blur
 style_loss = nnlib.style_loss
 dssim = nnlib.dssim
 
-#ReflectionPadding2D = nnlib.ReflectionPadding2D
+
 PixelShuffler = nnlib.PixelShuffler
 SubpixelUpscaler = nnlib.SubpixelUpscaler
+Scale = nnlib.Scale
+#ReflectionPadding2D = nnlib.ReflectionPadding2D
 #AddUniformNoise = nnlib.AddUniformNoise
 """
     code_import_keras_contrib_string = \
@@ -183,9 +186,10 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         
         if 'TF_SUPPRESS_STD' in os.environ.keys() and os.environ['TF_SUPPRESS_STD'] == '1':        
             suppressor.__exit__()
-
-        nnlib.__initialize_keras_functions()  
+            
         nnlib.code_import_keras = compile (nnlib.code_import_keras_string,'','exec')
+        nnlib.__initialize_keras_functions()  
+        
         return nnlib.code_import_keras
         
     @staticmethod
@@ -394,9 +398,41 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 return dict(list(base_config.items()) + list(config.items()))        
         
         nnlib.PixelShuffler = PixelShuffler
-        nnlib.SubpixelUpscaler = PixelShuffler    
-        '''
+        nnlib.SubpixelUpscaler = PixelShuffler
+
+        class Scale(keras.layers.Layer):
+            """
+            GAN Custom Scal Layer
+            Code borrows from https://github.com/flyyufelix/cnn_finetune
+            """
+            def __init__(self, weights=None, axis=-1, gamma_init='zero', **kwargs):
+                self.axis = axis
+                self.gamma_init = keras.initializers.get(gamma_init)
+                self.initial_weights = weights
+                super(Scale, self).__init__(**kwargs)
+
+            def build(self, input_shape):
+                self.input_spec = [keras.engine.InputSpec(shape=input_shape)]
+
+                # Compatibility with TensorFlow >= 1.0.0
+                self.gamma = K.variable(self.gamma_init((1,)), name='{}_gamma'.format(self.name))
+                self.trainable_weights = [self.gamma]
+
+                if self.initial_weights is not None:
+                    self.set_weights(self.initial_weights)
+                    del self.initial_weights
+
+            def call(self, x, mask=None):
+                return self.gamma * x
+
+            def get_config(self):
+                config = {"axis": self.axis}
+                base_config = super(Scale, self).get_config()
+                return dict(list(base_config.items()) + list(config.items()))
+        nnlib.Scale = Scale
         
+        '''        
+        not implemented in plaidML
         class ReflectionPadding2D(keras.layers.Layer):
             def __init__(self, padding=(1, 1), **kwargs):
                 self.padding = tuple(padding)
@@ -410,28 +446,11 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
             def call(self, x, mask=None):
                 w_pad,h_pad = self.padding
                 return tf.pad(x, [[0,0], [h_pad,h_pad], [w_pad,w_pad], [0,0] ], 'REFLECT')
-        nnlib.ReflectionPadding2D = ReflectionPadding2D
-
-       
-        class AddUniformNoise(keras.layers.Layer):
-            def __init__(self, power=1.0, minval=-1.0, maxval=1.0, **kwargs):
-                super(AddUniformNoise, self).__init__(**kwargs)
-                self.power = power
-                self.supports_masking = True
-                self.minval = minval
-                self.maxval = maxval
-
-            def call(self, inputs, training=None):
-                def noised():
-                    return inputs + self.power*K.random_uniform(shape=K.shape(inputs), minval=self.minval, maxval=self.maxval)
-                return K.in_train_phase(noised, inputs, training=training)
-
-            def get_config(self):
-                config = {'power': self.power, 'minval': self.minval, 'maxval': self.maxval}
-                base_config = super(AddUniformNoise, self).get_config()
-                return dict(list(base_config.items()) + list(config.items()))
-        nnlib.AddUniformNoise = AddUniformNoise       
-        '''        
+        nnlib.ReflectionPadding2D = ReflectionPadding2D     
+        '''   
+        
+        
+             
     @staticmethod
     def import_keras_contrib(device_config = None):
         if nnlib.keras_contrib is not None:
@@ -489,6 +508,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                     return 10*dssim() (y_true*mask, y_pred*mask)                    
         nnlib.DSSIMMSEMaskLoss = DSSIMMSEMaskLoss
         
+
         '''
         def ResNet(output_nc, use_batch_norm, ngf=64, n_blocks=6, use_dropout=False):
             exec (nnlib.import_all(), locals(), globals())

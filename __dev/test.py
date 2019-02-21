@@ -305,20 +305,98 @@ def get_transform_mat (image_landmarks, output_size, scale=1.0):
 #    alignments.append (dflimg.get_source_landmarks())
 import mathlib
 def main():
+
+    def f ( *args, asd=True, **kwargs ):
+        import code
+        code.interact(local=dict(globals(), **locals()))
+    
+    f( 1, asd=True, bg=0)
+    
     from nnlib import nnlib
-    exec( nnlib.import_all(), locals(), globals() )
+    exec( nnlib.import_all( device_config=nnlib.device.Config() ), locals(), globals() )
     PMLTile = nnlib.PMLTile
     PMLK = nnlib.PMLK
     
+    class DSSIMObjective:
+        """Computes DSSIM index between img1 and img2.
+        This function is based on the standard SSIM implementation from:
+        Wang, Z., Bovik, A. C., Sheikh, H. R., & Simoncelli, E. P. (2004).
+        """
+
+        def __init__(self, k1=0.01, k2=0.03, max_value=1.0):
+            self.__name__ = 'DSSIMObjective'
+            self.k1 = k1
+            self.k2 = k2
+            self.max_value = max_value
+            self.c1 = (self.k1 * self.max_value) ** 2
+            self.c2 = (self.k2 * self.max_value) ** 2
+            self.dim_ordering = K.image_data_format()
+            self.backend = K.backend()
+
+        def __int_shape(self, x):
+            return K.int_shape(x) if self.backend == 'tensorflow' else K.shape(x)
+
+        def __call__(self, y_true, y_pred):
+            ch = K.shape(y_pred)[-1]
+
+            def softmax(x, axis=-1):
+                y = np.exp(x - np.max(x, axis, keepdims=True))
+                return y / np.sum(y, axis, keepdims=True)
+                    
+            def _fspecial_gauss(size, sigma):
+                #Function to mimic the 'fspecial' gaussian MATLAB function.
+                coords = np.arange(0, size, dtype=K.floatx())
+                coords -= (size - 1 ) / 2.0
+                g = coords**2
+                g *= ( -0.5 / (sigma**2) )
+                g = np.reshape (g, (1,-1)) + np.reshape(g, (-1,1) )
+                g = np.reshape (g, (1,-1))
+                g = softmax(g)
+                g = K.constant ( np.reshape (g, (size, size, 1, 1))  )
+                g = K.tile (g, (1,1,ch,1))
+                return g
+                      
+            kernel = _fspecial_gauss(11,1.5)
+
+            def reducer(x):
+                return K.depthwise_conv2d(x, kernel, strides=(1, 1), padding='valid')
+
+            c1 = (self.k1 * self.max_value) ** 2
+            c2 = (self.k2 * self.max_value) ** 2
+            
+            mean0 = reducer(y_true)
+            mean1 = reducer(y_pred)
+            num0 = mean0 * mean1 * 2.0
+            den0 = K.square(mean0) + K.square(mean1)
+            luminance = (num0 + c1) / (den0 + c1)
+            
+            num1 = reducer(y_true * y_pred) * 2.0
+            den1 = reducer(K.square(y_true) + K.square(y_pred))
+            c2 *= 1.0 #compensation factor
+            cs = (num1 - num0 + c2) / (den1 - den0 + c2)
+
+            ssim_val = K.mean(luminance * cs, axis=(-3, -2) )
+            return K.mean( (1.0 - ssim_val ) / 2.0 )
+
     image = cv2.imread('D:\\DeepFaceLab\\test\\00000.png').astype(np.float32) / 255.0    
-    image = cv2.resize ( image, (128,128) )
-    
-    image = cv2.cvtColor (image, cv2.COLOR_BGR2GRAY)    
-    image = np.expand_dims (image, -1)
     image = np.expand_dims (image, 0)
     image_shape = image.shape
     
-    t = K.placeholder ( image_shape ) #K.constant ( np.ones ( (10,) ) )
+    image2 = cv2.imread('D:\\DeepFaceLab\\test\\00001.png').astype(np.float32) / 255.0    
+    image2 = np.expand_dims (image2, 0)
+    image2_shape = image2.shape
+    
+    #image = np.random.uniform ( size=(1,256,256,3) )
+    #image2 = np.random.uniform ( size=(1,256,256,3) )
+    
+    t1 = K.placeholder ( (None,) + image_shape[1:], name="t1" )
+    t2 = K.placeholder ( (None,) + image_shape[1:], name="t2" )
+    
+    l1_t = DSSIMObjective() (t1,t2 )
+    l1, = K.function([t1, t2],[l1_t]) ([image, image2])
+    
+    print (l1)
+    
     import code
     code.interact(local=dict(globals(), **locals()))
     
@@ -1279,4 +1357,34 @@ O[i0, i1, i2, i3: (1 + 1 - 1)/1, (64 + 1 - 1)/1, (64 + 2 - 1)/2, (1 + 1 - 1)/1] 
 
 
 if __name__ == "__main__":
+    #os.environ["KERAS_BACKEND"] = "plaidml.keras.backend"
+    #os.environ["PLAIDML_DEVICE_IDS"] = "opencl_nvidia_geforce_gtx_1060_6gb.0"
+    #import keras
+    #K = keras.backend
+    #
+    #image = np.random.uniform ( size=(1,256,256,3) )
+    #image2 = np.random.uniform ( size=(1,256,256,3) )
+    #
+    #y_true = K.placeholder ( (None,) + image.shape[1:] )
+    #y_pred = K.placeholder ( (None,) + image2.shape[1:] )
+    #
+    #def reducer(x):
+    #    shape = K.shape(x)        
+    #    x = K.reshape(x, (-1, shape[-3] , shape[-2], shape[-1]) )      
+    #    y = K.depthwise_conv2d(x, K.constant(np.ones( (11,11,3,1) )), strides=(1, 1), padding='valid' )
+    #    y_shape = K.shape(y)
+    #    return K.reshape(y, (shape[0], y_shape[1], y_shape[2], y_shape[3] ) )
+    #        
+    #mean0 = reducer(y_true)
+    #mean1 = reducer(y_pred)
+    #luminance = mean0 * mean1    
+    #cs = y_true * y_pred
+    #
+    #result = K.function([y_true, y_pred],[luminance, cs]) ([image, image2])
+    #
+    #print (result)    
+    #import code
+    #code.interact(local=dict(globals(), **locals()))
+
+
     main()
