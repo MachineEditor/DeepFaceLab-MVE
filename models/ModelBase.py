@@ -286,9 +286,11 @@ class ModelBase(object):
             
     def save_weights_safe(self, model_filename_list):
         for model, filename in model_filename_list:
+            filename = self.get_strpath_storage_for_file(filename)
             model.save_weights( filename + '.tmp' )
             
         for model, filename in model_filename_list:
+            filename = self.get_strpath_storage_for_file(filename)        
             source_filename = Path(filename+'.tmp')
             target_filename = Path(filename)
             if target_filename.exists():
