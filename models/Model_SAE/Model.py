@@ -27,7 +27,12 @@ class SAEModel(ModelBase):
         default_face_type = 'f'
         
         if is_first_run:
-            self.options['resolution'] = input_int("Resolution (64,128 ?:help skip:128) : ", default_resolution, [64,128], help_message="More resolution requires more VRAM.")
+            resolution = input_int("Resolution ( 64-256 ?:help skip:128) : ", default_resolution, help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 16.")
+            resolution = np.clip (resolution, 64, 256)            
+            while np.modf(resolution / 16)[0] != 0.0:
+                resolution -= 1
+            self.options['resolution'] = resolution
+            
             self.options['face_type'] = input_str ("Half or Full face? (h/f, ?:help skip:f) : ", default_face_type, ['h','f'], help_message="Half face has better resolution, but covers less area of cheeks.").lower()            
             self.options['learn_mask'] = input_bool ("Learn mask? (y/n, ?:help skip:y) : ", True, help_message="Learning mask can help model to recognize face directions. Learn without mask can reduce model size, in this case converter forced to use 'not predicted mask' that is not smooth as predicted. Model with style values can be learned without mask and produce same quality result.")
             self.options['archi'] = input_str ("AE architecture (df, liae, vg ?:help skip:%s) : " % (default_archi) , default_archi, ['df','liae','vg'], help_message="'df' keeps faces more natural. 'liae' can fix overly different face shapes. 'vg' - currently testing.").lower()
@@ -462,7 +467,7 @@ class SAEModel(ModelBase):
                 
                 #if self.use_reflection_padding:
                 #    #var_x = ReflectionPadding2D(stride=1, kernel_size=kernel_size)(var_x)
-                    
+
                 var_x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding, kernel_initializer=RandomNormal(0, 0.02) )(var_x)
                 var_x = LeakyReLU(alpha=0.2)(var_x)
                 
@@ -645,7 +650,7 @@ class SAEModel(ModelBase):
             while np.modf(ed_dims / 4)[0] != 0.0:
                 ed_dims -= 1
             
-            in_conv_filters = ed_dims if resolution <= 128 else ed_dims + (resolution//128)*ed_ch_dims
+            in_conv_filters = ed_dims# if resolution <= 128 else ed_dims + (resolution//128)*ed_ch_dims
             
             x = tmp_x = Conv2D (in_conv_filters, kernel_size=5, strides=2, padding='same') (x)
 
