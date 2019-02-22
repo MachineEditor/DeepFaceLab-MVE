@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import multiprocessing
+import shutil
 from pathlib import Path
 import numpy as np
 import cv2
@@ -156,8 +157,7 @@ class ExtractSubprocessor(SubprocessorBase):
                     self.original_image = cv2_imread(filename)
                     
                     (h,w,c) = self.original_image.shape
- 
-                    self.view_scale = 1.0 if self.manual_window_size == 0 else self.manual_window_size / (w if w > h else h)
+                    self.view_scale = 1.0 if self.manual_window_size == 0 else self.manual_window_size / ( h * (16.0/9.0) ) 
                     self.original_image = cv2.resize (self.original_image, ( int(w*self.view_scale), int(h*self.view_scale) ), interpolation=cv2.INTER_LINEAR)    
                     (h,w,c) = self.original_image.shape
                     
@@ -290,6 +290,7 @@ class ExtractSubprocessor(SubprocessorBase):
         filename_path = Path( data[0] )
 
         image = cv2_imread( str(filename_path) )
+
         if image is None:
             print ( 'Failed to extract %s, reason: cv2_imread() fail.' % ( str(filename_path) ) )
         else:
@@ -302,7 +303,14 @@ class ExtractSubprocessor(SubprocessorBase):
                 landmarks = self.e.extract_from_bgr (image, rects)                    
                 return [str(filename_path), landmarks]
 
-            elif self.type == 'final':     
+            elif self.type == 'final':
+                src_dflimg = None
+                (h,w,c) = image.shape                
+                if h == w:
+                    #extracting from already extracted jpg image?
+                    if filename_path.suffix == '.jpg':
+                        src_dflimg = DFLJPG.load ( str(filename_path) )
+            
                 result = []
                 faces = data[1]
                 
@@ -327,7 +335,11 @@ class ExtractSubprocessor(SubprocessorBase):
                         face_image = cv2.warpAffine(image, image_to_face_mat, (self.image_size, self.image_size), cv2.INTER_LANCZOS4)
                         face_image_landmarks = LandmarksProcessor.transform_points (image_landmarks, image_to_face_mat)
                     
-                    cv2_imwrite(output_file, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 85] )
+                    if src_dflimg is not None:
+                        #if extracting from dflimg just copy it in order not to lose quality
+                        shutil.copy ( str(filename_path), str(output_file) )
+                    else:
+                        cv2_imwrite(output_file, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 85] )
 
                     DFLJPG.embed_data(output_file, face_type = FaceType.toString(self.face_type),
                                                    landmarks = face_image_landmarks.tolist(),
