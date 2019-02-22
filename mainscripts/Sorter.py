@@ -708,23 +708,24 @@ def final_process(input_path, img_list, trash_img_list):
                 
         print ("")
         
-    for i in tqdm( range(len(img_list)), desc="Renaming" , leave=False, ascii=True):
-        src = Path (img_list[i][0])        
-        dst = input_path / ('%.5d_%s' % (i, src.name ))
-        try:
-            src.rename (dst)
-        except:
-            print ('fail to rename %s' % (src.name) )
+    if len(img_list) != 0:
+        for i in tqdm( range(len(img_list)), desc="Renaming" , leave=False, ascii=True):
+            src = Path (img_list[i][0])
+            dst = input_path / ('%.5d_%s' % (i, src.name ))
+            try:
+                src.rename (dst)
+            except:
+                print ('fail to rename %s' % (src.name) )
+                
+        for i in tqdm( range(len(img_list)) , desc="Renaming", ascii=True ):
+            src = Path (img_list[i][0])
             
-    for i in tqdm( range(len(img_list)) , desc="Renaming", ascii=True ):
-        src = Path (img_list[i][0])
-        
-        src = input_path / ('%.5d_%s' % (i, src.name))
-        dst = input_path / ('%.5d%s' % (i, src.suffix))
-        try:
-            src.rename (dst)
-        except:
-            print ('fail to rename %s' % (src.name) )   
+            src = input_path / ('%.5d_%s' % (i, src.name))
+            dst = input_path / ('%.5d%s' % (i, src.suffix))
+            try:
+                src.rename (dst)
+            except:
+                print ('fail to rename %s' % (src.name) )   
         
 def sort_by_origname(input_path):
     print ("Sort by original filename...")
@@ -750,17 +751,19 @@ def sort_by_origname(input_path):
 def sort_by_oneface_in_image(input_path):
     print ("Sort by one face in images...")
     image_paths = Path_utils.get_image_paths(input_path)
-
-    a = [ Path(filepath).stem.split('_') for filepath in image_paths ]
-    a = np.array ( [ ( int(x[0]), int(x[1]) ) for x in a ] )
-    idxs = np.ndarray.flatten ( np.argwhere ( a[:,1] != 0 ) )
-    idxs = np.unique ( a[idxs][:,0] )
-    idxs = np.ndarray.flatten ( np.argwhere ( np.array([ x[0] in idxs for x in a ]) == True ) )
-
-    img_list = [ (i,) for j,i in enumerate(image_paths) if j not in idxs ]
-    trash_img_list = [ (image_paths[x],) for x in idxs ]
-    
-    return img_list, trash_img_list
+    a = np.array ([ ( int(x[0]), int(x[1]) ) \
+                      for x in [ Path(filepath).stem.split('_') for filepath in image_paths ] if len(x) == 2
+                  ])
+    if len(a) > 0:
+        idxs = np.ndarray.flatten ( np.argwhere ( a[:,1] != 0 ) )
+        idxs = np.unique ( a[idxs][:,0] )
+        idxs = np.ndarray.flatten ( np.argwhere ( np.array([ x[0] in idxs for x in a ]) == True ) )
+        if len(idxs) > 0:
+            print ("Found %d images." % (len(idxs)) )
+            img_list = [ (path,) for i,path in enumerate(image_paths) if i not in idxs ]
+            trash_img_list = [ (image_paths[x],) for x in idxs ]
+            return img_list, trash_img_list
+    return [], []
     
 def main (input_path, sort_by_method):
     input_path = Path(input_path)
