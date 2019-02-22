@@ -671,7 +671,7 @@ def sort_final(input_path):
             
         final_img_list += img_list[0:imgs_per_grad]
         trash_img_list += img_list[imgs_per_grad:]
-    
+
     return final_img_list, trash_img_list
     
 def sort_by_black(input_path):
@@ -746,7 +746,22 @@ def sort_by_origname(input_path):
     print ("Sorting...")
     img_list = sorted(img_list, key=operator.itemgetter(1))
     return img_list
+    
+def sort_by_oneface_in_image(input_path):
+    print ("Sort by one face in images...")
+    image_paths = Path_utils.get_image_paths(input_path)
 
+    a = [ Path(filepath).stem.split('_') for filepath in image_paths ]
+    a = np.array ( [ ( int(x[0]), int(x[1]) ) for x in a ] )
+    idxs = np.ndarray.flatten ( np.argwhere ( a[:,1] != 0 ) )
+    idxs = np.unique ( a[idxs][:,0] )
+    idxs = np.ndarray.flatten ( np.argwhere ( np.array([ x[0] in idxs for x in a ]) == True ) )
+
+    img_list = [ (i,) for j,i in enumerate(image_paths) if j not in idxs ]
+    trash_img_list = [ (image_paths[x],) for x in idxs ]
+    
+    return img_list, trash_img_list
+    
 def main (input_path, sort_by_method):
     input_path = Path(input_path)
     sort_by_method = sort_by_method.lower()
@@ -765,7 +780,8 @@ def main (input_path, sort_by_method):
     elif sort_by_method == 'brightness':    img_list = sort_by_brightness (input_path)
     elif sort_by_method == 'hue':           img_list = sort_by_hue (input_path)
     elif sort_by_method == 'black':         img_list = sort_by_black (input_path)    
-    elif sort_by_method == 'origname':      img_list = sort_by_origname (input_path)       
-    elif sort_by_method == 'final':   img_list, trash_img_list = sort_final (input_path)  
+    elif sort_by_method == 'origname':      img_list = sort_by_origname (input_path)
+    elif sort_by_method == 'oneface':       img_list, trash_img_list = sort_by_oneface_in_image (input_path)      
+    elif sort_by_method == 'final':         img_list, trash_img_list = sort_final (input_path)  
     
     final_process (input_path, img_list, trash_img_list)

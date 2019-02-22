@@ -1,6 +1,6 @@
 ### **Features**:
 
-- works on AMD, NVIDIA, IntelHD graphics and all OpenCL1.2-compatible videocards with at least 512M video memory
+- works on AMD, NVIDIA, IntelHD graphics and all OpenCL1.2-compatible videocards with at least 256M video memory. Of course, the more memory available, the better quality you will get.
 
 - CPU-only mode [`--cpu-mode`]. 8th gen Intel core CPU able to train H64 model in 2 days.
 

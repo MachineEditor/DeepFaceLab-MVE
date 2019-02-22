@@ -71,3 +71,4 @@ def add_landmarks_debug_images(input_path):
             
             output_file = '{}{}'.format( str(Path(str(input_path)) / filepath.stem),  '_debug.jpg')
             cv2_imwrite(output_file, img, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )
+            
