@@ -260,7 +260,12 @@ class device:
 force_plaidML = os.environ.get("force_plaidML", "0") == "1"
 has_nvml = False
 has_nvml_cap = False
-has_nvidia_device = os.environ.get("force_has_nvidia_device", "0") == "1"
+
+#use force_has_nvidia_device=1 if 
+#- your NVIDIA cannot be seen by OpenCL
+#- CUDA build of DFL
+has_nvidia_device = os.environ.get("force_has_nvidia_device", "0") == "1" 
+
 plaidML_devices = []
 
 # Using plaidML OpenCL backend to determine system devices and has_nvidia_device
@@ -309,8 +314,8 @@ if device.backend is None:
         device.backend = None
         has_nvml = False     
 
-if device.backend is None or force_plaidML:
-    #tensorflow backend was failed or forcing plaidML, trying to use plaidML backend
+if not has_nvidia_device and (device.backend is None or force_plaidML):
+    #tensorflow backend was failed without has_nvidia_device , or forcing plaidML, trying to use plaidML backend
     if plaidML_devices_count == 0:
         print ("plaidML: No capable OpenCL devices found. Falling back to tensorflow backend.")
         device.backend = None
