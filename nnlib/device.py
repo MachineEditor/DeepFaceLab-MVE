@@ -260,7 +260,7 @@ class device:
 force_plaidML = os.environ.get("force_plaidML", "0") == "1"
 has_nvml = False
 has_nvml_cap = False
-has_nvidia_device = False
+has_nvidia_device = os.environ.get("force_has_nvidia_device", "0") == "1"
 plaidML_devices = []
 
 # Using plaidML OpenCL backend to determine system devices and has_nvidia_device
