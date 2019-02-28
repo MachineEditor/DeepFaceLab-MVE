@@ -193,6 +193,9 @@ class ExtractSubprocessor(Subprocessor):
         io.progress_bar_close()
         
     def get_devices_for_type (self, type, multi_gpu, cpu_only):
+        if 'cpu' in nnlib.device.backend:
+            cpu_only = True
+            
         if not cpu_only and (type == 'rects' or type == 'landmarks'):
             if type == 'rects' and self.detector == 'mt' and nnlib.device.backend == "plaidML":
                 cpu_only = True
