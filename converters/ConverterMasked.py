@@ -271,11 +271,8 @@ class ConverterMasked(Converter):
                         pass
                         
                     if self.mode == 'seamless' or self.mode == 'seamless-hist-match':
-                        out_img = np.clip( img_bgr*(1-img_face_mask_aaa) + (out_img*img_face_mask_aaa) , 0, 1.0 )
-                        if debug:
-                            debugs += [out_img.copy()]
-
                         try:
+                            
                             out_img = cv2.seamlessClone( (out_img*255).astype(np.uint8), (img_bgr*255).astype(np.uint8), (img_face_seamless_mask_aaa*255).astype(np.uint8), (maskx,masky) , cv2.NORMAL_CLONE )
                             out_img = out_img.astype(dtype=np.float32) / 255.0
                         except:
