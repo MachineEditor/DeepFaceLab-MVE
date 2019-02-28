@@ -150,15 +150,16 @@ class ConverterMasked(Converter):
             if maxregion.size != 0:
                 miny,minx = maxregion.min(axis=0)[:2]
                 maxy,maxx = maxregion.max(axis=0)[:2]
-                
-                if debug:
-                    io.log_info ("maxregion.size: %d, minx:%d, maxx:%d miny:%d, maxy:%d" % (maxregion.size, minx, maxx, miny, maxy  ) )
-                
                 lenx = maxx - minx
                 leny = maxy - miny
+                maskx = minx+(lenx/2)
+                masky = miny+(leny/2)
+                
+                if debug:
+                    io.log_info ("maxregion.size: %d, min/max_x:(%d/%d) min/max_y:(%d/%d) mask_x_y:(%d/%d)" % (maxregion.size, minx, maxx, miny, maxy, maskx, masky  ) )
+
                 if lenx >= 4 and leny >= 4:
-                    maskx = int(minx+(lenx//2))
-                    masky = int(miny+(leny//2))
+                    
                     lowest_len = min (lenx, leny)
                     
                     if debug:
