@@ -113,7 +113,7 @@ class DFLJPG(object):
         return None
         
     @staticmethod
-    def load(filename, print_on_no_embedded_data=False, throw_on_no_embedded_data=False):
+    def load(filename):
         inst = DFLJPG.load_raw (filename)
         inst.dfl_dict = None
         
@@ -141,10 +141,6 @@ class DFLJPG(object):
             inst.dfl_dict['face_type'] = FaceType.toString (FaceType.FULL)
         
         if inst.dfl_dict == None:
-            if print_on_no_embedded_data:
-                print ( "No DFL data found in %s" % (filename) )
-            if throw_on_no_embedded_data:
-                raise ValueError("No DFL data found in %s" % (filename) )
             return None
         
         return inst

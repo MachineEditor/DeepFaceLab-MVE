@@ -2,7 +2,6 @@ import traceback
 from enum import IntEnum
 import cv2
 import numpy as np
-from tqdm import tqdm
 from pathlib import Path
 
 from utils import Path_utils
@@ -14,6 +13,7 @@ from .Sample import SampleType
 
 from facelib import FaceType
 from facelib import LandmarksProcessor
+from interact import interact as io
 
 class SampleLoader:
     cache = dict()
@@ -29,7 +29,7 @@ class SampleLoader:
 
         if            sample_type == SampleType.IMAGE:
             if  datas[sample_type] is None:  
-                datas[sample_type] = [ Sample(filename=filename) for filename in tqdm( Path_utils.get_image_paths(samples_path), desc="Loading", ascii=True ) ]
+                datas[sample_type] = [ Sample(filename=filename) for filename in io.progress_bar_generator( Path_utils.get_image_paths(samples_path), "Loading") ]
 
         elif          sample_type == SampleType.FACE:
             if  datas[sample_type] is None:  
@@ -55,16 +55,17 @@ class SampleLoader:
     def upgradeToFaceSamples ( samples ):
         sample_list = []
         
-        for s in tqdm( samples, desc="Loading", ascii=True ):
+        for s in io.progress_bar_generator(samples, "Loading"):
             s_filename_path = Path(s.filename)
             try:
                 if s_filename_path.suffix == '.png':
-                    dflimg = DFLPNG.load ( str(s_filename_path), print_on_no_embedded_data=True )
-                    if dflimg is None: continue
+                    dflimg = DFLPNG.load ( str(s_filename_path) )
                 elif s_filename_path.suffix == '.jpg':
-                    dflimg = DFLJPG.load ( str(s_filename_path), print_on_no_embedded_data=True )
-                    if dflimg is None: continue
+                    dflimg = DFLJPG.load ( str(s_filename_path) )
                 else:
+                    dflimg = None
+                    
+                if dflimg is None:
                     print ("%s is not a dfl image file required for training" % (s_filename_path.name) ) 
                     continue
                     
@@ -87,7 +88,7 @@ class SampleLoader:
         yaw_samples_len = len(yaw_samples)
         
         sample_list = []
-        for i in tqdm( range(yaw_samples_len), desc="Sorting", ascii=True ):
+        for i in io.progress_bar_generator( range(yaw_samples_len), "Sorting"):
             if yaw_samples[i] is not None:
                 for s in yaw_samples[i]:
                     s_t = []
@@ -123,7 +124,7 @@ class SampleLoader:
 
         yaws_sample_list = [None]*gradations
         
-        for i in tqdm( range(0, gradations), desc="Sorting", ascii=True ):
+        for i in io.progress_bar_generator(range(gradations), "Sorting"):
             yaw = lowest_yaw + i*diff_rot_per_grad
             next_yaw = lowest_yaw + (i+1)*diff_rot_per_grad
 

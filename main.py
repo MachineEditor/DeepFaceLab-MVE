@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import argparse
 from utils import Path_utils
 from utils import os_utils
@@ -12,35 +13,26 @@ class fixPathAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         setattr(namespace, self.dest, os.path.abspath(os.path.expanduser(values)))
 
-def str2bool(v):
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
-        
 if __name__ == "__main__":
     os_utils.set_process_lowest_prio()   
     parser = argparse.ArgumentParser()    
-    parser.add_argument('--tf-suppress-std', action="store_true", dest="tf_suppress_std", default=False, help="Suppress tensorflow initialization info. May not works on some python builds such as anaconda python 3.6.4. If you can fix it, you are welcome.")
- 
+
     subparsers = parser.add_subparsers()
     
     def process_extract(arguments):
-        from mainscripts import Extractor        
-        Extractor.main (
-            input_dir=arguments.input_dir, 
-            output_dir=arguments.output_dir, 
-            debug=arguments.debug,
-            face_type=arguments.face_type,
-            detector=arguments.detector,
-            multi_gpu=arguments.multi_gpu,
-            cpu_only=arguments.cpu_only,
-            manual_fix=arguments.manual_fix,
-            manual_output_debug_fix=arguments.manual_output_debug_fix,
-            manual_window_size=arguments.manual_window_size
-            )
+        from mainscripts import Extractor      
+        Extractor.main( arguments.input_dir, 
+                        arguments.output_dir, 
+                        arguments.debug,
+                        arguments.detector,   
+                        arguments.manual_fix,
+                        arguments.manual_output_debug_fix,
+                        arguments.manual_window_size, 
+                        face_type=arguments.face_type,
+                        device_args={'cpu_only'  : arguments.cpu_only,
+                                     'multi_gpu' : arguments.multi_gpu,
+                                    }
+                      )
         
     extract_parser = subparsers.add_parser( "extract", help="Extract the faces from a pictures.")
     extract_parser.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
@@ -79,24 +71,26 @@ if __name__ == "__main__":
     util_parser.add_argument('--add-landmarks-debug-images', action="store_true", dest="add_landmarks_debug_images", default=False, help="Add landmarks debug image for aligned faces.")
     util_parser.set_defaults (func=process_util)
     
-    def process_train(arguments):      
-        from mainscripts import Trainer
-        Trainer.main (
-            training_data_src_dir=arguments.training_data_src_dir, 
-            training_data_dst_dir=arguments.training_data_dst_dir, 
-            model_path=arguments.model_dir, 
-            model_name=arguments.model_name,
-            debug              = arguments.debug,
-            #**options
-            force_gpu_idx = arguments.force_gpu_idx,
-            cpu_only      = arguments.cpu_only
-            )
-        
+    def process_train(arguments):
+        args = {'training_data_src_dir'  : arguments.training_data_src_dir, 
+                'training_data_dst_dir'  : arguments.training_data_dst_dir, 
+                'model_path'             : arguments.model_dir,
+                'model_name'             : arguments.model_name,
+                'no_preview'             : arguments.no_preview,
+                'debug'                  : arguments.debug,                
+                }                
+        device_args = {'cpu_only'  : arguments.cpu_only,
+                       'force_gpu_idx' : arguments.force_gpu_idx,
+                       }
+        from mainscripts import Trainer           
+        Trainer.main(args, device_args)
+
     train_parser = subparsers.add_parser( "train", help="Trainer") 
     train_parser.add_argument('--training-data-src-dir', required=True, action=fixPathAction, dest="training_data_src_dir", help="Dir of src-set.")
     train_parser.add_argument('--training-data-dst-dir', required=True, action=fixPathAction, dest="training_data_dst_dir", help="Dir of dst-set.")
     train_parser.add_argument('--model-dir', required=True, action=fixPathAction, dest="model_dir", help="Model dir.")
     train_parser.add_argument('--model', required=True, dest="model_name", choices=Path_utils.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Type of model")
+    train_parser.add_argument('--no-preview', action="store_true", dest="no_preview", default=False, help="Disable preview window.")
     train_parser.add_argument('--debug', action="store_true", dest="debug", default=False, help="Debug samples.")  
     train_parser.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Train on CPU.")
     train_parser.add_argument('--force-gpu-idx', type=int, dest="force_gpu_idx", default=-1, help="Force to choose this GPU idx.")
@@ -104,17 +98,18 @@ if __name__ == "__main__":
     train_parser.set_defaults (func=process_train)
     
     def process_convert(arguments):
+        args = {'input_dir'   : arguments.input_dir, 
+                'output_dir'  : arguments.output_dir, 
+                'aligned_dir' : arguments.aligned_dir,
+                'model_dir'   : arguments.model_dir,
+                'model_name'  : arguments.model_name,
+                'debug'       : arguments.debug,                
+                }                
+        device_args = {'cpu_only'  : arguments.cpu_only,
+                       'force_gpu_idx' : arguments.force_gpu_idx,
+                       }
         from mainscripts import Converter
-        Converter.main (
-            input_dir=arguments.input_dir, 
-            output_dir=arguments.output_dir, 
-            aligned_dir=arguments.aligned_dir,
-            model_dir=arguments.model_dir, 
-            model_name=arguments.model_name, 
-            debug = arguments.debug,
-            force_gpu_idx = arguments.force_gpu_idx,
-            cpu_only = arguments.cpu_only
-            )
+        Converter.main (args, device_args)
         
     convert_parser = subparsers.add_parser( "convert", help="Converter") 
     convert_parser.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
@@ -134,14 +129,27 @@ if __name__ == "__main__":
     parser.set_defaults(func=bad_args)
     
     arguments = parser.parse_args()
-    if arguments.tf_suppress_std:
-        os.environ['TF_SUPPRESS_STD'] = '1'
 
     #os.environ['force_plaidML'] = '1'
     
     arguments.func(arguments)
 
     print ("Done.")
+
+    """
+    Suppressing error with keras 2.2.4+ on python exit:
+    
+        Exception ignored in: <bound method BaseSession._Callable.__del__ of <tensorflow.python.client.session.BaseSession._Callable object at 0x000000001BDEA9B0>>
+        Traceback (most recent call last):
+        File "D:\DeepFaceLab\_internal\bin\lib\site-packages\tensorflow\python\client\session.py", line 1413, in __del__
+        AttributeError: 'NoneType' object has no attribute 'raise_exception_on_not_ok_status'
+        
+    reproduce: https://github.com/keras-team/keras/issues/11751 ( still no solution )
+    """
+    outnull_file = open(os.devnull, 'w')
+    os.dup2 ( outnull_file.fileno(), sys.stderr.fileno() )
+    sys.stderr = outnull_file     
+    
     
 '''
 import code

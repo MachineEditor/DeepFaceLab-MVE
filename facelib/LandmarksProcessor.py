@@ -134,7 +134,7 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
         elif face_type == FaceType.HEAD:
             padding = (output_size / 64) * 24
         else:
-            raise ValueError ('wrong face_type')
+            raise ValueError ('wrong face_type: ', face_type)
         
         mat = umeyama(image_landmarks[17:], landmarks_2D, True)[0:2]
         mat = mat * (output_size - 2 * padding)

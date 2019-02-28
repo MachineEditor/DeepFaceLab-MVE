@@ -248,7 +248,7 @@ class DFLPNG(object):
         return inst
         
     @staticmethod
-    def load(filename, print_on_no_embedded_data=False, throw_on_no_embedded_data=False):
+    def load(filename):
         inst = DFLPNG.load_raw (filename)
         inst.fcwp_dict = inst.getDFLDictData()
         
@@ -256,10 +256,6 @@ class DFLPNG(object):
             inst.fcwp_dict['face_type'] = FaceType.toString (FaceType.FULL)
         
         if inst.fcwp_dict == None:
-            if print_on_no_embedded_data:
-                print ( "No DFL data found in %s" % (filename) )
-            if throw_on_no_embedded_data:
-                raise ValueError("No DFL data found in %s" % (filename) )
             return None
         
         return inst

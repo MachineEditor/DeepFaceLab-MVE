@@ -3,10 +3,6 @@ import os
 import cv2
 from pathlib import Path
 
-from utils import std_utils
-
-
-
 def transform(point, center, scale, resolution):
     pt = np.array ( [point[0], point[1], 1.0] )            
     h = 200.0 * scale
@@ -123,8 +119,7 @@ class LandmarksExtractor(object):
             image = crop(input_image, center, scale).transpose ( (2,0,1) ).astype(np.float32) / 255.0
             image = np.expand_dims(image, 0)
             
-            with std_utils.suppress_stdout_stderr():
-                predicted = self.keras_model.predict (image)
+            predicted = self.keras_model.predict (image)
                 
             pts_img = get_pts_from_predict ( predicted[-1][0], center, scale)
             pts_img = [ ( int(pt[0]), int(pt[1]) ) for pt in pts_img ]             

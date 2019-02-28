@@ -4,14 +4,14 @@ from nnlib import nnlib
 from models import ModelBase
 from facelib import FaceType
 from samples import *
-from utils.console_utils import *
+from interact import interact as io
 
 class Model(ModelBase):
 
     #override
     def onInitializeOptions(self, is_first_run, ask_override):        
         if is_first_run:
-            self.options['lighter_ae'] = input_bool ("Use lightweight autoencoder? (y/n, ?:help skip:n) : ", False, help_message="Lightweight autoencoder is faster, requires less VRAM, sacrificing overall quality. If your GPU VRAM <= 4, you should to choose this option.")
+            self.options['lighter_ae'] = io.input_bool ("Use lightweight autoencoder? (y/n, ?:help skip:n) : ", False, help_message="Lightweight autoencoder is faster, requires less VRAM, sacrificing overall quality. If your GPU VRAM <= 4, you should to choose this option.")
         else:
             default_lighter_ae = self.options.get('created_vram_gb', 99) <= 4 #temporally support old models, deprecate in future
             if 'created_vram_gb' in self.options.keys():
@@ -20,12 +20,12 @@ class Model(ModelBase):
             
         if is_first_run or ask_override:
             def_pixel_loss = self.options.get('pixel_loss', False)
-            self.options['pixel_loss'] = input_bool ("Use pixel loss? (y/n, ?:help skip: n/default ) : ", def_pixel_loss, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 20k epochs to enhance fine details and decrease face jitter.")
+            self.options['pixel_loss'] = io.input_bool ("Use pixel loss? (y/n, ?:help skip: n/default ) : ", def_pixel_loss, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 20k epochs to enhance fine details and decrease face jitter.")
         else:
             self.options['pixel_loss'] = self.options.get('pixel_loss', False)
             
     #override
-    def onInitialize(self, **in_options):
+    def onInitialize(self):
         exec(nnlib.import_all(), locals(), globals())        
         self.set_vram_batch_requirements( {2.5:4} )
                 
@@ -125,15 +125,14 @@ class Model(ModelBase):
         return np.concatenate ( (x,mx), -1 )
 
     #override
-    def get_converter(self, **in_options):
-        from models import ConverterMasked
+    def get_converter(self):
+        from converters import ConverterMasked
         return ConverterMasked(self.predictor_func, 
                                predictor_input_size=128, 
                                output_size=128, 
                                face_type=FaceType.HALF,
                                base_erode_mask_modifier=100,
-                               base_blur_mask_modifier=100,
-                               **in_options)
+                               base_blur_mask_modifier=100)
     
     def Build(self, lighter_ae):
         exec(nnlib.code_import_all, locals(), globals())

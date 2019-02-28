@@ -4,7 +4,7 @@ from nnlib import nnlib
 from models import ModelBase
 from facelib import FaceType
 from samples import *
-from utils.console_utils import *
+from interact import interact as io
 
 #SAE - Styled AutoEncoder
 class SAEModel(ModelBase):
@@ -27,15 +27,15 @@ class SAEModel(ModelBase):
         default_face_type = 'f'
         
         if is_first_run:
-            resolution = input_int("Resolution ( 64-256 ?:help skip:128) : ", default_resolution, help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 16.")
+            resolution = io.input_int("Resolution ( 64-256 ?:help skip:128) : ", default_resolution, help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 16.")
             resolution = np.clip (resolution, 64, 256)            
             while np.modf(resolution / 16)[0] != 0.0:
                 resolution -= 1
             self.options['resolution'] = resolution
             
-            self.options['face_type'] = input_str ("Half or Full face? (h/f, ?:help skip:f) : ", default_face_type, ['h','f'], help_message="Half face has better resolution, but covers less area of cheeks.").lower()            
-            self.options['learn_mask'] = input_bool ("Learn mask? (y/n, ?:help skip:y) : ", True, help_message="Learning mask can help model to recognize face directions. Learn without mask can reduce model size, in this case converter forced to use 'not predicted mask' that is not smooth as predicted. Model with style values can be learned without mask and produce same quality result.")
-            self.options['archi'] = input_str ("AE architecture (df, liae, vg ?:help skip:%s) : " % (default_archi) , default_archi, ['df','liae','vg'], help_message="'df' keeps faces more natural. 'liae' can fix overly different face shapes. 'vg' - currently testing.").lower()
+            self.options['face_type'] = io.input_str ("Half or Full face? (h/f, ?:help skip:f) : ", default_face_type, ['h','f'], help_message="Half face has better resolution, but covers less area of cheeks.").lower()            
+            self.options['learn_mask'] = io.input_bool ("Learn mask? (y/n, ?:help skip:y) : ", True, help_message="Learning mask can help model to recognize face directions. Learn without mask can reduce model size, in this case converter forced to use 'not predicted mask' that is not smooth as predicted. Model with style values can be learned without mask and produce same quality result.")
+            self.options['archi'] = io.input_str ("AE architecture (df, liae, vg ?:help skip:%s) : " % (default_archi) , default_archi, ['df','liae','vg'], help_message="'df' keeps faces more natural. 'liae' can fix overly different face shapes. 'vg' - currently testing.").lower()
         else:
             self.options['resolution'] = self.options.get('resolution', default_resolution)
             self.options['face_type'] = self.options.get('face_type', default_face_type)
@@ -45,17 +45,17 @@ class SAEModel(ModelBase):
         default_ae_dims = 256 if self.options['archi'] == 'liae' else 512
         default_ed_ch_dims = 42
         if is_first_run:
-            self.options['ae_dims'] = np.clip ( input_int("AutoEncoder dims (32-1024 ?:help skip:%d) : " % (default_ae_dims) , default_ae_dims, help_message="More dims are better, but requires more VRAM. You can fine-tune model size to fit your GPU." ), 32, 1024 )
-            self.options['ed_ch_dims'] = np.clip ( input_int("Encoder/Decoder dims per channel (21-85 ?:help skip:%d) : " % (default_ed_ch_dims) , default_ed_ch_dims, help_message="More dims are better, but requires more VRAM. You can fine-tune model size to fit your GPU." ), 21, 85 )
+            self.options['ae_dims'] = np.clip ( io.input_int("AutoEncoder dims (32-1024 ?:help skip:%d) : " % (default_ae_dims) , default_ae_dims, help_message="More dims are better, but requires more VRAM. You can fine-tune model size to fit your GPU." ), 32, 1024 )
+            self.options['ed_ch_dims'] = np.clip ( io.input_int("Encoder/Decoder dims per channel (21-85 ?:help skip:%d) : " % (default_ed_ch_dims) , default_ed_ch_dims, help_message="More dims are better, but requires more VRAM. You can fine-tune model size to fit your GPU." ), 21, 85 )
         else:
             self.options['ae_dims'] = self.options.get('ae_dims', default_ae_dims)
             self.options['ed_ch_dims'] = self.options.get('ed_ch_dims', default_ed_ch_dims)
             
         if is_first_run:
-            self.options['lighter_encoder'] = input_bool ("Use lightweight encoder? (y/n, ?:help skip:n) : ", False, help_message="Lightweight encoder is 35% faster, requires less VRAM, but sacrificing overall quality.")
+            self.options['lighter_encoder'] = io.input_bool ("Use lightweight encoder? (y/n, ?:help skip:n) : ", False, help_message="Lightweight encoder is 35% faster, requires less VRAM, but sacrificing overall quality.")
             
             if self.options['archi'] != 'vg':
-                self.options['multiscale_decoder'] = input_bool ("Use multiscale decoder? (y/n, ?:help skip:y) : ", True, help_message="Multiscale decoder helps to get better details.")
+                self.options['multiscale_decoder'] = io.input_bool ("Use multiscale decoder? (y/n, ?:help skip:y) : ", True, help_message="Multiscale decoder helps to get better details.")
         else:
             self.options['lighter_encoder'] = self.options.get('lighter_encoder', False)
             
@@ -66,14 +66,14 @@ class SAEModel(ModelBase):
         default_bg_style_power = 0.0  
         if is_first_run or ask_override:
             def_pixel_loss = self.options.get('pixel_loss', False)
-            self.options['pixel_loss'] = input_bool ("Use pixel loss? (y/n, ?:help skip: n/default ) : ", def_pixel_loss, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 15-25k epochs to enhance fine details and decrease face jitter.")
+            self.options['pixel_loss'] = io.input_bool ("Use pixel loss? (y/n, ?:help skip: n/default ) : ", def_pixel_loss, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 15-25k epochs to enhance fine details and decrease face jitter.")
         
             default_face_style_power = default_face_style_power if is_first_run else self.options.get('face_style_power', default_face_style_power)
-            self.options['face_style_power'] = np.clip ( input_number("Face style power ( 0.0 .. 100.0 ?:help skip:%.2f) : " % (default_face_style_power), default_face_style_power, 
+            self.options['face_style_power'] = np.clip ( io.input_number("Face style power ( 0.0 .. 100.0 ?:help skip:%.2f) : " % (default_face_style_power), default_face_style_power, 
                                                                                help_message="Learn to transfer face style details such as light and color conditions. Warning: Enable it only after 10k epochs, when predicted face is clear enough to start learn style. Start from 0.1 value and check history changes."), 0.0, 100.0 )            
                             
             default_bg_style_power = default_bg_style_power if is_first_run else self.options.get('bg_style_power', default_bg_style_power)
-            self.options['bg_style_power'] = np.clip ( input_number("Background style power ( 0.0 .. 100.0 ?:help skip:%.2f) : " % (default_bg_style_power), default_bg_style_power, 
+            self.options['bg_style_power'] = np.clip ( io.input_number("Background style power ( 0.0 .. 100.0 ?:help skip:%.2f) : " % (default_bg_style_power), default_bg_style_power, 
                                                                                help_message="Learn to transfer image around face. This can make face more like dst."), 0.0, 100.0 )            
         else:
             self.options['pixel_loss'] = self.options.get('pixel_loss', False)
@@ -81,7 +81,7 @@ class SAEModel(ModelBase):
             self.options['bg_style_power'] = self.options.get('bg_style_power', default_bg_style_power)
 
     #override
-    def onInitialize(self, **in_options):
+    def onInitialize(self):
         exec(nnlib.import_all(), locals(), globals())
         SAEModel.initialize_nn_functions()
         
@@ -427,9 +427,7 @@ class SAEModel(ModelBase):
         return np.concatenate ( [prd[0], prd[1]], -1 )
         
     #override
-    def get_converter(self, **in_options):
-        from models import ConverterMasked
-
+    def get_converter(self):
         base_erode_mask_modifier = 30 if self.options['face_type'] == 'f' else 100
         base_blur_mask_modifier = 0 if self.options['face_type'] == 'f' else 100
         
@@ -439,6 +437,7 @@ class SAEModel(ModelBase):
         
         face_type = FaceType.FULL if self.options['face_type'] == 'f' else FaceType.HALF
         
+        from converters import ConverterMasked
         return ConverterMasked(self.predictor_func, 
                                predictor_input_size=self.options['resolution'],
                                output_size=self.options['resolution'],
@@ -448,8 +447,7 @@ class SAEModel(ModelBase):
                                base_blur_mask_modifier=base_blur_mask_modifier,
                                default_erode_mask_modifier=default_erode_mask_modifier,
                                default_blur_mask_modifier=default_blur_mask_modifier,
-                               clip_hborder_mask_per=0.0625 if self.options['face_type'] == 'f' else 0,
-                               **in_options)
+                               clip_hborder_mask_per=0.0625 if self.options['face_type'] == 'f' else 0)
                                
     @staticmethod
     def initialize_nn_functions():

@@ -4,7 +4,7 @@ from nnlib import nnlib
 from models import ModelBase
 from facelib import FaceType
 from samples import *
-from utils.console_utils import *
+from interact import interact as io
 
 class Model(ModelBase):
 
@@ -12,12 +12,12 @@ class Model(ModelBase):
     def onInitializeOptions(self, is_first_run, ask_override):        
         if is_first_run or ask_override:
             def_pixel_loss = self.options.get('pixel_loss', False)
-            self.options['pixel_loss'] = input_bool ("Use pixel loss? (y/n, ?:help skip: n/default ) : ", def_pixel_loss, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 20k epochs to enhance fine details and decrease face jitter.")
+            self.options['pixel_loss'] = io.input_bool ("Use pixel loss? (y/n, ?:help skip: n/default ) : ", def_pixel_loss, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 20k epochs to enhance fine details and decrease face jitter.")
         else:
             self.options['pixel_loss'] = self.options.get('pixel_loss', False)
             
     #override
-    def onInitialize(self, **in_options):
+    def onInitialize(self):
         exec(nnlib.import_all(), locals(), globals())
         self.set_vram_batch_requirements( {4.5:4} )
 
@@ -121,15 +121,14 @@ class Model(ModelBase):
         return np.concatenate ( (x,mx), -1 )
         
     #override
-    def get_converter(self, **in_options):
-        from models import ConverterMasked
+    def get_converter(self):
+        from converters import ConverterMasked
         return ConverterMasked(self.predictor_func, 
                                predictor_input_size=128, 
                                output_size=128, 
                                face_type=FaceType.FULL, 
                                base_erode_mask_modifier=30,
-                               base_blur_mask_modifier=0,
-                               **in_options)
+                               base_blur_mask_modifier=0)
       
     def Build(self, input_layer):
         exec(nnlib.code_import_all, locals(), globals())

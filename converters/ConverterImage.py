@@ -1,4 +1,4 @@
-from models import ConverterBase
+from .Converter import Converter
 from facelib import LandmarksProcessor
 from facelib import FaceType
 
@@ -7,38 +7,33 @@ import numpy as np
 from utils import image_utils
 
 '''
-predictor: 
+predictor_func: 
     input:  [predictor_input_size, predictor_input_size, BGR]
     output: [predictor_input_size, predictor_input_size, BGR]
 '''
 
-class ConverterImage(ConverterBase):
+class ConverterImage(Converter):
 
     #override
-    def __init__(self,  predictor,
+    def __init__(self,  predictor_func,
                         predictor_input_size=0, 
-                        output_size=0,               
-                        **in_options):
+                        output_size=0):
                         
-        super().__init__(predictor)
+        super().__init__(predictor_func, Converter.TYPE_IMAGE)
          
         self.predictor_input_size = predictor_input_size
         self.output_size = output_size   
-  
-    #override
-    def get_mode(self):
-        return ConverterBase.MODE_IMAGE
         
     #override
     def dummy_predict(self):
-        self.predictor ( np.zeros ( (self.predictor_input_size, self.predictor_input_size,3), dtype=np.float32) )
+        self.predictor_func ( np.zeros ( (self.predictor_input_size, self.predictor_input_size,3), dtype=np.float32) )
         
     #override
     def convert_image (self, img_bgr, img_landmarks, debug):
         img_size = img_bgr.shape[1], img_bgr.shape[0]
 
         predictor_input_bgr = cv2.resize ( img_bgr, (self.predictor_input_size, self.predictor_input_size), cv2.INTER_LANCZOS4 )
-        predicted_bgr = self.predictor ( predictor_input_bgr )
+        predicted_bgr = self.predictor_func ( predictor_input_bgr )
 
         output = cv2.resize ( predicted_bgr, (self.output_size, self.output_size), cv2.INTER_LANCZOS4 )
         if debug:
