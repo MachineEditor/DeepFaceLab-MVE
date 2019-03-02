@@ -65,9 +65,6 @@ def cut_video ( input_file, from_time=None, to_time=None, audio_track_id=None, b
     if bitrate is None:
         bitrate = max (1, io.input_int ("Bitrate of output file in MB/s ? (default:25) : ", 25) )
 
-    from_time = "0:0:04.34"
-    to_time = "0:0:10.000"
-
     kwargs = {"c:v": "libx264",
               "b:v": "%dM" %(bitrate),
               "pix_fmt": "yuv420p",
