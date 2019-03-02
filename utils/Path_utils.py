@@ -3,7 +3,7 @@ from scandir import scandir
 
 image_extensions = [".jpg", ".jpeg", ".png", ".tif", ".tiff"]
 
-def get_image_paths(dir_path):
+def get_image_paths(dir_path, image_extensions=image_extensions):
     dir_path = Path (dir_path)
         
     result = []    
@@ -38,3 +38,17 @@ def get_all_dir_names_startswith (dir_path, startswith):
             if x.name.lower().startswith(startswith):
                 result.append ( x.name[len(startswith):] )
     return result
+
+def get_first_file_by_stem (dir_path, stem, exts=None):
+    dir_path = Path (dir_path)
+    stem = stem.lower()
+    
+    if dir_path.exists():
+        for x in list(scandir(str(dir_path))):
+            if not x.is_file():
+                continue
+            xp = Path(x.path)
+            if xp.stem.lower() == stem and (exts is None or xp.suffix.lower() in exts):
+                return xp
+                
+    return None

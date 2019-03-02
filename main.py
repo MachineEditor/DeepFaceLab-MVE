@@ -120,9 +120,65 @@ if __name__ == "__main__":
     convert_parser.add_argument('--debug', action="store_true", dest="debug", default=False, help="Debug converter.")
     convert_parser.add_argument('--force-gpu-idx', type=int, dest="force_gpu_idx", default=-1, help="Force to choose this GPU idx.")
     convert_parser.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Convert on CPU.")
-    
     convert_parser.set_defaults(func=process_convert)
-
+    
+    videoed_parser = subparsers.add_parser( "videoed", help="Video processing.").add_subparsers()
+    
+    def process_videoed_extract_video(arguments):        
+        from mainscripts import VideoEd
+        VideoEd.extract_video (arguments.input_file, arguments.output_dir, arguments.output_ext, arguments.fps)
+    p = videoed_parser.add_parser( "extract-video", help="Extract images from video file.")
+    p.add_argument('--input-file', required=True, action=fixPathAction, dest="input_file", help="Input file to be processed. Specify .*-extension to find first file.")
+    p.add_argument('--output-dir', required=True, action=fixPathAction, dest="output_dir", help="Output directory. This is where the extracted images will be stored.")
+    p.add_argument('--ouptut-ext', dest="output_ext", default='png', help="Image format (extension) of output files.")
+    p.add_argument('--fps', type=int, dest="fps", default=None, help="How many frames of every second of the video will be extracted. 0 - full fps.")
+    p.set_defaults(func=process_videoed_extract_video)
+    
+    def process_videoed_cut_video(arguments):        
+        from mainscripts import VideoEd
+        VideoEd.cut_video (arguments.input_file, 
+                           arguments.from_time, 
+                           arguments.to_time, 
+                           arguments.audio_track_id, 
+                           arguments.bitrate)
+    p = videoed_parser.add_parser( "cut-video", help="Cut video file.")
+    p.add_argument('--input-file', required=True, action=fixPathAction, dest="input_file", help="Input file to be processed. Specify .*-extension to find first file.")
+    p.add_argument('--from-time', dest="from_time", default=None, help="From time, for example 00:00:00.000")
+    p.add_argument('--to-time', dest="to_time", default=None, help="To time, for example 00:00:00.000")
+    p.add_argument('--audio-track-id', type=int, dest="audio_track_id", default=None, help="Specify audio track id.")
+    p.add_argument('--bitrate', type=int, dest="bitrate", default=None, help="Bitrate of output file in Megabits.")    
+    p.set_defaults(func=process_videoed_cut_video)
+    
+    def process_videoed_denoise_image_sequence(arguments):        
+        from mainscripts import VideoEd
+        VideoEd.denoise_image_sequence (arguments.input_dir, arguments.ext, arguments.factor)
+    p = videoed_parser.add_parser( "denoise-image-sequence", help="Denoise sequence of images, keeping sharp edges. This allows you to make the final fake more believable, since the neural network is not able to make a detailed skin texture, but it makes the edges quite clear. Therefore, if the whole frame is more `blurred`, then a fake will seem more believable. Especially true for scenes of the film, which are usually very clear.")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input file to be processed. Specify .*-extension to find first file.")
+    p.add_argument('--ext', dest="ext", default='png', help="Image format (extension) of input files.")
+    p.add_argument('--factor', type=int, dest="factor", default=None, help="Denoise factor (1-20).")
+    p.set_defaults(func=process_videoed_denoise_image_sequence)
+    
+    def process_videoed_video_from_sequence(arguments):        
+        from mainscripts import VideoEd
+        VideoEd.video_from_sequence (arguments.input_dir,
+                                     arguments.output_file, 
+                                     arguments.reference_file,
+                                     arguments.ext,
+                                     arguments.fps,
+                                     arguments.bitrate,
+                                     arguments.lossless)
+                                     
+    p = videoed_parser.add_parser( "video-from-sequence", help="Make video from image sequence.")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input file to be processed. Specify .*-extension to find first file.")
+    p.add_argument('--output-file', required=True, action=fixPathAction, dest="output_file", help="Input file to be processed. Specify .*-extension to find first file.")
+    p.add_argument('--reference-file', action=fixPathAction, dest="reference_file", help="Reference file used to determine proper FPS and transfer audio from it. Specify .*-extension to find first file.")
+    p.add_argument('--ext', dest="ext", default='png', help="Image format (extension) of input files.")
+    p.add_argument('--fps', type=int, dest="fps", default=None, help="FPS of output file. Overwritten by reference-file.")
+    p.add_argument('--bitrate', type=int, dest="bitrate", default=None, help="Bitrate of output file in Megabits.")    
+    p.add_argument('--lossless', action="store_true", dest="lossless", default=False, help="PNG codec.")
+    
+    p.set_defaults(func=process_videoed_video_from_sequence)
+    
     def bad_args(arguments):
         parser.print_help()
         exit(0)
