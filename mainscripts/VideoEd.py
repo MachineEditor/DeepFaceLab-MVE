@@ -75,7 +75,8 @@ def cut_video ( input_file, from_time=None, to_time=None, audio_track_id=None, b
     job_v = job['v:0']
     job_a = job['a:' + str(audio_track_id) + '?' ]
     
-    job = ffmpeg.output (job_v, job_a, str(output_file_path), **kwargs)
+    job = ffmpeg.output(job_v, job_a, str(output_file_path), **kwargs).overwrite_output()
+    
     try:
         job = job.run()
     except:
