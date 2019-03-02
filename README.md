@@ -32,6 +32,10 @@ bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr
 
 - ### [Build and repository info](doc/doc_build_and_repository_info.md)
 
+- ### Manuals:
+
+[На русском](doc/manual_ru.pdf)
+
 - ### Communication groups:
 
 (Chinese) QQ group 951138799 for ML/AI experts
