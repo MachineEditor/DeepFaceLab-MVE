@@ -1,3 +1,4 @@
+import os
 import sys
 
 if sys.platform[0:3] == 'win':
