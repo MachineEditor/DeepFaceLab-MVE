@@ -5,6 +5,9 @@ import sys
 from interact import interact as io
                 
 class Subprocessor(object):
+
+    class SilenceException(Exception):
+        pass
         
     class Cli(object):
         def __init__ ( self, client_dict ):
@@ -71,14 +74,16 @@ class Subprocessor(object):
                         
                 self.on_finalize()
                 c2s.put ( {'op': 'finalized'} )
-         
+                return
+            except Subprocessor.SilenceException as e:
+                pass
             except Exception as e:
                 if data is not None:        
                     print ('Exception while process data [%s]: %s' % (self.get_data_name(data), traceback.format_exc()) )
                 else:
                     print ('Exception: %s' % (traceback.format_exc()) )
 
-                c2s.put ( {'op': 'error', 'data' : data} )
+            c2s.put ( {'op': 'error', 'data' : data} )
 
     #overridable
     def __init__(self, name, SubprocessorCli_class, no_response_time_sec = 60):

@@ -16,25 +16,15 @@ Goal: RTX 2080 TI
 
 bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr
 
-- ### [Features](doc/doc_features.md)
+- ### Manuals:
 
-- ### [Model types](doc/doc_model_types.md)
-
-- ### [Convertor overview](doc/doc_convertor_overview.md)
-
-- ### [Tips and tricks](doc/doc_tips_and_tricks.md)
-
-- ### [Using sort tool](doc/doc_sort_tool.md)
+[На русском](doc/manual_ru.pdf)
 
 - ### [Prebuilt windows app](doc/doc_prebuilt_windows_app.md)
 
 - ### [Ready to work facesets](doc/doc_ready_to_work_facesets.md)
 
 - ### [Build and repository info](doc/doc_build_and_repository_info.md)
-
-- ### Manuals:
-
-[На русском](doc/manual_ru.pdf)
 
 - ### Communication groups:
 

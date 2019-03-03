@@ -28,7 +28,12 @@ class ConvertSubprocessor(Subprocessor):
             self.output_path = Path(client_dict['output_dir']) if 'output_dir' in client_dict.keys() else None        
             self.alignments  = client_dict['alignments']
             self.debug       = client_dict['debug']
-
+            
+            #transfer and set stdin in order to work code.interact in debug subprocess
+            stdin_fd         = client_dict['stdin_fd']
+            if stdin_fd is not None:
+                sys.stdin = os.fdopen(stdin_fd)
+                
             from nnlib import nnlib          
             #model process ate all GPU mem,
             #so we cannot use GPU for any TF operations in converter processes
@@ -99,8 +104,11 @@ class ConvertSubprocessor(Subprocessor):
                                 image = self.converter.convert_face(image, image_landmarks, self.debug) 
                                 
                         except Exception as e:
-                            self.log_info ( 'Error while converting face_num [%d] in file [%s]: %s' % (face_num, filename_path, str(e)) )
-                            traceback.print_exc()
+                            e_str = traceback.format_exc()
+                            if 'MemoryError' in e_str:
+                                raise Subprocessor.SilenceException
+                            else:
+                                raise Exception( 'Error while converting face_num [%d] in file [%s]: %s' % (face_num, filename_path, e_str) )
                             
                     if self.debug:
                         return (1, debug_images)
@@ -136,7 +144,7 @@ class ConvertSubprocessor(Subprocessor):
         
     #override
     def process_info_generator(self):
-        r = [0] if self.debug else range( min(multiprocessing.cpu_count(), 6) )
+        r = [0] if self.debug else range(multiprocessing.cpu_count())
 
         for i in r:
             yield 'CPU%d' % (i), {}, {'device_idx': i,
@@ -144,14 +152,15 @@ class ConvertSubprocessor(Subprocessor):
                                       'converter' : self.process_converter, 
                                       'output_dir' : str(self.output_path), 
                                       'alignments' : self.alignments,
-                                      'debug': self.debug
+                                      'debug': self.debug,
+                                      'stdin_fd': sys.stdin.fileno() if self.debug else None
                                       }
 
     #overridable optional
     def on_clients_initialized(self):
         if self.debug:
             io.named_window ("Debug convert")
-                
+        
         io.progress_bar ("Converting", len (self.input_data) )
         
     #overridable optional

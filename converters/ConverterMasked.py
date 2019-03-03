@@ -1,3 +1,4 @@
+import traceback
 from .Converter import Converter
 from facelib import LandmarksProcessor
 from facelib import FaceType
@@ -5,7 +6,6 @@ import cv2
 import numpy as np
 from utils import image_utils
 from interact import interact as io
-
 '''
 default_mode = {1:'overlay',
              2:'hist-match',
@@ -34,16 +34,16 @@ class ConverterMasked(Converter):
         self.face_type = face_type 
         self.clip_hborder_mask_per = clip_hborder_mask_per
         
-        mode = io.input_int ("Choose mode: (1) overlay, (2) hist match, (3) hist match bw, (4) seamless, (5) seamless hist match, (6) raw. Default - %d : " % (default_mode) , default_mode)
+        mode = io.input_int ("Choose mode: (1) overlay, (2) hist match, (3) hist match bw, (4) seamless, (5) raw. Default - %d : " % (default_mode) , default_mode)
         
         mode_dict = {1:'overlay',
                      2:'hist-match',
                      3:'hist-match-bw',
                      4:'seamless',
-                     5:'seamless-hist-match',
-                     6:'raw'}
+                     5:'raw'}
         
         self.mode = mode_dict.get (mode, mode_dict[default_mode] )
+        self.suppress_seamless_jitter = False
         
         if self.mode == 'raw':
             mode = io.input_int ("Choose raw mode: (1) rgb, (2) rgb+mask (default), (3) mask only, (4) predicted only : ", 2)
@@ -53,6 +53,13 @@ class ConverterMasked(Converter):
                              4:'predicted-only'}.get (mode, 'rgb-mask')
         
         if self.mode != 'raw':
+        
+            if self.mode == 'seamless':
+                io.input_bool ("Suppress seamless jitter? [ y/n ] (?:help skip:n ) : ", False, help_message="Seamless clone produces face jitter. You can suppress it, but process can take a long time." )
+          
+                if io.input_bool("Seamless hist match? (y/n skip:n) : ", False):
+                    self.mode = 'seamless-hist-match'
+        
             if self.mode == 'hist-match' or self.mode == 'hist-match-bw':
                 self.masked_hist_match = io.input_bool("Masked hist match? (y/n skip:y) : ", True)
             
@@ -60,30 +67,37 @@ class ConverterMasked(Converter):
                 self.hist_match_threshold = np.clip ( io.input_int("Hist match threshold [0..255] (skip:255) :  ", 255), 0, 255)
             
         self.use_predicted_mask = io.input_bool("Use predicted mask? (y/n skip:y) : ", True)
-            
+
         if self.mode != 'raw':
             self.erode_mask_modifier = base_erode_mask_modifier + np.clip ( io.input_int ("Choose erode mask modifier [-200..200] (skip:%d) : " % (default_erode_mask_modifier), default_erode_mask_modifier), -200, 200)
             self.blur_mask_modifier = base_blur_mask_modifier + np.clip ( io.input_int ("Choose blur mask modifier [-200..200] (skip:%d) : " % (default_blur_mask_modifier), default_blur_mask_modifier), -200, 200)
             
             self.seamless_erode_mask_modifier = 0
-            if self.mode == 'seamless' or self.mode == 'seamless-hist-match':
+            if 'seamless' in self.mode:
                 self.seamless_erode_mask_modifier = np.clip ( io.input_int ("Choose seamless erode mask modifier [-100..100] (skip:0) : ", 0), -100, 100)
-          
+  
         self.output_face_scale = np.clip ( 1.0 + io.input_int ("Choose output face scale modifier [-50..50] (skip:0) : ", 0)*0.01, 0.5, 1.5)
         self.color_transfer_mode = io.input_str ("Apply color transfer to predicted face? Choose mode ( rct/lct skip:None ) : ", None, ['rct','lct'])
 
         if self.mode != 'raw':
             self.final_image_color_degrade_power = np.clip (  io.input_int ("Degrade color power of final image [0..100] (skip:0) : ", 0), 0, 100)
             self.alpha = io.input_bool("Export png with alpha channel? (y/n skip:n) : ", False)
-            
-        io.log_info ("")
+        
+        io.log_info ("")        
+        self.over_res = 4 if self.suppress_seamless_jitter else 1
+        
         
     #override
     def dummy_predict(self):
         self.predictor_func ( np.zeros ( (self.predictor_input_size,self.predictor_input_size,4), dtype=np.float32 ) )
         
     #override
-    def convert_face (self, img_bgr, img_face_landmarks, debug):        
+    def convert_face (self, img_bgr, img_face_landmarks, debug):
+
+        if self.over_res != 1:
+            img_bgr = cv2.resize ( img_bgr, ( img_bgr.shape[1]*self.over_res, img_bgr.shape[0]*self.over_res ) )
+            img_face_landmarks = img_face_landmarks*self.over_res
+
         if debug:        
             debugs = [img_bgr.copy()]
             
@@ -114,22 +128,17 @@ class ConverterMasked(Converter):
         prd_face_mask_a   = np.expand_dims (prd_face_mask_a_0, axis=-1)
         prd_face_mask_aaa = np.repeat (prd_face_mask_a, (3,), axis=-1)
 
-        img_prd_face_mask_aaa = cv2.warpAffine( prd_face_mask_aaa, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), flags=cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4 )
-        img_prd_face_mask_aaa = np.clip (img_prd_face_mask_aaa, 0.0, 1.0)
-            
-        img_face_mask_aaa = img_prd_face_mask_aaa
+        img_face_mask_aaa = cv2.warpAffine( prd_face_mask_aaa, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), flags=cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4 )
+        img_face_mask_aaa = np.clip (img_face_mask_aaa, 0.0, 1.0)
+        img_face_mask_aaa [ img_face_mask_aaa <= 0.1 ] = 0.0 #get rid of noise
         
         if debug:
             debugs += [img_face_mask_aaa.copy()]
-        
-        img_face_mask_aaa [ img_face_mask_aaa <= 0.1 ] = 0.0
-            
-        if self.mode == 'seamless' or self.mode == 'seamless-hist-match':
-            img_face_seamless_mask_aaa = img_face_mask_aaa.copy()
+   
+        if 'seamless' in self.mode:
+            img_face_seamless_mask_aaa = img_face_mask_aaa.copy()   #mask used for cv2.seamlessClone
             img_face_seamless_mask_aaa[img_face_seamless_mask_aaa > 0.9] = 1.0
             img_face_seamless_mask_aaa[img_face_seamless_mask_aaa <= 0.9] = 0.0
-            
-        maxregion = np.argwhere(img_face_mask_aaa > 0.9)
         
         out_img = img_bgr.copy()
         
@@ -147,17 +156,29 @@ class ConverterMasked(Converter):
                 out_img = cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(out_img.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
                 
         else:
-            if maxregion.size != 0:
-                miny,minx = maxregion.min(axis=0)[:2]
-                maxy,maxx = maxregion.max(axis=0)[:2]
-                lenx = maxx - minx
-                leny = maxy - miny
-                maskx = minx+(lenx/2)
-                masky = miny+(leny/2)
+
+            #averaging [lenx, leny, maskx, masky] by grayscale gradients of upscaled mask
+            ar = []
+            for i in range(1, 10):                
+                maxregion = np.argwhere( img_face_mask_aaa > i / 10.0 )
+                if maxregion.size != 0:
+                    miny,minx = maxregion.min(axis=0)[:2]
+                    maxy,maxx = maxregion.max(axis=0)[:2]
+                    lenx = maxx - minx
+                    leny = maxy - miny
+                    maskx = ( minx+(lenx/2) )
+                    masky = ( miny+(leny/2) )
+                    if lenx >= 4 and leny >= 4:
+                        ar += [ [ lenx, leny, maskx, masky]  ]
+            
+            if len(ar) > 0:
+                lenx, leny, maskx, masky = np.mean ( ar, axis=0 )
                 
                 if debug:
-                    io.log_info ("maxregion.size: %d, min/max_x:(%d/%d) min/max_y:(%d/%d) mask_x_y:(%d/%d)" % (maxregion.size, minx, maxx, miny, maxy, maskx, masky  ) )
-
+                    io.log_info ("lenx/leny:(%d/%d) maskx/masky:(%f/%f)" % (lenx, leny, maskx, masky  ) )
+                    
+                maskx = int( maskx )
+                masky = int( masky )
                 if lenx >= 4 and leny >= 4:
                     
                     lowest_len = min (lenx, leny)
@@ -270,14 +291,18 @@ class ConverterMasked(Converter):
                     if self.mode == 'overlay':
                         pass
                         
-                    if self.mode == 'seamless' or self.mode == 'seamless-hist-match':
-                        try:
-                            
+                    if 'seamless' in self.mode:
+                        try:                 
                             out_img = cv2.seamlessClone( (out_img*255).astype(np.uint8), (img_bgr*255).astype(np.uint8), (img_face_seamless_mask_aaa*255).astype(np.uint8), (maskx,masky) , cv2.NORMAL_CLONE )
                             out_img = out_img.astype(dtype=np.float32) / 255.0
-                        except:
+                        except Exception as e:
                             #seamlessClone may fail in some cases
-                            pass
+                            e_str = traceback.format_exc()
+                           
+                            if 'MemoryError' in e_str:
+                                raise Exception("Seamless fail: " + e_str) #reraise MemoryError in order to reprocess this data by other processes
+                            else:
+                                print ("Seamless fail: " + e_str)
                         
                         if debug:
                             debugs += [out_img.copy()]
@@ -303,6 +328,9 @@ class ConverterMasked(Converter):
                     if self.alpha:
                         out_img = np.concatenate ( [out_img, np.expand_dims (img_mask_blurry_aaa[:,:,0],-1)], -1 )                        
        
+        if self.over_res != 1:
+            out_img = cv2.resize ( out_img, ( img_bgr.shape[1] // self.over_res, img_bgr.shape[0] // self.over_res ) )
+
         out_img = np.clip (out_img, 0.0, 1.0 )
         
         if debug:
