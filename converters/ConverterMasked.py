@@ -179,154 +179,153 @@ class ConverterMasked(Converter):
                     
                 maskx = int( maskx )
                 masky = int( masky )
-                if lenx >= 4 and leny >= 4:
                     
-                    lowest_len = min (lenx, leny)
-                    
-                    if debug:
-                        io.log_info ("lowest_len = %f" % (lowest_len) )
-                  
-                    img_mask_blurry_aaa = img_face_mask_aaa
+                lowest_len = min (lenx, leny)
+                
+                if debug:
+                    io.log_info ("lowest_len = %f" % (lowest_len) )
+              
+                img_mask_blurry_aaa = img_face_mask_aaa
 
-                    if self.erode_mask_modifier != 0:
-                        ero  = int( lowest_len * ( 0.126 - lowest_len * 0.00004551365 ) * 0.01*self.erode_mask_modifier )
-                        if debug:
-                            io.log_info ("erode_size = %d" % (ero) )                    
-                        if ero > 0:
-                            img_mask_blurry_aaa = cv2.erode(img_mask_blurry_aaa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(ero,ero)), iterations = 1 )                        
-                        elif ero < 0:
-                            img_mask_blurry_aaa = cv2.dilate(img_mask_blurry_aaa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(-ero,-ero)), iterations = 1 )
-                    
-                    if self.seamless_erode_mask_modifier != 0:
-                        ero  = int( lowest_len * ( 0.126 - lowest_len * 0.00004551365 ) * 0.01*self.seamless_erode_mask_modifier )
-                        if debug:
-                            io.log_info ("seamless_erode_size = %d" % (ero) )
-                        if ero > 0:
-                            img_face_seamless_mask_aaa = cv2.erode(img_face_seamless_mask_aaa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(ero,ero)), iterations = 1 )
-                        elif ero < 0:
-                            img_face_seamless_mask_aaa = cv2.dilate(img_face_seamless_mask_aaa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(-ero,-ero)), iterations = 1 )
-                        img_face_seamless_mask_aaa = np.clip (img_face_seamless_mask_aaa, 0, 1)
-         
-                    if self.clip_hborder_mask_per > 0: #clip hborder before blur
-                        prd_hborder_rect_mask_a = np.ones ( prd_face_mask_a.shape, dtype=np.float32)        
-                        prd_border_size = int ( prd_hborder_rect_mask_a.shape[1] * self.clip_hborder_mask_per )
-                        prd_hborder_rect_mask_a[:,0:prd_border_size,:] = 0
-                        prd_hborder_rect_mask_a[:,-prd_border_size:,:] = 0                        
-                        prd_hborder_rect_mask_a = np.expand_dims(cv2.blur(prd_hborder_rect_mask_a, (prd_border_size, prd_border_size) ),-1)
-   
-                        img_prd_hborder_rect_mask_a = cv2.warpAffine( prd_hborder_rect_mask_a, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4 )
-                        img_prd_hborder_rect_mask_a = np.expand_dims (img_prd_hborder_rect_mask_a, -1)
-                        img_mask_blurry_aaa *= img_prd_hborder_rect_mask_a
-                        img_mask_blurry_aaa = np.clip( img_mask_blurry_aaa, 0, 1.0 )
-                        
-                        if debug:
-                            debugs += [img_mask_blurry_aaa.copy()]
-                            
-                    if self.blur_mask_modifier > 0:
-                        blur = int( lowest_len * 0.10 * 0.01*self.blur_mask_modifier )
-                        if debug:
-                            io.log_info ("blur_size = %d" % (blur) )
-                        if blur > 0:
-                            img_mask_blurry_aaa = cv2.blur(img_mask_blurry_aaa, (blur, blur) )                    
-                        
+                if self.erode_mask_modifier != 0:
+                    ero  = int( lowest_len * ( 0.126 - lowest_len * 0.00004551365 ) * 0.01*self.erode_mask_modifier )
+                    if debug:
+                        io.log_info ("erode_size = %d" % (ero) )                    
+                    if ero > 0:
+                        img_mask_blurry_aaa = cv2.erode(img_mask_blurry_aaa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(ero,ero)), iterations = 1 )                        
+                    elif ero < 0:
+                        img_mask_blurry_aaa = cv2.dilate(img_mask_blurry_aaa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(-ero,-ero)), iterations = 1 )
+                
+                if self.seamless_erode_mask_modifier != 0:
+                    ero  = int( lowest_len * ( 0.126 - lowest_len * 0.00004551365 ) * 0.01*self.seamless_erode_mask_modifier )
+                    if debug:
+                        io.log_info ("seamless_erode_size = %d" % (ero) )
+                    if ero > 0:
+                        img_face_seamless_mask_aaa = cv2.erode(img_face_seamless_mask_aaa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(ero,ero)), iterations = 1 )
+                    elif ero < 0:
+                        img_face_seamless_mask_aaa = cv2.dilate(img_face_seamless_mask_aaa, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(-ero,-ero)), iterations = 1 )
+                    img_face_seamless_mask_aaa = np.clip (img_face_seamless_mask_aaa, 0, 1)
+     
+                if self.clip_hborder_mask_per > 0: #clip hborder before blur
+                    prd_hborder_rect_mask_a = np.ones ( prd_face_mask_a.shape, dtype=np.float32)        
+                    prd_border_size = int ( prd_hborder_rect_mask_a.shape[1] * self.clip_hborder_mask_per )
+                    prd_hborder_rect_mask_a[:,0:prd_border_size,:] = 0
+                    prd_hborder_rect_mask_a[:,-prd_border_size:,:] = 0                        
+                    prd_hborder_rect_mask_a = np.expand_dims(cv2.blur(prd_hborder_rect_mask_a, (prd_border_size, prd_border_size) ),-1)
+
+                    img_prd_hborder_rect_mask_a = cv2.warpAffine( prd_hborder_rect_mask_a, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4 )
+                    img_prd_hborder_rect_mask_a = np.expand_dims (img_prd_hborder_rect_mask_a, -1)
+                    img_mask_blurry_aaa *= img_prd_hborder_rect_mask_a
                     img_mask_blurry_aaa = np.clip( img_mask_blurry_aaa, 0, 1.0 )
                     
                     if debug:
                         debugs += [img_mask_blurry_aaa.copy()]
                         
-                    if self.color_transfer_mode is not None:
-                        if self.color_transfer_mode == 'rct':
-                            if debug:
-                                debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
-                          
-                            prd_face_bgr = image_utils.reinhard_color_transfer ( np.clip( (prd_face_bgr*255).astype(np.uint8), 0, 255),
-                                                                                 np.clip( (dst_face_bgr*255).astype(np.uint8), 0, 255),
-                                                                                 source_mask=prd_face_mask_a, target_mask=prd_face_mask_a)
-                            prd_face_bgr = np.clip( prd_face_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
-
-                            if debug:
-                                debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
-                          
-                            
-                        elif self.color_transfer_mode == 'lct':
-                            if debug:
-                                debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
-
-                            prd_face_bgr = image_utils.linear_color_transfer (prd_face_bgr, dst_face_bgr)
-                            prd_face_bgr = np.clip( prd_face_bgr, 0.0, 1.0)
-                            
-                            if debug:
-                                debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
- 
-                    if self.mode == 'hist-match-bw':
-                        prd_face_bgr = cv2.cvtColor(prd_face_bgr, cv2.COLOR_BGR2GRAY)
-                        prd_face_bgr = np.repeat( np.expand_dims (prd_face_bgr, -1), (3,), -1 )
+                if self.blur_mask_modifier > 0:
+                    blur = int( lowest_len * 0.10 * 0.01*self.blur_mask_modifier )
+                    if debug:
+                        io.log_info ("blur_size = %d" % (blur) )
+                    if blur > 0:
+                        img_mask_blurry_aaa = cv2.blur(img_mask_blurry_aaa, (blur, blur) )                    
                     
-                    if self.mode == 'hist-match' or self.mode == 'hist-match-bw':
+                img_mask_blurry_aaa = np.clip( img_mask_blurry_aaa, 0, 1.0 )
+                
+                if debug:
+                    debugs += [img_mask_blurry_aaa.copy()]
+                    
+                if self.color_transfer_mode is not None:
+                    if self.color_transfer_mode == 'rct':
                         if debug:
-                            debugs += [ cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ) ]
-                            
-                        hist_mask_a = np.ones ( prd_face_bgr.shape[:2] + (1,) , dtype=np.float32)
-                            
-                        if self.masked_hist_match:
-                            hist_mask_a *= prd_face_mask_a
-                        
-                        hist_match_1 = prd_face_bgr*hist_mask_a + (1.0-hist_mask_a)* np.ones ( prd_face_bgr.shape[:2] + (1,) , dtype=np.float32) 
-                        hist_match_1[ hist_match_1 > 1.0 ] = 1.0
-                        
-                        hist_match_2 = dst_face_bgr*hist_mask_a + (1.0-hist_mask_a)* np.ones ( prd_face_bgr.shape[:2] + (1,) , dtype=np.float32) 
-                        hist_match_2[ hist_match_1 > 1.0 ] = 1.0
+                            debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
+                      
+                        prd_face_bgr = image_utils.reinhard_color_transfer ( np.clip( (prd_face_bgr*255).astype(np.uint8), 0, 255),
+                                                                             np.clip( (dst_face_bgr*255).astype(np.uint8), 0, 255),
+                                                                             source_mask=prd_face_mask_a, target_mask=prd_face_mask_a)
+                        prd_face_bgr = np.clip( prd_face_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
 
-                        prd_face_bgr = image_utils.color_hist_match(hist_match_1, hist_match_2, self.hist_match_threshold )
-                            
-                    if self.mode == 'hist-match-bw':
-                        prd_face_bgr = prd_face_bgr.astype(dtype=np.float32)
+                        if debug:
+                            debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
+                      
                         
-                    out_img = cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, out_img, cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
-                    out_img = np.clip(out_img, 0.0, 1.0)
+                    elif self.color_transfer_mode == 'lct':
+                        if debug:
+                            debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
+
+                        prd_face_bgr = image_utils.linear_color_transfer (prd_face_bgr, dst_face_bgr)
+                        prd_face_bgr = np.clip( prd_face_bgr, 0.0, 1.0)
+                        
+                        if debug:
+                            debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
+
+                if self.mode == 'hist-match-bw':
+                    prd_face_bgr = cv2.cvtColor(prd_face_bgr, cv2.COLOR_BGR2GRAY)
+                    prd_face_bgr = np.repeat( np.expand_dims (prd_face_bgr, -1), (3,), -1 )
+                
+                if self.mode == 'hist-match' or self.mode == 'hist-match-bw':
+                    if debug:
+                        debugs += [ cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ) ]
+                        
+                    hist_mask_a = np.ones ( prd_face_bgr.shape[:2] + (1,) , dtype=np.float32)
+                        
+                    if self.masked_hist_match:
+                        hist_mask_a *= prd_face_mask_a
+                    
+                    hist_match_1 = prd_face_bgr*hist_mask_a + (1.0-hist_mask_a)* np.ones ( prd_face_bgr.shape[:2] + (1,) , dtype=np.float32) 
+                    hist_match_1[ hist_match_1 > 1.0 ] = 1.0
+                    
+                    hist_match_2 = dst_face_bgr*hist_mask_a + (1.0-hist_mask_a)* np.ones ( prd_face_bgr.shape[:2] + (1,) , dtype=np.float32) 
+                    hist_match_2[ hist_match_1 > 1.0 ] = 1.0
+
+                    prd_face_bgr = image_utils.color_hist_match(hist_match_1, hist_match_2, self.hist_match_threshold )
+                        
+                if self.mode == 'hist-match-bw':
+                    prd_face_bgr = prd_face_bgr.astype(dtype=np.float32)
+                    
+                out_img = cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, out_img, cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
+                out_img = np.clip(out_img, 0.0, 1.0)
+                
+                if debug:
+                    debugs += [out_img.copy()]
+
+                if self.mode == 'overlay':
+                    pass
+                    
+                if 'seamless' in self.mode:
+                    try:                 
+                        out_img = cv2.seamlessClone( (out_img*255).astype(np.uint8), (img_bgr*255).astype(np.uint8), (img_face_seamless_mask_aaa*255).astype(np.uint8), (maskx,masky) , cv2.NORMAL_CLONE )
+                        out_img = out_img.astype(dtype=np.float32) / 255.0
+                    except Exception as e:
+                        #seamlessClone may fail in some cases
+                        e_str = traceback.format_exc()
+                       
+                        if 'MemoryError' in e_str:
+                            raise Exception("Seamless fail: " + e_str) #reraise MemoryError in order to reprocess this data by other processes
+                        else:
+                            print ("Seamless fail: " + e_str)
                     
                     if debug:
                         debugs += [out_img.copy()]
 
-                    if self.mode == 'overlay':
-                        pass
-                        
-                    if 'seamless' in self.mode:
-                        try:                 
-                            out_img = cv2.seamlessClone( (out_img*255).astype(np.uint8), (img_bgr*255).astype(np.uint8), (img_face_seamless_mask_aaa*255).astype(np.uint8), (maskx,masky) , cv2.NORMAL_CLONE )
-                            out_img = out_img.astype(dtype=np.float32) / 255.0
-                        except Exception as e:
-                            #seamlessClone may fail in some cases
-                            e_str = traceback.format_exc()
-                           
-                            if 'MemoryError' in e_str:
-                                raise Exception("Seamless fail: " + e_str) #reraise MemoryError in order to reprocess this data by other processes
-                            else:
-                                print ("Seamless fail: " + e_str)
-                        
-                        if debug:
-                            debugs += [out_img.copy()]
- 
-                    out_img = np.clip( img_bgr*(1-img_mask_blurry_aaa) + (out_img*img_mask_blurry_aaa) , 0, 1.0 )
- 
-                    if self.mode == 'seamless-hist-match':
-                        out_face_bgr = cv2.warpAffine( out_img, face_mat, (self.output_size, self.output_size) )      
-                        new_out_face_bgr = image_utils.color_hist_match(out_face_bgr, dst_face_bgr, self.hist_match_threshold)                
-                        new_out = cv2.warpAffine( new_out_face_bgr, face_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
-                        out_img =  np.clip( img_bgr*(1-img_mask_blurry_aaa) + (new_out*img_mask_blurry_aaa) , 0, 1.0 )
+                out_img = np.clip( img_bgr*(1-img_mask_blurry_aaa) + (out_img*img_mask_blurry_aaa) , 0, 1.0 )
+
+                if self.mode == 'seamless-hist-match':
+                    out_face_bgr = cv2.warpAffine( out_img, face_mat, (self.output_size, self.output_size) )      
+                    new_out_face_bgr = image_utils.color_hist_match(out_face_bgr, dst_face_bgr, self.hist_match_threshold)                
+                    new_out = cv2.warpAffine( new_out_face_bgr, face_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
+                    out_img =  np.clip( img_bgr*(1-img_mask_blurry_aaa) + (new_out*img_mask_blurry_aaa) , 0, 1.0 )
+                
+                if self.final_image_color_degrade_power != 0:
+                    if debug:
+                        debugs += [out_img.copy()]                    
+                    out_img_reduced = image_utils.reduce_colors(out_img, 256)
+                    if self.final_image_color_degrade_power == 100:
+                        out_img = out_img_reduced
+                    else:
+                        alpha = self.final_image_color_degrade_power / 100.0
+                        out_img = (out_img*(1.0-alpha) + out_img_reduced*alpha)
                     
-                    if self.final_image_color_degrade_power != 0:
-                        if debug:
-                            debugs += [out_img.copy()]                    
-                        out_img_reduced = image_utils.reduce_colors(out_img, 256)
-                        if self.final_image_color_degrade_power == 100:
-                            out_img = out_img_reduced
-                        else:
-                            alpha = self.final_image_color_degrade_power / 100.0
-                            out_img = (out_img*(1.0-alpha) + out_img_reduced*alpha)
-                        
-                    if self.alpha:
-                        out_img = np.concatenate ( [out_img, np.expand_dims (img_mask_blurry_aaa[:,:,0],-1)], -1 )                        
+                if self.alpha:
+                    out_img = np.concatenate ( [out_img, np.expand_dims (img_mask_blurry_aaa[:,:,0],-1)], -1 )                        
        
         if self.over_res != 1:
             out_img = cv2.resize ( out_img, ( img_bgr.shape[1] // self.over_res, img_bgr.shape[0] // self.over_res ) )
