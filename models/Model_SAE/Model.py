@@ -55,7 +55,7 @@ class SAEModel(ModelBase):
             self.options['lighter_encoder'] = io.input_bool ("Use lightweight encoder? (y/n, ?:help skip:n) : ", False, help_message="Lightweight encoder is 35% faster, requires less VRAM, but sacrificing overall quality.")
             
             if self.options['archi'] != 'vg':
-                self.options['multiscale_decoder'] = io.input_bool ("Use multiscale decoder? (y/n, ?:help skip:y) : ", False, help_message="Multiscale decoder helps to get better details.")
+                self.options['multiscale_decoder'] = io.input_bool ("Use multiscale decoder? (y/n, ?:help skip:n) : ", False, help_message="Multiscale decoder helps to get better details.")
         else:
             self.options['lighter_encoder'] = self.options.get('lighter_encoder', False)
             
