@@ -4,8 +4,9 @@ import numpy as np
 from .pynvml import *
 
  
-
-tf_min_req_cap = int(os.environ.get("force_tf_min_req_cap", 37)) #min req compute capability for tensorflow-gpu==1.11.0
+#you can force_tf_min_req_cap 35, if your DFL is built for tf==1.5.0
+#the reason why we cannot check tensorflow.version is it requires import tensorflow
+tf_min_req_cap = int(os.environ.get("force_tf_min_req_cap", 37)) 
     
 class device:
     backend = None
