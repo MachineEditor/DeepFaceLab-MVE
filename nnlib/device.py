@@ -3,7 +3,9 @@ import json
 import numpy as np
 from .pynvml import *
 
-tf_min_req_cap = 37 #min req compute capability for tensorflow-gpu==1.11.0
+ 
+
+tf_min_req_cap = int(os.environ.get("force_tf_min_req_cap", 37)) #min req compute capability for tensorflow-gpu==1.11.0
     
 class device:
     backend = None
