@@ -1,5 +1,5 @@
 from pathlib import Path
-from scandir import scandir
+from os import scandir
 
 image_extensions = [".jpg", ".jpeg", ".png", ".tif", ".tiff"]
 

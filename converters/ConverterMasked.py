@@ -136,9 +136,15 @@ class ConverterMasked(Converter):
             debugs += [img_face_mask_aaa.copy()]
    
         if 'seamless' in self.mode:
-            img_face_seamless_mask_aaa = img_face_mask_aaa.copy()   #mask used for cv2.seamlessClone
-            img_face_seamless_mask_aaa[img_face_seamless_mask_aaa > 0.9] = 1.0
-            img_face_seamless_mask_aaa[img_face_seamless_mask_aaa <= 0.9] = 0.0
+            #mask used for cv2.seamlessClone
+            img_face_seamless_mask_aaa = None
+            for i in range(9, 0, -1):
+                a = img_face_mask_aaa > i / 10.0
+                if len(np.argwhere(a)) == 0:
+                    continue
+                img_face_seamless_mask_aaa = img_face_mask_aaa.copy()
+                img_face_seamless_mask_aaa[a] = 1.0
+                img_face_seamless_mask_aaa[img_face_seamless_mask_aaa <= i / 10.0] = 0.0
         
         out_img = img_bgr.copy()
         
@@ -155,8 +161,7 @@ class ConverterMasked(Converter):
             if self.raw_mode == 'predicted-only':
                 out_img = cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(out_img.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
                 
-        else:
-
+        elif ('seamless' not in self.mode) or (img_face_seamless_mask_aaa is not None):            
             #averaging [lenx, leny, maskx, masky] by grayscale gradients of upscaled mask
             ar = []
             for i in range(1, 10):                

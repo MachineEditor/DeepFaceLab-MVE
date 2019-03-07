@@ -1,10 +1,8 @@
 numpy==1.16.1
-pathlib==1.0.1
-scandir==1.6
-h5py==2.7.1
+h5py==2.9.0
 Keras==2.2.4
 opencv-python==4.0.0.21
-tensorflow==1.13.1
+tensorflow==1.12.0
 scikit-image
 dlib==19.16.0
 tqdm

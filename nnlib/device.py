@@ -3,10 +3,9 @@ import json
 import numpy as np
 from .pynvml import *
 
- 
-#you can force_tf_min_req_cap 35, if your DFL is built for tf==1.5.0
+#you can set DFL_TF_MIN_REQ_CAP manually for your build
 #the reason why we cannot check tensorflow.version is it requires import tensorflow
-tf_min_req_cap = int(os.environ.get("force_tf_min_req_cap", 37)) 
+tf_min_req_cap = int(os.environ.get("DFL_TF_MIN_REQ_CAP", 35)) 
     
 class device:
     backend = None
@@ -260,14 +259,15 @@ class device:
         return result[0] * 10 + result[1]
 
         
-force_plaidML = os.environ.get("force_plaidML", "0") == "1"
+force_plaidML = os.environ.get("DFL_FORCE_PLAIDML", "0") == "1" #for OpenCL build , forcing using plaidML even if NVIDIA found
+force_tf_cpu = os.environ.get("DFL_FORCE_TF_CPU", "0") == "1"   #for OpenCL build , forcing using tf-cpu if plaidML failed
 has_nvml = False
 has_nvml_cap = False
 
-#use force_has_nvidia_device=1 if 
+#use DFL_FORCE_HAS_NVIDIA_DEVICE=1 if 
 #- your NVIDIA cannot be seen by OpenCL
 #- CUDA build of DFL
-has_nvidia_device = os.environ.get("force_has_nvidia_device", "0") == "1" 
+has_nvidia_device = os.environ.get("DFL_FORCE_HAS_NVIDIA_DEVICE", "0") == "1" 
 
 plaidML_devices = []
 
@@ -294,7 +294,7 @@ plaidML_devices_count = len(plaidML_devices)
 
 #choosing backend
 
-if device.backend is None:
+if device.backend is None and not force_tf_cpu:
     #first trying to load NVSMI and detect CUDA devices for tensorflow backend,
     #even force_plaidML is choosed, because if plaidML will fail, we can choose tensorflow
     try:
@@ -320,13 +320,15 @@ if device.backend is None:
 if not has_nvidia_device and (device.backend is None or force_plaidML):
     #tensorflow backend was failed without has_nvidia_device , or forcing plaidML, trying to use plaidML backend
     if plaidML_devices_count == 0:
-        print ("plaidML: No capable OpenCL devices found. Falling back to tensorflow backend.")
+        #print ("plaidML: No capable OpenCL devices found. Falling back to tensorflow backend.")
         device.backend = None
     else:
         device.backend = "plaidML"
 
 if device.backend is None:
-    if not has_nvml:        
+    if force_tf_cpu:
+        device.backend = "tensorflow-cpu"
+    elif not has_nvml:        
         if has_nvidia_device:
             #some notebook systems have NVIDIA card without NVSMI in official drivers
             #in that case considering we have system with one capable GPU and let tensorflow to choose best GPU
