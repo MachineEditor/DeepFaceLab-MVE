@@ -1,9 +1,16 @@
 ### **Prebuilt Windows Releases**
 
-Windows builds with all dependencies included are released regularly. Only the NVIDIA GeForce display driver needs to be installed. Prebuilt DeepFaceLab, including GPU and CPU versions, can be downloaded from [Mega](https://mega.nz/#F!b9MzCK4B!zEAG9txu7uaRUjXz9PtBqg) or [BitTorrent](https://rutracker.org/forum/viewtopic.php?p=75318742)  (magnet link inside).
+Windows builds with all dependencies included are released regularly. Only the NVIDIA GeForce display driver needs to be installed. Prebuilt DeepFaceLab, including GPU and CPU versions, can be downloaded from 
 
+[Mega](https://mega.nz/#F!b9MzCK4B!zEAG9txu7uaRUjXz9PtBqg) or [BitTorrent](https://rutracker.org/forum/viewtopic.php?p=75318742)  (magnet link inside).
 
+Available builds:
 
+* DeepFaceLabCUDA9.2SSE - for NVIDIA cards up to GTX1080 and any 64-bit CPU
+
+* DeepFaceLabCUDA10.1AVX - for NVIDIA cards up to RTX and CPU with AVX instructions support
+
+* DeepFaceLabOpenCLSSE - for AMD cards and any 64-bit CPU
 
 #### Video tutorials using prebuilt windows app
 
