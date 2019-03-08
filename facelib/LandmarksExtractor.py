@@ -121,7 +121,7 @@ class LandmarksExtractor(object):
             
             predicted = self.keras_model.predict (image)
                 
-            pts_img = get_pts_from_predict ( predicted[-1][0], center, scale)
+            pts_img = get_pts_from_predict ( predicted[-1], center, scale)
             pts_img = [ ( int(pt[0]), int(pt[1]) ) for pt in pts_img ]             
             landmarks.append ( ( (left, top, right, bottom),pts_img ) )
    

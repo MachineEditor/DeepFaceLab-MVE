@@ -12,7 +12,7 @@ import os
 import time
 import code
 
-class TorchBatchNorm2D(keras.engine.topology.Layer):
+class TorchBatchNorm2D(keras.engine.Layer):
     def __init__(self, axis=-1, momentum=0.99, epsilon=1e-3, **kwargs):
         super(TorchBatchNorm2D, self).__init__(**kwargs)
         self.supports_masking = True
@@ -69,6 +69,7 @@ def t2kw_bn2d(src):
 import face_alignment
 fa = face_alignment.FaceAlignment(face_alignment.LandmarksType._2D,enable_cuda=False,enable_cudnn=False,use_cnn_face_detector=True).face_alignemnt_net
 fa.eval()
+
 
 
 def KerasConvBlock(in_planes, out_planes, input, srctorch):
@@ -155,6 +156,11 @@ else:
     model.compile ( loss='mse', optimizer='adam' )
     model.save (model_path)
     model.save_weights ( os.path.join( os.path.dirname(__file__) , 'weights.h5') )
+    
+    model_short = keras.models.Model (_input, outputs[0])
+    model_short.compile ( loss='mse', optimizer='adam' )
+    model_short.save ( os.path.join( os.path.dirname(__file__) , "2DFAN-4_light.h5" ) )
+    model_short.save_weights ( os.path.join( os.path.dirname(__file__) , '_light_weights.h5') )
     
 def transform(point, center, scale, resolution, invert=False):
     _pt = torch.ones(3)
@@ -268,7 +274,7 @@ pts_img = pts_img.view(68, 2).numpy()
 m_pts_img = get_preds_fromhm2 (m_out[0], center, scale)
 
 print ('pts1 == pts2 == %s' % ( np.array_equal(pts_img, m_pts_img) ) )
-
+import code
 code.interact(local=dict(globals(), **locals()))
 
 #print ( np.array_equal (fa_out, m_out) ) #>>> False
