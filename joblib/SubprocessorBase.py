@@ -48,7 +48,7 @@ class Subprocessor(object):
             return "undefined"
             
         def log_info(self, msg): self.c2s.put ( {'op': 'log_info', 'msg':msg } )
-        def log_err(self, msg):  self.c2s.put ( {'op': 'log_err' , 'msg':msg } )
+        def log_err(self, msg): self.c2s.put ( {'op': 'log_err' , 'msg':msg } )
         def progress_bar_inc(self, c): self.c2s.put ( {'op': 'progress_bar_inc' , 'c':c } )
         
         def _subprocess_run(self, client_dict):
@@ -163,6 +163,10 @@ class Subprocessor(object):
                     op = obj.get('op','')                        
                     if op == 'init_ok':
                         cli.state = 0
+                    elif op == 'log_info':
+                        io.log_info(obj['msg'])
+                    elif op == 'log_err':
+                        io.log_err(obj['msg'])
                     elif op == 'error':
                         cli.kill()
                         self.clis.remove(cli)
@@ -184,7 +188,6 @@ class Subprocessor(object):
                 while not cli.c2s.empty():
                     obj = cli.c2s.get()
                     op = obj.get('op','')
-                    
                     if op == 'success':
                         #success processed data, return data and result to on_result
                         self.on_result (cli.host_dict, obj['data'], obj['result'])

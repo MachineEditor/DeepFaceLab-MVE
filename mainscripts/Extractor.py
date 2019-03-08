@@ -25,6 +25,7 @@ class ExtractSubprocessor(Subprocessor):
         #override
         def on_initialize(self, client_dict):
             self.log_info ('Running on %s.' % (client_dict['device_name']) )
+
             self.type         = client_dict['type']
             self.image_size   = client_dict['image_size']
             self.face_type    = client_dict['face_type']
@@ -175,6 +176,7 @@ class ExtractSubprocessor(Subprocessor):
             self.cache_original_image = (None, None)
             self.cache_image = (None, None)
             self.cache_text_lines_img = (None, None)
+            self.hide_help = False
             
             self.landmarks = None
             self.x = 0
@@ -211,7 +213,7 @@ class ExtractSubprocessor(Subprocessor):
                     dev_name = nnlib.device.getDeviceName(idx)
                     dev_vram = nnlib.device.getDeviceVRAMTotalGb(idx)
                     
-                    if not self.manual and self.type == 'rects' and self.detector == 'mt':
+                    if not self.manual and ( (self.type == 'rects') ):
                         for i in range ( int (max (1, dev_vram / 2) ) ):
                             yield (idx, 'GPU', '%s #%d' % (dev_name,i) , dev_vram)
                     else:
@@ -299,8 +301,8 @@ class ExtractSubprocessor(Subprocessor):
                                                             '[Enter] - confirm face landmarks and continue',
                                                             '[Space] - confirm as unmarked frame and continue',
                                                             '[Mouse wheel] - change rect',
-                                                            '[,] [.]- prev frame, next frame',
-                                                            '[Q] - skip remaining frames'
+                                                            '[,] [.]- prev frame, next frame. [Q] - skip remaining frames',
+                                                            '[h] - hide this help'
                                                         ], (1, 1, 1) )*255).astype(np.uint8)
                                                         
                         self.cache_text_lines_img = (sh, self.text_lines_img)
@@ -349,6 +351,9 @@ class ExtractSubprocessor(Subprocessor):
                             break
                         elif key == ord('q'):
                             skip_remaining = True
+                            break
+                        elif key == ord('h'):
+                            self.hide_help = not self.hide_help
                             break
                         
                         if self.x != new_x or \
@@ -402,7 +407,12 @@ class ExtractSubprocessor(Subprocessor):
             self.landmarks = result[1][0][1]
                                         
             (h,w,c) = self.image.shape
-            image = cv2.addWeighted (self.image,1.0,self.text_lines_img,1.0,0)                                
+            
+            if not self.hide_help:
+                image = cv2.addWeighted (self.image,1.0,self.text_lines_img,1.0,0)
+            else:
+                image = self.image.copy()
+                
             view_rect = (np.array(self.rect) * self.view_scale).astype(np.int).tolist()
             view_landmarks  = (np.array(self.landmarks) * self.view_scale).astype(np.int).tolist()
             
