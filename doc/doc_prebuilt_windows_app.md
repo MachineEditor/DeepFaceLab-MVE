@@ -10,7 +10,7 @@ Available builds:
 
 * DeepFaceLabCUDA10.1AVX - for NVIDIA cards up to RTX and CPU with AVX instructions support
 
-* DeepFaceLabOpenCLSSE - for AMD cards and any 64-bit CPU
+* DeepFaceLabOpenCLSSE - for AMD/IntelHD cards and any 64-bit CPU
 
 #### Video tutorials using prebuilt windows app
 
