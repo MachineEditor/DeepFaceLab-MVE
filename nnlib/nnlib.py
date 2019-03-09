@@ -121,7 +121,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
             os.environ.pop('CUDA_VISIBLE_DEVICES')
         
         os.environ['TF_MIN_GPU_MULTIPROCESSOR_COUNT'] = '2'
-        
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' #tf log errors only
         import tensorflow as tf
         nnlib.tf = tf
         
