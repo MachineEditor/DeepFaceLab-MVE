@@ -20,3 +20,6 @@ def rotationMatrixToEulerAngles(R) :
         y = math.atan2(-R[2,0], sy)
         z = 0 
     return np.array([x, y, z])
+    
+def polygon_area(x,y):
+    return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))

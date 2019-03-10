@@ -6,6 +6,7 @@ import multiprocessing
 import shutil
 from pathlib import Path
 import numpy as np
+import mathlib
 import cv2
 from utils import Path_utils
 from utils.DFLJPG import DFLJPG
@@ -47,6 +48,9 @@ class ExtractSubprocessor(Subprocessor):
                     elif self.detector == 'dlib':
                         nnlib.import_dlib (device_config)
                         self.e = facelib.DLIBExtractor(nnlib.dlib)
+                    elif self.detector == 's3fd':
+                        nnlib.import_all (device_config)
+                        self.e = facelib.S3FDExtractor()
                     else:
                         raise ValueError ("Wrond detector type.")
                         
@@ -104,14 +108,10 @@ class ExtractSubprocessor(Subprocessor):
                         debug_output_file = '{}{}'.format( str(Path(str(self.output_path) + '_debug') / filename_path.stem),  '.jpg')
                         debug_image = image.copy()
                         
-                    for (face_idx, face) in enumerate(faces):         
-                        output_file = '{}_{}{}'.format(str(self.output_path / filename_path.stem), str(face_idx), '.jpg')
-                        
-                        rect = face[0]
+                    face_idx = 0
+                    for face in faces:   
+                        rect = np.array(face[0])
                         image_landmarks = np.array(face[1])
-
-                        if self.debug:
-                            LandmarksProcessor.draw_rect_landmarks (debug_image, rect, image_landmarks, self.image_size, self.face_type)
 
                         if self.face_type == FaceType.MARK_ONLY:                        
                             face_image = image
@@ -120,6 +120,20 @@ class ExtractSubprocessor(Subprocessor):
                             image_to_face_mat = LandmarksProcessor.get_transform_mat (image_landmarks, self.image_size, self.face_type)       
                             face_image = cv2.warpAffine(image, image_to_face_mat, (self.image_size, self.image_size), cv2.INTER_LANCZOS4)
                             face_image_landmarks = LandmarksProcessor.transform_points (image_landmarks, image_to_face_mat)
+                            
+                            landmarks_bbox = LandmarksProcessor.transform_points ( [ (0,0), (0,self.image_size-1), (self.image_size-1, self.image_size-1), (self.image_size-1,0) ], image_to_face_mat, True)
+                            
+                            rect_area      = mathlib.polygon_area(np.array(rect[[0,2,2,0]]), np.array(rect[[1,1,3,3]]))
+                            landmarks_area = mathlib.polygon_area(landmarks_bbox[:,0], landmarks_bbox[:,1] )
+                            
+                            if landmarks_area > 4*rect_area: #get rid of faces which umeyama-landmark-area > 4*detector-rect-area
+                                continue
+
+                        if self.debug:
+                            LandmarksProcessor.draw_rect_landmarks (debug_image, rect, image_landmarks, self.image_size, self.face_type)
+                            
+                        output_file = '{}_{}{}'.format(str(self.output_path / filename_path.stem), str(face_idx), '.jpg')
+                        face_idx += 1
                         
                         if src_dflimg is not None:
                             #if extracting from dflimg just copy it in order not to lose quality
@@ -199,13 +213,13 @@ class ExtractSubprocessor(Subprocessor):
             cpu_only = True
             
         if not cpu_only and (type == 'rects' or type == 'landmarks'):
-            if type == 'rects' and self.detector == 'mt' and nnlib.device.backend == "plaidML":
+            if type == 'rects' and (self.detector == 'mt' or self.detector == 's3fd') and nnlib.device.backend == "plaidML":
                 cpu_only = True
             else:
                 if multi_gpu:
                     devices = nnlib.device.getValidDevicesWithAtLeastTotalMemoryGB(2)
                 if not multi_gpu or len(devices) == 0:
-                    devices = [nnlib.device.getBestValidDeviceIdx()]                    
+                    devices = [nnlib.device.getBestValidDeviceIdx()]
                 if len(devices) == 0:
                     devices = [0]
                     
@@ -213,7 +227,7 @@ class ExtractSubprocessor(Subprocessor):
                     dev_name = nnlib.device.getDeviceName(idx)
                     dev_vram = nnlib.device.getDeviceVRAMTotalGb(idx)
                     
-                    if not self.manual and ( (self.type == 'rects') ):
+                    if not self.manual and ( self.type == 'rects' and self.detector != 's3fd' ):
                         for i in range ( int (max (1, dev_vram / 2) ) ):
                             yield (idx, 'GPU', '%s #%d' % (dev_name,i) , dev_vram)
                     else:

@@ -4,14 +4,5 @@
 !*.txt
 !*.jpg
 !requirements*
-!doc
-!facelib
-!gpufmkmgr
-!localization
-!mainscripts
-!mathlib
-!models
-!nnlib
-!utils
 !Dockerfile*
 !*.sh
