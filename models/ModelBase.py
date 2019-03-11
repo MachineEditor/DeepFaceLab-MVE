@@ -1,4 +1,5 @@
 import os
+import json
 import time
 import inspect
 import pickle
@@ -119,6 +120,7 @@ class ModelBase(object):
         
         nnlib.import_all ( nnlib.DeviceConfig(allow_growth=False, **self.device_args) )
         self.device_config = nnlib.active_DeviceConfig
+        self.keras = nnlib.keras
 
         self.onInitialize()
         
@@ -271,25 +273,52 @@ class ModelBase(object):
         }            
         self.model_data_path.write_bytes( pickle.dumps(model_data) )
 
-    def load_weights_safe(self, model_filename_list):
+    def load_weights_safe(self, model_filename_list, optimizer_filename_list=[]):
         for model, filename in model_filename_list:
             filename = self.get_strpath_storage_for_file(filename)
-            if Path(filename).exists():        
+            if Path(filename).exists():
                 model.load_weights(filename)
             
-    def save_weights_safe(self, model_filename_list):
+        if len(optimizer_filename_list) != 0:
+            opt_filename = self.get_strpath_storage_for_file('opt.h5')
+            if Path(opt_filename).exists():
+                h5dict = self.keras.utils.io_utils.H5Dict(opt_filename, mode='r')
+                try:
+                    for x in optimizer_filename_list:
+                        opt, filename = x
+                        if filename in h5dict:                   
+                            opt = opt.__class__.from_config( json.loads(h5dict[filename]) )
+                        x[0] = opt
+                finally:
+                    h5dict.close()
+            
+        return [x[0] for x in optimizer_filename_list]
+        
+    def save_weights_safe(self, model_filename_list, optimizer_filename_list=[]):
         for model, filename in model_filename_list:
             filename = self.get_strpath_storage_for_file(filename)
             model.save_weights( filename + '.tmp' )
-            
-        for model, filename in model_filename_list:
+
+        rename_list = model_filename_list
+        if len(optimizer_filename_list) != 0:            
+            opt_filename = self.get_strpath_storage_for_file('opt.h5')
+            h5dict = self.keras.utils.io_utils.H5Dict(opt_filename + '.tmp', mode='w')
+            try:
+                for opt, filename in optimizer_filename_list:
+                    h5dict[filename] = json.dumps(opt.get_config())
+            finally:
+                h5dict.close()
+                rename_list += [('', 'opt.h5')]
+
+        for _, filename in rename_list:
             filename = self.get_strpath_storage_for_file(filename)        
             source_filename = Path(filename+'.tmp')
-            target_filename = Path(filename)
-            if target_filename.exists():
-                target_filename.unlink()
-                
-            source_filename.rename ( str(target_filename) )
+            if source_filename.exists():
+                target_filename = Path(filename)
+                if target_filename.exists():
+                    target_filename.unlink()                    
+                source_filename.rename ( str(target_filename) )
+
         
     def debug_one_epoch(self):
         images = []
