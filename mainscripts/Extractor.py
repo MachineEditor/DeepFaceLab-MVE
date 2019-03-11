@@ -213,7 +213,7 @@ class ExtractSubprocessor(Subprocessor):
             cpu_only = True
             
         if not cpu_only and (type == 'rects' or type == 'landmarks'):
-            if type == 'rects' and (self.detector == 'mt' or self.detector == 's3fd') and nnlib.device.backend == "plaidML":
+            if type == 'rects' and (self.detector == 'mt') and nnlib.device.backend == "plaidML":
                 cpu_only = True
             else:
                 if multi_gpu:
