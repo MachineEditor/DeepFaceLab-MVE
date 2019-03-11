@@ -71,8 +71,8 @@ ZeroPadding2D = keras.layers.ZeroPadding2D
 RandomNormal = keras.initializers.RandomNormal
 Model = keras.models.Model
 
-#Adam = keras.optimizers.Adam
-Adam = nnlib.Adam
+Adam = keras.optimizers.Adam
+FastAdam = nnlib.FastAdam
 
 modelify = nnlib.modelify
 gaussian_blur = nnlib.gaussian_blur
@@ -434,21 +434,16 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 return dict(list(base_config.items()) + list(config.items()))
         nnlib.Scale = Scale
 
-        class Adam(keras.optimizers.Optimizer):
-            def __init__(self, lr=0.001, beta_1=0.9, beta_2=0.999,
-                         epsilon=None, decay=0., amsgrad=False, iterations=0, **kwargs):
-                super(Adam, self).__init__(**kwargs)
+        class FastAdam(keras.optimizers.Optimizer):
+            def __init__(self, lr=0.001, beta_1=0.9, beta_2=0.999, iterations=0, **kwargs):
+                super(FastAdam, self).__init__(**kwargs)
                 with K.name_scope(self.__class__.__name__):
                     self.iterations = K.variable(iterations, dtype='int64', name='iterations')
                     self.lr = K.variable(lr, name='lr')
                     self.beta_1 = K.variable(beta_1, name='beta_1')
                     self.beta_2 = K.variable(beta_2, name='beta_2')
-                    self.decay = K.variable(decay, name='decay')
-                if epsilon is None:
-                    epsilon = K.epsilon()
-                self.epsilon = epsilon
-                self.initial_decay = decay
-                self.amsgrad = amsgrad
+
+                self.epsilon = K.epsilon()
 
             @keras.legacy.interfaces.legacy_get_updates_support
             def get_updates(self, loss, params):
@@ -456,34 +451,16 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 self.updates = [K.update_add(self.iterations, 1)]
 
                 lr = self.lr
-                if self.initial_decay > 0:
-                    lr = lr * (1. / (1. + self.decay * K.cast(self.iterations,
-                                                              K.dtype(self.decay))))
-
                 t = K.cast(self.iterations, K.floatx()) + 1
                 lr_t = lr * (K.sqrt(1. - K.pow(self.beta_2, t)) /
-                             (1. - K.pow(self.beta_1, t)))
+                                   (1. - K.pow(self.beta_1, t)))
+                self.weights = [self.iterations]
 
-                ms = [K.zeros(K.int_shape(p), dtype=K.dtype(p)) for p in params]
-                vs = [K.zeros(K.int_shape(p), dtype=K.dtype(p)) for p in params]
-                if self.amsgrad:
-                    vhats = [K.zeros(K.int_shape(p), dtype=K.dtype(p)) for p in params]
-                else:
-                    vhats = [K.zeros(1) for _ in params]
-                self.weights = [self.iterations] + ms + vs + vhats
+                for p, g in zip(params, grads):
 
-                for p, g, m, v, vhat in zip(params, grads, ms, vs, vhats):
-                    m_t = (self.beta_1 * m) + (1. - self.beta_1) * g
-                    v_t = (self.beta_2 * v) + (1. - self.beta_2) * K.square(g)
-                    if self.amsgrad:
-                        vhat_t = K.maximum(vhat, v_t)
-                        p_t = p - lr_t * m_t / (K.sqrt(vhat_t) + self.epsilon)
-                        self.updates.append(K.update(vhat, vhat_t))
-                    else:
-                        p_t = p - lr_t * m_t / (K.sqrt(v_t) + self.epsilon)
-
-                    self.updates.append(K.update(m, m_t))
-                    self.updates.append(K.update(v, v_t))
+                    m_t = (1. - self.beta_1) * g
+                    v_t = (1. - self.beta_2) * K.square(g)
+                    p_t = p - lr_t * m_t / (K.sqrt(v_t) + self.epsilon)
                     new_p = p_t
 
                     # Apply constraints.
@@ -497,15 +474,14 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 config = {'iterations': int(K.get_value(self.iterations)),
                           'lr': float(K.get_value(self.lr)),
                           'beta_1': float(K.get_value(self.beta_1)),
-                          'beta_2': float(K.get_value(self.beta_2)),
-                          'decay': float(K.get_value(self.decay)),
-                          'epsilon': self.epsilon,
-                          'amsgrad': self.amsgrad}
-                base_config = super(Adam, self).get_config()
+                          'beta_2': float(K.get_value(self.beta_2))
+                          }
+                base_config = super(FastAdam, self).get_config()
                 return dict(list(base_config.items()) + list(config.items()))
-        nnlib.Adam = Adam
 
-        '''        
+        nnlib.FastAdam = FastAdam
+
+        '''
         not implemented in plaidML
         class ReflectionPadding2D(keras.layers.Layer):
             def __init__(self, padding=(1, 1), **kwargs):

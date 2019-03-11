@@ -121,7 +121,8 @@ class ModelBase(object):
         nnlib.import_all ( nnlib.DeviceConfig(allow_growth=False, **self.device_args) )
         self.device_config = nnlib.active_DeviceConfig
         self.keras = nnlib.keras
-
+        self.K = nnlib.keras.backend
+        
         self.onInitialize()
         
         self.options['batch_size'] = self.batch_size
@@ -282,17 +283,20 @@ class ModelBase(object):
         if len(optimizer_filename_list) != 0:
             opt_filename = self.get_strpath_storage_for_file('opt.h5')
             if Path(opt_filename).exists():
-                h5dict = self.keras.utils.io_utils.H5Dict(opt_filename, mode='r')
                 try:
+                    with open(opt_filename, "rb") as f:
+                        d = pickle.loads(f.read())
+                        
                     for x in optimizer_filename_list:
                         opt, filename = x
-                        if filename in h5dict:                   
-                            opt = opt.__class__.from_config( json.loads(h5dict[filename]) )
-                        x[0] = opt
-                finally:
-                    h5dict.close()
-            
-        return [x[0] for x in optimizer_filename_list]
+                        if filename in d:                   
+                            weights = d[filename].get('weights', None)
+                            if weights:
+                                opt.set_weights(weights)
+                                print("set ok")
+                except Exception as e:
+                    print ("Unable to load ", opt_filename)
+
         
     def save_weights_safe(self, model_filename_list, optimizer_filename_list=[]):
         for model, filename in model_filename_list:
@@ -302,13 +306,23 @@ class ModelBase(object):
         rename_list = model_filename_list
         if len(optimizer_filename_list) != 0:            
             opt_filename = self.get_strpath_storage_for_file('opt.h5')
-            h5dict = self.keras.utils.io_utils.H5Dict(opt_filename + '.tmp', mode='w')
+            
             try:
+                d = {}
                 for opt, filename in optimizer_filename_list:
-                    h5dict[filename] = json.dumps(opt.get_config())
-            finally:
-                h5dict.close()
+                    fd = {}
+                    symbolic_weights = getattr(opt, 'weights')
+                    if symbolic_weights:
+                        fd['weights'] = self.K.batch_get_value(symbolic_weights)
+                    
+                    d[filename] = fd
+                    
+                with open(opt_filename+'.tmp', 'wb') as f:
+                    f.write( pickle.dumps(d) )
+                    
                 rename_list += [('', 'opt.h5')]
+            except Exception as e:
+                print ("Unable to save ", opt_filename)
 
         for _, filename in rename_list:
             filename = self.get_strpath_storage_for_file(filename)        
