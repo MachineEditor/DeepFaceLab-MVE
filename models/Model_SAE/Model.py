@@ -376,7 +376,7 @@ class SAEModel(ModelBase):
                 ar += [ [self.decoder_srcm, 'decoder_srcm.h5'],
                         [self.decoder_dstm, 'decoder_dstm.h5'] ]
                
-        self.save_weights_safe(ar, opt_ar)
+        self.save_weights_safe(ar)
        
     
     #override
