@@ -65,12 +65,14 @@ class ModelBase(object):
 
         ask_override = self.is_training_mode and self.epoch != 0 and io.input_in_time ("Press enter in 2 seconds to override model settings.", 2)
         
+        yn_str = {True:'y',False:'n'}
+        
         if self.epoch == 0: 
             io.log_info ("\nModel first run. Enter model options as default for each run.")
         
         if self.epoch == 0 or ask_override: 
             default_write_preview_history = False if self.epoch == 0 else self.options.get('write_preview_history',False)
-            self.options['write_preview_history'] = io.input_bool("Write preview history? (y/n ?:help skip:n/default) : ", default_write_preview_history, help_message="Preview history will be writed to <ModelName>_history folder.")
+            self.options['write_preview_history'] = io.input_bool("Write preview history? (y/n ?:help skip:%s) : " % (yn_str[default_write_preview_history]) , default_write_preview_history, help_message="Preview history will be writed to <ModelName>_history folder.")
         else:
             self.options['write_preview_history'] = self.options.get('write_preview_history', False)
             

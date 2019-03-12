@@ -276,7 +276,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
             return func
         nnlib.style_loss = style_loss  
         
-        def dssim(k1=0.01, k2=0.03, max_value=1.0):
+        def dssim(kernel_size=11, k1=0.01, k2=0.03, max_value=1.0):
             # port of tf.image.ssim to pure keras in order to work on plaidML backend.
 
             def func(y_true, y_pred):
@@ -295,7 +295,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                     g = K.tile (g, (1,1,ch,1))
                     return g
                               
-                kernel = _fspecial_gauss(11,1.5)
+                kernel = _fspecial_gauss(kernel_size,1.5)
 
                 def reducer(x):
                     return K.depthwise_conv2d(x, kernel, strides=(1, 1), padding='valid')
