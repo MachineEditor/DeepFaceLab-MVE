@@ -35,11 +35,20 @@ class SAEModel(ModelBase):
             
             self.options['face_type'] = io.input_str ("Half or Full face? (h/f, ?:help skip:f) : ", default_face_type, ['h','f'], help_message="Half face has better resolution, but covers less area of cheeks.").lower()            
             self.options['learn_mask'] = io.input_bool ("Learn mask? (y/n, ?:help skip:y) : ", True, help_message="Learning mask can help model to recognize face directions. Learn without mask can reduce model size, in this case converter forced to use 'not predicted mask' that is not smooth as predicted. Model with style values can be learned without mask and produce same quality result.")
-            self.options['archi'] = io.input_str ("AE architecture (df, liae, vg ?:help skip:%s) : " % (default_archi) , default_archi, ['df','liae','vg'], help_message="'df' keeps faces more natural. 'liae' can fix overly different face shapes. 'vg' - currently testing.").lower()
         else:
             self.options['resolution'] = self.options.get('resolution', default_resolution)
             self.options['face_type'] = self.options.get('face_type', default_face_type)
-            self.options['learn_mask'] = self.options.get('learn_mask', True)            
+            self.options['learn_mask'] = self.options.get('learn_mask', True)
+            
+        if is_first_run or ask_override:
+            def_simple_optimizer = self.options.get('simple_optimizer', False)
+            self.options['simple_optimizer'] = io.input_bool ("Use simple optimizer? (y/n, ?:help skip:%s) : " % ( {True:'y',False:'n'}[def_simple_optimizer] ), def_simple_optimizer, help_message="Simple optimizer allows you to train bigger network or more batch size, sacrificing training accuracy.")
+        else:
+            self.options['simple_optimizer'] = self.options.get('simple_optimizer', False)
+        
+        if is_first_run:
+            self.options['archi'] = io.input_str ("AE architecture (df, liae, vg ?:help skip:%s) : " % (default_archi) , default_archi, ['df','liae','vg'], help_message="'df' keeps faces more natural. 'liae' can fix overly different face shapes. 'vg' - currently testing.").lower()
+        else:
             self.options['archi'] = self.options.get('archi', default_archi)
         
         default_ae_dims = 256 if self.options['archi'] == 'liae' else 512
@@ -260,8 +269,12 @@ class SAEModel(ModelBase):
         psd_target_dst_anti_masked_ar = [ pred_src_dst_sigm_ar[i]*target_dstm_anti_sigm_ar[i]  for i in range(len(pred_src_dst_sigm_ar))]
         
         if self.is_training_mode:
-            self.src_dst_opt      = Adam(lr=5e-5, beta_1=0.5, beta_2=0.999)
-            self.src_dst_mask_opt = Adam(lr=5e-5, beta_1=0.5, beta_2=0.999)
+            if self.options['simple_optimizer']:
+                self.src_dst_opt      = DFLOptimizer(lr=5e-5)
+                self.src_dst_mask_opt = DFLOptimizer(lr=5e-5)
+            else:
+                self.src_dst_opt      = Adam(lr=5e-5, beta_1=0.5, beta_2=0.999)
+                self.src_dst_mask_opt = Adam(lr=5e-5, beta_1=0.5, beta_2=0.999)
             
             if self.options['archi'] == 'liae':          
                 src_dst_loss_train_weights = self.encoder.trainable_weights + self.inter_B.trainable_weights + self.inter_AB.trainable_weights + self.decoder.trainable_weights

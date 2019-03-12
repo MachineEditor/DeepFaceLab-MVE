@@ -72,7 +72,7 @@ RandomNormal = keras.initializers.RandomNormal
 Model = keras.models.Model
 
 Adam = keras.optimizers.Adam
-FastAdam = nnlib.FastAdam
+DFLOptimizer = nnlib.DFLOptimizer
 
 modelify = nnlib.modelify
 gaussian_blur = nnlib.gaussian_blur
@@ -434,16 +434,14 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 return dict(list(base_config.items()) + list(config.items()))
         nnlib.Scale = Scale
 
-        class FastAdam(keras.optimizers.Optimizer):
-            def __init__(self, lr=0.001, beta_1=0.9, beta_2=0.999, iterations=0, **kwargs):
-                super(FastAdam, self).__init__(**kwargs)
+        class DFLOptimizer(keras.optimizers.Optimizer):
+            def __init__(self, lr=0.001, **kwargs):
+                super(DFLOptimizer, self).__init__(**kwargs)
                 with K.name_scope(self.__class__.__name__):
-                    self.iterations = K.variable(iterations, dtype='int64', name='iterations')
+                    self.iterations = K.variable(0, dtype='int64', name='iterations')
                     self.lr = K.variable(lr, name='lr')
-                    self.beta_1 = K.variable(beta_1, name='beta_1')
-                    self.beta_2 = K.variable(beta_2, name='beta_2')
-
-                self.epsilon = K.epsilon()
+                    self.beta_1 = K.variable(0.9, name='beta_1')
+                    self.beta_2 = K.variable(0.998, name='beta_2')
 
             @keras.legacy.interfaces.legacy_get_updates_support
             def get_updates(self, loss, params):
@@ -451,16 +449,16 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 self.updates = [K.update_add(self.iterations, 1)]
 
                 lr = self.lr
-                t = K.cast(self.iterations, K.floatx()) + 1
+                t = ( K.cast(self.iterations, K.floatx()) ) % 1000 + 1
                 lr_t = lr * (K.sqrt(1. - K.pow(self.beta_2, t)) /
                                    (1. - K.pow(self.beta_1, t)))
-                self.weights = [self.iterations]
 
+                self.weights = []
                 for p, g in zip(params, grads):
 
                     m_t = (1. - self.beta_1) * g
                     v_t = (1. - self.beta_2) * K.square(g)
-                    p_t = p - lr_t * m_t / (K.sqrt(v_t) + self.epsilon)
+                    p_t = p - lr_t * m_t / (K.sqrt(v_t) + K.epsilon() )
                     new_p = p_t
 
                     # Apply constraints.
@@ -471,15 +469,14 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 return self.updates
 
             def get_config(self):
-                config = {'iterations': int(K.get_value(self.iterations)),
-                          'lr': float(K.get_value(self.lr)),
+                config = {'lr': float(K.get_value(self.lr)),
                           'beta_1': float(K.get_value(self.beta_1)),
                           'beta_2': float(K.get_value(self.beta_2))
                           }
-                base_config = super(FastAdam, self).get_config()
+                base_config = super(DFLOptimizer, self).get_config()
                 return dict(list(base_config.items()) + list(config.items()))
 
-        nnlib.FastAdam = FastAdam
+        nnlib.DFLOptimizer = DFLOptimizer
 
         '''
         not implemented in plaidML
