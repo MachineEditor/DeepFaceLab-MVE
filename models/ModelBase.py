@@ -267,8 +267,6 @@ class ModelBase(object):
         return self.onGetPreview (self.sample_for_preview)[0][1] #first preview, and bgr
        
     def save(self):    
-        io.log_info ("Saving....", end='\r')
-        
         Path( self.get_strpath_storage_for_file('summary.txt') ).write_text(self.model_summary_text)  
         self.onSave()
             
