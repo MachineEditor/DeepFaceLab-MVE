@@ -20,7 +20,7 @@ class Model(ModelBase):
             
         if is_first_run or ask_override:
             def_pixel_loss = self.options.get('pixel_loss', False)
-            self.options['pixel_loss'] = io.input_bool ("Use pixel loss? (y/n, ?:help skip: n/default ) : ", def_pixel_loss, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 20k epochs to enhance fine details and decrease face jitter.")
+            self.options['pixel_loss'] = io.input_bool ("Use pixel loss? (y/n, ?:help skip: n/default ) : ", def_pixel_loss, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 20k iters to enhance fine details and decrease face jitter.")
         else:
             self.options['pixel_loss'] = self.options.get('pixel_loss', False)
             
@@ -77,7 +77,7 @@ class Model(ModelBase):
                                  [self.decoder_dst, 'decoder_dst.h5']] )
         
     #override
-    def onTrainOneEpoch(self, sample, generators_list):
+    def onTrainOneIter(self, sample, generators_list):
         warped_src, target_src, target_src_mask = sample[0]
         warped_dst, target_dst, target_dst_mask = sample[1]    
 

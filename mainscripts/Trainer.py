@@ -40,30 +40,33 @@ def trainerThread (s2c, c2s, args, device_args):
                         debug=debug,
                         device_args=device_args)
             
-            is_reached_goal = model.is_reached_epoch_goal()
+            is_reached_goal = model.is_reached_iter_goal()
             is_upd_save_time_after_train = False
+            loss_string = ""
             def model_save():
                 if not debug and not is_reached_goal:
+                    io.log_info ("Saving....", end='\r')
                     model.save()
+                    io.log_info(loss_string)
                     is_upd_save_time_after_train = True
             
             def send_preview():
                 if not debug:                        
                     previews = model.get_previews()                
-                    c2s.put ( {'op':'show', 'previews': previews, 'epoch':model.get_epoch(), 'loss_history': model.get_loss_history().copy() } )
+                    c2s.put ( {'op':'show', 'previews': previews, 'iter':model.get_iter(), 'loss_history': model.get_loss_history().copy() } )
                 else:
-                    previews = [( 'debug, press update for new', model.debug_one_epoch())]
+                    previews = [( 'debug, press update for new', model.debug_one_iter())]
                     c2s.put ( {'op':'show', 'previews': previews} )
             
             
             if model.is_first_run():
                 model_save()
                 
-            if model.get_target_epoch() != 0:
+            if model.get_target_iter() != 0:
                 if is_reached_goal:
-                    io.log_info('Model already trained to target epoch. You can use preview.')
+                    io.log_info('Model already trained to target iteration. You can use preview.')
                 else:
-                    io.log_info('Starting. Target epoch: %d. Press "Enter" to stop training and save model.' % ( model.get_target_epoch()  ) )
+                    io.log_info('Starting. Target iteration: %d. Press "Enter" to stop training and save model.' % ( model.get_target_iter()  ) )
             else: 
                 io.log_info('Starting. Press "Enter" to stop training and save model.')
  
@@ -72,14 +75,14 @@ def trainerThread (s2c, c2s, args, device_args):
             for i in itertools.count(0,1):
                 if not debug:
                     if not is_reached_goal:
-                        loss_string = model.train_one_epoch()     
+                        loss_string = model.train_one_iter()     
                         if is_upd_save_time_after_train:
                             #save resets plaidML programs, so upd last_save_time only after plaidML rebuild them
                             last_save_time = time.time()
                         
                         io.log_info (loss_string, end='\r')
-                        if model.get_target_epoch() != 0 and model.is_reached_epoch_goal():
-                            io.log_info ('Reached target epoch.')
+                        if model.get_target_iter() != 0 and model.is_reached_iter_goal():
+                            io.log_info ('Reached target iteration.')
                             model_save()
                             is_reached_goal = True
                             io.log_info ('You can use preview now.')
@@ -91,7 +94,7 @@ def trainerThread (s2c, c2s, args, device_args):
                     
                 if i==0:
                     if is_reached_goal:
-                        model.pass_one_epoch()    
+                        model.pass_one_iter()    
                     send_preview()
                     
                 if debug:
@@ -104,7 +107,7 @@ def trainerThread (s2c, c2s, args, device_args):
                         model_save()
                     elif op == 'preview':                    
                         if is_reached_goal:
-                            model.pass_one_epoch()                    
+                            model.pass_one_iter()                    
                         send_preview()
                     elif op == 'close':
                         model_save()
@@ -156,8 +159,8 @@ def main(args, device_args):
         update_preview = False
         is_showing = False
         is_waiting_preview = False
-        show_last_history_epochs_count = 0    
-        epoch = 0
+        show_last_history_iters_count = 0    
+        iter = 0
         while True:      
             if not c2s.empty():
                 input = c2s.get()
@@ -166,7 +169,7 @@ def main(args, device_args):
                     is_waiting_preview = False
                     loss_history = input['loss_history'] if 'loss_history' in input.keys() else None
                     previews = input['previews'] if 'previews' in input.keys() else None
-                    epoch = input['epoch'] if 'epoch' in input.keys() else 0
+                    iter = input['iter'] if 'iter' in input.keys() else 0
                     if previews is not None:
                         max_w = 0
                         max_h = 0
@@ -217,12 +220,12 @@ def main(args, device_args):
                 final = head
        
                 if loss_history is not None:                
-                    if show_last_history_epochs_count == 0:
+                    if show_last_history_iters_count == 0:
                         loss_history_to_show = loss_history
                     else:
-                        loss_history_to_show = loss_history[-show_last_history_epochs_count:]
+                        loss_history_to_show = loss_history[-show_last_history_iters_count:]
                         
-                    lh_img = models.ModelBase.get_loss_history_preview(loss_history_to_show, epoch, w, c)
+                    lh_img = models.ModelBase.get_loss_history_preview(loss_history_to_show, iter, w, c)
                     final = np.concatenate ( [final, lh_img], axis=0 )
 
                 final = np.concatenate ( [final, selected_preview_rgb], axis=0 )
@@ -243,16 +246,16 @@ def main(args, device_args):
                     is_waiting_preview = True
                     s2c.put ( {'op': 'preview'} )
             elif key == ord('l'):
-                if show_last_history_epochs_count == 0:
-                    show_last_history_epochs_count = 5000
-                elif show_last_history_epochs_count == 5000:
-                    show_last_history_epochs_count = 10000
-                elif show_last_history_epochs_count == 10000:
-                    show_last_history_epochs_count = 50000
-                elif show_last_history_epochs_count == 50000:
-                    show_last_history_epochs_count = 100000    
-                elif show_last_history_epochs_count == 100000:
-                    show_last_history_epochs_count = 0                
+                if show_last_history_iters_count == 0:
+                    show_last_history_iters_count = 5000
+                elif show_last_history_iters_count == 5000:
+                    show_last_history_iters_count = 10000
+                elif show_last_history_iters_count == 10000:
+                    show_last_history_iters_count = 50000
+                elif show_last_history_iters_count == 50000:
+                    show_last_history_iters_count = 100000    
+                elif show_last_history_iters_count == 100000:
+                    show_last_history_iters_count = 0                
                 update_preview = True
             elif key == ord(' '):
                 selected_preview = (selected_preview + 1) % len(previews)

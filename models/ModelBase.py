@@ -51,53 +51,57 @@ class ModelBase(object):
         self.debug = debug
         self.is_training_mode = (training_data_src_path is not None and training_data_dst_path is not None)
 
-        self.epoch = 0
+        self.iter = 0
         self.options = {}
         self.loss_history = []
         self.sample_for_preview = None
         if self.model_data_path.exists():            
             model_data = pickle.loads ( self.model_data_path.read_bytes() )            
-            self.epoch = model_data['epoch']            
-            if self.epoch != 0:
+            self.iter = max( model_data.get('iter',0), model_data.get('epoch',0) )
+            if 'epoch' in self.options:
+                self.options.pop('epoch')
+            if self.iter != 0:
                 self.options = model_data['options']
                 self.loss_history = model_data['loss_history'] if 'loss_history' in model_data.keys() else []
                 self.sample_for_preview = model_data['sample_for_preview']  if 'sample_for_preview' in model_data.keys() else None
 
-        ask_override = self.is_training_mode and self.epoch != 0 and io.input_in_time ("Press enter in 2 seconds to override model settings.", 2)
+        ask_override = self.is_training_mode and self.iter != 0 and io.input_in_time ("Press enter in 2 seconds to override model settings.", 2)
         
         yn_str = {True:'y',False:'n'}
         
-        if self.epoch == 0: 
+        if self.iter == 0: 
             io.log_info ("\nModel first run. Enter model options as default for each run.")
         
-        if self.epoch == 0 or ask_override: 
-            default_write_preview_history = False if self.epoch == 0 else self.options.get('write_preview_history',False)
+        if self.iter == 0 or ask_override: 
+            default_write_preview_history = False if self.iter == 0 else self.options.get('write_preview_history',False)
             self.options['write_preview_history'] = io.input_bool("Write preview history? (y/n ?:help skip:%s) : " % (yn_str[default_write_preview_history]) , default_write_preview_history, help_message="Preview history will be writed to <ModelName>_history folder.")
         else:
             self.options['write_preview_history'] = self.options.get('write_preview_history', False)
             
-        if self.epoch == 0 or ask_override: 
-            self.options['target_epoch'] = max(0, io.input_int("Target epoch (skip:unlimited/default) : ", 0))
+        if self.iter == 0 or ask_override: 
+            self.options['target_iter'] = max(0, io.input_int("Target iteration (skip:unlimited/default) : ", 0))
         else:
-            self.options['target_epoch'] = self.options.get('target_epoch', 0)
+            self.options['target_iter'] = max(model_data.get('target_iter',0), self.options.get('target_epoch',0))
+            if 'target_epoch' in self.options:
+                self.options.pop('target_epoch')
         
-        if self.epoch == 0 or ask_override: 
-            default_batch_size = 0 if self.epoch == 0 else self.options.get('batch_size',0)
+        if self.iter == 0 or ask_override: 
+            default_batch_size = 0 if self.iter == 0 else self.options.get('batch_size',0)
             self.options['batch_size'] = max(0, io.input_int("Batch_size (?:help skip:0/default) : ", default_batch_size, help_message="Larger batch size is always better for NN's generalization, but it can cause Out of Memory error. Tune this value for your videocard manually."))
         else:
             self.options['batch_size'] = self.options.get('batch_size', 0)
         
-        if self.epoch == 0: 
+        if self.iter == 0: 
             self.options['sort_by_yaw'] = io.input_bool("Feed faces to network sorted by yaw? (y/n ?:help skip:n) : ", False, help_message="NN will not learn src face directions that don't match dst face directions." )
         else:
             self.options['sort_by_yaw'] = self.options.get('sort_by_yaw', False)
             
-        if self.epoch == 0: 
+        if self.iter == 0: 
             self.options['random_flip'] = io.input_bool("Flip faces randomly? (y/n ?:help skip:y) : ", True, help_message="Predicted face will look more naturally without this option, but src faceset should cover all face directions as dst faceset.")
         else:
             self.options['random_flip'] = self.options.get('random_flip', True)
         
-        if self.epoch == 0: 
+        if self.iter == 0: 
             self.options['src_scale_mod'] = np.clip( io.input_int("Src face scale modifier % ( -30...30, ?:help skip:0) : ", 0, help_message="If src face shape is wider than dst, try to decrease this value to get a better result."), -30, 30)
         else:            
             self.options['src_scale_mod'] = self.options.get('src_scale_mod', 0)
@@ -106,9 +110,9 @@ class ModelBase(object):
         if not self.options['write_preview_history']:
             self.options.pop('write_preview_history') 
         
-        self.target_epoch = self.options['target_epoch']
-        if self.options['target_epoch'] == 0:
-            self.options.pop('target_epoch') 
+        self.target_iter = self.options['target_iter']
+        if self.options['target_iter'] == 0:
+            self.options.pop('target_iter') 
            
         self.batch_size = self.options['batch_size']
         self.sort_by_yaw = self.options['sort_by_yaw']        
@@ -118,7 +122,7 @@ class ModelBase(object):
         if self.src_scale_mod == 0:
             self.options.pop('src_scale_mod') 
             
-        self.onInitializeOptions(self.epoch == 0, ask_override)
+        self.onInitializeOptions(self.iter == 0, ask_override)
         
         nnlib.import_all ( nnlib.DeviceConfig(allow_growth=False, **self.device_args) )
         self.device_config = nnlib.active_DeviceConfig
@@ -142,7 +146,7 @@ class ModelBase(object):
                 if not self.preview_history_path.exists():
                     self.preview_history_path.mkdir(exist_ok=True)
                 else:
-                    if self.epoch == 0:
+                    if self.iter == 0:
                         for filename in Path_utils.get_image_paths(self.preview_history_path):
                             Path(filename).unlink()
         
@@ -153,7 +157,7 @@ class ModelBase(object):
                     if not isinstance(generator, SampleGeneratorBase):
                         raise ValueError('training data generator is not subclass of SampleGeneratorBase')
                         
-            if (self.sample_for_preview is None) or (self.epoch == 0):
+            if (self.sample_for_preview is None) or (self.iter == 0):
                 self.sample_for_preview = self.generate_next_sample()
 
         model_summary_text = []
@@ -161,7 +165,7 @@ class ModelBase(object):
         model_summary_text += ["===== Model summary ====="]
         model_summary_text += ["== Model name: " + self.get_model_name()]
         model_summary_text += ["=="]
-        model_summary_text += ["== Current epoch: " + str(self.epoch)]
+        model_summary_text += ["== Current iteration: " + str(self.iter)]
         model_summary_text += ["=="]
         model_summary_text += ["== Model options:"]
         for key in self.options.keys():
@@ -210,7 +214,7 @@ class ModelBase(object):
         pass
 
     #overridable
-    def onTrainOneEpoch(self, sample, generator_list):
+    def onTrainOneIter(self, sample, generator_list):
         #train your keras models here
 
         #return array of losses
@@ -231,11 +235,11 @@ class ModelBase(object):
         raise NotImplementeError
         #return existing or your own converter which derived from base
      
-    def get_target_epoch(self):
-        return self.target_epoch
+    def get_target_iter(self):
+        return self.target_iter
         
-    def is_reached_epoch_goal(self):
-        return self.target_epoch != 0 and self.epoch >= self.target_epoch    
+    def is_reached_iter_goal(self):
+        return self.target_iter != 0 and self.iter >= self.target_iter    
      
     #multi gpu in keras actually is fake and doesn't work for training https://github.com/keras-team/keras/issues/11976
     #def to_multi_gpu_model_if_possible (self, models_list):
@@ -263,13 +267,13 @@ class ModelBase(object):
         return self.onGetPreview (self.sample_for_preview)[0][1] #first preview, and bgr
        
     def save(self):    
-        io.log_info ("Saving...")
+        io.log_info ("Saving....", end='\r')
         
         Path( self.get_strpath_storage_for_file('summary.txt') ).write_text(self.model_summary_text)  
         self.onSave()
             
         model_data = {
-            'epoch': self.epoch,
+            'iter': self.iter,
             'options': self.options,
             'loss_history': self.loss_history,
             'sample_for_preview' : self.sample_for_preview
@@ -336,7 +340,7 @@ class ModelBase(object):
                 source_filename.rename ( str(target_filename) )
 
         
-    def debug_one_epoch(self):
+    def debug_one_iter(self):
         images = []
         for generator in self.generator_list:        
             for i,batch in enumerate(next(generator)):
@@ -348,42 +352,42 @@ class ModelBase(object):
     def generate_next_sample(self):
         return [next(generator) for generator in self.generator_list]
 
-    def train_one_epoch(self):
+    def train_one_iter(self):
         sample = self.generate_next_sample()        
-        epoch_time = time.time()        
-        losses = self.onTrainOneEpoch(sample, self.generator_list)        
-        epoch_time = time.time() - epoch_time
+        iter_time = time.time()        
+        losses = self.onTrainOneIter(sample, self.generator_list)        
+        iter_time = time.time() - iter_time
         self.last_sample = sample
         
         self.loss_history.append ( [float(loss[1]) for loss in losses] )
 
         if self.write_preview_history:
-            if self.epoch % 10 == 0:            
+            if self.iter % 10 == 0:            
                 preview = self.get_static_preview()
-                preview_lh = ModelBase.get_loss_history_preview(self.loss_history, self.epoch, preview.shape[1], preview.shape[2])
+                preview_lh = ModelBase.get_loss_history_preview(self.loss_history, self.iter, preview.shape[1], preview.shape[2])
                 img = (np.concatenate ( [preview_lh, preview], axis=0 ) * 255).astype(np.uint8)
-                cv2_imwrite ( str (self.preview_history_path / ('%.6d.jpg' %( self.epoch) )), img )     
+                cv2_imwrite ( str (self.preview_history_path / ('%.6d.jpg' %( self.iter) )), img )     
                 
-        self.epoch += 1
+        self.iter += 1
 
-        if epoch_time >= 10:
-            #............."Saving... 
-            loss_string = "Training [#{0:06d}][{1:.5s}s]".format ( self.epoch, '{:0.4f}'.format(epoch_time) )
+        time_str = time.strftime("[%H:%M:%S]")
+        if iter_time >= 10:
+            loss_string = "{0}[#{1:06d}][{2:.5s}s]".format ( time_str, self.iter, '{:0.4f}'.format(iter_time) )
         else:
-            loss_string = "Training [#{0:06d}][{1:04d}ms]".format ( self.epoch, int(epoch_time*1000) )
+            loss_string = "{0}[#{1:06d}][{2:04d}ms]".format ( time_str, self.iter, int(iter_time*1000) )
         for (loss_name, loss_value) in losses:
             loss_string += " %s:%.3f" % (loss_name, loss_value)
 
         return loss_string
         
-    def pass_one_epoch(self):
+    def pass_one_iter(self):
         self.last_sample = self.generate_next_sample()     
         
     def finalize(self):
         nnlib.finalize_all()
                 
     def is_first_run(self):
-        return self.epoch == 0
+        return self.iter == 0
         
     def is_debug(self):
         return self.debug
@@ -394,8 +398,8 @@ class ModelBase(object):
     def get_batch_size(self):
         return self.batch_size
         
-    def get_epoch(self):
-        return self.epoch
+    def get_iter(self):
+        return self.iter
         
     def get_loss_history(self):
         return self.loss_history
@@ -430,7 +434,7 @@ class ModelBase(object):
                     self.batch_size = d[ keys[-1] ]
                     
     @staticmethod
-    def get_loss_history_preview(loss_history, epoch, w, c):
+    def get_loss_history_preview(loss_history, iter, w, c):
         loss_history = np.array (loss_history.copy())
                 
         lh_height = 100
@@ -483,7 +487,7 @@ class ModelBase(object):
         last_line_t = int((lh_lines-1)*lh_line_height)
         last_line_b = int(lh_lines*lh_line_height)
         
-        lh_text = 'Epoch: %d' % (epoch) if epoch != 0 else ''
+        lh_text = 'Iter: %d' % (iter) if iter != 0 else ''
         
         lh_img[last_line_t:last_line_b, 0:w] += image_utils.get_text_image (  (w,last_line_b-last_line_t,c), lh_text, color=[0.8]*c )
         return lh_img

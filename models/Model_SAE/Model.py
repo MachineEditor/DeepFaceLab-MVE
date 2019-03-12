@@ -77,11 +77,11 @@ class SAEModel(ModelBase):
         default_bg_style_power = 0.0  
         if is_first_run or ask_override:
             def_pixel_loss = self.options.get('pixel_loss', False)
-            self.options['pixel_loss'] = io.input_bool ("Use pixel loss? (y/n, ?:help skip: %s ) : " % (yn_str[def_pixel_loss]), def_pixel_loss, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 15-25k epochs to enhance fine details and decrease face jitter.")
+            self.options['pixel_loss'] = io.input_bool ("Use pixel loss? (y/n, ?:help skip: %s ) : " % (yn_str[def_pixel_loss]), def_pixel_loss, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 15-25k iters to enhance fine details and decrease face jitter.")
         
             default_face_style_power = default_face_style_power if is_first_run else self.options.get('face_style_power', default_face_style_power)
             self.options['face_style_power'] = np.clip ( io.input_number("Face style power ( 0.0 .. 100.0 ?:help skip:%.2f) : " % (default_face_style_power), default_face_style_power, 
-                                                                               help_message="Learn to transfer face style details such as light and color conditions. Warning: Enable it only after 10k epochs, when predicted face is clear enough to start learn style. Start from 0.1 value and check history changes."), 0.0, 100.0 )            
+                                                                               help_message="Learn to transfer face style details such as light and color conditions. Warning: Enable it only after 10k iters, when predicted face is clear enough to start learn style. Start from 0.1 value and check history changes."), 0.0, 100.0 )            
                             
             default_bg_style_power = default_bg_style_power if is_first_run else self.options.get('bg_style_power', default_bg_style_power)
             self.options['bg_style_power'] = np.clip ( io.input_number("Background style power ( 0.0 .. 100.0 ?:help skip:%.2f) : " % (default_bg_style_power), default_bg_style_power, 
@@ -107,7 +107,6 @@ class SAEModel(ModelBase):
         
         masked_training = True
         
-        epoch_alpha = Input( (1,) )
         warped_src = Input(bgr_shape)
         target_src = Input(bgr_shape)
         target_srcm = Input(mask_shape)
@@ -395,7 +394,7 @@ class SAEModel(ModelBase):
        
     
     #override
-    def onTrainOneEpoch(self, generators_samples, generators_list):
+    def onTrainOneIter(self, generators_samples, generators_list):
         src_samples  = generators_samples[0]
         dst_samples  = generators_samples[1]
 
