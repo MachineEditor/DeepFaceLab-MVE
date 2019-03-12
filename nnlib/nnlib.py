@@ -448,18 +448,14 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 grads = self.get_gradients(loss, params)
                 self.updates = [K.update_add(self.iterations, 1)]
 
-                lr = self.lr
-                t = ( K.cast(self.iterations, K.floatx()) ) % 1000 + 1
-                lr_t = lr * (K.sqrt(1. - K.pow(self.beta_2, t)) /
-                                   (1. - K.pow(self.beta_1, t)))
+                lr_t = self.lr * ( ( K.cast(self.iterations, K.floatx()) ) % 100 + 1 ) / 100.0
 
                 self.weights = []
                 for p, g in zip(params, grads):
 
                     m_t = (1. - self.beta_1) * g
                     v_t = (1. - self.beta_2) * K.square(g)
-                    p_t = p - lr_t * m_t / (K.sqrt(v_t) + K.epsilon() )
-                    new_p = p_t
+                    new_p = p - lr_t * m_t / (K.sqrt(v_t) + K.epsilon() )
 
                     # Apply constraints.
                     if getattr(p, 'constraint', None) is not None:
