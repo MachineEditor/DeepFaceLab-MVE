@@ -34,6 +34,11 @@ class ModelBase(object):
                 device_args['force_gpu_idx'] = io.input_int("Which GPU idx to choose? ( skip: best GPU ) : ", -1, [ x[0] for x in idxs_names_list] )
         self.device_args = device_args
     
+        nnlib.import_all ( nnlib.DeviceConfig(allow_growth=False, **self.device_args) )
+        self.device_config = nnlib.active_DeviceConfig
+        self.keras = nnlib.keras
+        self.K = nnlib.keras.backend
+        
         io.log_info ("Loading model...")
             
         self.model_path = model_path
@@ -121,14 +126,9 @@ class ModelBase(object):
         self.src_scale_mod = self.options['src_scale_mod']
         if self.src_scale_mod == 0:
             self.options.pop('src_scale_mod') 
-            
+
+        
         self.onInitializeOptions(self.iter == 0, ask_override)
-        
-        nnlib.import_all ( nnlib.DeviceConfig(allow_growth=False, **self.device_args) )
-        self.device_config = nnlib.active_DeviceConfig
-        self.keras = nnlib.keras
-        self.K = nnlib.keras.backend
-        
         self.onInitialize()
         
         self.options['batch_size'] = self.batch_size
