@@ -90,7 +90,7 @@ class MTCExtractor(object):
         input_image = input_image[:,:,::-1].copy()
         (h, w, ch) = input_image.shape
 
-        input_scale = self.scale_to / (w if w > h else h)
+        input_scale = self.scale_to / max(w,h)
         input_image = cv2.resize (input_image, ( int(w*input_scale), int(h*input_scale) ), interpolation=cv2.INTER_LINEAR)
 
         detected_faces, pnts = detect_face ( input_image, self.min_face_size, self.pnet_fun, self.rnet_fun, self.onet_fun, [ self.thresh1, self.thresh2, self.thresh3 ], self.scale_factor )

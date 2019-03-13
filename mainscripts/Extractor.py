@@ -79,13 +79,24 @@ class ExtractSubprocessor(Subprocessor):
                 image = self.cached_image[1]
             else:
                 image = cv2_imread( filename_path_str )
+                h, w, ch = image.shape
+                wm = w % 2
+                hm = h % 2
+                if wm + hm != 0: #fix odd image
+                    image = image[0:h-hm,0:w-wm,:]
                 self.cached_image = ( filename_path_str, image )
             
             if image is None:
                 self.log_err ( 'Failed to extract %s, reason: cv2_imread() fail.' % ( str(filename_path) ) )
             else:
                 if self.type == 'rects':
-                    rects = self.e.extract_from_bgr (image)
+                    h, w, ch = image.shape
+                    if min(w,h) < 128:
+                        self.log_err ( 'Image is too small %s : [%d, %d]' % ( str(filename_path), w, h ) )
+                        rects = []
+                    else:                    
+                        rects = self.e.extract_from_bgr (image)
+                        
                     return [str(filename_path), rects]
 
                 elif self.type == 'landmarks':

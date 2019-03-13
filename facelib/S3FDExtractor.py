@@ -5,8 +5,6 @@ from nnlib import nnlib
 
 class S3FDExtractor(object):   
     def __init__(self):
-        self.scale_factor = 3
-        
         exec( nnlib.import_all(), locals(), globals() )
         
         model_path = Path(__file__).parent / "S3FD.h5"
@@ -25,24 +23,30 @@ class S3FDExtractor(object):
         input_image = input_image[:,:,::-1].copy()
         (h, w, ch) = input_image.shape
         
-        d = w if w > h else h
-        input_scale = d / ( (d // self.scale_factor) - (d % self.scale_factor) )
+        d = max(w, h)
+        scale_to = 640 if d >= 1280 else d / 2
+        scale_to = max(64, scale_to)
+            
+        input_scale = d / scale_to
         input_image = cv2.resize (input_image, ( int(w/input_scale), int(h/input_scale) ), interpolation=cv2.INTER_LINEAR)
 
         olist = self.model.predict( np.expand_dims(input_image,0) )
         
         detected_faces = self.refine (olist)
         
+        #filtering faces < 40pix by any side
         #enlarging bottom line a bit for 2DFAN-4, because default is not enough covering a chin
-        for face in detected_faces:
-            l,t,r,b = face
-            tb = (b-t) * 0.1
-            face[3] += tb
-        
+        new_detected_faces = []
+        for l,t,r,b in detected_faces:
+            bt = b-t
+            if min(r-l,bt) < 40:
+                continue
+            new_detected_faces.append ((l,t,r,b+bt*0.1))
+
         return [ (int(face[0]*input_scale), 
                   int(face[1]*input_scale),
                   int(face[2]*input_scale), 
-                  int(face[3]*input_scale)) for face in detected_faces ]
+                  int(face[3]*input_scale)) for face in new_detected_faces ]
         
     def refine(self, olist):
         bboxlist = []
