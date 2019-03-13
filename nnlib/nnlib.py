@@ -148,18 +148,12 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
             suppressor.__exit__()
         
     @staticmethod
-    def import_keras(device_config = None):
+    def import_keras(device_config):
         if nnlib.keras is not None:
             return nnlib.code_import_keras
 
-        if device_config is None:
-            device_config = nnlib.active_DeviceConfig
-            
-        nnlib.active_DeviceConfig = device_config
-
         if "tensorflow" in device_config.backend:
             nnlib._import_tf(device_config)
-            device_config = nnlib.active_DeviceConfig
         elif device_config.backend == "plaidML":
             os.environ["KERAS_BACKEND"] = "plaidml.keras.backend"
             os.environ["PLAIDML_DEVICE_IDS"] = ",".join ( [ nnlib.device.getDeviceID(idx) for idx in device_config.gpu_idxs] )
@@ -435,38 +429,16 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         nnlib.Scale = Scale
 
         class AdamCPU(keras.optimizers.Optimizer):
-            """Adam optimizer.
-            Default parameters follow those provided in the original paper.
-            # Arguments
-                lr: float >= 0. Learning rate.
-                beta_1: float, 0 < beta < 1. Generally close to 1.
-                beta_2: float, 0 < beta < 1. Generally close to 1.
-                epsilon: float >= 0. Fuzz factor. If `None`, defaults to `K.epsilon()`.
-                decay: float >= 0. Learning rate decay over each update.
-                amsgrad: boolean. Whether to apply the AMSGrad variant of this
-                    algorithm from the paper "On the Convergence of Adam and
-                    Beyond".
-            # References
-                - [Adam - A Method for Stochastic Optimization](
-                   https://arxiv.org/abs/1412.6980v8)
-                - [On the Convergence of Adam and Beyond](
-                   https://openreview.net/forum?id=ryQu7f-RZ)
-            """
-
             def __init__(self, lr=0.001, beta_1=0.9, beta_2=0.999,
-                         epsilon=None, decay=0., amsgrad=False, tf_cpu_mode=0, **kwargs):
+                          tf_cpu_mode=0, **kwargs):
                 super(AdamCPU, self).__init__(**kwargs)
                 with K.name_scope(self.__class__.__name__):
                     self.iterations = K.variable(0, dtype='int64', name='iterations')
                     self.lr = K.variable(lr, name='lr')
                     self.beta_1 = K.variable(beta_1, name='beta_1')
                     self.beta_2 = K.variable(beta_2, name='beta_2')
-                    self.decay = K.variable(decay, name='decay')
-                if epsilon is None:
-                    epsilon = K.epsilon()
-                self.epsilon = epsilon
-                self.initial_decay = decay
-                self.amsgrad = amsgrad
+
+                self.epsilon = K.epsilon()
                 self.tf_cpu_mode = tf_cpu_mode
 
             @keras.legacy.interfaces.legacy_get_updates_support
@@ -474,12 +446,8 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 grads = self.get_gradients(loss, params)
                 self.updates = [K.update_add(self.iterations, 1)]
 
-                
                 lr = self.lr
-                if self.initial_decay > 0:
-                    lr = lr * (1. / (1. + self.decay * K.cast(self.iterations,
-                                                              K.dtype(self.decay))))
-                
+
                 t = K.cast(self.iterations, K.floatx()) + 1
                 lr_t = lr * (K.sqrt(1. - K.pow(self.beta_2, t)) /
                              (1. - K.pow(self.beta_1, t)))
@@ -488,21 +456,13 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                     with K.tf.device("/cpu:0"):
                         ms = [K.zeros(K.int_shape(p), dtype=K.dtype(p)) for p in params]
                         vs = [K.zeros(K.int_shape(p), dtype=K.dtype(p)) for p in params]
-                        if self.amsgrad:
-                            vhats = [K.zeros(K.int_shape(p), dtype=K.dtype(p)) for p in params]
-                        else:
-                            vhats = [K.zeros(1) for _ in params]
                 else:
                     ms = [K.zeros(K.int_shape(p), dtype=K.dtype(p)) for p in params]
                     vs = [K.zeros(K.int_shape(p), dtype=K.dtype(p)) for p in params]
-                    if self.amsgrad:
-                        vhats = [K.zeros(K.int_shape(p), dtype=K.dtype(p)) for p in params]
-                    else:
-                        vhats = [K.zeros(1) for _ in params]
 
-                self.weights = [self.iterations] + ms + vs + vhats
+                self.weights = [self.iterations] + ms + vs
  
-                for p, g, m, v, vhat in zip(params, grads, ms, vs, vhats):
+                for p, g, m, v in zip(params, grads, ms, vs):
                     if self.tf_cpu_mode == 2:
                         with K.tf.device("/cpu:0"):
                             m_t = (self.beta_1 * m) + (1. - self.beta_1) * g
@@ -511,12 +471,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                         m_t = (self.beta_1 * m) + (1. - self.beta_1) * g
                         v_t = (self.beta_2 * v) + (1. - self.beta_2) * K.square(g)
                         
-                    if self.amsgrad:
-                        vhat_t = K.maximum(vhat, v_t)
-                        p_t = p - lr_t * m_t / (K.sqrt(vhat_t) + self.epsilon)
-                        self.updates.append(K.update(vhat, vhat_t))
-                    else:
-                        p_t = p - lr_t * m_t / (K.sqrt(v_t) + self.epsilon)
+                    p_t = p - lr_t * m_t / (K.sqrt(v_t) + self.epsilon)
 
                     self.updates.append(K.update(m, m_t))
                     self.updates.append(K.update(v, v_t))
@@ -532,10 +487,8 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
             def get_config(self):
                 config = {'lr': float(K.get_value(self.lr)),
                           'beta_1': float(K.get_value(self.beta_1)),
-                          'beta_2': float(K.get_value(self.beta_2)),
-                          'decay': float(K.get_value(self.decay)),
-                          'epsilon': self.epsilon,
-                          'amsgrad': self.amsgrad}
+                          'beta_2': float(K.get_value(self.beta_2))
+                          }
                 base_config = super(AdamCPU, self).get_config()
                 return dict(list(base_config.items()) + list(config.items()))
                 
@@ -561,7 +514,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         
              
     @staticmethod
-    def import_keras_contrib(device_config = None):
+    def import_keras_contrib(device_config):
         if nnlib.keras_contrib is not None:
             return nnlib.code_import_keras_contrib
         
@@ -588,7 +541,12 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
     
     @staticmethod
     def import_all(device_config = None):
-        if nnlib.code_import_all is None:  
+        if nnlib.code_import_all is None:
+            if device_config is None:
+                device_config = nnlib.active_DeviceConfig
+            else:
+                nnlib.active_DeviceConfig = device_config
+                
             nnlib.import_keras(device_config)
             nnlib.import_keras_contrib(device_config)                                                
             nnlib.code_import_all = compile (nnlib.code_import_keras_string + '\n'
@@ -600,8 +558,8 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
     
     @staticmethod
     def __initialize_all_functions():
-        exec (nnlib.import_keras(), locals(), globals())
-        exec (nnlib.import_keras_contrib(), locals(), globals())
+        exec (nnlib.import_keras(nnlib.active_DeviceConfig), locals(), globals())
+        exec (nnlib.import_keras_contrib(nnlib.active_DeviceConfig), locals(), globals())
         
         class DSSIMMSEMaskLoss(object):
             def __init__(self, mask, is_mse=False):
