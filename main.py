@@ -6,8 +6,8 @@ from utils import Path_utils
 from utils import os_utils
 from pathlib import Path
 
-if sys.version_info[0] < 3 or (sys.version_info[0] == 3 and sys.version_info[1] < 2):
-    raise Exception("This program requires at least Python 3.2")
+if sys.version_info[0] < 3 or (sys.version_info[0] == 3 and sys.version_info[1] < 6):
+    raise Exception("This program requires at least Python 3.6")
 
 class fixPathAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
