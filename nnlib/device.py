@@ -317,7 +317,7 @@ if device.backend is None and not force_tf_cpu:
         device.backend = None
         has_nvml = False     
 
-if not has_nvidia_device and (device.backend is None or force_plaidML):
+if force_plaidML or (device.backend is None and not has_nvidia_device):
     #tensorflow backend was failed without has_nvidia_device , or forcing plaidML, trying to use plaidML backend
     if plaidML_devices_count == 0:
         #print ("plaidML: No capable OpenCL devices found. Falling back to tensorflow backend.")
@@ -343,3 +343,4 @@ if device.backend is None:
         else:
             #has NVSMI, no capable CUDA-devices, also plaidML was failed, then CPU only
             device.backend = "tensorflow-cpu"
+
