@@ -90,7 +90,7 @@ class ModelBase(object):
         
         if self.iter == 0 or ask_override: 
             default_batch_size = 0 if self.iter == 0 else self.options.get('batch_size',0)
-            self.options['batch_size'] = max(0, io.input_int("Batch_size (?:help skip:0/default) : ", default_batch_size, help_message="Larger batch size is always better for NN's generalization, but it can cause Out of Memory error. Tune this value for your videocard manually."))
+            self.options['batch_size'] = max(0, io.input_int("Batch_size (?:help skip:%d) : " % (default_batch_size), default_batch_size, help_message="Larger batch size is always better for NN's generalization, but it can cause Out of Memory error. Tune this value for your videocard manually."))
         else:
             self.options['batch_size'] = self.options.get('batch_size', 0)
         
