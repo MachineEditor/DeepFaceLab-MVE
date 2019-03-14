@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import argparse
+import multiprocessing
 from utils import Path_utils
 from utils import os_utils
 from pathlib import Path
@@ -13,7 +14,9 @@ class fixPathAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         setattr(namespace, self.dest, os.path.abspath(os.path.expanduser(values)))
 
-if __name__ == "__main__":
+if __name__ == "__main__":    
+    multiprocessing.set_start_method("spawn")
+    
     os_utils.set_process_lowest_prio()   
     parser = argparse.ArgumentParser()    
 
