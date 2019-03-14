@@ -159,12 +159,46 @@ def get_image_hull_mask (image_shape, image_landmarks):
         
     hull_mask = np.zeros(image_shape[0:2]+(1,),dtype=np.float32)
 
-    cv2.fillConvexPoly( hull_mask, cv2.convexHull( np.concatenate ( (image_landmarks[0:17], image_landmarks[48:], [image_landmarks[0]], [image_landmarks[8]], [image_landmarks[16]]))    ), (1,) )
-    cv2.fillConvexPoly( hull_mask, cv2.convexHull( np.concatenate ( (image_landmarks[27:31], [image_landmarks[33]]) )                                                                    ), (1,) )
-    cv2.fillConvexPoly( hull_mask, cv2.convexHull( np.concatenate ( (image_landmarks[17:27], [image_landmarks[0]], [image_landmarks[27]], [image_landmarks[16]], [image_landmarks[33]])) ), (1,) )
+    cv2.fillConvexPoly( hull_mask, cv2.convexHull( 
+            np.concatenate ( (image_landmarks[0:9], 
+                              image_landmarks[17:18]))) , (1,)  )
+                              
+    cv2.fillConvexPoly( hull_mask, cv2.convexHull(
+            np.concatenate ( (image_landmarks[8:17], 
+                              image_landmarks[26:27]))) , (1,)  )
+                              
+    cv2.fillConvexPoly( hull_mask, cv2.convexHull(
+            np.concatenate ( (image_landmarks[17:20], 
+                              image_landmarks[8:9]))) , (1,)  )
+                              
+    cv2.fillConvexPoly( hull_mask, cv2.convexHull(
+            np.concatenate ( (image_landmarks[24:27], 
+                              image_landmarks[8:9]))) , (1,)  )
+                              
+    cv2.fillConvexPoly( hull_mask, cv2.convexHull(
+            np.concatenate ( (image_landmarks[19:25], 
+                              image_landmarks[8:9],
+                              ))) , (1,)  )
+                              
+    cv2.fillConvexPoly( hull_mask, cv2.convexHull(
+            np.concatenate ( (image_landmarks[17:22], 
+                              image_landmarks[27:28],
+                              image_landmarks[31:36],
+                              image_landmarks[8:9]
+                              ))) , (1,)  )   
+                              
+    cv2.fillConvexPoly( hull_mask, cv2.convexHull(
+            np.concatenate ( (image_landmarks[22:27], 
+                              image_landmarks[27:28],
+                              image_landmarks[31:36],
+                              image_landmarks[8:9]
+                              ))) , (1,)  )   
+                              
+    #nose
+    cv2.fillConvexPoly( hull_mask, cv2.convexHull(image_landmarks[27:36]), (1,) )
     
     return hull_mask
-    
+
 def get_image_eye_mask (image_shape, image_landmarks):        
     if len(image_landmarks) != 68:
         raise Exception('get_image_eye_mask works only with 68 landmarks')
