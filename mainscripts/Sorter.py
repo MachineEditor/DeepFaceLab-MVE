@@ -509,6 +509,7 @@ class FinalLoaderSubprocessor(Subprocessor):
         #override
         def on_initialize(self, client_dict):        
             self.log_info ('Running on %s.' % (client_dict['device_name']) )
+            self.include_by_blur = client_dict['include_by_blur']
             
         #override
         def process_data(self, data):        
@@ -529,8 +530,9 @@ class FinalLoaderSubprocessor(Subprocessor):
                 bgr = cv2_imread(str(filepath))
                 if bgr is None:
                     raise Exception ("Unable to load %s" % (filepath.name) ) 
-                    
-                sharpness = estimate_sharpness(bgr)
+                
+                gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+                sharpness = estimate_sharpness(gray) if self.include_by_blur else 0
                 pitch, yaw = LandmarksProcessor.estimate_pitch_yaw ( dflimg.get_landmarks() )
                 
                 hist = cv2.calcHist([gray], [0], None, [256], [0, 256])
@@ -546,9 +548,10 @@ class FinalLoaderSubprocessor(Subprocessor):
             return data[0]
     
     #override
-    def __init__(self, img_list ): 
+    def __init__(self, img_list, include_by_blur ): 
         self.img_list = img_list
 
+        self.include_by_blur = include_by_blur
         self.result = []
         self.result_trash = []
 
@@ -566,7 +569,8 @@ class FinalLoaderSubprocessor(Subprocessor):
     def process_info_generator(self):    
         for i in range(0, min(multiprocessing.cpu_count(), 8) ):
             yield 'CPU%d' % (i), {}, {'device_idx': i,
-                                      'device_name': 'CPU%d' % (i)
+                                      'device_name': 'CPU%d' % (i),
+                                      'include_by_blur': self.include_by_blur
                                       }
 
     #override
@@ -592,12 +596,12 @@ class FinalLoaderSubprocessor(Subprocessor):
     def get_result(self):
         return self.result, self.result_trash
     
-def sort_final(input_path):
+def sort_final(input_path, include_by_blur=True):
     io.log_info ("Performing final sort.")
     
     target_count = io.input_int ("Target number of images? (default:2000) : ", 2000)
     
-    img_list, trash_img_list = FinalLoaderSubprocessor( Path_utils.get_image_paths(input_path) ).run()
+    img_list, trash_img_list = FinalLoaderSubprocessor( Path_utils.get_image_paths(input_path), include_by_blur ).run()
     final_img_list = []
 
     grads = 128
@@ -631,22 +635,23 @@ def sort_final(input_path):
     imgs_per_grad += total_lack // grads
     sharpned_imgs_per_grad = imgs_per_grad*10
     
-    for g in io.progress_bar_generator ( range (grads), "Sort by blur"):
-        img_list = yaws_sample_list[g]
-        if img_list is None:
-            continue
+    if include_by_blur:
+        for g in io.progress_bar_generator ( range (grads), "Sort by blur"):
+            img_list = yaws_sample_list[g]
+            if img_list is None:
+                continue
 
-        img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)    
- 
-        if len(img_list) > imgs_per_grad*2:
-            trash_img_list += img_list[len(img_list) // 2:]
-            img_list = img_list[0: len(img_list) // 2]
-        
-        if len(img_list) > sharpned_imgs_per_grad:
-            trash_img_list += img_list[sharpned_imgs_per_grad:]
-            img_list = img_list[0:sharpned_imgs_per_grad]
+            img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)    
+     
+            if len(img_list) > imgs_per_grad*2:
+                trash_img_list += img_list[len(img_list) // 2:]
+                img_list = img_list[0: len(img_list) // 2]
             
-        yaws_sample_list[g] = img_list
+            if len(img_list) > sharpned_imgs_per_grad:
+                trash_img_list += img_list[sharpned_imgs_per_grad:]
+                img_list = img_list[0:sharpned_imgs_per_grad]
+                
+            yaws_sample_list[g] = img_list
             
     for g in io.progress_bar_generator ( range (grads), "Sort by hist"):
         img_list = yaws_sample_list[g]
@@ -737,5 +742,6 @@ def main (input_path, sort_by_method):
     elif sort_by_method == 'origname':      img_list, trash_img_list = sort_by_origname (input_path)
     elif sort_by_method == 'oneface':       img_list, trash_img_list = sort_by_oneface_in_image (input_path)      
     elif sort_by_method == 'final':         img_list, trash_img_list = sort_final (input_path)  
+    elif sort_by_method == 'final-no-blur': img_list, trash_img_list = sort_final (input_path, include_by_blur=False)
     
     final_process (input_path, img_list, trash_img_list)
