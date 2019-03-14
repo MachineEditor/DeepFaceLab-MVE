@@ -63,7 +63,7 @@ def add_landmarks_debug_images(input_path):
 
         if img is not None:
             face_landmarks = dflimg.get_landmarks()
-            LandmarksProcessor.draw_landmarks(img, face_landmarks)
+            img = LandmarksProcessor.draw_landmarks(img, face_landmarks, transparent_mask=True)
             
             output_file = '{}{}'.format( str(Path(str(input_path)) / filepath.stem),  '_debug.jpg')
             cv2_imwrite(output_file, img, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )

@@ -141,7 +141,7 @@ class ExtractSubprocessor(Subprocessor):
                                 continue
 
                         if self.debug:
-                            LandmarksProcessor.draw_rect_landmarks (debug_image, rect, image_landmarks, self.image_size, self.face_type)
+                            debug_image = LandmarksProcessor.draw_rect_landmarks (debug_image, rect, image_landmarks, self.image_size, self.face_type, transparent_mask=True)
                             
                         output_file = '{}_{}{}'.format(str(self.output_path / filename_path.stem), str(face_idx), '.jpg')
                         face_idx += 1
@@ -457,10 +457,10 @@ class ExtractSubprocessor(Subprocessor):
                 image = cv2.warpAffine(image, mat,(w,h) )                
                 view_landmarks = LandmarksProcessor.transform_points (view_landmarks, mat)
      
-            LandmarksProcessor.draw_rect_landmarks (image, view_rect, view_landmarks, self.image_size, self.face_type)
+            image = LandmarksProcessor.draw_rect_landmarks (image, view_rect, view_landmarks, self.image_size, self.face_type)
 
             if self.rect_locked:
-                LandmarksProcessor.draw_landmarks(image, view_landmarks, (255,255,0) )
+                image = LandmarksProcessor.draw_landmarks(image, view_landmarks, (255,255,0) )
             self.redraw_needed = False
             
             io.show_image (self.wnd_name, image)
