@@ -4,7 +4,6 @@ import operator
 import numpy as np
 import cv2
 from shutil import copyfile
-
 from pathlib import Path
 from utils import Path_utils
 from utils import image_utils
@@ -15,25 +14,8 @@ from facelib import LandmarksProcessor
 from joblib import Subprocessor
 import multiprocessing
 from interact import interact as io
-
-def estimate_sharpness(image):       
-    height, width = image.shape[:2]
+from imagelib import estimate_sharpness
     
-    if image.ndim == 3:
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    sharpness = 0
-    for y in range(height):
-        for x in range(width-1):        
-            sharpness += abs( int(image[y, x]) - int(image[y, x+1]) )            
-    
-    for x in range(width):    
-        for y in range(height-1):
-            sharpness += abs( int(image[y, x]) - int(image[y+1, x]) )
-    
-    return sharpness
-    
-
 class BlurEstimatorSubprocessor(Subprocessor):
     class Cli(Subprocessor.Cli):
     
@@ -54,10 +36,7 @@ class BlurEstimatorSubprocessor(Subprocessor):
                 
             if dflimg is not None:
                 image = cv2_imread( str(filepath) )
-                image = ( image * \
-                          LandmarksProcessor.get_image_hull_mask (image.shape, dflimg.get_landmarks()) \
-                         ).astype(np.uint8)
-                return [ str(filepath), estimate_sharpness( image ) ]
+                return [ str(filepath), estimate_sharpness(image) ]
             else:
                 self.log_err ("%s is not a dfl image file" % (filepath.name) ) 
                 return [ str(filepath), 0 ]
@@ -551,9 +530,7 @@ class FinalLoaderSubprocessor(Subprocessor):
                 if bgr is None:
                     raise Exception ("Unable to load %s" % (filepath.name) ) 
                     
-                gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)        
-                gray_masked = ( gray * LandmarksProcessor.get_image_hull_mask (bgr.shape, dflimg.get_landmarks() )[:,:,0] ).astype(np.uint8)
-                sharpness = estimate_sharpness(gray_masked)
+                sharpness = estimate_sharpness(bgr)
                 pitch, yaw = LandmarksProcessor.estimate_pitch_yaw ( dflimg.get_landmarks() )
                 
                 hist = cv2.calcHist([gray], [0], None, [256], [0, 256])
