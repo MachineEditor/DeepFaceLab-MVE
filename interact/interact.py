@@ -111,7 +111,7 @@ class Interact(object):
             has_capture_keys = True
                 
         if has_windows or has_capture_keys:
-            wait_key_time = int(sleep_time / 1000) if sleep_time != 0 else 1
+            wait_key_time = max(1, int(sleep_time*1000) )
             key = cv2.waitKey(wait_key_time) & 0xFF
         else:
             if sleep_time != 0:
