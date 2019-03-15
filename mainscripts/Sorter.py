@@ -643,7 +643,9 @@ def sort_final(input_path, include_by_blur=True):
         if len(img_list) > imgs_per_grad*2:
             trash_img_list += img_list[len(img_list) // 2:]
             img_list = img_list[0: len(img_list) // 2]
-    
+            
+        yaws_sample_list[g] = img_list
+        
     if include_by_blur:
         for g in io.progress_bar_generator ( range (grads), "Sort by blur"):
             img_list = yaws_sample_list[g]
