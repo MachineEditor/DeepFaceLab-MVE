@@ -8,7 +8,10 @@ from tqdm import tqdm
 
 class Interact(object):
     EVENT_LBUTTONDOWN = 1
-    EVENT_MOUSEWHEEL = 2
+    EVENT_LBUTTONUP = 2
+    EVENT_RBUTTONDOWN = 5
+    EVENT_RBUTTONUP = 6
+    EVENT_MOUSEWHEEL = 10
     
     def __init__(self):
         self.named_windows = {}
@@ -55,7 +58,11 @@ class Interact(object):
         def onMouse(event, x, y, flags, param):
             (inst, wnd_name) = param            
             if event == cv2.EVENT_LBUTTONDOWN: ev = Interact.EVENT_LBUTTONDOWN
+            elif event == cv2.EVENT_LBUTTONUP: ev = Interact.EVENT_LBUTTONUP
+            elif event == cv2.EVENT_RBUTTONDOWN: ev = Interact.EVENT_RBUTTONDOWN
+            elif event == cv2.EVENT_RBUTTONUP: ev = Interact.EVENT_RBUTTONUP
             elif event == cv2.EVENT_MOUSEWHEEL: ev = Interact.EVENT_MOUSEWHEEL
+            
             else: ev = 0
             inst.add_mouse_event (wnd_name, x, y, ev, flags) 
 
@@ -105,7 +112,7 @@ class Interact(object):
                 
         if has_windows or has_capture_keys:
             wait_key_time = int(sleep_time / 1000) if sleep_time != 0 else 1
-            key = cv2.waitKey(1) & 0xFF
+            key = cv2.waitKey(wait_key_time) & 0xFF
         else:
             if sleep_time != 0:
                 time.sleep(sleep_time)
