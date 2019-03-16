@@ -113,8 +113,12 @@ class ExtractSubprocessor(Subprocessor):
                 return [str(filename_path), rects]
 
             elif self.type == 'landmarks':
-                rects = data[1]   
-                landmarks = self.e.extract_from_bgr (image, rects)                    
+                rects = data[1]
+                if rects is None:
+                    landmarks = None
+                else:
+                    landmarks = self.e.extract_from_bgr (image, rects)                    
+                    
                 return [str(filename_path), landmarks]
 
             elif self.type == 'final':
@@ -291,20 +295,19 @@ class ExtractSubprocessor(Subprocessor):
                 return self.input_data.pop(0)    
         else:
 
-            allow_remark_faces = False
+            need_remark_face = False
+            redraw_needed = False
             while len (self.input_data) > 0:
                 data = self.input_data[0]
                 filename, faces = data
                 is_frame_done = False
 
-                # Can we mark an image that already has a marked face?
-                if allow_remark_faces:
-                    allow_remark_faces = False
-                    # If there was already a face then lock the rectangle to it until the mouse is clicked
-                    if len(faces) > 0:
+                if need_remark_face: # need remark image from input data that already has a marked face?
+                    need_remark_face = False
+                    if len(faces) != 0: # If there was already a face then lock the rectangle to it until the mouse is clicked
                         self.rect, self.landmarks = faces.pop()
                         faces.clear()
-                        self.extract_needed = True
+                        redraw_needed = True
                         self.rect_locked = True                        
                         self.rect_size = ( self.rect[2] - self.rect[0] ) / 2
                         self.x = ( self.rect[0] + self.rect[2] ) / 2
@@ -378,7 +381,7 @@ class ExtractSubprocessor(Subprocessor):
                             is_frame_done = True
                             break
                         elif key == ord(',')  and len(self.result) > 0: 
-                            #go prev frame
+                            #go prev frame      
                             
                             if self.rect_locked:
                                 # Only save the face if the rect is still locked
@@ -386,21 +389,21 @@ class ExtractSubprocessor(Subprocessor):
                             
                             self.input_data.insert(0, self.result.pop() )
                             io.progress_bar_inc(-1)
-                            allow_remark_faces = True
-                            self.extract_needed = True
-                            self.rect_locked = False
+                            need_remark_face = True
                     
                             break
                         elif key == ord('.'): 
-                            #go next frame
-                            is_frame_done = True
-                            allow_remark_faces = True                            
+                            #go next frame   
+                            
                             if self.rect_locked:
                                 # Only save the face if the rect is still locked
-                                faces.append ( [(self.rect), self.landmarks] )                            
+                                faces.append ( [(self.rect), self.landmarks] )
+                            need_remark_face = True
+                            is_frame_done = True
                             break                        
                         elif key == ord('q'):
                             #skip remaining
+                            
                             if self.rect_locked:
                                 faces.append ( [(self.rect), self.landmarks] )
                             while len(self.input_data) > 0:
@@ -416,17 +419,21 @@ class ExtractSubprocessor(Subprocessor):
                         if self.x != new_x or \
                            self.y != new_y or \
                            self.rect_size != new_rect_size or \
-                           self.extract_needed:
+                           self.extract_needed or \
+                           redraw_needed:
                             self.x = new_x
                             self.y = new_y
                             self.rect_size = new_rect_size
-
                             self.rect = ( int(self.x-self.rect_size), 
                                           int(self.y-self.rect_size), 
                                           int(self.x+self.rect_size), 
                                           int(self.y+self.rect_size) )
                                           
-                            return [filename, [self.rect]]
+                            if redraw_needed:
+                                redraw_needed = False
+                                return [filename, None]
+                            else:
+                                return [filename, [self.rect]]
        
                 else:
                     is_frame_done = True
@@ -448,7 +455,9 @@ class ExtractSubprocessor(Subprocessor):
     #override
     def on_result (self, host_dict, data, result):
         if self.manual == True:
-            self.landmarks = result[1][0][1]
+            filename, landmarks = result
+            if landmarks is not None:
+                self.landmarks = landmarks[0][1]
                                         
             (h,w,c) = self.image.shape
             
@@ -476,10 +485,8 @@ class ExtractSubprocessor(Subprocessor):
                 image = cv2.warpAffine(image, mat,(w,h) )                
                 view_landmarks = LandmarksProcessor.transform_points (view_landmarks, mat)
      
-            LandmarksProcessor.draw_rect_landmarks (image, view_rect, view_landmarks, self.image_size, self.face_type)
-
-            if self.rect_locked:
-                LandmarksProcessor.draw_landmarks(image, view_landmarks, (255,255,0) )
+            landmarks_color = (255,255,0) if self.rect_locked else (0,255,0)
+            LandmarksProcessor.draw_rect_landmarks (image, view_rect, view_landmarks, self.image_size, self.face_type, landmarks_color=landmarks_color)
             self.extract_needed = False
 
             io.show_image (self.wnd_name, image)
