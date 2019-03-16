@@ -356,11 +356,11 @@ class SAEModel(ModelBase):
             self.set_training_data_generators ([            
                     SampleGeneratorFace(self.training_data_src_path, sort_by_yaw_target_samples_path=self.training_data_dst_path if self.sort_by_yaw else None, 
                                                                      debug=self.is_debug(), batch_size=self.batch_size, 
-                        sample_process_options=SampleProcessor.Options(random_flip=self.random_flip, normalize_tanh = True, scale_range=np.array([-0.05, 0.05])+self.src_scale_mod / 100.0 ), 
+                        sample_process_options=SampleProcessor.Options(random_flip=self.random_flip, scale_range=np.array([-0.05, 0.05])+self.src_scale_mod / 100.0 ), 
                         output_sample_types=output_sample_types ),
                                               
                     SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size,
-                        sample_process_options=SampleProcessor.Options(random_flip=self.random_flip, normalize_tanh = True), 
+                        sample_process_options=SampleProcessor.Options(random_flip=self.random_flip, ), 
                         output_sample_types=output_sample_types )
                 ])
             
@@ -418,10 +418,10 @@ class SAEModel(ModelBase):
         test_B_m = sample[1][2][0:4]
 
         if self.options['learn_mask']:
-            S, D, SS, DD, SD, SDM = [ np.clip(x / 2 + 0.5, 0.0, 1.0) for x in ([test_A,test_B] + self.AE_view ([test_A, test_B]) ) ]
+            S, D, SS, DD, SD, SDM = [ np.clip(x, 0.0, 1.0) for x in ([test_A,test_B] + self.AE_view ([test_A, test_B]) ) ]
             SDM, = [ np.repeat (x, (3,), -1) for x in [SDM] ]
         else:
-            S, D, SS, DD, SD, = [ np.clip(x / 2 + 0.5, 0.0, 1.0) for x in ([test_A,test_B] + self.AE_view ([test_A, test_B]) ) ]
+            S, D, SS, DD, SD, = [ np.clip(x, 0.0, 1.0) for x in ([test_A,test_B] + self.AE_view ([test_A, test_B]) ) ]
 
         st = []
         for i in range(0, len(test_A)):
@@ -433,15 +433,13 @@ class SAEModel(ModelBase):
         return [ ('SAE', np.concatenate (st, axis=0 )), ]
     
     def predictor_func (self, face):
-        face_tanh = np.clip(face * 2.0 - 1.0, -1.0, 1.0)
-        
-        face_bgr = face_tanh[...,0:3] 
-        prd = [ (x[0] + 1.0) / 2.0 for x in self.AE_convert ( [ np.expand_dims(face_bgr,0) ] ) ]
- 
+    
+        prd = [ x[0] for x in self.AE_convert ( [ face[np.newaxis,:,:,0:3] ] ) ]
+
         if not self.options['learn_mask']:
-            prd += [ np.expand_dims(face[...,3],-1) ] 
+            prd += [ face[...,3:4] ] 
         
-        return np.concatenate ( [prd[0], prd[1]], -1 )
+        return np.concatenate ( prd, -1 )
         
     #override
     def get_converter(self):
@@ -470,6 +468,9 @@ class SAEModel(ModelBase):
     def initialize_nn_functions():
         exec (nnlib.import_all(), locals(), globals())
         
+        def conv_initializer():
+            return RandomNormal(0, 0.02)
+        
         class ResidualBlock(object):
             def __init__(self, filters, kernel_size=3, padding='same', use_reflection_padding=False):
                 self.filters = filters
@@ -483,13 +484,13 @@ class SAEModel(ModelBase):
                 #if self.use_reflection_padding:
                 #    #var_x = ReflectionPadding2D(stride=1, kernel_size=kernel_size)(var_x)
 
-                var_x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding, kernel_initializer=RandomNormal(0, 0.02) )(var_x)
+                var_x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding, kernel_initializer=conv_initializer() )(var_x)                
                 var_x = LeakyReLU(alpha=0.2)(var_x)
                 
                 #if self.use_reflection_padding:
                 #    #var_x = ReflectionPadding2D(stride=1, kernel_size=kernel_size)(var_x)
                     
-                var_x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding, kernel_initializer=RandomNormal(0, 0.02) )(var_x)
+                var_x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding, kernel_initializer=conv_initializer() )(var_x)
                 var_x = Scale(gamma_init=keras.initializers.Constant(value=0.1))(var_x)
                 var_x = Add()([var_x, inp])
                 var_x = LeakyReLU(alpha=0.2)(var_x)
@@ -498,25 +499,25 @@ class SAEModel(ModelBase):
 
         def downscale (dim):
             def func(x):
-                return LeakyReLU(0.1)(Conv2D(dim, kernel_size=5, strides=2, padding='same', kernel_initializer=RandomNormal(0, 0.02))(x))
+                return LeakyReLU(0.1)(Conv2D(dim, kernel_size=5, strides=2, padding='same', kernel_initializer=conv_initializer())(x))
             return func 
         SAEModel.downscale = downscale
         
         def downscale_sep (dim):
             def func(x):
-                return LeakyReLU(0.1)(SeparableConv2D(dim, kernel_size=5, strides=2, padding='same', depthwise_initializer=RandomNormal(0, 0.02), pointwise_initializer=RandomNormal(0, 0.02) )(x))
+                return LeakyReLU(0.1)(SeparableConv2D(dim, kernel_size=5, strides=2, padding='same', depthwise_initializer=conv_initializer(), pointwise_initializer=RandomNormal(0, 0.02) )(x))
             return func 
         SAEModel.downscale_sep = downscale_sep
         
         def upscale (dim):
             def func(x):
-                return SubpixelUpscaler()(LeakyReLU(0.1)(Conv2D(dim * 4, kernel_size=3, strides=1, padding='same', kernel_initializer=RandomNormal(0, 0.02) )(x)))
+                return SubpixelUpscaler()(LeakyReLU(0.1)(Conv2D(dim * 4, kernel_size=3, strides=1, padding='same', kernel_initializer=conv_initializer() )(x)))
             return func 
         SAEModel.upscale = upscale
         
         def to_bgr (output_nc):
             def func(x):
-                return Conv2D(output_nc, kernel_size=5, padding='same', activation='tanh', kernel_initializer=RandomNormal(0, 0.02))(x)
+                return Conv2D(output_nc, kernel_size=5, padding='same', activation='sigmoid', kernel_initializer=conv_initializer() )(x)
             return func
         SAEModel.to_bgr = to_bgr
         

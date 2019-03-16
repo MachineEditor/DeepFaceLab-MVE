@@ -410,6 +410,9 @@ class ModelBase(object):
     def get_training_data_generators (self):
         return self.generator_list
         
+    def get_model_root_path(self):
+        return self.model_path
+        
     def get_strpath_storage_for_file(self, filename):
         if self.device_args['force_gpu_idx'] == -1:
             return str( self.model_path / ( self.get_model_name() + '_' + filename) )
