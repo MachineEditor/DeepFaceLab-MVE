@@ -3,8 +3,13 @@ import sys
 import contextlib
 import numpy as np
 
+from .CAInitializer import CAGenerateWeights
+import multiprocessing
+from joblib import Subprocessor
+
 from utils import std_utils
 from .device import device
+from interact import interact as io
 
 class nnlib(object):
     device = device #forwards nnlib.devicelib to device in order to use nnlib as standalone lib
@@ -73,6 +78,7 @@ Model = keras.models.Model
 
 #Adam = keras.optimizers.Adam
 Adam = nnlib.Adam
+Padam = nnlib.Padam
 
 modelify = nnlib.modelify
 gaussian_blur = nnlib.gaussian_blur
@@ -82,6 +88,7 @@ dssim = nnlib.dssim
 PixelShuffler = nnlib.PixelShuffler
 SubpixelUpscaler = nnlib.SubpixelUpscaler
 Scale = nnlib.Scale
+CAInitializerMP = nnlib.CAInitializerMP
 
 #ReflectionPadding2D = nnlib.ReflectionPadding2D
 #AddUniformNoise = nnlib.AddUniformNoise
@@ -91,7 +98,6 @@ Scale = nnlib.Scale
 keras_contrib = nnlib.keras_contrib
 GroupNormalization = keras_contrib.layers.GroupNormalization
 InstanceNormalization = keras_contrib.layers.InstanceNormalization
-Padam = keras_contrib.optimizers.Padam
 """
     code_import_dlib_string = \
 """
@@ -497,7 +503,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
 
                 for p, g, m, v, vhat in zip(params, grads, ms, vs, vhats):            
                     e = K.tf.device("/cpu:0") if self.tf_cpu_mode == 2 else None
-                    if e: e.__enter__()            
+                    if e: e.__enter__()
                     m_t = (self.beta_1 * m) + (1. - self.beta_1) * g
                     v_t = (self.beta_2 * v) + (1. - self.beta_2) * K.square(g)
                     
@@ -532,6 +538,126 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 base_config = super(Adam, self).get_config()
                 return dict(list(base_config.items()) + list(config.items()))
         nnlib.Adam = Adam
+        
+        class Padam(keras.optimizers.Optimizer):
+            """Partially adaptive momentum estimation optimizer.
+            # Arguments
+                lr: float >= 0. Learning rate.
+                beta_1: float, 0 < beta < 1. Generally close to 1.
+                beta_2: float, 0 < beta < 1. Generally close to 1.
+                epsilon: float >= 0. Fuzz factor. If `None`, defaults to `K.epsilon()`.
+                decay: float >= 0. Learning rate decay over each update.
+                amsgrad: boolean. Whether to apply the AMSGrad variant of this
+                    algorithm from the paper "On the Convergence of Adam and
+                    Beyond".
+                partial: float, 0 <= partial <= 0.5 . Parameter controlling partial
+                    momentum adaption. For `partial=0`, this optimizer behaves like SGD,
+                    for `partial=0.5` it behaves like AMSGrad.
+            # References
+                - [Closing the Generalization Gap of Adaptive Gradient Methods
+                in Training Deep Neural Networks](https://arxiv.org/pdf/1806.06763.pdf)
+            """
+
+            def __init__(self, lr=1e-1, beta_1=0.9, beta_2=0.999,
+                         epsilon=1e-8, decay=0., amsgrad=False, partial=1. / 8., tf_cpu_mode=0, **kwargs):
+                if partial < 0 or partial > 0.5:
+                    raise ValueError(
+                        "Padam: 'partial' must be a positive float with a maximum "
+                        "value of `0.5`, since higher values will cause divergence "
+                        "during training."
+                    )
+                super(Padam, self).__init__(**kwargs)
+                with K.name_scope(self.__class__.__name__):
+                    self.iterations = K.variable(0, dtype='int64', name='iterations')
+                    self.lr = K.variable(lr, name='lr')
+                    self.beta_1 = K.variable(beta_1, name='beta_1')
+                    self.beta_2 = K.variable(beta_2, name='beta_2')
+                    self.decay = K.variable(decay, name='decay')
+                if epsilon is None:
+                    epsilon = K.epsilon()
+                self.epsilon = epsilon
+                self.partial = partial
+                self.initial_decay = decay
+                self.amsgrad = amsgrad
+                self.tf_cpu_mode = tf_cpu_mode
+                
+            def get_updates(self, loss, params):
+                grads = self.get_gradients(loss, params)
+                self.updates = [K.update_add(self.iterations, 1)]
+
+                lr = self.lr
+                if self.initial_decay > 0:
+                    lr = lr * (1. / (1. + self.decay * K.cast(self.iterations,
+                                                              K.dtype(self.decay))))
+
+                t = K.cast(self.iterations, K.floatx()) + 1
+                lr_t = lr * (K.sqrt(1. - K.pow(self.beta_2, t)) /
+                             (1. - K.pow(self.beta_1, t)))
+                e = K.tf.device("/cpu:0") if self.tf_cpu_mode > 0 else None
+                if e: e.__enter__()
+                ms = [K.zeros(K.int_shape(p), dtype=K.dtype(p)) for p in params]
+                vs = [K.zeros(K.int_shape(p), dtype=K.dtype(p)) for p in params]
+                if self.amsgrad:
+                    vhats = [K.zeros(K.int_shape(p), dtype=K.dtype(p)) for p in params]
+                else:
+                    vhats = [K.zeros(1) for _ in params]
+                self.weights = [self.iterations] + ms + vs + vhats
+                if e: e.__exit__(None, None, None)
+                
+                for p, g, m, v, vhat in zip(params, grads, ms, vs, vhats):
+                
+                    e = K.tf.device("/cpu:0") if self.tf_cpu_mode == 2 else None
+                    if e: e.__enter__()
+                    
+                    m_t = (self.beta_1 * m) + (1. - self.beta_1) * g
+                    v_t = (self.beta_2 * v) + (1. - self.beta_2) * K.square(g)
+                    
+                    if self.amsgrad:
+                        vhat_t = K.maximum(vhat, v_t)
+                        self.updates.append(K.update(vhat, vhat_t))
+                        
+                    if e: e.__exit__(None, None, None)
+                    
+                    if self.amsgrad:
+                        denom = (K.sqrt(vhat_t) + self.epsilon)
+                    else:
+                        denom = (K.sqrt(v_t) + self.epsilon)
+
+                    self.updates.append(K.update(m, m_t))
+                    self.updates.append(K.update(v, v_t))
+
+                    # Partial momentum adaption.
+                    new_p = p - (lr_t * (m_t / (denom ** (self.partial * 2))))
+
+                    # Apply constraints.
+                    if getattr(p, 'constraint', None) is not None:
+                        new_p = p.constraint(new_p)
+
+                    self.updates.append(K.update(p, new_p))
+                return self.updates
+
+            def get_config(self):
+                config = {'lr': float(K.get_value(self.lr)),
+                          'beta_1': float(K.get_value(self.beta_1)),
+                          'beta_2': float(K.get_value(self.beta_2)),
+                          'decay': float(K.get_value(self.decay)),
+                          'epsilon': self.epsilon,
+                          'amsgrad': self.amsgrad,
+                          'partial': self.partial}
+                base_config = super(Padam, self).get_config()
+                return dict(list(base_config.items()) + list(config.items()))
+        nnlib.Padam = Padam
+        
+ 
+        def CAInitializerMP( conv_weights_list ):            
+            result = CAInitializerMPSubprocessor ( [ (i, K.int_shape(conv_weights)) for i, conv_weights in enumerate(conv_weights_list) ], K.floatx(), K.image_data_format() ).run()
+            for idx, weights in result:
+                K.set_value ( conv_weights_list[idx], weights )
+            
+        nnlib.CAInitializerMP = CAInitializerMP
+            
+            
+            
         '''
         not implemented in plaidML
         class ReflectionPadding2D(keras.layers.Layer):
@@ -812,5 +938,71 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         if nnlib.tf is not None:
             nnlib.tf_sess = None
             nnlib.tf = None
+     
+    
+class CAInitializerMPSubprocessor(Subprocessor):
+    class Cli(Subprocessor.Cli):
+    
+        #override
+        def on_initialize(self, client_dict):
+            self.floatx = client_dict['floatx']
+            self.data_format = client_dict['data_format']
 
+        #override
+        def process_data(self, data):
+            idx, shape = data            
+            weights = CAGenerateWeights (shape, self.floatx, self.data_format)
+            return idx, weights
 
+        #override
+        def get_data_name (self, data):
+            #return string identificator of your data
+            return "undefined"
+            
+    #override
+    def __init__(self, idx_shapes_list, floatx, data_format ):
+    
+        self.idx_shapes_list = idx_shapes_list
+        self.floatx = floatx
+        self.data_format = data_format
+        
+        self.result = []
+        super().__init__('CAInitializerMP', CAInitializerMPSubprocessor.Cli)
+
+    #override
+    def on_clients_initialized(self):
+        io.progress_bar ("Processing", len (self.idx_shapes_list))
+        
+    #override
+    def on_clients_finalized(self):
+        io.progress_bar_close()
+        
+    #override
+    def process_info_generator(self):    
+        for i in range(multiprocessing.cpu_count()):
+            yield 'CPU%d' % (i), {}, {'device_idx': i,
+                                      'device_name': 'CPU%d' % (i), 
+                                      'floatx' : self.floatx,
+                                      'data_format' : self.data_format
+                                      }
+
+    #override
+    def get_data(self, host_dict):
+        if len (self.idx_shapes_list) > 0:
+            return self.idx_shapes_list.pop(0)    
+        
+        return None
+    
+    #override
+    def on_data_return (self, host_dict, data):
+        self.idx_shapes_list.insert(0, data)   
+
+    #override
+    def on_result (self, host_dict, data, result):
+        self.result.append ( result )
+        io.progress_bar_inc(1)
+        
+    #override
+    def get_result(self):
+        return self.result
+        

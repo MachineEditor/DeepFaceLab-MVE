@@ -86,7 +86,7 @@ class Subprocessor(object):
             c2s.put ( {'op': 'error', 'data' : data} )
 
     #overridable
-    def __init__(self, name, SubprocessorCli_class, no_response_time_sec = 60):
+    def __init__(self, name, SubprocessorCli_class, no_response_time_sec = 0):
         if not issubclass(SubprocessorCli_class, Subprocessor.Cli):
             raise ValueError("SubprocessorCli_class must be subclass of Subprocessor.Cli")
 
