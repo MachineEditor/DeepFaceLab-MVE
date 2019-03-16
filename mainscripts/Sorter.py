@@ -632,21 +632,10 @@ def sort_final(input_path, include_by_blur=True):
         lack = imgs_per_grad - img_list_len
         total_lack += max(lack, 0)        
 
-    imgs_per_grad += total_lack // grads
-    sharpned_imgs_per_grad = imgs_per_grad*10
-    
-    for g in io.progress_bar_generator ( range (grads), "Normalizing"):
-        img_list = yaws_sample_list[g]
-        if img_list is None:
-            continue
-
-        if len(img_list) > imgs_per_grad*2:
-            trash_img_list += img_list[len(img_list) // 2:]
-            img_list = img_list[0: len(img_list) // 2]
-            
-        yaws_sample_list[g] = img_list
+    imgs_per_grad += total_lack // grads    
         
     if include_by_blur:
+        sharpned_imgs_per_grad = imgs_per_grad*10
         for g in io.progress_bar_generator ( range (grads), "Sort by blur"):
             img_list = yaws_sample_list[g]
             if img_list is None:
@@ -659,7 +648,7 @@ def sort_final(input_path, include_by_blur=True):
                 img_list = img_list[0:sharpned_imgs_per_grad]
                 
             yaws_sample_list[g] = img_list
-            
+     
     for g in io.progress_bar_generator ( range (grads), "Sort by hist"):
         img_list = yaws_sample_list[g]
         if img_list is None:
