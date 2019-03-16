@@ -182,8 +182,16 @@ if __name__ == "__main__":
     p.add_argument('--fps', type=int, dest="fps", default=None, help="FPS of output file. Overwritten by reference-file.")
     p.add_argument('--bitrate', type=int, dest="bitrate", default=None, help="Bitrate of output file in Megabits.")    
     p.add_argument('--lossless', action="store_true", dest="lossless", default=False, help="PNG codec.")
-    
     p.set_defaults(func=process_videoed_video_from_sequence)
+    
+    def process_labelingtool(arguments):        
+        from mainscripts import LabelingTool
+        LabelingTool.main (arguments.input_dir, arguments.output_dir)
+    
+    p = subparsers.add_parser( "labelingtool", help="Labeling tool.")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory of aligned faces.")
+    p.add_argument('--output-dir', required=True, action=fixPathAction, dest="output_dir", help="Output directory. This is where the labeled faces will be stored.")
+    p.set_defaults(func=process_labelingtool)
     
     def bad_args(arguments):
         parser.print_help()
