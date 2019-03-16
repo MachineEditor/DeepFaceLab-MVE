@@ -79,93 +79,106 @@ class ExtractSubprocessor(Subprocessor):
                 image = self.cached_image[1]
             else:
                 image = cv2_imread( filename_path_str )
-                h, w, ch = image.shape
+                
+                if image is None:
+                    self.log_err ( 'Failed to extract %s, reason: cv2_imread() fail.' % ( str(filename_path) ) )
+                    return None
+                
+                image_shape = image.shape
+                if len(image_shape) == 2:
+                    h, w = image.shape
+                    ch = 1                    
+                else:
+                    h, w, ch = image.shape
+                
+                if ch == 1:
+                    image = np.repeat ( image [:,:,np.newaxis], 3, -1 )
+                elif ch == 4:
+                    image = image[:,:,0:3]
+                    
                 wm = w % 2
                 hm = h % 2
                 if wm + hm != 0: #fix odd image
                     image = image[0:h-hm,0:w-wm,:]
                 self.cached_image = ( filename_path_str, image )
-            
-            if image is None:
-                self.log_err ( 'Failed to extract %s, reason: cv2_imread() fail.' % ( str(filename_path) ) )
-            else:
-                if self.type == 'rects':
-                    h, w, ch = image.shape
-                    if min(w,h) < 128:
-                        self.log_err ( 'Image is too small %s : [%d, %d]' % ( str(filename_path), w, h ) )
-                        rects = []
-                    else:                    
-                        rects = self.e.extract_from_bgr (image)
-                        
-                    return [str(filename_path), rects]
-
-                elif self.type == 'landmarks':
-                    rects = data[1]   
-                    landmarks = self.e.extract_from_bgr (image, rects)                    
-                    return [str(filename_path), landmarks]
-
-                elif self.type == 'final':
-                    src_dflimg = None
-                    (h,w,c) = image.shape                
-                    if h == w:
-                        #extracting from already extracted jpg image?
-                        if filename_path.suffix == '.jpg':
-                            src_dflimg = DFLJPG.load ( str(filename_path) )
-                
-                    result = []
-                    faces = data[1]
+       
+            if self.type == 'rects':
+                h, w, ch = image.shape
+                if min(w,h) < 128:
+                    self.log_err ( 'Image is too small %s : [%d, %d]' % ( str(filename_path), w, h ) )
+                    rects = []
+                else:                    
+                    rects = self.e.extract_from_bgr (image)
                     
+                return [str(filename_path), rects]
+
+            elif self.type == 'landmarks':
+                rects = data[1]   
+                landmarks = self.e.extract_from_bgr (image, rects)                    
+                return [str(filename_path), landmarks]
+
+            elif self.type == 'final':
+                src_dflimg = None
+                (h,w,c) = image.shape                
+                if h == w:
+                    #extracting from already extracted jpg image?
+                    if filename_path.suffix == '.jpg':
+                        src_dflimg = DFLJPG.load ( str(filename_path) )
+            
+                result = []
+                faces = data[1]
+                
+                if self.debug:
+                    debug_output_file = '{}{}'.format( str(Path(str(self.output_path) + '_debug') / filename_path.stem),  '.jpg')
+                    debug_image = image.copy()
+                    
+                face_idx = 0
+                for face in faces:   
+                    rect = np.array(face[0])
+                    image_landmarks = np.array(face[1])
+
+                    if self.face_type == FaceType.MARK_ONLY:                        
+                        face_image = image
+                        face_image_landmarks = image_landmarks
+                    else:
+                        image_to_face_mat = LandmarksProcessor.get_transform_mat (image_landmarks, self.image_size, self.face_type)       
+                        face_image = cv2.warpAffine(image, image_to_face_mat, (self.image_size, self.image_size), cv2.INTER_LANCZOS4)
+                        face_image_landmarks = LandmarksProcessor.transform_points (image_landmarks, image_to_face_mat)
+                        
+                        landmarks_bbox = LandmarksProcessor.transform_points ( [ (0,0), (0,self.image_size-1), (self.image_size-1, self.image_size-1), (self.image_size-1,0) ], image_to_face_mat, True)
+                        
+                        rect_area      = mathlib.polygon_area(np.array(rect[[0,2,2,0]]), np.array(rect[[1,1,3,3]]))
+                        landmarks_area = mathlib.polygon_area(landmarks_bbox[:,0], landmarks_bbox[:,1] )
+                        
+                        if landmarks_area > 4*rect_area: #get rid of faces which umeyama-landmark-area > 4*detector-rect-area
+                            continue
+
                     if self.debug:
-                        debug_output_file = '{}{}'.format( str(Path(str(self.output_path) + '_debug') / filename_path.stem),  '.jpg')
-                        debug_image = image.copy()
+                        LandmarksProcessor.draw_rect_landmarks (debug_image, rect, image_landmarks, self.image_size, self.face_type, transparent_mask=True)
                         
-                    face_idx = 0
-                    for face in faces:   
-                        rect = np.array(face[0])
-                        image_landmarks = np.array(face[1])
+                    output_file = '{}_{}{}'.format(str(self.output_path / filename_path.stem), str(face_idx), '.jpg')
+                    face_idx += 1
+                    
+                    if src_dflimg is not None:
+                        #if extracting from dflimg just copy it in order not to lose quality
+                        shutil.copy ( str(filename_path), str(output_file) )
+                    else:
+                        cv2_imwrite(output_file, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 85] )
 
-                        if self.face_type == FaceType.MARK_ONLY:                        
-                            face_image = image
-                            face_image_landmarks = image_landmarks
-                        else:
-                            image_to_face_mat = LandmarksProcessor.get_transform_mat (image_landmarks, self.image_size, self.face_type)       
-                            face_image = cv2.warpAffine(image, image_to_face_mat, (self.image_size, self.image_size), cv2.INTER_LANCZOS4)
-                            face_image_landmarks = LandmarksProcessor.transform_points (image_landmarks, image_to_face_mat)
-                            
-                            landmarks_bbox = LandmarksProcessor.transform_points ( [ (0,0), (0,self.image_size-1), (self.image_size-1, self.image_size-1), (self.image_size-1,0) ], image_to_face_mat, True)
-                            
-                            rect_area      = mathlib.polygon_area(np.array(rect[[0,2,2,0]]), np.array(rect[[1,1,3,3]]))
-                            landmarks_area = mathlib.polygon_area(landmarks_bbox[:,0], landmarks_bbox[:,1] )
-                            
-                            if landmarks_area > 4*rect_area: #get rid of faces which umeyama-landmark-area > 4*detector-rect-area
-                                continue
-
-                        if self.debug:
-                            debug_image = LandmarksProcessor.draw_rect_landmarks (debug_image, rect, image_landmarks, self.image_size, self.face_type, transparent_mask=True)
-                            
-                        output_file = '{}_{}{}'.format(str(self.output_path / filename_path.stem), str(face_idx), '.jpg')
-                        face_idx += 1
+                    DFLJPG.embed_data(output_file, face_type = FaceType.toString(self.face_type),
+                                                   landmarks = face_image_landmarks.tolist(),
+                                                   source_filename = filename_path.name,
+                                                   source_rect=  rect,
+                                                   source_landmarks = image_landmarks.tolist()
+                                        )  
                         
-                        if src_dflimg is not None:
-                            #if extracting from dflimg just copy it in order not to lose quality
-                            shutil.copy ( str(filename_path), str(output_file) )
-                        else:
-                            cv2_imwrite(output_file, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 85] )
-
-                        DFLJPG.embed_data(output_file, face_type = FaceType.toString(self.face_type),
-                                                       landmarks = face_image_landmarks.tolist(),
-                                                       source_filename = filename_path.name,
-                                                       source_rect=  rect,
-                                                       source_landmarks = image_landmarks.tolist()
-                                            )  
-                            
-                        result.append (output_file)
-                        
-                    if self.debug:
-                        cv2_imwrite(debug_output_file, debug_image, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )
-                        
-                    return result       
-            return None
+                    result.append (output_file)
+                    
+                if self.debug:
+                    cv2_imwrite(debug_output_file, debug_image, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )
+                    
+                return result       
+            
              
         #overridable
         def get_data_name (self, data):
@@ -208,7 +221,7 @@ class ExtractSubprocessor(Subprocessor):
             self.y = 0
             self.rect_size = 100
             self.rect_locked = False
-            self.redraw_needed = True
+            self.extract_needed = True
             
         io.progress_bar (None, len (self.input_data))
             
@@ -277,13 +290,12 @@ class ExtractSubprocessor(Subprocessor):
             if len (self.input_data) > 0:
                 return self.input_data.pop(0)    
         else:
-            skip_remaining = False
+
             allow_remark_faces = False
             while len (self.input_data) > 0:
                 data = self.input_data[0]
                 filename, faces = data
                 is_frame_done = False
-                go_to_prev_frame = False
 
                 # Can we mark an image that already has a marked face?
                 if allow_remark_faces:
@@ -291,10 +303,9 @@ class ExtractSubprocessor(Subprocessor):
                     # If there was already a face then lock the rectangle to it until the mouse is clicked
                     if len(faces) > 0:
                         self.rect, self.landmarks = faces.pop()
-                        
-                        self.rect_locked = True
-                        self.redraw_needed = True
                         faces.clear()
+                        self.extract_needed = True
+                        self.rect_locked = True                        
                         self.rect_size = ( self.rect[2] - self.rect[0] ) / 2
                         self.x = ( self.rect[0] + self.rect[2] ) / 2
                         self.y = ( self.rect[1] + self.rect[3] ) / 2
@@ -333,6 +344,8 @@ class ExtractSubprocessor(Subprocessor):
                         self.cache_text_lines_img = (sh, self.text_lines_img)
 
                     while True:
+                        io.process_messages(0.0001)
+                        
                         new_x = self.x
                         new_y = self.y
                         new_rect_size = self.rect_size
@@ -346,7 +359,7 @@ class ExtractSubprocessor(Subprocessor):
                                 new_rect_size = max (5, new_rect_size + diff*mod)                    
                             elif ev == io.EVENT_LBUTTONDOWN:
                                 self.rect_locked = not self.rect_locked
-                                self.redraw_needed = True
+                                self.extract_needed = True
                             elif not self.rect_locked:
                                 new_x = np.clip (x, 0, w-1) / self.view_scale
                                 new_y = np.clip (y, 0, h-1) / self.view_scale
@@ -355,28 +368,47 @@ class ExtractSubprocessor(Subprocessor):
                         key, = key_events[-1] if len(key_events) > 0 else (0,)
 
                         if key == ord('\r') or key == ord('\n'):
-                            faces.append ( [(self.rect), self.landmarks] )
+                            #confirm frame
                             is_frame_done = True
+                            faces.append ( [(self.rect), self.landmarks] )
+                            
                             break
                         elif key == ord(' '):
+                            #confirm skip frame
                             is_frame_done = True
                             break
-                        elif key == ord('.'):
+                        elif key == ord(',')  and len(self.result) > 0: 
+                            #go prev frame
+                            
+                            if self.rect_locked:
+                                # Only save the face if the rect is still locked
+                                faces.append ( [(self.rect), self.landmarks] )
+                            
+                            self.input_data.insert(0, self.result.pop() )
+                            io.progress_bar_inc(-1)
                             allow_remark_faces = True
-                            # Only save the face if the rect is still locked
-                            if self.rect_locked:
-                                faces.append ( [(self.rect), self.landmarks] )
+                            self.extract_needed = True
+                            self.rect_locked = False
+                    
+                            break
+                        elif key == ord('.'): 
+                            #go next frame
                             is_frame_done = True
-                            break
-                        elif key == ord(',')  and len(self.result) > 0:
-                            # Only save the face if the rect is still locked
+                            allow_remark_faces = True                            
+                            if self.rect_locked:
+                                # Only save the face if the rect is still locked
+                                faces.append ( [(self.rect), self.landmarks] )                            
+                            break                        
+                        elif key == ord('q'):
+                            #skip remaining
                             if self.rect_locked:
                                 faces.append ( [(self.rect), self.landmarks] )
-                            go_to_prev_frame = True
+                            while len(self.input_data) > 0:
+                                self.result.append( self.input_data.pop(0) )
+                                io.progress_bar_inc(1)
+                            
                             break
-                        elif key == ord('q'):
-                            skip_remaining = True
-                            break
+                            
                         elif key == ord('h'):
                             self.hide_help = not self.hide_help
                             break
@@ -384,7 +416,7 @@ class ExtractSubprocessor(Subprocessor):
                         if self.x != new_x or \
                            self.y != new_y or \
                            self.rect_size != new_rect_size or \
-                           self.redraw_needed:
+                           self.extract_needed:
                             self.x = new_x
                             self.y = new_y
                             self.rect_size = new_rect_size
@@ -395,8 +427,7 @@ class ExtractSubprocessor(Subprocessor):
                                           int(self.y+self.rect_size) )
                                           
                             return [filename, [self.rect]]
-                        
-                        io.process_messages(0.0001)
+       
                 else:
                     is_frame_done = True
                     
@@ -404,20 +435,8 @@ class ExtractSubprocessor(Subprocessor):
                     self.result.append ( data )
                     self.input_data.pop(0)
                     io.progress_bar_inc(1)
-                    self.redraw_needed = True
-                    self.rect_locked = False
-                elif go_to_prev_frame:
-                    self.input_data.insert(0, self.result.pop() )
-                    io.progress_bar_inc(-1)
-                    allow_remark_faces = True
-                    self.redraw_needed = True
-                    self.rect_locked = False
-                elif skip_remaining:
-                    if self.rect_locked:
-                        faces.append ( [(self.rect), self.landmarks] )
-                    while len(self.input_data) > 0:
-                        self.result.append( self.input_data.pop(0) )
-                        io.progress_bar_inc(1)
+                    self.extract_needed = True
+                    self.rect_locked = False                    
 
         return None
     
@@ -457,12 +476,12 @@ class ExtractSubprocessor(Subprocessor):
                 image = cv2.warpAffine(image, mat,(w,h) )                
                 view_landmarks = LandmarksProcessor.transform_points (view_landmarks, mat)
      
-            image = LandmarksProcessor.draw_rect_landmarks (image, view_rect, view_landmarks, self.image_size, self.face_type)
+            LandmarksProcessor.draw_rect_landmarks (image, view_rect, view_landmarks, self.image_size, self.face_type)
 
             if self.rect_locked:
-                image = LandmarksProcessor.draw_landmarks(image, view_landmarks, (255,255,0) )
-            self.redraw_needed = False
-            
+                LandmarksProcessor.draw_landmarks(image, view_landmarks, (255,255,0) )
+            self.extract_needed = False
+
             io.show_image (self.wnd_name, image)
         else:
             if self.type == 'rects':

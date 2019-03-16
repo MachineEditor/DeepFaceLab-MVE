@@ -282,7 +282,6 @@ def mirror_landmarks (landmarks, val):
     return result
     
 def draw_landmarks (image, image_landmarks, color=(0,255,0), transparent_mask=False):
-    image = image.copy()
     if len(image_landmarks) != 68:
         raise Exception('get_image_eye_mask works only with 68 landmarks')   
         
@@ -309,17 +308,15 @@ def draw_landmarks (image, image_landmarks, color=(0,255,0), transparent_mask=Fa
     
     if transparent_mask:
         mask = get_image_hull_mask (image.shape, image_landmarks)
-        image = image * (1-mask) + image * mask / 2
-    return image
-    
+        image[...] = ( image * (1-mask) + image * mask / 2 )[...]
+
 def draw_rect_landmarks (image, rect, image_landmarks, face_size, face_type, transparent_mask=False):
-    image = draw_landmarks(image, image_landmarks, transparent_mask=transparent_mask)
+    draw_landmarks(image, image_landmarks, transparent_mask=transparent_mask)
     image_utils.draw_rect (image, rect, (255,0,0), 2 )
 
     image_to_face_mat = get_transform_mat (image_landmarks, face_size, face_type)        
     points = transform_points ( [ (0,0), (0,face_size-1), (face_size-1, face_size-1), (face_size-1,0) ], image_to_face_mat, True)
     image_utils.draw_polygon (image, points, (0,0,255), 2)  
-    return image
     
 def calc_face_pitch(landmarks):
     if not isinstance(landmarks, np.ndarray):

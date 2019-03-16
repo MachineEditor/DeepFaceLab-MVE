@@ -48,13 +48,13 @@ class SampleProcessor(object):
         is_face_sample = sample.landmarks is not None 
         
         if debug and is_face_sample:
-            sample_bgr = LandmarksProcessor.draw_landmarks (sample_bgr, sample.landmarks, (0, 1, 0))
+            LandmarksProcessor.draw_landmarks (sample_bgr, sample.landmarks, (0, 1, 0))
         
         close_sample = sample.close_target_list[ np.random.randint(0, len(sample.close_target_list)) ] if sample.close_target_list is not None else None
         close_sample_bgr = close_sample.load_bgr() if close_sample is not None else None
         
         if debug and close_sample_bgr is not None:
-            close_sample_bgr = LandmarksProcessor.draw_landmarks (close_sample_bgr, close_sample.landmarks, (0, 1, 0))        
+            LandmarksProcessor.draw_landmarks (close_sample_bgr, close_sample.landmarks, (0, 1, 0))        
         
         params = image_utils.gen_warp_params(sample_bgr, sample_process_options.random_flip, rotation_range=sample_process_options.rotation_range, scale_range=sample_process_options.scale_range, tx_range=sample_process_options.tx_range, ty_range=sample_process_options.ty_range )
 

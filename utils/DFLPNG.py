@@ -249,17 +249,21 @@ class DFLPNG(object):
         
     @staticmethod
     def load(filename):
-        inst = DFLPNG.load_raw (filename)
-        inst.fcwp_dict = inst.getDFLDictData()
-        
-        if (inst.fcwp_dict is not None) and ('face_type' not in inst.fcwp_dict.keys()):
-            inst.fcwp_dict['face_type'] = FaceType.toString (FaceType.FULL)
-        
-        if inst.fcwp_dict == None:
+        try:
+            inst = DFLPNG.load_raw (filename)
+            inst.fcwp_dict = inst.getDFLDictData()
+            
+            if (inst.fcwp_dict is not None) and ('face_type' not in inst.fcwp_dict.keys()):
+                inst.fcwp_dict['face_type'] = FaceType.toString (FaceType.FULL)
+            
+            if inst.fcwp_dict == None:
+                return None
+            
+            return inst
+        except Exception as e:
+            print(e)
             return None
-        
-        return inst
-        
+            
     @staticmethod
     def embed_data(filename, face_type=None,
                              landmarks=None,
