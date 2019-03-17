@@ -1,3 +1,4 @@
+import traceback
 import numpy as np
 import os
 import cv2
@@ -41,7 +42,8 @@ class LandmarksExtractor(object):
                 pts_img = self.get_pts_from_predict ( predicted[-1], center, scale)
                 pts_img = [ ( int(pt[0]), int(pt[1]) ) for pt in pts_img ]             
                 landmarks.append ( ( (left, top, right, bottom),pts_img ) )
-            except:
+            except Exception as e:
+                print ("extract_from_bgr: ", traceback.format_exc() )
                 landmarks.append ( ( (left, top, right, bottom), [ (0,0) for _ in range(68) ] ) )
                 
         return landmarks

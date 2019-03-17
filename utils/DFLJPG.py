@@ -152,7 +152,8 @@ class DFLJPG(object):
                              landmarks=None,
                              source_filename=None,
                              source_rect=None,
-                             source_landmarks=None
+                             source_landmarks=None,
+                             image_to_face_mat=None
                    ):
     
         inst = DFLJPG.load_raw (filename)
@@ -161,7 +162,8 @@ class DFLJPG(object):
                                 'landmarks': landmarks,
                                 'source_filename': source_filename,
                                 'source_rect': source_rect,
-                                'source_landmarks': source_landmarks
+                                'source_landmarks': source_landmarks,
+                                'image_to_face_mat': image_to_face_mat
                              })
     
         try:
@@ -223,3 +225,6 @@ class DFLJPG(object):
     def get_source_filename(self): return self.dfl_dict['source_filename']        
     def get_source_rect(self): return self.dfl_dict['source_rect']        
     def get_source_landmarks(self): return np.array ( self.dfl_dict['source_landmarks'] )
+    def get_image_to_face_mat(self): 
+        mat = self.dfl_dict.get('image_to_face_mat', None)
+        return np.array(mat) if mat is not None else None

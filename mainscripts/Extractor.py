@@ -33,7 +33,7 @@ class ExtractSubprocessor(Subprocessor):
             self.device_idx   = client_dict['device_idx']
             self.cpu_only     = client_dict['device_type'] == 'CPU'
             self.output_path  = Path(client_dict['output_dir']) if 'output_dir' in client_dict.keys() else None        
-            self.debug        = client_dict['debug']
+            self.debug_dir    = client_dict['debug_dir']
             self.detector     = client_dict['detector']
 
             self.cached_image = (None, None)
@@ -132,8 +132,8 @@ class ExtractSubprocessor(Subprocessor):
                 result = []
                 faces = data[1]
                 
-                if self.debug:
-                    debug_output_file = '{}{}'.format( str(Path(str(self.output_path) + '_debug') / filename_path.stem),  '.jpg')
+                if self.debug_dir is not None:
+                    debug_output_file = str( Path(self.debug_dir) / (filename_path.stem+'.jpg') )
                     debug_image = image.copy()
                     
                 face_idx = 0
@@ -157,7 +157,7 @@ class ExtractSubprocessor(Subprocessor):
                         if landmarks_area > 4*rect_area: #get rid of faces which umeyama-landmark-area > 4*detector-rect-area
                             continue
 
-                    if self.debug:
+                    if self.debug_dir is not None:
                         LandmarksProcessor.draw_rect_landmarks (debug_image, rect, image_landmarks, self.image_size, self.face_type, transparent_mask=True)
                         
                     output_file = '{}_{}{}'.format(str(self.output_path / filename_path.stem), str(face_idx), '.jpg')
@@ -170,7 +170,8 @@ class ExtractSubprocessor(Subprocessor):
                     if src_dflimg is not None:
                         #if extracting from dflimg copy it in order not to lose quality
                         output_file = str(self.output_path / filename_path.name)
-                        shutil.copy ( str(filename_path), str(output_file) )
+                        if str(filename_path) != str(output_file):
+                            shutil.copy ( str(filename_path), str(output_file) )
                         
                         #and transfer data
                         source_filename = src_dflimg.get_source_filename()                        
@@ -191,7 +192,7 @@ class ExtractSubprocessor(Subprocessor):
                         
                     result.append (output_file)
                     
-                if self.debug:
+                if self.debug_dir is not None:
                     cv2_imwrite(debug_output_file, debug_image, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )
                     
                 return result       
@@ -203,12 +204,12 @@ class ExtractSubprocessor(Subprocessor):
             return data[0]
             
     #override
-    def __init__(self, input_data, type, image_size, face_type, debug, multi_gpu=False, cpu_only=False, manual=False, manual_window_size=0, detector=None, output_path=None ): 
+    def __init__(self, input_data, type, image_size, face_type, debug_dir, multi_gpu=False, cpu_only=False, manual=False, manual_window_size=0, detector=None, output_path=None ): 
         self.input_data = input_data
         self.type = type
         self.image_size = image_size
         self.face_type = face_type
-        self.debug = debug        
+        self.debug_dir = debug_dir
         self.multi_gpu = multi_gpu
         self.cpu_only = cpu_only
         self.detector = detector
@@ -290,7 +291,7 @@ class ExtractSubprocessor(Subprocessor):
         base_dict = {'type' : self.type, 
                      'image_size': self.image_size, 
                      'face_type': self.face_type, 
-                     'debug': self.debug, 
+                     'debug_dir': self.debug_dir, 
                      'output_dir': str(self.output_path), 
                      'detector': self.detector}
     
@@ -577,7 +578,7 @@ class DeletedFilesSearcherSubprocessor(Subprocessor):
 
 def main(input_dir,
          output_dir,
-         debug=False,
+         debug_dir=None,
          detector='mt',
          manual_fix=False,
          manual_output_debug_fix=False,
@@ -597,20 +598,21 @@ def main(input_dir,
         raise ValueError('Input directory not found. Please ensure it exists.')
     
     if output_path.exists():
-        if not manual_output_debug_fix:
+        if not manual_output_debug_fix and input_path != output_path:
             for filename in Path_utils.get_image_paths(output_path):
                 Path(filename).unlink()
     else:
         output_path.mkdir(parents=True, exist_ok=True)
         
     if manual_output_debug_fix:
-        debug = True
+        if debug_dir is None:
+            raise ValueError('debug-dir must be specified')
         detector = 'manual'
         io.log_info('Performing re-extract frames which were deleted from _debug directory.')
         
     input_path_image_paths = Path_utils.get_image_unique_filestem_paths(input_path, verbose_print_func=io.log_info)
-    if debug:
-        debug_output_path = Path(str(output_path) + '_debug')
+    if debug_dir is not None:
+        debug_output_path = Path(debug_dir)
         
         if manual_output_debug_fix:
             if not debug_output_path.exists():
@@ -630,13 +632,13 @@ def main(input_dir,
     if images_found != 0:    
         if detector == 'manual':
             io.log_info ('Performing manual extract...')
-            extracted_faces = ExtractSubprocessor ([ (filename,[]) for filename in input_path_image_paths ], 'landmarks', image_size, face_type, debug, cpu_only=cpu_only, manual=True, manual_window_size=manual_window_size).run()
+            extracted_faces = ExtractSubprocessor ([ (filename,[]) for filename in input_path_image_paths ], 'landmarks', image_size, face_type, debug_dir, cpu_only=cpu_only, manual=True, manual_window_size=manual_window_size).run()
         else:
             io.log_info ('Performing 1st pass...')
-            extracted_rects = ExtractSubprocessor ([ (x,) for x in input_path_image_paths ], 'rects', image_size, face_type, debug, multi_gpu=multi_gpu, cpu_only=cpu_only, manual=False, detector=detector).run()
+            extracted_rects = ExtractSubprocessor ([ (x,) for x in input_path_image_paths ], 'rects', image_size, face_type, debug_dir, multi_gpu=multi_gpu, cpu_only=cpu_only, manual=False, detector=detector).run()
                 
             io.log_info ('Performing 2nd pass...')
-            extracted_faces = ExtractSubprocessor (extracted_rects, 'landmarks', image_size, face_type, debug, multi_gpu=multi_gpu, cpu_only=cpu_only, manual=False).run()
+            extracted_faces = ExtractSubprocessor (extracted_rects, 'landmarks', image_size, face_type, debug_dir, multi_gpu=multi_gpu, cpu_only=cpu_only, manual=False).run()
                 
             if manual_fix:
                 io.log_info ('Performing manual fix...')
@@ -644,11 +646,11 @@ def main(input_dir,
                 if all ( np.array ( [ len(data[1]) > 0 for data in extracted_faces] ) == True ):
                     io.log_info ('All faces are detected, manual fix not needed.')
                 else:
-                    extracted_faces = ExtractSubprocessor (extracted_faces, 'landmarks', image_size, face_type, debug, manual=True, manual_window_size=manual_window_size).run()
+                    extracted_faces = ExtractSubprocessor (extracted_faces, 'landmarks', image_size, face_type, debug_dir, manual=True, manual_window_size=manual_window_size).run()
 
         if len(extracted_faces) > 0:
             io.log_info ('Performing 3rd pass...')
-            final_imgs_paths = ExtractSubprocessor (extracted_faces, 'final', image_size, face_type, debug, multi_gpu=multi_gpu, cpu_only=cpu_only, manual=False, output_path=output_path).run()
+            final_imgs_paths = ExtractSubprocessor (extracted_faces, 'final', image_size, face_type, debug_dir, multi_gpu=multi_gpu, cpu_only=cpu_only, manual=False, output_path=output_path).run()
             faces_detected = len(final_imgs_paths)
             
     io.log_info ('-------------------------')
