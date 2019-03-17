@@ -76,9 +76,7 @@ ZeroPadding2D = keras.layers.ZeroPadding2D
 RandomNormal = keras.initializers.RandomNormal
 Model = keras.models.Model
 
-AdaBound = nnlib.AdaBound
 Adam = nnlib.Adam
-Padam = nnlib.Padam
 
 modelify = nnlib.modelify
 gaussian_blur = nnlib.gaussian_blur
