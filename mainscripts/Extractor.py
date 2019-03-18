@@ -52,7 +52,7 @@ class ExtractSubprocessor(Subprocessor):
                         nnlib.import_all (device_config)
                         self.e = facelib.S3FDExtractor()
                     else:
-                        raise ValueError ("Wrond detector type.")
+                        raise ValueError ("Wrong detector type.")
                         
                     if self.e is not None:
                         self.e.__enter__()
@@ -61,6 +61,11 @@ class ExtractSubprocessor(Subprocessor):
                 nnlib.import_all (device_config)
                 self.e = facelib.LandmarksExtractor(nnlib.keras)
                 self.e.__enter__()
+                if device_config.gpu_vram_gb[0] >= 2:
+                    self.second_pass_e = facelib.S3FDExtractor()
+                    self.second_pass_e.__enter__()
+                else:
+                    self.second_pass_e = None
                 
             elif self.type == 'final':
                 pass
@@ -76,7 +81,7 @@ class ExtractSubprocessor(Subprocessor):
 
             filename_path_str = str(filename_path)
             if self.cached_image[0] == filename_path_str:
-                image = self.cached_image[1]
+                image = self.cached_image[1] #cached image for manual extractor
             else:
                 image = cv2_imread( filename_path_str )
                 
@@ -102,8 +107,14 @@ class ExtractSubprocessor(Subprocessor):
                     image = image[0:h-hm,0:w-wm,:]
                 self.cached_image = ( filename_path_str, image )
        
+            src_dflimg = None
+            h, w, ch = image.shape                
+            if h == w:
+                #extracting from already extracted jpg image?
+                if filename_path.suffix == '.jpg':
+                    src_dflimg = DFLJPG.load ( str(filename_path) )
+       
             if self.type == 'rects':
-                h, w, ch = image.shape
                 if min(w,h) < 128:
                     self.log_err ( 'Image is too small %s : [%d, %d]' % ( str(filename_path), w, h ) )
                     rects = []
@@ -116,18 +127,13 @@ class ExtractSubprocessor(Subprocessor):
                 rects = data[1]
                 if rects is None:
                     landmarks = None
-                else:
-                    landmarks = self.e.extract_from_bgr (image, rects)                    
+                else:                    
+                    landmarks = self.e.extract_from_bgr (image, rects, self.second_pass_e if src_dflimg is None else None)                    
                     
                 return [str(filename_path), landmarks]
 
             elif self.type == 'final':
-                src_dflimg = None
-                (h,w,c) = image.shape                
-                if h == w:
-                    #extracting from already extracted jpg image?
-                    if filename_path.suffix == '.jpg':
-                        src_dflimg = DFLJPG.load ( str(filename_path) )
+                
             
                 result = []
                 faces = data[1]
@@ -139,7 +145,10 @@ class ExtractSubprocessor(Subprocessor):
                 face_idx = 0
                 for face in faces:   
                     rect = np.array(face[0])
-                    image_landmarks = np.array(face[1])
+                    image_landmarks = face[1]
+                    if image_landmarks is None:
+                        continue
+                    image_landmarks = np.array(image_landmarks)
 
                     if self.face_type == FaceType.MARK_ONLY:                        
                         face_image = image

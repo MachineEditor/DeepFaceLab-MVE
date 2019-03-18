@@ -64,6 +64,7 @@ class device:
                             
                 self.cpu_only = (len(self.gpu_idxs) == 0)
  
+            
             if not self.cpu_only:
                 self.gpu_names = []
                 self.gpu_compute_caps = []
@@ -73,7 +74,11 @@ class device:
                     self.gpu_compute_caps += [ device.getDeviceComputeCapability(gpu_idx) ]
                     self.gpu_vram_gb += [ device.getDeviceVRAMTotalGb(gpu_idx) ]
                 self.cpu_only = (len(self.gpu_idxs) == 0)
-                
+            else:
+                self.gpu_names = ['CPU']
+                self.gpu_compute_caps = [99]
+                self.gpu_vram_gb = [0]
+            
             if self.cpu_only:
                 self.backend = "tensorflow-cpu"
                 
