@@ -225,6 +225,3 @@ class DFLJPG(object):
     def get_source_filename(self): return self.dfl_dict['source_filename']        
     def get_source_rect(self): return self.dfl_dict['source_rect']        
     def get_source_landmarks(self): return np.array ( self.dfl_dict['source_landmarks'] )
-    def get_image_to_face_mat(self): 
-        mat = self.dfl_dict.get('image_to_face_mat', None)
-        return np.array(mat) if mat is not None else None

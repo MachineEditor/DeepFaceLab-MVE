@@ -329,9 +329,6 @@ class DFLPNG(object):
     def get_source_filename(self): return self.fcwp_dict['source_filename']
     def get_source_rect(self): return self.fcwp_dict['source_rect']
     def get_source_landmarks(self): return np.array ( self.fcwp_dict['source_landmarks'] )
-    def get_image_to_face_mat(self): 
-        mat = self.fcwp_dict.get('image_to_face_mat', None)
-        return np.array(mat) if mat is not None else None
     
     def __str__(self):
         return "<PNG length={length} chunks={}>".format(len(self.chunks), **self.__dict__)

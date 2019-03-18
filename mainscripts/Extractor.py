@@ -177,32 +177,21 @@ class ExtractSubprocessor(Subprocessor):
 
                         if self.debug_dir is not None:
                             LandmarksProcessor.draw_rect_landmarks (debug_image, rect, image_landmarks, self.image_size, self.face_type, transparent_mask=True)
-     
-                        landmarks=face_image_landmarks.tolist()
-                        source_filename = filename_path.name
-                        source_landmarks = image_landmarks.tolist()
-                        source_rect = rect
+
                         if src_dflimg is not None:
                             #if extracting from dflimg copy it in order not to lose quality
                             output_file = str(self.output_path / filename_path.name)
                             if str(filename_path) != str(output_file):
                                 shutil.copy ( str(filename_path), str(output_file) )
-                            
-                            #and transfer data
-                            source_filename = src_dflimg.get_source_filename()                        
-                            mat = src_dflimg.get_image_to_face_mat()
-                            if mat is not None:
-                                image_to_face_mat = mat
-                                source_landmarks = LandmarksProcessor.transform_points (landmarks, image_to_face_mat, True)                            
                         else:
                             output_file = '{}_{}{}'.format(str(self.output_path / filename_path.stem), str(face_idx), '.jpg')
                             cv2_imwrite(output_file, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 85] )
 
                         DFLJPG.embed_data(output_file, face_type=FaceType.toString(self.face_type),
-                                                       landmarks=landmarks,
-                                                       source_filename=source_filename,
-                                                       source_rect=source_rect,
-                                                       source_landmarks=source_landmarks,
+                                                       landmarks=face_image_landmarks.tolist(),
+                                                       source_filename=filename_path.name,
+                                                       source_rect=rect,
+                                                       source_landmarks=image_landmarks.tolist(),
                                                        image_to_face_mat=image_to_face_mat
                                             )  
                             
