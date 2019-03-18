@@ -32,7 +32,7 @@ class LandmarksExtractor(object):
         for (left, top, right, bottom) in rects:
             try:
                 center = np.array( [ (left + right) / 2.0, (top + bottom) / 2.0] )
-                center[1] -= (bottom - top) * 0.12
+                #center[1] -= (bottom - top) * 0.12
                 scale = (right - left + bottom - top) / 195.0
             
                 image = self.crop(input_image, center, scale).astype(np.float32)
