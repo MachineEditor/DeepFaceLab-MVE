@@ -44,27 +44,29 @@ class LandmarksExtractor(object):
                 pts_img = [ ( int(pt[0]), int(pt[1]) ) for pt in pts_img ]             
                 landmarks.append ( ( (left, top, right, bottom),pts_img ) )
             except Exception as e:
-                print ("extract_from_bgr: ", traceback.format_exc() )
                 landmarks.append ( ( (left, top, right, bottom), None ) )
 
         if second_pass_extractor is not None:
-            for i in range(len(landmarks)):                
-                rect, lmrks = landmarks[i]
-                if lmrks is None:
-                    continue
+            for i in range(len(landmarks)):
+                try:
+                    rect, lmrks = landmarks[i]
+                    if lmrks is None:
+                        continue
+                        
+                    image_to_face_mat = LandmarksProcessor.get_transform_mat (lmrks, 256, FaceType.FULL)
+                    face_image = cv2.warpAffine(input_image, image_to_face_mat, (256, 256), cv2.INTER_CUBIC)
                     
-                image_to_face_mat = LandmarksProcessor.get_transform_mat (lmrks, 256, FaceType.FULL)
-                face_image = cv2.warpAffine(input_image, image_to_face_mat, (256, 256), cv2.INTER_CUBIC)
-                
-                rects2 = second_pass_extractor.extract_from_bgr(face_image)
-                if len(rects2) != 1: #dont do second pass if more than 1 face detected in cropped image
-                    continue
+                    rects2 = second_pass_extractor.extract_from_bgr(face_image)
+                    if len(rects2) != 1: #dont do second pass if more than 1 or zero faces detected in cropped image
+                        continue
+                        
+                    rect2 = rects2[0]
                     
-                rect2 = rects2[0]
-                
-                lmrks2 = self.extract_from_bgr (face_image, [rect2] )[0][1]
-                source_lmrks2 = LandmarksProcessor.transform_points (lmrks2, image_to_face_mat, True)                            
-                landmarks[i] = (rect, source_lmrks2)               
+                    lmrks2 = self.extract_from_bgr (face_image, [rect2] )[0][1]
+                    source_lmrks2 = LandmarksProcessor.transform_points (lmrks2, image_to_face_mat, True)                            
+                    landmarks[i] = (rect, source_lmrks2)
+                except:
+                    continue
                 
         return landmarks
 
