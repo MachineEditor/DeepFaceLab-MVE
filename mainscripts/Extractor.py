@@ -141,66 +141,73 @@ class ExtractSubprocessor(Subprocessor):
                 if self.debug_dir is not None:
                     debug_output_file = str( Path(self.debug_dir) / (filename_path.stem+'.jpg') )
                     debug_image = image.copy()
-                    
-                face_idx = 0
-                for face in faces:   
-                    rect = np.array(face[0])
-                    image_landmarks = face[1]
-                    if image_landmarks is None:
-                        continue
-                    image_landmarks = np.array(image_landmarks)
-
-                    if self.face_type == FaceType.MARK_ONLY:                        
-                        face_image = image
-                        face_image_landmarks = image_landmarks
-                    else:
-                        image_to_face_mat = LandmarksProcessor.get_transform_mat (image_landmarks, self.image_size, self.face_type)       
-                        face_image = cv2.warpAffine(image, image_to_face_mat, (self.image_size, self.image_size), cv2.INTER_LANCZOS4)
-                        face_image_landmarks = LandmarksProcessor.transform_points (image_landmarks, image_to_face_mat)
-                        
-                        landmarks_bbox = LandmarksProcessor.transform_points ( [ (0,0), (0,self.image_size-1), (self.image_size-1, self.image_size-1), (self.image_size-1,0) ], image_to_face_mat, True)
-                        
-                        rect_area      = mathlib.polygon_area(np.array(rect[[0,2,2,0]]), np.array(rect[[1,1,3,3]]))
-                        landmarks_area = mathlib.polygon_area(landmarks_bbox[:,0], landmarks_bbox[:,1] )
-                        
-                        if landmarks_area > 4*rect_area: #get rid of faces which umeyama-landmark-area > 4*detector-rect-area
-                            continue
-
-                    if self.debug_dir is not None:
-                        LandmarksProcessor.draw_rect_landmarks (debug_image, rect, image_landmarks, self.image_size, self.face_type, transparent_mask=True)
-                        
-                    output_file = '{}_{}{}'.format(str(self.output_path / filename_path.stem), str(face_idx), '.jpg')
-                    face_idx += 1
-                    
-                    landmarks=face_image_landmarks.tolist()
-                    source_filename = filename_path.name
-                    source_landmarks = image_landmarks.tolist()
-                    source_rect = rect
-                    if src_dflimg is not None:
-                        #if extracting from dflimg copy it in order not to lose quality
-                        output_file = str(self.output_path / filename_path.name)
-                        if str(filename_path) != str(output_file):
-                            shutil.copy ( str(filename_path), str(output_file) )
-                        
-                        #and transfer data
-                        source_filename = src_dflimg.get_source_filename()                        
-                        mat = src_dflimg.get_image_to_face_mat()
-                        if mat is not None:
-                            image_to_face_mat = mat
-                            source_landmarks = LandmarksProcessor.transform_points (landmarks, image_to_face_mat, True)                            
-                    else:
-                        cv2_imwrite(output_file, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 85] )
-
-                    DFLJPG.embed_data(output_file, face_type=FaceType.toString(self.face_type),
-                                                   landmarks=landmarks,
-                                                   source_filename=source_filename,
-                                                   source_rect=source_rect,
-                                                   source_landmarks=source_landmarks,
-                                                   image_to_face_mat=image_to_face_mat
-                                        )  
-                        
+                 
+                if src_dflimg is not None and len(faces) != 1:
+                    #if re-extracting from dflimg and more than 1 or zero faces detected - dont process and just copy it
+                    print("src_dflimg is not None and len(faces) != 1", str(filename_path) )
+                    output_file = str(self.output_path / filename_path.name)
+                    if str(filename_path) != str(output_file):
+                        shutil.copy ( str(filename_path), str(output_file) )
                     result.append (output_file)
-                    
+                else:
+                    face_idx = 0
+                    for face in faces:   
+                        rect = np.array(face[0])
+                        image_landmarks = face[1]
+                        if image_landmarks is None:
+                            continue
+                        image_landmarks = np.array(image_landmarks)
+
+                        if self.face_type == FaceType.MARK_ONLY:                        
+                            face_image = image
+                            face_image_landmarks = image_landmarks
+                        else:
+                            image_to_face_mat = LandmarksProcessor.get_transform_mat (image_landmarks, self.image_size, self.face_type)       
+                            face_image = cv2.warpAffine(image, image_to_face_mat, (self.image_size, self.image_size), cv2.INTER_LANCZOS4)
+                            face_image_landmarks = LandmarksProcessor.transform_points (image_landmarks, image_to_face_mat)
+                            
+                            landmarks_bbox = LandmarksProcessor.transform_points ( [ (0,0), (0,self.image_size-1), (self.image_size-1, self.image_size-1), (self.image_size-1,0) ], image_to_face_mat, True)
+                            
+                            rect_area      = mathlib.polygon_area(np.array(rect[[0,2,2,0]]), np.array(rect[[1,1,3,3]]))
+                            landmarks_area = mathlib.polygon_area(landmarks_bbox[:,0], landmarks_bbox[:,1] )
+                            
+                            if landmarks_area > 4*rect_area: #get rid of faces which umeyama-landmark-area > 4*detector-rect-area
+                                continue
+
+                        if self.debug_dir is not None:
+                            LandmarksProcessor.draw_rect_landmarks (debug_image, rect, image_landmarks, self.image_size, self.face_type, transparent_mask=True)
+     
+                        landmarks=face_image_landmarks.tolist()
+                        source_filename = filename_path.name
+                        source_landmarks = image_landmarks.tolist()
+                        source_rect = rect
+                        if src_dflimg is not None:
+                            #if extracting from dflimg copy it in order not to lose quality
+                            output_file = str(self.output_path / filename_path.name)
+                            if str(filename_path) != str(output_file):
+                                shutil.copy ( str(filename_path), str(output_file) )
+                            
+                            #and transfer data
+                            source_filename = src_dflimg.get_source_filename()                        
+                            mat = src_dflimg.get_image_to_face_mat()
+                            if mat is not None:
+                                image_to_face_mat = mat
+                                source_landmarks = LandmarksProcessor.transform_points (landmarks, image_to_face_mat, True)                            
+                        else:
+                            output_file = '{}_{}{}'.format(str(self.output_path / filename_path.stem), str(face_idx), '.jpg')
+                            cv2_imwrite(output_file, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 85] )
+
+                        DFLJPG.embed_data(output_file, face_type=FaceType.toString(self.face_type),
+                                                       landmarks=landmarks,
+                                                       source_filename=source_filename,
+                                                       source_rect=source_rect,
+                                                       source_landmarks=source_landmarks,
+                                                       image_to_face_mat=image_to_face_mat
+                                            )  
+                            
+                        result.append (output_file)
+                        face_idx += 1
+                        
                 if self.debug_dir is not None:
                     cv2_imwrite(debug_output_file, debug_image, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )
                     
