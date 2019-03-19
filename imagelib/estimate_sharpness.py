@@ -1,6 +1,6 @@
 """
 Copyright (c) 2009-2010 Arizona Board of Regents.  All Rights Reserved.
- Contact: Lina Karam (karam@asu.edu) and Niranjan Narvekar (nnarveka@asu.edu) 
+ Contact: Lina Karam (karam@asu.edu) and Niranjan Narvekar (nnarveka@asu.edu)
  Image, Video, and Usabilty (IVU) Lab, http://ivulab.asu.edu , Arizona State University
  This copyright statement may not be removed from any file containing it or from modifications to these files.
  This copyright notice must also be included in any file or product that is derived from the source files.
@@ -267,10 +267,10 @@ def get_block_contrast(block):
     # type: (numpy.ndarray) -> int
     return int(np.max(block) - np.min(block))
 
-    
-def estimate_sharpness(image):       
+
+def estimate_sharpness(image):
     height, width = image.shape[:2]
-    
+
     if image.ndim == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 

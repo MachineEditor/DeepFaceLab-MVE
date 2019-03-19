@@ -110,7 +110,7 @@ class Chunk(object):
 
     def __str__(self):
         return "<Chunk '{name}' length={length} crc={crc:08X}>".format(**self.__dict__)
-        
+
 class IHDR(Chunk):
 	"""IHDR Chunk
 	width, height, bit_depth, color_type, compression_method,
@@ -189,24 +189,24 @@ class IEND(Chunk):
 class DFLChunk(Chunk):
     def __init__(self, dict_data=None):
         super().__init__("fcWp")
-        self.dict_data = dict_data       
+        self.dict_data = dict_data
 
     def setDictData(self, dict_data):
         self.dict_data = dict_data
-        
+
     def getDictData(self):
         return self.dict_data
-        
+
     @classmethod
     def load(cls, data):
         inst = super().load(data)
-        inst.dict_data = pickle.loads( inst.data )        
+        inst.dict_data = pickle.loads( inst.data )
         return inst
-        
+
     def dump(self):
         self.data = pickle.dumps (self.dict_data)
         return super().dump()
-        
+
 chunk_map = {
     b"IHDR": IHDR,
     b"fcWp": DFLChunk,
@@ -219,7 +219,7 @@ class DFLPNG(object):
         self.length = 0
         self.chunks = []
         self.fcwp_dict = None
-        
+
     @staticmethod
     def load_raw(filename):
         try:
@@ -227,11 +227,11 @@ class DFLPNG(object):
                 data = f.read()
         except:
             raise FileNotFoundError(data)
-    
+
         inst = DFLPNG()
         inst.data = data
         inst.length = len(data)
-        
+
         if data[0:8] != PNG_HEADER:
             msg = "No Valid PNG header"
             raise ValueError(msg)
@@ -244,26 +244,26 @@ class DFLPNG(object):
             chunk = chunk_map.get(chunk_name, Chunk).load(data[chunk_start:chunk_end])
             inst.chunks.append(chunk)
             chunk_start = chunk_end
-        
+
         return inst
-        
+
     @staticmethod
     def load(filename):
         try:
             inst = DFLPNG.load_raw (filename)
             inst.fcwp_dict = inst.getDFLDictData()
-            
+
             if (inst.fcwp_dict is not None) and ('face_type' not in inst.fcwp_dict.keys()):
                 inst.fcwp_dict['face_type'] = FaceType.toString (FaceType.FULL)
-            
+
             if inst.fcwp_dict == None:
                 return None
-            
+
             return inst
         except Exception as e:
             print(e)
             return None
-            
+
     @staticmethod
     def embed_data(filename, face_type=None,
                              landmarks=None,
@@ -271,7 +271,7 @@ class DFLPNG(object):
                              source_rect=None,
                              source_landmarks=None
                    ):
-    
+
         inst = DFLPNG.load_raw (filename)
         inst.setDFLDictData ({
                                 'face_type': face_type,
@@ -280,7 +280,7 @@ class DFLPNG(object):
                                 'source_rect': source_rect,
                                 'source_landmarks': source_landmarks
                              })
-    
+
         try:
             with open(filename, "wb") as f:
                 f.write ( inst.dump() )
@@ -292,7 +292,7 @@ class DFLPNG(object):
         for chunk in self.chunks:
             data += chunk.dump()
         return data
-        
+
     def get_shape(self):
         for chunk in self.chunks:
             if type(chunk) == IHDR:
@@ -301,34 +301,34 @@ class DFLPNG(object):
                 h = chunk.height
                 return (h,w,c)
         return (0,0,0)
-        
+
     def get_height(self):
         for chunk in self.chunks:
             if type(chunk) == IHDR:
                 return chunk.height
         return 0
-        
-    def getDFLDictData(self):        
+
+    def getDFLDictData(self):
         for chunk in self.chunks:
             if type(chunk) == DFLChunk:
                 return chunk.getDictData()
         return None
-                
+
     def setDFLDictData (self, dict_data=None):
         for chunk in self.chunks:
             if type(chunk) == DFLChunk:
                 self.chunks.remove(chunk)
                 break
-    
+
         if not dict_data is None:
             chunk = DFLChunk(dict_data)
             self.chunks.insert(-1, chunk)
-       
-    def get_face_type(self): return self.fcwp_dict['face_type']        
+
+    def get_face_type(self): return self.fcwp_dict['face_type']
     def get_landmarks(self): return np.array ( self.fcwp_dict['landmarks'] )
     def get_source_filename(self): return self.fcwp_dict['source_filename']
     def get_source_rect(self): return self.fcwp_dict['source_rect']
     def get_source_landmarks(self): return np.array ( self.fcwp_dict['source_landmarks'] )
-    
+
     def __str__(self):
         return "<PNG length={length} chunks={}>".format(len(self.chunks), **self.__dict__)

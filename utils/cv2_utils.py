@@ -11,7 +11,7 @@ def cv2_imread(filename, flags=cv2.IMREAD_UNCHANGED):
             return cv2.imdecode(numpyarray, flags)
     except:
         return None
-    
+
 def cv2_imwrite(filename, img, *args):
     ret, buf = cv2.imencode( Path(filename).suffix, img, *args)
     if ret == True:

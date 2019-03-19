@@ -541,7 +541,6 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
             result = CAInitializerMPSubprocessor ( [ (i, K.int_shape(conv_weights)) for i, conv_weights in enumerate(conv_weights_list) ], K.floatx(), K.image_data_format() ).run()
             for idx, weights in result:
                 K.set_value ( conv_weights_list[idx], weights )
-            
         nnlib.CAInitializerMP = CAInitializerMP
             
       

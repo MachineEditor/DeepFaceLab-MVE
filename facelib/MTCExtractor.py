@@ -5,10 +5,10 @@ import cv2
 from pathlib import Path
 from nnlib import nnlib
 
-class MTCExtractor(object):   
+class MTCExtractor(object):
     def __init__(self):
         self.scale_to = 1920
-        
+
         self.min_face_size = self.scale_to * 0.042
         self.thresh1 = 0.7
         self.thresh2 = 0.85
@@ -26,12 +26,12 @@ class MTCExtractor(object):
         x = Conv2D (32, kernel_size=(3,3), strides=(1,1), padding='valid', name="conv3")(x)
         x = PReLU (shared_axes=[1,2], name="PReLU3" )(x)
         prob = Conv2D (2, kernel_size=(1,1), strides=(1,1), padding='valid', name="conv41")(x)
-        prob = Softmax()(prob)    
+        prob = Softmax()(prob)
         x = Conv2D (4, kernel_size=(1,1), strides=(1,1), padding='valid', name="conv42")(x)
 
-        PNet_model = Model(PNet_Input, [x,prob] )        
+        PNet_model = Model(PNet_Input, [x,prob] )
         PNet_model.load_weights ( (Path(__file__).parent / 'mtcnn_pnet.h5').__str__() )
-        
+
         RNet_Input = Input ( (24, 24, 3) )
         x = RNet_Input
         x = Conv2D (28, kernel_size=(3,3), strides=(1,1), padding='valid', name="conv1")(x)
@@ -39,18 +39,18 @@ class MTCExtractor(object):
         x = MaxPooling2D( pool_size=(3,3), strides=(2,2), padding='same' ) (x)
         x = Conv2D (48, kernel_size=(3,3), strides=(1,1), padding='valid', name="conv2")(x)
         x = PReLU (shared_axes=[1,2], name="prelu2" )(x)
-        x = MaxPooling2D( pool_size=(3,3), strides=(2,2), padding='valid' ) (x)    
+        x = MaxPooling2D( pool_size=(3,3), strides=(2,2), padding='valid' ) (x)
         x = Conv2D (64, kernel_size=(2,2), strides=(1,1), padding='valid', name="conv3")(x)
         x = PReLU (shared_axes=[1,2], name="prelu3" )(x)
         x = Lambda ( lambda x: K.reshape (x, (-1, np.prod(K.int_shape(x)[1:]),) ), output_shape=(np.prod(K.int_shape(x)[1:]),) ) (x)
-        x = Dense (128, name='conv4')(x)    
+        x = Dense (128, name='conv4')(x)
         x = PReLU (name="prelu4" )(x)
         prob = Dense (2, name='conv51')(x)
-        prob = Softmax()(prob)  
-        x = Dense (4, name='conv52')(x)        
-        RNet_model = Model(RNet_Input, [x,prob] )        
+        prob = Softmax()(prob)
+        x = Dense (4, name='conv52')(x)
+        RNet_model = Model(RNet_Input, [x,prob] )
         RNet_model.load_weights ( (Path(__file__).parent / 'mtcnn_rnet.h5').__str__() )
-        
+
         ONet_Input = Input ( (48, 48, 3) )
         x = ONet_Input
         x = Conv2D (32, kernel_size=(3,3), strides=(1,1), padding='valid', name="conv1")(x)
@@ -58,20 +58,20 @@ class MTCExtractor(object):
         x = MaxPooling2D( pool_size=(3,3), strides=(2,2), padding='same' ) (x)
         x = Conv2D (64, kernel_size=(3,3), strides=(1,1), padding='valid', name="conv2")(x)
         x = PReLU (shared_axes=[1,2], name="prelu2" )(x)
-        x = MaxPooling2D( pool_size=(3,3), strides=(2,2), padding='valid' ) (x)    
+        x = MaxPooling2D( pool_size=(3,3), strides=(2,2), padding='valid' ) (x)
         x = Conv2D (64, kernel_size=(3,3), strides=(1,1), padding='valid', name="conv3")(x)
         x = PReLU (shared_axes=[1,2], name="prelu3" )(x)
-        x = MaxPooling2D( pool_size=(2,2), strides=(2,2), padding='same' ) (x) 
+        x = MaxPooling2D( pool_size=(2,2), strides=(2,2), padding='same' ) (x)
         x = Conv2D (128, kernel_size=(2,2), strides=(1,1), padding='valid', name="conv4")(x)
         x = PReLU (shared_axes=[1,2], name="prelu4" )(x)
-        x = Lambda ( lambda x: K.reshape (x, (-1, np.prod(K.int_shape(x)[1:]),) ), output_shape=(np.prod(K.int_shape(x)[1:]),) ) (x)    
+        x = Lambda ( lambda x: K.reshape (x, (-1, np.prod(K.int_shape(x)[1:]),) ), output_shape=(np.prod(K.int_shape(x)[1:]),) ) (x)
         x = Dense (256, name='conv5')(x)
         x = PReLU (name="prelu5" )(x)
         prob = Dense (2, name='conv61')(x)
-        prob = Softmax()(prob)    
+        prob = Softmax()(prob)
         x1 = Dense (4, name='conv62')(x)
-        x2 = Dense (10, name='conv63')(x)        
-        ONet_model = Model(ONet_Input, [x1,x2,prob] )        
+        x2 = Dense (10, name='conv63')(x)
+        ONet_model = Model(ONet_Input, [x1,x2,prob] )
         ONet_model.load_weights ( (Path(__file__).parent / 'mtcnn_onet.h5').__str__() )
 
         self.pnet_fun = K.function ( PNet_model.inputs, PNet_model.outputs )
@@ -79,13 +79,13 @@ class MTCExtractor(object):
         self.onet_fun = K.function ( ONet_model.inputs, ONet_model.outputs )
 
     def __enter__(self):
-        faces, pnts = detect_face ( np.zeros ( (self.scale_to, self.scale_to, 3)), self.min_face_size, self.pnet_fun, self.rnet_fun, self.onet_fun, [ self.thresh1, self.thresh2, self.thresh3 ], self.scale_factor ) 
-        
+        faces, pnts = detect_face ( np.zeros ( (self.scale_to, self.scale_to, 3)), self.min_face_size, self.pnet_fun, self.rnet_fun, self.onet_fun, [ self.thresh1, self.thresh2, self.thresh3 ], self.scale_factor )
+
         return self
-        
+
     def __exit__(self, exc_type=None, exc_value=None, traceback=None):
         return False #pass exception between __enter__ and __exit__ to outter level
-        
+
     def extract_from_bgr (self, input_image):
         input_image = input_image[:,:,::-1].copy()
         (h, w, ch) = input_image.shape
@@ -95,7 +95,7 @@ class MTCExtractor(object):
 
         detected_faces, pnts = detect_face ( input_image, self.min_face_size, self.pnet_fun, self.rnet_fun, self.onet_fun, [ self.thresh1, self.thresh2, self.thresh3 ], self.scale_factor )
         detected_faces = [ ( int(face[0]/input_scale), int(face[1]/input_scale), int(face[2]/input_scale), int(face[3]/input_scale)) for face in detected_faces ]
-          
+
         return detected_faces
 
 def detect_face(img, minsize, pnet, rnet, onet, threshold, factor):
@@ -132,9 +132,9 @@ def detect_face(img, minsize, pnet, rnet, onet, threshold, factor):
         out = pnet([img_y])
         out0 = np.transpose(out[0], (0,2,1,3))
         out1 = np.transpose(out[1], (0,2,1,3))
-        
+
         boxes, _ = generateBoundingBox(out1[0,:,:,1].copy(), out0[0,:,:,:].copy(), scale, threshold[0])
-        
+
         # inter-scale nms
         pick = nms(boxes.copy(), 0.5, 'Union')
         if boxes.size>0 and pick.size>0:
@@ -217,7 +217,7 @@ def detect_face(img, minsize, pnet, rnet, onet, threshold, factor):
             pick = nms(total_boxes.copy(), 0.7, 'Min')
             total_boxes = total_boxes[pick,:]
             points = points[:,pick]
-                
+
     return total_boxes, points
 
 
@@ -235,7 +235,7 @@ def bbreg(boundingbox,reg):
     b4 = boundingbox[:,3]+reg[:,3]*h
     boundingbox[:,0:4] = np.transpose(np.vstack([b1, b2, b3, b4 ]))
     return boundingbox
- 
+
 def generateBoundingBox(imap, reg, scale, t):
     """Use heatmap to generate bounding boxes"""
     stride=2
@@ -261,7 +261,7 @@ def generateBoundingBox(imap, reg, scale, t):
     q2 = np.fix((stride*bb+cellsize-1+1)/scale)
     boundingbox = np.hstack([q1, q2, np.expand_dims(score,1), reg])
     return boundingbox, reg
- 
+
 # function pick = nms(boxes,threshold,type)
 def nms(boxes, threshold, method):
     if boxes.size==0:
@@ -315,7 +315,7 @@ def pad(total_boxes, w, h):
     tmp = np.where(ex>w)
     edx.flat[tmp] = np.expand_dims(-ex[tmp]+w+tmpw[tmp],1)
     ex[tmp] = w
-    
+
     tmp = np.where(ey>h)
     edy.flat[tmp] = np.expand_dims(-ey[tmp]+h+tmph[tmp],1)
     ey[tmp] = h
@@ -327,7 +327,7 @@ def pad(total_boxes, w, h):
     tmp = np.where(y<1)
     dy.flat[tmp] = np.expand_dims(2-y[tmp],1)
     y[tmp] = 1
-    
+
     return dy, edy, dx, edx, y, ey, x, ex, tmpw, tmph
 
 # function [bboxA] = rerec(bboxA)

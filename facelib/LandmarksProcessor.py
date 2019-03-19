@@ -36,7 +36,7 @@ landmarks_68_pt = { "mouth": (48,68),
                     "left_eye": (42, 48),
                     "nose": (27, 36), # missed one point
                     "jaw": (0, 17) }
-    
+
 
 landmarks_68_3D = np.array( [
 [-73.393523  , -29.801432   , 47.667532   ],
@@ -107,20 +107,20 @@ landmarks_68_3D = np.array( [
 [8.449166    , 30.596216    , -20.671489  ],
 [0.205322    , 31.408738    , -21.903670  ],
 [-7.198266   , 30.844876    , -20.328022  ] ], dtype=np.float32)
-    
+
 def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
     if not isinstance(image_landmarks, np.ndarray):
-        image_landmarks = np.array (image_landmarks) 
-        
+        image_landmarks = np.array (image_landmarks)
+
     if face_type == FaceType.AVATAR:
         centroid = np.mean (image_landmarks, axis=0)
-        
+
         mat = umeyama(image_landmarks[17:], landmarks_2D, True)[0:2]
         a, c = mat[0,0], mat[1,0]
         scale = math.sqrt((a * a) + (c * c))
-        
+
         padding = (output_size / 64) * 32
-        
+
         mat = np.eye ( 2,3 )
         mat[0,2] = -centroid[0]
         mat[1,2] = -centroid[1]
@@ -135,15 +135,15 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
             padding = (output_size / 64) * 24
         else:
             raise ValueError ('wrong face_type: ', face_type)
-        
+
         mat = umeyama(image_landmarks[17:], landmarks_2D, True)[0:2]
         mat = mat * (output_size - 2 * padding)
-        mat[:,2] += padding        
+        mat[:,2] += padding
         mat *= (1 / scale)
         mat[:,2] += -output_size*( ( (1 / scale) - 1.0 ) / 2 )
-             
+
     return mat
-    
+
 def transform_points(points, mat, invert=False):
     if invert:
         mat = cv2.invertAffineTransform (mat)
@@ -151,68 +151,68 @@ def transform_points(points, mat, invert=False):
     points = cv2.transform(points, mat, points.shape)
     points = np.squeeze(points)
     return points
-    
-    
-def get_image_hull_mask (image_shape, image_landmarks):        
+
+
+def get_image_hull_mask (image_shape, image_landmarks):
     if len(image_landmarks) != 68:
         raise Exception('get_image_hull_mask works only with 68 landmarks')
-        
+
     hull_mask = np.zeros(image_shape[0:2]+(1,),dtype=np.float32)
 
-    cv2.fillConvexPoly( hull_mask, cv2.convexHull( 
-            np.concatenate ( (image_landmarks[0:9], 
+    cv2.fillConvexPoly( hull_mask, cv2.convexHull(
+            np.concatenate ( (image_landmarks[0:9],
                               image_landmarks[17:18]))) , (1,)  )
-                              
+
     cv2.fillConvexPoly( hull_mask, cv2.convexHull(
-            np.concatenate ( (image_landmarks[8:17], 
+            np.concatenate ( (image_landmarks[8:17],
                               image_landmarks[26:27]))) , (1,)  )
-                              
+
     cv2.fillConvexPoly( hull_mask, cv2.convexHull(
-            np.concatenate ( (image_landmarks[17:20], 
+            np.concatenate ( (image_landmarks[17:20],
                               image_landmarks[8:9]))) , (1,)  )
-                              
+
     cv2.fillConvexPoly( hull_mask, cv2.convexHull(
-            np.concatenate ( (image_landmarks[24:27], 
+            np.concatenate ( (image_landmarks[24:27],
                               image_landmarks[8:9]))) , (1,)  )
-                              
+
     cv2.fillConvexPoly( hull_mask, cv2.convexHull(
-            np.concatenate ( (image_landmarks[19:25], 
+            np.concatenate ( (image_landmarks[19:25],
                               image_landmarks[8:9],
                               ))) , (1,)  )
-                              
+
     cv2.fillConvexPoly( hull_mask, cv2.convexHull(
-            np.concatenate ( (image_landmarks[17:22], 
+            np.concatenate ( (image_landmarks[17:22],
                               image_landmarks[27:28],
                               image_landmarks[31:36],
                               image_landmarks[8:9]
-                              ))) , (1,)  )   
-                              
+                              ))) , (1,)  )
+
     cv2.fillConvexPoly( hull_mask, cv2.convexHull(
-            np.concatenate ( (image_landmarks[22:27], 
+            np.concatenate ( (image_landmarks[22:27],
                               image_landmarks[27:28],
                               image_landmarks[31:36],
                               image_landmarks[8:9]
-                              ))) , (1,)  )   
-                              
+                              ))) , (1,)  )
+
     #nose
     cv2.fillConvexPoly( hull_mask, cv2.convexHull(image_landmarks[27:36]), (1,) )
-    
+
     return hull_mask
 
-def get_image_eye_mask (image_shape, image_landmarks):        
+def get_image_eye_mask (image_shape, image_landmarks):
     if len(image_landmarks) != 68:
         raise Exception('get_image_eye_mask works only with 68 landmarks')
-        
+
     hull_mask = np.zeros(image_shape[0:2]+(1,),dtype=np.float32)
 
     cv2.fillConvexPoly( hull_mask, cv2.convexHull( image_landmarks[36:42]), (1,) )
     cv2.fillConvexPoly( hull_mask, cv2.convexHull( image_landmarks[42:48]), (1,) )
-    
+
     return hull_mask
-    
-def get_image_hull_mask_3D (image_shape, image_landmarks):    
+
+def get_image_hull_mask_3D (image_shape, image_landmarks):
     result = get_image_hull_mask(image_shape, image_landmarks)
-    
+
     return np.repeat ( result, (3,), -1 )
 
 def blur_image_hull_mask (hull_mask):
@@ -224,7 +224,7 @@ def blur_image_hull_mask (hull_mask):
     leny = maxy - miny;
     masky = int(minx+(lenx//2))
     maskx = int(miny+(leny//2))
-    lowest_len = min (lenx, leny)        
+    lowest_len = min (lenx, leny)
     ero = int( lowest_len * 0.085 )
     blur = int( lowest_len * 0.10 )
 
@@ -233,10 +233,10 @@ def blur_image_hull_mask (hull_mask):
     hull_mask = np.expand_dims (hull_mask,-1)
 
     return hull_mask
-    
-def get_blurred_image_hull_mask(image_shape, image_landmarks):        
+
+def get_blurred_image_hull_mask(image_shape, image_landmarks):
     return blur_image_hull_mask ( get_image_hull_mask(image_shape, image_landmarks) )
-    
+
 mirror_idxs = [
     [0,16],
     [1,15],
@@ -246,23 +246,23 @@ mirror_idxs = [
     [5,11],
     [6,10],
     [7,9],
-    
+
     [17,26],
     [18,25],
     [19,24],
     [20,23],
-    [21,22],    
-    
+    [21,22],
+
     [36,45],
     [37,44],
     [38,43],
     [39,42],
     [40,47],
-    [41,46],    
-    
+    [41,46],
+
     [31,35],
     [32,34],
-    
+
     [50,52],
     [49,53],
     [48,54],
@@ -271,28 +271,28 @@ mirror_idxs = [
     [67,65],
     [60,64],
     [61,63] ]
-    
-def mirror_landmarks (landmarks, val):    
+
+def mirror_landmarks (landmarks, val):
     result = landmarks.copy()
-    
+
     for idx in mirror_idxs:
         result [ idx ] = result [ idx[::-1] ]
 
     result[:,0] = val - result[:,0] - 1
     return result
-    
+
 def draw_landmarks (image, image_landmarks, color=(0,255,0), transparent_mask=False):
     if len(image_landmarks) != 68:
-        raise Exception('get_image_eye_mask works only with 68 landmarks')   
-        
-    jaw = image_landmarks[slice(*landmarks_68_pt["jaw"])]        
+        raise Exception('get_image_eye_mask works only with 68 landmarks')
+
+    jaw = image_landmarks[slice(*landmarks_68_pt["jaw"])]
     right_eyebrow = image_landmarks[slice(*landmarks_68_pt["right_eyebrow"])]
     left_eyebrow = image_landmarks[slice(*landmarks_68_pt["left_eyebrow"])]
-    mouth = image_landmarks[slice(*landmarks_68_pt["mouth"])]                                    
-    right_eye = image_landmarks[slice(*landmarks_68_pt["right_eye"])]                     
-    left_eye = image_landmarks[slice(*landmarks_68_pt["left_eye"])]            
-    nose = image_landmarks[slice(*landmarks_68_pt["nose"])]            
-    
+    mouth = image_landmarks[slice(*landmarks_68_pt["mouth"])]
+    right_eye = image_landmarks[slice(*landmarks_68_pt["right_eye"])]
+    left_eye = image_landmarks[slice(*landmarks_68_pt["left_eye"])]
+    nose = image_landmarks[slice(*landmarks_68_pt["nose"])]
+
     # open shapes
     cv2.polylines(image, tuple(np.array([v]) for v in ( right_eyebrow, jaw, left_eyebrow, np.concatenate((nose, [nose[-6]])) )),
                   False, color, lineType=cv2.LINE_AA)
@@ -303,9 +303,9 @@ def draw_landmarks (image, image_landmarks, color=(0,255,0), transparent_mask=Fa
     for x, y in np.concatenate((right_eyebrow, left_eyebrow, mouth, right_eye, left_eye, nose), axis=0):
         cv2.circle(image, (x, y), 1, color, 1, lineType=cv2.LINE_AA)
     # jaw big circles
-    for x, y in jaw: 
+    for x, y in jaw:
         cv2.circle(image, (x, y), 2, color, lineType=cv2.LINE_AA)
-    
+
     if transparent_mask:
         mask = get_image_hull_mask (image.shape, image_landmarks)
         image[...] = ( image * (1-mask) + image * mask / 2 )[...]
@@ -314,24 +314,24 @@ def draw_rect_landmarks (image, rect, image_landmarks, face_size, face_type, tra
     draw_landmarks(image, image_landmarks, color=landmarks_color, transparent_mask=transparent_mask)
     image_utils.draw_rect (image, rect, (255,0,0), 2 )
 
-    image_to_face_mat = get_transform_mat (image_landmarks, face_size, face_type)        
+    image_to_face_mat = get_transform_mat (image_landmarks, face_size, face_type)
     points = transform_points ( [ (0,0), (0,face_size-1), (face_size-1, face_size-1), (face_size-1,0) ], image_to_face_mat, True)
-    image_utils.draw_polygon (image, points, (0,0,255), 2)  
-    
+    image_utils.draw_polygon (image, points, (0,0,255), 2)
+
 def calc_face_pitch(landmarks):
     if not isinstance(landmarks, np.ndarray):
         landmarks = np.array (landmarks)
-    t = ( (landmarks[6][1]-landmarks[8][1]) + (landmarks[10][1]-landmarks[8][1]) ) / 2.0   
+    t = ( (landmarks[6][1]-landmarks[8][1]) + (landmarks[10][1]-landmarks[8][1]) ) / 2.0
     b = landmarks[8][1]
     return float(b-t)
-    
+
 def calc_face_yaw(landmarks):
     if not isinstance(landmarks, np.ndarray):
         landmarks = np.array (landmarks)
-    l = ( (landmarks[27][0]-landmarks[0][0]) + (landmarks[28][0]-landmarks[1][0]) + (landmarks[29][0]-landmarks[2][0]) ) / 3.0   
+    l = ( (landmarks[27][0]-landmarks[0][0]) + (landmarks[28][0]-landmarks[1][0]) + (landmarks[29][0]-landmarks[2][0]) ) / 3.0
     r = ( (landmarks[16][0]-landmarks[27][0]) + (landmarks[15][0]-landmarks[28][0]) + (landmarks[14][0]-landmarks[29][0]) ) / 3.0
     return float(r-l)
-  
+
 #returns pitch,yaw [-1...+1]
 def estimate_pitch_yaw(aligned_256px_landmarks):
     shape = (256,256)
@@ -347,7 +347,7 @@ def estimate_pitch_yaw(aligned_256px_landmarks):
         aligned_256px_landmarks.astype(np.float32),
         camera_matrix,
         np.zeros((4, 1)) )
- 
+
     pitch, yaw, _ = mathlib.rotationMatrixToEulerAngles( cv2.Rodrigues(rotation_vector)[0] )
     pitch = np.clip ( pitch*1.25, -1.0, 1.0 )
     yaw = np.clip ( yaw*1.25, -1.0, 1.0 )

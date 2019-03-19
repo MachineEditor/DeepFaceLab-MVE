@@ -7,7 +7,7 @@ class SubprocessFunctionCaller(object):
             self.s2c = s2c
             self.c2s = c2s
             self.lock = lock
-            
+
         def __call__(self, value):
             self.lock.acquire()
             self.c2s.put (value)
@@ -17,26 +17,26 @@ class SubprocessFunctionCaller(object):
                     self.lock.release()
                     return obj
                 time.sleep(0.005)
-    
+
     class HostProcessor(object):
         def __init__(self, s2c, c2s, func):
             self.s2c = s2c
             self.c2s = c2s
             self.func = func
-            
+
         def process_messages(self):
             while not self.c2s.empty():
                 obj = self.c2s.get()
                 result = self.func (obj)
                 self.s2c.put (result)
-                
+
     @staticmethod
     def make_pair( func ):
         s2c = multiprocessing.Queue()
         c2s = multiprocessing.Queue()
         lock = multiprocessing.Lock()
-        
+
         host_processor = SubprocessFunctionCaller.HostProcessor (s2c, c2s, func)
         cli_func = SubprocessFunctionCaller.CliFunction (s2c, c2s, lock)
-        
+
         return host_processor, cli_func

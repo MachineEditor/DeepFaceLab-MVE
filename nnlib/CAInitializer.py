@@ -61,7 +61,7 @@ def _scale_filters(filters, variance):
 def CAGenerateWeights ( shape, floatx, data_format, eps_std=0.05, seed=None ):
     if seed is not None:
         np.random.seed(seed)
-    
+
     fan_in, fan_out = _compute_fans(shape, data_format)
     variance = 2 / fan_in
 
