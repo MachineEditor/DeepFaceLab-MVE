@@ -9,7 +9,14 @@ from interact import interact as io
 
 class Model(ModelBase):
 
-    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs, 
+                            ask_write_preview_history=False, 
+                            ask_target_iter=False,
+                            ask_sort_by_yaw=False,
+                            ask_random_flip=False,
+                            ask_src_scale_mod=False)
+        
     #override
     def onInitialize(self):
         exec(nnlib.import_all(), locals(), globals())
@@ -25,17 +32,17 @@ class Model(ModelBase):
 
         if self.is_training_mode:
             f = SampleProcessor.TypeFlags
-            f_type = f.FACE_ALIGN_FULL #if self.face_type == FaceType.FULL else f.FACE_ALIGN_HALF
+            f_type = f.FACE_ALIGN_FULL
             
             self.set_training_data_generators ([    
                     SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size, 
-                            sample_process_options=SampleProcessor.Options(random_flip=self.random_flip, normalize_tanh = True, scale_range=np.array([-0.05, 0.05])+self.src_scale_mod / 100.0 ), 
+                            sample_process_options=SampleProcessor.Options(random_flip=True, normalize_tanh = True ), 
                             output_sample_types=[ [f.TRANSFORMED | f_type | f.MODE_BGR, self.resolution],
                                                   [f.TRANSFORMED | f_type | f.MODE_M | f.FACE_MASK_FULL, self.resolution]
                                                 ]),
                                                 
                     SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size, 
-                            sample_process_options=SampleProcessor.Options(random_flip=self.random_flip, normalize_tanh = True, scale_range=np.array([-0.05, 0.05])+self.src_scale_mod / 100.0 ), 
+                            sample_process_options=SampleProcessor.Options(random_flip=True, normalize_tanh = True ), 
                             output_sample_types=[ [f.TRANSFORMED | f_type | f.MODE_BGR, self.resolution]
                                                 ])
                                                ])
@@ -59,6 +66,9 @@ class Model(ModelBase):
         
         mAA = self.fan_seg.extract_from_bgr([test_A])
         mBB = self.fan_seg.extract_from_bgr([test_B])
+        
+        test_A, test_B, = [ np.clip( (x + 1.0)/2.0, 0.0, 1.0)  for x in [test_A, test_B] ]
+        
         mAA = np.repeat ( mAA, (3,), -1)
         mBB = np.repeat ( mBB, (3,), -1)
         
@@ -81,25 +91,3 @@ class Model(ModelBase):
         return [ ('FANSegmentator', np.concatenate ( st, axis=0 ) ),
                  ('never seen', np.concatenate ( st2, axis=0 ) ),
                  ]
-
-    def predictor_func (self, face):
-        
-        face_64_bgr = face[...,0:3]
-        face_64_mask = np.expand_dims(face[...,3],-1)
-        
-        x, mx = self.src_view ( [ np.expand_dims(face_64_bgr,0) ] )
-        x, mx = x[0], mx[0]     
-        
-        return np.concatenate ( (x,mx), -1 )
-
-    #override
-    def get_converter(self):
-        from converters import ConverterMasked
-        return ConverterMasked(self.predictor_func,
-                               predictor_input_size=64, 
-                               output_size=64, 
-                               face_type=FaceType.HALF, 
-                               base_erode_mask_modifier=100,
-                               base_blur_mask_modifier=100)
-        
-   
