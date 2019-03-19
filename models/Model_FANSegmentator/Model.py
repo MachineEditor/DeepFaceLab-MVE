@@ -37,13 +37,13 @@ class Model(ModelBase):
             self.set_training_data_generators ([    
                     SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size, 
                             sample_process_options=SampleProcessor.Options(random_flip=True, normalize_tanh = True ), 
-                            output_sample_types=[ [f.TRANSFORMED | f_type | f.MODE_BGR, self.resolution],
+                            output_sample_types=[ [f.TRANSFORMED | f_type | f.MODE_BGR_SHUFFLE, self.resolution],
                                                   [f.TRANSFORMED | f_type | f.MODE_M | f.FACE_MASK_FULL, self.resolution]
                                                 ]),
                                                 
                     SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size, 
                             sample_process_options=SampleProcessor.Options(random_flip=True, normalize_tanh = True ), 
-                            output_sample_types=[ [f.TRANSFORMED | f_type | f.MODE_BGR, self.resolution]
+                            output_sample_types=[ [f.TRANSFORMED | f_type | f.MODE_BGR_SHUFFLE, self.resolution]
                                                 ])
                                                ])
                 
