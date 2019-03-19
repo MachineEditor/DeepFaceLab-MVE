@@ -595,7 +595,75 @@ class FinalLoaderSubprocessor(Subprocessor):
     #override
     def get_result(self):
         return self.result, self.result_trash
+
+class FinalHistDissimSubprocessor(Subprocessor):
+    class Cli(Subprocessor.Cli):
+        #override
+        def on_initialize(self, client_dict):  
+            self.log_info ('Running on %s.' % (client_dict['device_name']) )
+
+        #override
+        def process_data(self, data):
+            idx, img_list = data
+            for i in range( len(img_list) ):
+                score_total = 0
+                for j in range( len(img_list) ):
+                    if i == j:
+                        continue
+                    score_total += cv2.compareHist(img_list[i][2], img_list[j][2], cv2.HISTCMP_BHATTACHARYYA)
+                img_list[i][3] = score_total                
+            img_list = sorted(img_list, key=operator.itemgetter(3), reverse=True)
+            return idx, img_list     
+
+        #override
+        def get_data_name (self, data):
+            return "Bunch of images"
     
+    #override
+    def __init__(self, yaws_sample_list ): 
+        self.yaws_sample_list = yaws_sample_list
+        self.yaws_sample_list_len = len(yaws_sample_list)
+        
+        self.yaws_sample_list_idxs = [ i for i in range(self.yaws_sample_list_len) if self.yaws_sample_list[i] is not None ]
+        self.result = [ None for _ in range(self.yaws_sample_list_len) ]
+        super().__init__('FinalHistDissimSubprocessor', FinalHistDissimSubprocessor.Cli)           
+
+    #override
+    def process_info_generator(self):    
+        for i in range(min(multiprocessing.cpu_count(), 8) ):
+            yield 'CPU%d' % (i), {'i':i}, {'device_idx': i,
+                                           'device_name': 'CPU%d' % (i)
+                                          }
+    #override
+    def on_clients_initialized(self):
+        io.progress_bar ("Sort by hist-dissim", self.yaws_sample_list_len)
+        
+    #override
+    def on_clients_finalized(self):
+        io.progress_bar_close()
+    
+    #override
+    def get_data(self, host_dict):     
+        if len (self.yaws_sample_list_idxs) > 0:
+            idx = self.yaws_sample_list_idxs.pop(0)
+            
+            return idx, self.yaws_sample_list[idx]
+        return None
+    
+    #override
+    def on_data_return (self, host_dict, data):
+        self.yaws_sample_list_idxs.insert(0, data[0])
+        
+    #override
+    def on_result (self, host_dict, data, result):
+        idx, yaws_sample_list = data        
+        self.result[idx] = yaws_sample_list
+        io.progress_bar_inc(1)
+
+    #override
+    def get_result(self):
+        return self.result
+        
 def sort_final(input_path, include_by_blur=True):
     io.log_info ("Performing final sort.")
     
@@ -648,21 +716,8 @@ def sort_final(input_path, include_by_blur=True):
                 img_list = img_list[0:sharpned_imgs_per_grad]
                 
             yaws_sample_list[g] = img_list
-     
-    for g in io.progress_bar_generator ( range (grads), "Sort by hist"):
-        img_list = yaws_sample_list[g]
-        if img_list is None:
-            continue
             
-        for i in range( len(img_list) ):
-            score_total = 0
-            for j in range( len(img_list) ):
-                if i == j:
-                    continue
-                score_total += cv2.compareHist(img_list[i][2], img_list[j][2], cv2.HISTCMP_BHATTACHARYYA)
-            img_list[i][3] = score_total
-            
-        yaws_sample_list[g] = sorted(img_list, key=operator.itemgetter(3), reverse=True)    
+    yaws_sample_list = FinalHistDissimSubprocessor(yaws_sample_list).run()
 
     for g in io.progress_bar_generator ( range (grads), "Fetching best"):
         img_list = yaws_sample_list[g]
@@ -673,9 +728,7 @@ def sort_final(input_path, include_by_blur=True):
         trash_img_list += img_list[imgs_per_grad:]
 
     return final_img_list, trash_img_list
-    
-
-    
+  
 def final_process(input_path, img_list, trash_img_list):
     if len(trash_img_list) != 0:
         parent_input_path = input_path.parent
