@@ -17,24 +17,24 @@ class nnlib(object):
     active_DeviceConfig = DeviceConfig() #default is one best GPU
 
     dlib = None
-    
+
     keras = None
     keras_contrib = None
-    
+
     tf = None
     tf_sess = None
-    
+
     PML = None
     PMLK = None
     PMLTile= None
-    
+
     code_import_keras = None
     code_import_keras_contrib = None
     code_import_all = None
-    
+
     code_import_dlib = None
 
-    
+
     ResNet = None
     UNet = None
     UNetTemporalPredictor = None
@@ -44,34 +44,35 @@ class nnlib(object):
 """
 keras = nnlib.keras
 K = keras.backend
+KL = keras.layers
 
-Input = keras.layers.Input
+Input = KL.Input
 
-Dense = keras.layers.Dense
-Conv2D = keras.layers.Conv2D
-Conv2DTranspose = keras.layers.Conv2DTranspose
-SeparableConv2D = keras.layers.SeparableConv2D
-MaxPooling2D = keras.layers.MaxPooling2D
-UpSampling2D = keras.layers.UpSampling2D
-BatchNormalization = keras.layers.BatchNormalization
+Dense = KL.Dense
+Conv2D = KL.Conv2D
+Conv2DTranspose = KL.Conv2DTranspose
+SeparableConv2D = KL.SeparableConv2D
+MaxPooling2D = KL.MaxPooling2D
+UpSampling2D = KL.UpSampling2D
+BatchNormalization = KL.BatchNormalization
 
-LeakyReLU = keras.layers.LeakyReLU
-ReLU = keras.layers.ReLU
-PReLU = keras.layers.PReLU
-tanh = keras.layers.Activation('tanh')
-sigmoid = keras.layers.Activation('sigmoid')
-Dropout = keras.layers.Dropout
-Softmax = keras.layers.Softmax
+LeakyReLU = KL.LeakyReLU
+ReLU = KL.ReLU
+PReLU = KL.PReLU
+tanh = KL.Activation('tanh')
+sigmoid = KL.Activation('sigmoid')
+Dropout = KL.Dropout
+Softmax = KL.Softmax
 
-Lambda = keras.layers.Lambda
-Add = keras.layers.Add
-Concatenate = keras.layers.Concatenate
+Lambda = KL.Lambda
+Add = KL.Add
+Concatenate = KL.Concatenate
 
 
-Flatten = keras.layers.Flatten
-Reshape = keras.layers.Reshape
+Flatten = KL.Flatten
+Reshape = KL.Reshape
 
-ZeroPadding2D = keras.layers.ZeroPadding2D       
+ZeroPadding2D = KL.ZeroPadding2D
 
 RandomNormal = keras.initializers.RandomNormal
 Model = keras.models.Model
@@ -86,6 +87,8 @@ dssim = nnlib.dssim
 PixelShuffler = nnlib.PixelShuffler
 SubpixelUpscaler = nnlib.SubpixelUpscaler
 Scale = nnlib.Scale
+Capsule = nnlib.Capsule
+
 CAInitializerMP = nnlib.CAInitializerMP
 
 #ReflectionPadding2D = nnlib.ReflectionPadding2D
@@ -100,7 +103,7 @@ InstanceNormalization = keras_contrib.layers.InstanceNormalization
     code_import_dlib_string = \
 """
 dlib = nnlib.dlib
-"""    
+"""
 
     code_import_all_string = \
 """
@@ -110,8 +113,8 @@ UNet = nnlib.UNet
 UNetTemporalPredictor = nnlib.UNetTemporalPredictor
 NLayerDiscriminator = nnlib.NLayerDiscriminator
 """
-    
-            
+
+
     @staticmethod
     def _import_tf(device_config):
         if nnlib.tf is not None:
@@ -121,20 +124,20 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
             suppressor = std_utils.suppress_stdout_stderr().__enter__()
         else:
             suppressor = None
-            
+
         if 'CUDA_VISIBLE_DEVICES' in os.environ.keys():
             os.environ.pop('CUDA_VISIBLE_DEVICES')
-        
+
         os.environ['TF_MIN_GPU_MULTIPROCESSOR_COUNT'] = '2'
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' #tf log errors only
         import tensorflow as tf
         nnlib.tf = tf
-        
+
         if device_config.cpu_only:
             config = tf.ConfigProto(device_count={'GPU': 0})
-        else:   
+        else:
             config = tf.ConfigProto()
-            
+
             if device_config.backend != "tensorflow-generic":
                 #tensorflow-generic is system with NVIDIA card, but w/o NVSMI
                 #so dont hide devices and let tensorflow to choose best card
@@ -142,15 +145,15 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 for idx in device_config.gpu_idxs:
                     visible_device_list += str(idx) + ','
                 config.gpu_options.visible_device_list=visible_device_list[:-1]
-            
-        config.gpu_options.force_gpu_compatible = True            
+
+        config.gpu_options.force_gpu_compatible = True
         config.gpu_options.allow_growth = device_config.allow_growth
 
         nnlib.tf_sess = tf.Session(config=config)
-            
-        if suppressor is not None:  
+
+        if suppressor is not None:
             suppressor.__exit__()
-        
+
     @staticmethod
     def import_keras(device_config):
         if nnlib.keras is not None:
@@ -164,48 +167,49 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
 
         if 'TF_SUPPRESS_STD' in os.environ.keys() and os.environ['TF_SUPPRESS_STD'] == '1':
             suppressor = std_utils.suppress_stdout_stderr().__enter__()
- 
+
         #if "tensorflow" in device_config.backend:
         #    nnlib.keras = nnlib.tf.keras
         #else:
         import keras as keras_
         nnlib.keras = keras_
-        
+
         if device_config.backend == "plaidML":
             import plaidml
             import plaidml.tile
             nnlib.PML = plaidml
             nnlib.PMLK = plaidml.keras.backend
             nnlib.PMLTile = plaidml.tile
-            
+
         if device_config.use_fp16:
             nnlib.keras.backend.set_floatx('float16')
 
         if "tensorflow" in device_config.backend:
             nnlib.keras.backend.set_session(nnlib.tf_sess)
-            
+
         nnlib.keras.backend.set_image_data_format('channels_last')
-        
-        if 'TF_SUPPRESS_STD' in os.environ.keys() and os.environ['TF_SUPPRESS_STD'] == '1':        
+
+        if 'TF_SUPPRESS_STD' in os.environ.keys() and os.environ['TF_SUPPRESS_STD'] == '1':
             suppressor.__exit__()
-            
+
         nnlib.code_import_keras = compile (nnlib.code_import_keras_string,'','exec')
-        nnlib.__initialize_keras_functions()  
-        
+        nnlib.__initialize_keras_functions()
+
         return nnlib.code_import_keras
-        
+
     @staticmethod
     def __initialize_keras_functions():
         keras = nnlib.keras
         K = keras.backend
+        KL = keras.layers
 
         def modelify(model_functor):
             def func(tensor):
                 return keras.models.Model (tensor, model_functor(tensor))
             return func
-        
+
         nnlib.modelify = modelify
-        
+
         def gaussian_blur(radius=2.0):
             def gaussian(x, mu, sigma):
                 return np.exp(-(float(x) - float(mu)) ** 2 / (2 * sigma ** 2))
@@ -217,7 +221,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 np_kernel = np.outer(kernel_1d, kernel_1d).astype(dtype=K.floatx())
                 kernel = np_kernel / np.sum(np_kernel)
                 return kernel
-          
+
             gauss_kernel = make_kernel(radius)
             gauss_kernel = gauss_kernel[:, :,np.newaxis, np.newaxis]
 
@@ -231,17 +235,17 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 return K.concatenate (outputs, axis=-1)
             return func
         nnlib.gaussian_blur = gaussian_blur
-        
+
         def style_loss(gaussian_blur_radius=0.0, loss_weight=1.0, wnd_size=0, step_size=1):
             if gaussian_blur_radius > 0.0:
                 gblur = gaussian_blur(gaussian_blur_radius)
-            
+
             def sd(content, style, loss_weight):
                 content_nc = K.int_shape(content)[-1]
                 style_nc = K.int_shape(style)[-1]
                 if content_nc != style_nc:
                     raise Exception("style_loss() content_nc != style_nc")
-                    
+
                 axes = [1,2]
                 c_mean, c_var = K.mean(content, axis=axes, keepdims=True), K.var(content, axis=axes, keepdims=True)
                 s_mean, s_var = K.mean(style, axis=axes, keepdims=True), K.var(style, axis=axes, keepdims=True)
@@ -249,9 +253,9 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
 
                 mean_loss = K.sum(K.square(c_mean-s_mean))
                 std_loss = K.sum(K.square(c_std-s_std))
-                
+
                 return (mean_loss + std_loss) * ( loss_weight / float(content_nc) )
-                
+
             def func(target, style):
                 if wnd_size == 0:
                     if gaussian_blur_radius > 0.0:
@@ -262,9 +266,9 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                     #currently unused
                     if nnlib.tf is not None:
                         sh = K.int_shape(target)[1]
-                        k = (sh-wnd_size) // step_size + 1                        
+                        k = (sh-wnd_size) // step_size + 1
                         if gaussian_blur_radius > 0.0:
-                            target, style = gblur(target), gblur(style)                        
+                            target, style = gblur(target), gblur(style)
                         target = nnlib.tf.image.extract_image_patches(target, [1,k,k,1], [1,1,1,1], [1,step_size,step_size,1], 'VALID')
                         style  = nnlib.tf.image.extract_image_patches(style,  [1,k,k,1], [1,1,1,1], [1,step_size,step_size,1], 'VALID')
                         return sd( target, style, loss_weight )
@@ -272,8 +276,8 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                         print ("Sorry, plaidML backend does not support style_loss")
                         return 0
             return func
-        nnlib.style_loss = style_loss  
-        
+        nnlib.style_loss = style_loss
+
         def dssim(kernel_size=11, k1=0.01, k2=0.03, max_value=1.0):
             # port of tf.image.ssim to pure keras in order to work on plaidML backend.
 
@@ -289,10 +293,10 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                     g = np.reshape (g, (1,-1)) + np.reshape(g, (-1,1) )
                     g = K.constant ( np.reshape (g, (1,-1)) )
                     g = K.softmax(g)
-                    g = K.reshape (g, (size, size, 1, 1)) 
+                    g = K.reshape (g, (size, size, 1, 1))
                     g = K.tile (g, (1,1,ch,1))
                     return g
-                              
+
                 kernel = _fspecial_gauss(kernel_size,1.5)
 
                 def reducer(x):
@@ -300,13 +304,13 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
 
                 c1 = (k1 * max_value) ** 2
                 c2 = (k2 * max_value) ** 2
-                
+
                 mean0 = reducer(y_true)
                 mean1 = reducer(y_pred)
                 num0 = mean0 * mean1 * 2.0
                 den0 = K.square(mean0) + K.square(mean1)
                 luminance = (num0 + c1) / (den0 + c1)
-                
+
                 num1 = reducer(y_true * y_pred) * 2.0
                 den1 = reducer(K.square(y_true) + K.square(y_pred))
                 c2 *= 1.0 #compensation factor
@@ -316,10 +320,10 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 return K.mean( (1.0 - ssim_val ) / 2.0 )
 
             return func
-        
+
         nnlib.dssim = dssim
-        
-        class PixelShuffler(keras.layers.Layer):
+
+        class PixelShuffler(KL.Layer):
             def __init__(self, size=(2, 2), data_format='channels_last', **kwargs):
                 super(PixelShuffler, self).__init__(**kwargs)
                 self.data_format = data_format
@@ -397,11 +401,11 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 base_config = super(PixelShuffler, self).get_config()
 
                 return dict(list(base_config.items()) + list(config.items()))
-        
+
         nnlib.PixelShuffler = PixelShuffler
         nnlib.SubpixelUpscaler = PixelShuffler
 
-        class Scale(keras.layers.Layer):
+        class Scale(KL.Layer):
             """
             GAN Custom Scal Layer
             Code borrows from https://github.com/flyyufelix/cnn_finetune
@@ -496,25 +500,25 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 else:
                     vhats = [K.zeros(1) for _ in params]
                 if e: e.__exit__(None, None, None)
-                
+
                 self.weights = [self.iterations] + ms + vs + vhats
 
-                for p, g, m, v, vhat in zip(params, grads, ms, vs, vhats):            
+                for p, g, m, v, vhat in zip(params, grads, ms, vs, vhats):
                     e = K.tf.device("/cpu:0") if self.tf_cpu_mode == 2 else None
                     if e: e.__enter__()
                     m_t = (self.beta_1 * m) + (1. - self.beta_1) * g
                     v_t = (self.beta_2 * v) + (1. - self.beta_2) * K.square(g)
-                    
+
                     if self.amsgrad:
                         vhat_t = K.maximum(vhat, v_t)
                         self.updates.append(K.update(vhat, vhat_t))
                     if e: e.__exit__(None, None, None)
-                    
+
                     if self.amsgrad:
                         p_t = p - lr_t * m_t / (K.sqrt(vhat_t) + self.epsilon)
                     else:
                         p_t = p - lr_t * m_t / (K.sqrt(v_t) + self.epsilon)
-                        
+
                     self.updates.append(K.update(m, m_t))
                     self.updates.append(K.update(v, v_t))
                     new_p = p_t
@@ -537,13 +541,13 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 return dict(list(base_config.items()) + list(config.items()))
         nnlib.Adam = Adam
 
-        def CAInitializerMP( conv_weights_list ):            
+        def CAInitializerMP( conv_weights_list ):
             result = CAInitializerMPSubprocessor ( [ (i, K.int_shape(conv_weights)) for i, conv_weights in enumerate(conv_weights_list) ], K.floatx(), K.image_data_format() ).run()
             for idx, weights in result:
                 K.set_value ( conv_weights_list[idx], weights )
         nnlib.CAInitializerMP = CAInitializerMP
-            
-      
+
+
         '''
         not implemented in plaidML
         class ReflectionPadding2D(keras.layers.Layer):
@@ -559,25 +563,25 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
             def call(self, x, mask=None):
                 w_pad,h_pad = self.padding
                 return tf.pad(x, [[0,0], [h_pad,h_pad], [w_pad,w_pad], [0,0] ], 'REFLECT')
-        nnlib.ReflectionPadding2D = ReflectionPadding2D     
-        '''   
-        
-        
-             
+        nnlib.ReflectionPadding2D = ReflectionPadding2D
+        '''
+
+
+
     @staticmethod
     def import_keras_contrib(device_config):
         if nnlib.keras_contrib is not None:
             return nnlib.code_import_keras_contrib
-        
-        import keras_contrib as keras_contrib_    
+
+        import keras_contrib as keras_contrib_
         nnlib.keras_contrib = keras_contrib_
-        nnlib.__initialize_keras_contrib_functions()    
+        nnlib.__initialize_keras_contrib_functions()
         nnlib.code_import_keras_contrib = compile (nnlib.code_import_keras_contrib_string,'','exec')
-    
+
     @staticmethod
     def __initialize_keras_contrib_functions():
         pass
-        
+
     @staticmethod
     def import_dlib( device_config = None):
         if nnlib.dlib is not None:
@@ -586,10 +590,10 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         import dlib as dlib_
         nnlib.dlib = dlib_
         if not device_config.cpu_only and "tensorflow" in device_config.backend and len(device_config.gpu_idxs) > 0:
-            nnlib.dlib.cuda.set_device(device_config.gpu_idxs[0])           
-        
+            nnlib.dlib.cuda.set_device(device_config.gpu_idxs[0])
+
         nnlib.code_import_dlib = compile (nnlib.code_import_dlib_string,'','exec')
-    
+
     @staticmethod
     def import_all(device_config = None):
         if nnlib.code_import_all is None:
@@ -597,35 +601,35 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 device_config = nnlib.active_DeviceConfig
             else:
                 nnlib.active_DeviceConfig = device_config
-                
+
             nnlib.import_keras(device_config)
-            nnlib.import_keras_contrib(device_config)                                                
+            nnlib.import_keras_contrib(device_config)
             nnlib.code_import_all = compile (nnlib.code_import_keras_string + '\n'
-                                            + nnlib.code_import_keras_contrib_string 
-                                            + nnlib.code_import_all_string,'','exec')        
+                                            + nnlib.code_import_keras_contrib_string
+                                            + nnlib.code_import_all_string,'','exec')
             nnlib.__initialize_all_functions()
-        
+
         return nnlib.code_import_all
-    
+
     @staticmethod
     def __initialize_all_functions():
         exec (nnlib.import_keras(nnlib.active_DeviceConfig), locals(), globals())
         exec (nnlib.import_keras_contrib(nnlib.active_DeviceConfig), locals(), globals())
-        
+
         class DSSIMMSEMaskLoss(object):
             def __init__(self, mask, is_mse=False):
                 self.mask = mask
-                self.is_mse = is_mse                
+                self.is_mse = is_mse
             def __call__(self,y_true, y_pred):
                 total_loss = None
                 mask = self.mask
-                if self.is_mse:                
+                if self.is_mse:
                     blur_mask = gaussian_blur(max(1, K.int_shape(mask)[1] // 64))(mask)
                     return K.mean ( 50*K.square( y_true*blur_mask - y_pred*blur_mask ) )
                 else:
-                    return 10*dssim() (y_true*mask, y_pred*mask)                    
+                    return 10*dssim() (y_true*mask, y_pred*mask)
         nnlib.DSSIMMSEMaskLoss = DSSIMMSEMaskLoss
-        
+
 
         '''
         def ResNet(output_nc, use_batch_norm, ngf=64, n_blocks=6, use_dropout=False):
@@ -639,59 +643,59 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 use_bias = False
                 def XNormalization(x):
                     return BatchNormalization (axis=3, gamma_initializer=RandomNormal(1., 0.02))(x)
-                    
+
             def Conv2D (filters, kernel_size, strides=(1, 1), padding='valid', data_format=None, dilation_rate=(1, 1), activation=None, use_bias=use_bias, kernel_initializer=RandomNormal(0, 0.02), bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None):
                 return keras.layers.Conv2D( filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, data_format=data_format, dilation_rate=dilation_rate, activation=activation, use_bias=use_bias, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer, activity_regularizer=activity_regularizer, kernel_constraint=kernel_constraint, bias_constraint=bias_constraint )
-        
+
             def Conv2DTranspose(filters, kernel_size, strides=(1, 1), padding='valid', output_padding=None, data_format=None, dilation_rate=(1, 1), activation=None, use_bias=use_bias, kernel_initializer='glorot_uniform', bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None):
                 return keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, output_padding=output_padding, data_format=data_format, dilation_rate=dilation_rate, activation=activation, use_bias=use_bias, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer, activity_regularizer=activity_regularizer, kernel_constraint=kernel_constraint, bias_constraint=bias_constraint)
-            
+
             def func(input):
 
-               
-                def ResnetBlock(dim):    
+
+                def ResnetBlock(dim):
                     def func(input):
                         x = input
-                        
+
                         x = ReflectionPadding2D((1,1))(x)
                         x = Conv2D(dim, 3, 1, padding='valid')(x)
                         x = XNormalization(x)
                         x = ReLU()(x)
-                        
+
                         if use_dropout:
                             x = Dropout(0.5)(x)
-                            
+
                         x = ReflectionPadding2D((1,1))(x)
                         x = Conv2D(dim, 3, 1, padding='valid')(x)
                         x = XNormalization(x)
-                        x = ReLU()(x)       
-                        return Add()([x,input])            
+                        x = ReLU()(x)
+                        return Add()([x,input])
                     return func
 
                 x = input
-                
+
                 x = ReflectionPadding2D((3,3))(x)
                 x = Conv2D(ngf, 7, 1, 'valid')(x)
-                
+
                 x = ReLU()(XNormalization(Conv2D(ngf*2, 4, 2, 'same')(x)))
                 x = ReLU()(XNormalization(Conv2D(ngf*4, 4, 2, 'same')(x)))
-                
+
                 for i in range(n_blocks):
                     x = ResnetBlock(ngf*4)(x)
-                    
+
                 x = ReLU()(XNormalization(PixelShuffler()(Conv2D(ngf*2 *4, 3, 1, 'same')(x))))
                 x = ReLU()(XNormalization(PixelShuffler()(Conv2D(ngf   *4, 3, 1, 'same')(x))))
-                
+
                 x = ReflectionPadding2D((3,3))(x)
                 x = Conv2D(output_nc, 7, 1, 'valid')(x)
                 x = tanh(x)
-                
+
                 return x
-                
-            return func  
-            
+
+            return func
+
         nnlib.ResNet = ResNet
-             
+
         # Defines the Unet generator.
         # |num_downs|: number of downsamplings in UNet. For example,
         # if |num_downs| == 7, image of size 128x128 will become of size 1x1
@@ -707,76 +711,76 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 use_bias = False
                 def XNormalization(x):
                     return BatchNormalization (axis=3, gamma_initializer=RandomNormal(1., 0.02))(x)
-                    
+
             def Conv2D (filters, kernel_size, strides=(1, 1), padding='valid', data_format=None, dilation_rate=(1, 1), activation=None, use_bias=use_bias, kernel_initializer=RandomNormal(0, 0.02), bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None):
                 return keras.layers.Conv2D( filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, data_format=data_format, dilation_rate=dilation_rate, activation=activation, use_bias=use_bias, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer, activity_regularizer=activity_regularizer, kernel_constraint=kernel_constraint, bias_constraint=bias_constraint )
 
             def Conv2DTranspose(filters, kernel_size, strides=(1, 1), padding='valid', output_padding=None, data_format=None, dilation_rate=(1, 1), activation=None, use_bias=use_bias, kernel_initializer='glorot_uniform', bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None):
                 return keras.layers.Conv2DTranspose(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, output_padding=output_padding, data_format=data_format, dilation_rate=dilation_rate, activation=activation, use_bias=use_bias, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer, activity_regularizer=activity_regularizer, kernel_constraint=kernel_constraint, bias_constraint=bias_constraint)
-                
-            def UNetSkipConnection(outer_nc, inner_nc, sub_model=None, outermost=False, innermost=False, use_dropout=False):       
+
+            def UNetSkipConnection(outer_nc, inner_nc, sub_model=None, outermost=False, innermost=False, use_dropout=False):
                 def func(inp):
                     x = inp
-                    
+
                     x = Conv2D(inner_nc, 4, 2, 'valid')(ReflectionPadding2D( (1,1) )(x))
                     x = XNormalization(x)
                     x = ReLU()(x)
-                        
+
                     if not innermost:
                         x = sub_model(x)
-                        
+
                     if not outermost:
                         x = Conv2DTranspose(outer_nc, 3, 2, 'same')(x)
                         x = XNormalization(x)
                         x = ReLU()(x)
-                        
+
                         if not innermost:
                             if use_dropout:
                                 x = Dropout(0.5)(x)
-                            
+
                         x = Concatenate(axis=3)([inp, x])
                     else:
                         x = Conv2DTranspose(outer_nc, 3, 2, 'same')(x)
-                        x = tanh(x)   
-                        
+                        x = tanh(x)
 
-                    return x           
-                    
+
+                    return x
+
                 return func
-                    
-            def func(input):                    
+
+            def func(input):
 
                 unet_block = UNetSkipConnection(ngf * 8, ngf * 8, sub_model=None, innermost=True)
 
                 for i in range(num_downs - 5):
                     unet_block = UNetSkipConnection(ngf * 8, ngf * 8, sub_model=unet_block, use_dropout=use_dropout)
-                
+
                 unet_block = UNetSkipConnection(ngf * 4  , ngf * 8, sub_model=unet_block)
                 unet_block = UNetSkipConnection(ngf * 2  , ngf * 4, sub_model=unet_block)
                 unet_block = UNetSkipConnection(ngf      , ngf * 2, sub_model=unet_block)
                 unet_block = UNetSkipConnection(output_nc, ngf    , sub_model=unet_block, outermost=True)
-                
+
                 return unet_block(input)
             return func
         nnlib.UNet = UNet
-        
+
         #predicts based on two past_image_tensors
         def UNetTemporalPredictor(output_nc, use_batch_norm, num_downs, ngf=64, use_dropout=False):
             exec (nnlib.import_all(), locals(), globals())
             def func(inputs):
                 past_2_image_tensor, past_1_image_tensor = inputs
-                    
+
                 x = Concatenate(axis=3)([ past_2_image_tensor, past_1_image_tensor ])
                 x = UNet(3, use_batch_norm, num_downs=num_downs, ngf=ngf, use_dropout=use_dropout) (x)
 
                 return x
-                    
-            return func                
+
+            return func
         nnlib.UNetTemporalPredictor = UNetTemporalPredictor
-        
+
         def NLayerDiscriminator(use_batch_norm, ndf=64, n_layers=3):
             exec (nnlib.import_all(), locals(), globals())
-            
+
             if not use_batch_norm:
                 use_bias = True
                 def XNormalization(x):
@@ -791,22 +795,22 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
 
             def func(input):
                 x = input
-                
+
                 x = ZeroPadding2D((1,1))(x)
                 x = Conv2D( ndf, 4, 2, 'valid')(x)
                 x = LeakyReLU(0.2)(x)
-                    
-                for i in range(1, n_layers):        
+
+                for i in range(1, n_layers):
                     x = ZeroPadding2D((1,1))(x)
                     x = Conv2D( ndf * min(2 ** i, 8), 4, 2, 'valid')(x)
                     x = XNormalization(x)
                     x = LeakyReLU(0.2)(x)
-                    
+
                 x = ZeroPadding2D((1,1))(x)
                 x = Conv2D( ndf * min(2 ** n_layers, 8), 4, 1, 'valid')(x)
-                x = XNormalization(x)    
+                x = XNormalization(x)
                 x = LeakyReLU(0.2)(x)
-                
+
                 x = ZeroPadding2D((1,1))(x)
                 return Conv2D( 1, 4, 1, 'valid')(x)
             return func
@@ -816,7 +820,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
     def finalize_all():
         if nnlib.keras_contrib is not None:
             nnlib.keras_contrib = None
-        
+
         if nnlib.keras is not None:
             nnlib.keras.backend.clear_session()
             nnlib.keras = None
@@ -824,11 +828,11 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         if nnlib.tf is not None:
             nnlib.tf_sess = None
             nnlib.tf = None
-     
-    
+
+
 class CAInitializerMPSubprocessor(Subprocessor):
     class Cli(Subprocessor.Cli):
-    
+
         #override
         def on_initialize(self, client_dict):
             self.floatx = client_dict['floatx']
@@ -836,7 +840,7 @@ class CAInitializerMPSubprocessor(Subprocessor):
 
         #override
         def process_data(self, data):
-            idx, shape = data            
+            idx, shape = data
             weights = CAGenerateWeights (shape, self.floatx, self.data_format)
             return idx, weights
 
@@ -844,30 +848,30 @@ class CAInitializerMPSubprocessor(Subprocessor):
         def get_data_name (self, data):
             #return string identificator of your data
             return "undefined"
-            
+
     #override
     def __init__(self, idx_shapes_list, floatx, data_format ):
-    
+
         self.idx_shapes_list = idx_shapes_list
         self.floatx = floatx
         self.data_format = data_format
-        
+
         self.result = []
         super().__init__('CAInitializerMP', CAInitializerMPSubprocessor.Cli)
 
     #override
     def on_clients_initialized(self):
         io.progress_bar ("Processing", len (self.idx_shapes_list))
-        
+
     #override
     def on_clients_finalized(self):
         io.progress_bar_close()
-        
+
     #override
-    def process_info_generator(self):    
+    def process_info_generator(self):
         for i in range(multiprocessing.cpu_count()):
             yield 'CPU%d' % (i), {}, {'device_idx': i,
-                                      'device_name': 'CPU%d' % (i), 
+                                      'device_name': 'CPU%d' % (i),
                                       'floatx' : self.floatx,
                                       'data_format' : self.data_format
                                       }
@@ -875,20 +879,19 @@ class CAInitializerMPSubprocessor(Subprocessor):
     #override
     def get_data(self, host_dict):
         if len (self.idx_shapes_list) > 0:
-            return self.idx_shapes_list.pop(0)    
-        
+            return self.idx_shapes_list.pop(0)
+
         return None
-    
+
     #override
     def on_data_return (self, host_dict, data):
-        self.idx_shapes_list.insert(0, data)   
+        self.idx_shapes_list.insert(0, data)
 
     #override
     def on_result (self, host_dict, data, result):
         self.result.append ( result )
         io.progress_bar_inc(1)
-        
+
     #override
     def get_result(self):
         return self.result
-        
