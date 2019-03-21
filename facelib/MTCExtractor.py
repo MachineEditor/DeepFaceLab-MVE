@@ -86,8 +86,12 @@ class MTCExtractor(object):
     def __exit__(self, exc_type=None, exc_value=None, traceback=None):
         return False #pass exception between __enter__ and __exit__ to outter level
 
-    def extract_from_bgr (self, input_image):
-        input_image = input_image[:,:,::-1].copy()
+    def extract (self, input_image, is_bgr=True):
+
+        if is_bgr:
+            input_image = input_image[:,:,::-1].copy()
+            is_bgr = False
+
         (h, w, ch) = input_image.shape
 
         input_scale = self.scale_to / max(w,h)
