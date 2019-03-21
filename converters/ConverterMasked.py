@@ -2,6 +2,7 @@ import traceback
 from .Converter import Converter
 from facelib import LandmarksProcessor
 from facelib import FaceType
+from facelib import FANSegmentator
 import cv2
 import numpy as np
 from utils import image_utils
@@ -65,9 +66,15 @@ class ConverterMasked(Converter):
             
             if self.mode == 'hist-match' or self.mode == 'hist-match-bw' or self.mode == 'seamless-hist-match':
                 self.hist_match_threshold = np.clip ( io.input_int("Hist match threshold [0..255] (skip:255) :  ", 255), 0, 255)
+          
+        if face_type == FaceType.FULL:
+            self.mask_mode = io.input_int ("Mask mode: (1) learned, (2) dst, (3) FAN-prd, (4) FAN-dst (?) help. Default - %d : " % (1) , 1, help_message="If you learned mask, then option 1 should be choosed. 'dst' mask is raw shaky mask from dst aligned images. 'FAN-prd' - using super smooth mask by pretrained FAN-model from predicted face. 'FAN-dst' - using super smooth mask by pretrained FAN-model from dst face.")
+        else:
+            self.mask_mode = io.input_int ("Mask mode: (1) learned, (2) dst . Default - %d : " % (1) , 1)
             
-        self.use_predicted_mask = io.input_bool("Use predicted mask? (y/n skip:y) : ", True)
-
+        if self.mask_mode == 3 or self.mask_mode == 4:
+            self.fan_seg = None       
+        
         if self.mode != 'raw':
             self.erode_mask_modifier = base_erode_mask_modifier + np.clip ( io.input_int ("Choose erode mask modifier [-200..200] (skip:%d) : " % (default_erode_mask_modifier), default_erode_mask_modifier), -200, 200)
             self.blur_mask_modifier = base_blur_mask_modifier + np.clip ( io.input_int ("Choose blur mask modifier [-200..200] (skip:%d) : " % (default_blur_mask_modifier), default_blur_mask_modifier), -200, 200)
@@ -93,7 +100,9 @@ class ConverterMasked(Converter):
         
     #override
     def convert_face (self, img_bgr, img_face_landmarks, debug):
-
+        if (self.mask_mode == 3 or self.mask_mode == 4) and self.fan_seg == None:
+            self.fan_seg = FANSegmentator(256, FaceType.toString(FaceType.FULL) )
+            
         if self.over_res != 1:
             img_bgr = cv2.resize ( img_bgr, ( img_bgr.shape[1]*self.over_res, img_bgr.shape[0]*self.over_res ) )
             img_face_landmarks = img_face_landmarks*self.over_res
@@ -120,9 +129,18 @@ class ConverterMasked(Converter):
         prd_face_bgr      = np.clip (predicted_bgra[:,:,0:3], 0, 1.0 )
         prd_face_mask_a_0 = np.clip (predicted_bgra[:,:,3], 0.0, 1.0)
 
-        if not self.use_predicted_mask:
+        if self.mask_mode == 2: #dst
             prd_face_mask_a_0 = predictor_input_mask_a_0
-            
+        elif self.mask_mode == 3: #FAN-prd
+            prd_face_bgr_256 = cv2.resize (prd_face_bgr, (256,256) )            
+            prd_face_bgr_256_mask = self.fan_seg.extract_from_bgr( np.expand_dims(prd_face_bgr_256,0) ) [0]
+            prd_face_mask_a_0 = cv2.resize (prd_face_bgr_256_mask, (self.predictor_input_size, self.predictor_input_size))
+        elif self.mask_mode == 4: #FAN-dst
+            face_256_mat     = LandmarksProcessor.get_transform_mat (img_face_landmarks, 256, face_type=FaceType.FULL)
+            dst_face_256_bgr = cv2.warpAffine(img_bgr, face_256_mat, (256, 256), flags=cv2.INTER_LANCZOS4 )
+            dst_face_256_mask = self.fan_seg.extract_from_bgr( np.expand_dims(dst_face_256_bgr,0) ) [0]
+            prd_face_mask_a_0 = cv2.resize (dst_face_256_mask, (self.predictor_input_size, self.predictor_input_size))
+        
         prd_face_mask_a_0[ prd_face_mask_a_0 < 0.001 ] = 0.0
         
         prd_face_mask_a   = np.expand_dims (prd_face_mask_a_0, axis=-1)
