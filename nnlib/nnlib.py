@@ -87,7 +87,6 @@ dssim = nnlib.dssim
 PixelShuffler = nnlib.PixelShuffler
 SubpixelUpscaler = nnlib.SubpixelUpscaler
 Scale = nnlib.Scale
-Capsule = nnlib.Capsule
 
 CAInitializerMP = nnlib.CAInitializerMP
 
