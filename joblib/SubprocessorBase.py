@@ -4,6 +4,7 @@ import time
 import sys
 from interact import interact as io
 
+
 class Subprocessor(object):
 
     class SilenceException(Exception):
@@ -134,7 +135,14 @@ class Subprocessor(object):
         #tick in main loop
         pass
 
+    #overridable
+    def on_check_run(self):
+        return True
+
     def run(self):
+        if not self.on_check_run():
+            return self.get_result()
+
         self.clis = []
 
         #getting info about name of subprocesses, host and client dicts, and spawning them

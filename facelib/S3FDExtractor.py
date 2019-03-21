@@ -19,8 +19,12 @@ class S3FDExtractor(object):
     def __exit__(self, exc_type=None, exc_value=None, traceback=None):
         return False #pass exception between __enter__ and __exit__ to outter level
 
-    def extract_from_bgr (self, input_image):
-        input_image = input_image[:,:,::-1].copy()
+    def extract (self, input_image, is_bgr=True):
+
+        if is_bgr:
+            input_image = input_image[:,:,::-1]
+            is_bgr = False
+
         (h, w, ch) = input_image.shape
 
         d = max(w, h)
