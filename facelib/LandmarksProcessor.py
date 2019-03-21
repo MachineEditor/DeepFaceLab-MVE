@@ -156,46 +156,47 @@ def transform_points(points, mat, invert=False):
 def get_image_hull_mask (image_shape, image_landmarks):
     if len(image_landmarks) != 68:
         raise Exception('get_image_hull_mask works only with 68 landmarks')
+    int_lmrks = np.array(image_landmarks, dtype=np.int)
 
     hull_mask = np.zeros(image_shape[0:2]+(1,),dtype=np.float32)
 
     cv2.fillConvexPoly( hull_mask, cv2.convexHull(
-            np.concatenate ( (image_landmarks[0:9],
-                              image_landmarks[17:18]))) , (1,)  )
+            np.concatenate ( (int_lmrks[0:9],
+                              int_lmrks[17:18]))) , (1,)  )
 
     cv2.fillConvexPoly( hull_mask, cv2.convexHull(
-            np.concatenate ( (image_landmarks[8:17],
-                              image_landmarks[26:27]))) , (1,)  )
+            np.concatenate ( (int_lmrks[8:17],
+                              int_lmrks[26:27]))) , (1,)  )
 
     cv2.fillConvexPoly( hull_mask, cv2.convexHull(
-            np.concatenate ( (image_landmarks[17:20],
-                              image_landmarks[8:9]))) , (1,)  )
+            np.concatenate ( (int_lmrks[17:20],
+                              int_lmrks[8:9]))) , (1,)  )
 
     cv2.fillConvexPoly( hull_mask, cv2.convexHull(
-            np.concatenate ( (image_landmarks[24:27],
-                              image_landmarks[8:9]))) , (1,)  )
+            np.concatenate ( (int_lmrks[24:27],
+                              int_lmrks[8:9]))) , (1,)  )
 
     cv2.fillConvexPoly( hull_mask, cv2.convexHull(
-            np.concatenate ( (image_landmarks[19:25],
-                              image_landmarks[8:9],
+            np.concatenate ( (int_lmrks[19:25],
+                              int_lmrks[8:9],
                               ))) , (1,)  )
 
     cv2.fillConvexPoly( hull_mask, cv2.convexHull(
-            np.concatenate ( (image_landmarks[17:22],
-                              image_landmarks[27:28],
-                              image_landmarks[31:36],
-                              image_landmarks[8:9]
+            np.concatenate ( (int_lmrks[17:22],
+                              int_lmrks[27:28],
+                              int_lmrks[31:36],
+                              int_lmrks[8:9]
                               ))) , (1,)  )
 
     cv2.fillConvexPoly( hull_mask, cv2.convexHull(
-            np.concatenate ( (image_landmarks[22:27],
-                              image_landmarks[27:28],
-                              image_landmarks[31:36],
-                              image_landmarks[8:9]
+            np.concatenate ( (int_lmrks[22:27],
+                              int_lmrks[27:28],
+                              int_lmrks[31:36],
+                              int_lmrks[8:9]
                               ))) , (1,)  )
 
     #nose
-    cv2.fillConvexPoly( hull_mask, cv2.convexHull(image_landmarks[27:36]), (1,) )
+    cv2.fillConvexPoly( hull_mask, cv2.convexHull(int_lmrks[27:36]), (1,) )
 
     return hull_mask
 
@@ -285,13 +286,15 @@ def draw_landmarks (image, image_landmarks, color=(0,255,0), transparent_mask=Fa
     if len(image_landmarks) != 68:
         raise Exception('get_image_eye_mask works only with 68 landmarks')
 
-    jaw = image_landmarks[slice(*landmarks_68_pt["jaw"])]
-    right_eyebrow = image_landmarks[slice(*landmarks_68_pt["right_eyebrow"])]
-    left_eyebrow = image_landmarks[slice(*landmarks_68_pt["left_eyebrow"])]
-    mouth = image_landmarks[slice(*landmarks_68_pt["mouth"])]
-    right_eye = image_landmarks[slice(*landmarks_68_pt["right_eye"])]
-    left_eye = image_landmarks[slice(*landmarks_68_pt["left_eye"])]
-    nose = image_landmarks[slice(*landmarks_68_pt["nose"])]
+    int_lmrks = np.array(image_landmarks, dtype=np.int)
+
+    jaw = int_lmrks[slice(*landmarks_68_pt["jaw"])]
+    right_eyebrow = int_lmrks[slice(*landmarks_68_pt["right_eyebrow"])]
+    left_eyebrow = int_lmrks[slice(*landmarks_68_pt["left_eyebrow"])]
+    mouth = int_lmrks[slice(*landmarks_68_pt["mouth"])]
+    right_eye = int_lmrks[slice(*landmarks_68_pt["right_eye"])]
+    left_eye = int_lmrks[slice(*landmarks_68_pt["left_eye"])]
+    nose = int_lmrks[slice(*landmarks_68_pt["nose"])]
 
     # open shapes
     cv2.polylines(image, tuple(np.array([v]) for v in ( right_eyebrow, jaw, left_eyebrow, np.concatenate((nose, [nose[-6]])) )),

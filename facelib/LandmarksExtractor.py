@@ -46,7 +46,6 @@ class LandmarksExtractor(object):
                 predicted = self.keras_model.predict (image).transpose (0,3,1,2)
 
                 pts_img = self.get_pts_from_predict ( predicted[-1], center, scale)
-                pts_img = [ ( int(pt[0]), int(pt[1]) ) for pt in pts_img ]
                 landmarks.append (pts_img)
             except:
                 landmarks.append (None)
@@ -118,4 +117,4 @@ class LandmarksExtractor(object):
                 c[i] += np.sign(diff)*0.25
 
         c += 0.5
-        return [ self.transform (c[i], center, scale, a.shape[2]) for i in range(a.shape[0]) ]
+        return np.array( [ self.transform (c[i], center, scale, a.shape[2]) for i in range(a.shape[0]) ] )
