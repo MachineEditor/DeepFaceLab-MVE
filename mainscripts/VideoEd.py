@@ -23,20 +23,23 @@ def extract_video(input_file, output_dir, output_ext=None, fps=None):
         io.log_err("input_file not found.")
         return
 
-    if output_ext is None:
-        output_ext = io.input_str ("Output image format (extension)? ( default:png ) : ", "png")
-
     if fps is None:
         fps = io.input_int ("Enter FPS ( ?:help skip:fullfps ) : ", 0, help_message="How many frames of every second of the video will be extracted.")
+
+    if output_ext is None:
+        output_ext = io.input_str ("Output image format? ( jpg png ?:help skip:png ) : ", "png", ["png","jpg"], help_message="png is lossless, but extraction is x10 slower for HDD, requires x10 more disk space than jpg.")
 
     for filename in Path_utils.get_image_paths (output_path, ['.'+output_ext]):
         Path(filename).unlink()
 
     job = ffmpeg.input(str(input_file_path))
 
-    kwargs = {}
+    kwargs = {'pix_fmt': 'rgb24'}
     if fps != 0:
         kwargs.update ({'r':str(fps)})
+
+    if output_ext == 'jpg':
+        kwargs.update ({'q:v':'2'})
 
     job = job.output( str (output_path / ('%5d.'+output_ext)), **kwargs )
 
