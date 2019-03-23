@@ -60,7 +60,7 @@ class SAEModel(ModelBase):
         if is_first_run:
             self.options['ae_dims'] = np.clip ( io.input_int("AutoEncoder dims (32-1024 ?:help skip:%d) : " % (default_ae_dims) , default_ae_dims, help_message="More dims are better, but requires more VRAM. You can fine-tune model size to fit your GPU." ), 32, 1024 )
             self.options['ed_ch_dims'] = np.clip ( io.input_int("Encoder/Decoder dims per channel (21-85 ?:help skip:%d) : " % (default_ed_ch_dims) , default_ed_ch_dims, help_message="More dims are better, but requires more VRAM. You can fine-tune model size to fit your GPU." ), 21, 85 )
-            self.options['ca_weights'] = io.input_bool ("Use CA weights? (y/n, ?:help skip: %s ) : " % (yn_str[def_ca_weights]), def_ca_weights, help_message="Initialize network with 'Convolution Aware' weights. This may help to achieve a higher accuracy model, but consumes time at first run.")
+            self.options['ca_weights'] = io.input_bool ("Use CA weights? (y/n, ?:help skip: %s ) : " % (yn_str[def_ca_weights]), def_ca_weights, help_message="Initialize network with 'Convolution Aware' weights. This may help to achieve a higher accuracy model, but consumes time at first run and sometime cause model collapse.")
         else:
             self.options['ae_dims'] = self.options.get('ae_dims', default_ae_dims)
             self.options['ed_ch_dims'] = self.options.get('ed_ch_dims', default_ed_ch_dims)
@@ -497,7 +497,7 @@ class SAEModel(ModelBase):
         exec (nnlib.import_all(), locals(), globals())
 
         def BatchNorm():
-            return BatchNormalization(axis=-1,  gamma_initializer=RandomNormal(1., 0.02) )
+            return BatchNormalization(axis=-1)
 
 
         class ResidualBlock(object):
@@ -513,13 +513,13 @@ class SAEModel(ModelBase):
                 #if self.use_reflection_padding:
                 #    #var_x = ReflectionPadding2D(stride=1, kernel_size=kernel_size)(var_x)
 
-                var_x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding, kernel_initializer=RandomNormal(0, 0.02) )(var_x)
+                var_x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding)(var_x)
                 var_x = LeakyReLU(alpha=0.2)(var_x)
 
                 #if self.use_reflection_padding:
                 #    #var_x = ReflectionPadding2D(stride=1, kernel_size=kernel_size)(var_x)
 
-                var_x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding, kernel_initializer=RandomNormal(0, 0.02) )(var_x)
+                var_x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding )(var_x)
                 var_x = Scale(gamma_init=keras.initializers.Constant(value=0.1))(var_x)
                 var_x = Add()([var_x, inp])
                 var_x = LeakyReLU(alpha=0.2)(var_x)
@@ -529,33 +529,33 @@ class SAEModel(ModelBase):
         def downscale (dim, use_bn=False):
             def func(x):
                 if use_bn:
-                    return LeakyReLU(0.1)(BatchNorm()(Conv2D(dim, kernel_size=5, strides=2, padding='same', kernel_initializer=RandomNormal(0, 0.02), use_bias=False)(x)))
+                    return LeakyReLU(0.1)(BatchNorm()(Conv2D(dim, kernel_size=5, strides=2, padding='same', use_bias=False)(x)))
                 else:
-                    return LeakyReLU(0.1)(Conv2D(dim, kernel_size=5, strides=2, padding='same', kernel_initializer=RandomNormal(0, 0.02))(x))
+                    return LeakyReLU(0.1)(Conv2D(dim, kernel_size=5, strides=2, padding='same')(x))
             return func
         SAEModel.downscale = downscale
 
         def downscale_sep (dim, use_bn=False):
             def func(x):
                 if use_bn:
-                    return LeakyReLU(0.1)(BatchNorm()(SeparableConv2D(dim, kernel_size=5, strides=2, padding='same', depthwise_initializer=RandomNormal(0, 0.02), pointwise_initializer=RandomNormal(0, 0.02), use_bias=False )(x)))
+                    return LeakyReLU(0.1)(BatchNorm()(SeparableConv2D(dim, kernel_size=5, strides=2, padding='same', use_bias=False )(x)))
                 else:
-                    return LeakyReLU(0.1)(SeparableConv2D(dim, kernel_size=5, strides=2, padding='same', depthwise_initializer=RandomNormal(0, 0.02), pointwise_initializer=RandomNormal(0, 0.02) )(x))
+                    return LeakyReLU(0.1)(SeparableConv2D(dim, kernel_size=5, strides=2, padding='same' )(x))
             return func
         SAEModel.downscale_sep = downscale_sep
 
         def upscale (dim, use_bn=False):
             def func(x):
                 if use_bn:
-                    return SubpixelUpscaler()(LeakyReLU(0.1)(BatchNorm()(Conv2D(dim * 4, kernel_size=3, strides=1, padding='same', kernel_initializer=RandomNormal(0,0.02), use_bias=False )(x))))
+                    return SubpixelUpscaler()(LeakyReLU(0.1)(BatchNorm()(Conv2D(dim * 4, kernel_size=3, strides=1, padding='same', use_bias=False )(x))))
                 else:
-                    return SubpixelUpscaler()(LeakyReLU(0.1)(Conv2D(dim * 4, kernel_size=3, strides=1, padding='same', kernel_initializer=RandomNormal(0, 0.02) )(x)))
+                    return SubpixelUpscaler()(LeakyReLU(0.1)(Conv2D(dim * 4, kernel_size=3, strides=1, padding='same')(x)))
             return func
         SAEModel.upscale = upscale
 
         def to_bgr (output_nc):
             def func(x):
-                return Conv2D(output_nc, kernel_size=5, padding='same', activation='sigmoid', kernel_initializer=RandomNormal(0, 0.02) )(x)
+                return Conv2D(output_nc, kernel_size=5, padding='same', activation='sigmoid')(x)
             return func
         SAEModel.to_bgr = to_bgr
 
