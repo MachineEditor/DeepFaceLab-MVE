@@ -39,7 +39,7 @@ def extract_video(input_file, output_dir, output_ext=None, fps=None):
         kwargs.update ({'r':str(fps)})
 
     if output_ext == 'jpg':
-        kwargs.update ({'q:v':'2'})
+        kwargs.update ({'q:v':'2'}) #highest quality for jpg
 
     job = job.output( str (output_path / ('%5d.'+output_ext)), **kwargs )
 
