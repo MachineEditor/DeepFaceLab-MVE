@@ -608,6 +608,20 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                     return K.tf.pad(x, [[0,0], [h_pad,h_pad], [w_pad,w_pad], [0,0] ], 'REFLECT')
                 elif backend == "plaidML":
                     return TileOP_ReflectionPadding2D.function(x, self.padding[0], self.padding[1])
+                else:
+                    if K.image_data_format() == 'channels_last':
+                        if x.shape.ndims == 4:
+                            w = K.concatenate ([ x[:,:,w_pad:0:-1,:],
+                                                x,
+                                                x[:,:,-2:-w_pad-2:-1,:] ], axis=2 )
+                            h = K.concatenate ([ w[:,h_pad:0:-1,:,:],
+                                                w,
+                                                w[:,-2:-h_pad-2:-1,:,:] ], axis=1 )
+                            return h
+                        else:
+                            raise NotImplemented
+                    else:
+                        raise NotImplemented
 
         nnlib.ReflectionPadding2D = ReflectionPadding2D
 

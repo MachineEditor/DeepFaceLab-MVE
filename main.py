@@ -136,7 +136,7 @@ if __name__ == "__main__":
     p = videoed_parser.add_parser( "extract-video", help="Extract images from video file.")
     p.add_argument('--input-file', required=True, action=fixPathAction, dest="input_file", help="Input file to be processed. Specify .*-extension to find first file.")
     p.add_argument('--output-dir', required=True, action=fixPathAction, dest="output_dir", help="Output directory. This is where the extracted images will be stored.")
-    p.add_argument('--ouptut-ext', dest="output_ext", default='png', help="Image format (extension) of output files.")
+    p.add_argument('--ouptut-ext', dest="output_ext", default=None, help="Image format (extension) of output files.")
     p.add_argument('--fps', type=int, dest="fps", default=None, help="How many frames of every second of the video will be extracted. 0 - full fps.")
     p.set_defaults(func=process_videoed_extract_video)
 

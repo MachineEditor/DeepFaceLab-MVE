@@ -40,6 +40,8 @@ class ConvertSubprocessor(Subprocessor):
             #therefore forcing active_DeviceConfig to CPU only
             nnlib.active_DeviceConfig = nnlib.DeviceConfig (cpu_only=True)
 
+            self.converter.on_cli_initialize()
+
             return None
 
         #override

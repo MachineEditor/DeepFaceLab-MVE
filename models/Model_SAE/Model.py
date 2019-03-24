@@ -50,32 +50,36 @@ class SAEModel(ModelBase):
             self.options['optimizer_mode'] = self.options.get('optimizer_mode', 1)
 
         if is_first_run:
-            self.options['archi'] = io.input_str ("AE architecture (df, liae, vg ?:help skip:%s) : " % (default_archi) , default_archi, ['df','liae','vg'], help_message="'df' keeps faces more natural. 'liae' can fix overly different face shapes. 'vg' - currently testing.").lower()
+            self.options['archi'] = io.input_str ("AE architecture (df, liae ?:help skip:%s) : " % (default_archi) , default_archi, ['df','liae'], help_message="'df' keeps faces more natural. 'liae' can fix overly different face shapes.").lower()
         else:
             self.options['archi'] = self.options.get('archi', default_archi)
 
         default_ae_dims = 256 if self.options['archi'] == 'liae' else 512
-        default_ed_ch_dims = 42
-        def_ca_weights = False
+        default_e_ch_dims = 42
+        default_d_ch_dims = default_e_ch_dims // 2
+
         if is_first_run:
-            self.options['ae_dims'] = np.clip ( io.input_int("AutoEncoder dims (32-1024 ?:help skip:%d) : " % (default_ae_dims) , default_ae_dims, help_message="More dims are better, but requires more VRAM. You can fine-tune model size to fit your GPU." ), 32, 1024 )
-            self.options['ed_ch_dims'] = np.clip ( io.input_int("Encoder/Decoder dims per channel (21-85 ?:help skip:%d) : " % (default_ed_ch_dims) , default_ed_ch_dims, help_message="More dims are better, but requires more VRAM. You can fine-tune model size to fit your GPU." ), 21, 85 )
-            self.options['ca_weights'] = io.input_bool ("Use CA weights? (y/n, ?:help skip: %s ) : " % (yn_str[def_ca_weights]), def_ca_weights, help_message="Initialize network with 'Convolution Aware' weights. This may help to achieve a higher accuracy model, but consumes time at first run and sometime cause model collapse.")
+            self.options['ae_dims'] = np.clip ( io.input_int("AutoEncoder dims (32-1024 ?:help skip:%d) : " % (default_ae_dims) , default_ae_dims, help_message="All face information will packed to AE dims. If amount of AE dims are not enough, then for example closed eyes will not be recognized. More dims are better, but require more VRAM. You can fine-tune model size to fit your GPU." ), 32, 1024 )
+            self.options['e_ch_dims'] = np.clip ( io.input_int("Encoder dims per channel (21-85 ?:help skip:%d) : " % (default_e_ch_dims) , default_e_ch_dims, help_message="More encoder dims help to recognize more facial features, but require more VRAM. You can fine-tune model size to fit your GPU." ), 21, 85 )
+            default_d_ch_dims = self.options['e_ch_dims'] // 2
+            self.options['d_ch_dims'] = np.clip ( io.input_int("Decoder dims per channel (10-85 ?:help skip:%d) : " % (default_d_ch_dims) , default_d_ch_dims, help_message="More decoder dims help to get better details, but require more VRAM. You can fine-tune model size to fit your GPU." ), 10, 85 )
+            self.options['d_residual_blocks'] = io.input_bool ("Add residual blocks to decoder? (y/n, ?:help skip:n) : ", False, help_message="These blocks help to get better details, but require more computing time.")
+            self.options['remove_gray_border'] = io.input_bool ("Remove gray border? (y/n, ?:help skip:n) : ", False, help_message="Removes gray border of predicted face, but requires more computing resources.")
         else:
             self.options['ae_dims'] = self.options.get('ae_dims', default_ae_dims)
-            self.options['ed_ch_dims'] = self.options.get('ed_ch_dims', default_ed_ch_dims)
-            self.options['ca_weights'] = self.options.get('ca_weights', def_ca_weights)
+            self.options['e_ch_dims'] = self.options.get('e_ch_dims', default_e_ch_dims)
+            self.options['d_ch_dims'] = self.options.get('d_ch_dims', default_d_ch_dims)
+            self.options['d_residual_blocks'] = self.options.get('d_residual_blocks', False)
+            self.options['remove_gray_border'] = self.options.get('remove_gray_border', False)
 
         if is_first_run:
             self.options['lighter_encoder'] = io.input_bool ("Use lightweight encoder? (y/n, ?:help skip:n) : ", False, help_message="Lightweight encoder is 35% faster, requires less VRAM, but sacrificing overall quality.")
 
-            if self.options['archi'] != 'vg':
-                self.options['multiscale_decoder'] = io.input_bool ("Use multiscale decoder? (y/n, ?:help skip:n) : ", False, help_message="Multiscale decoder helps to get better details.")
+            self.options['multiscale_decoder'] = io.input_bool ("Use multiscale decoder? (y/n, ?:help skip:n) : ", False, help_message="Multiscale decoder helps to get better details.")
         else:
             self.options['lighter_encoder'] = self.options.get('lighter_encoder', False)
 
-            if self.options['archi'] != 'vg':
-                self.options['multiscale_decoder'] = self.options.get('multiscale_decoder', False)
+            self.options['multiscale_decoder'] = self.options.get('multiscale_decoder', False)
 
         default_face_style_power = 0.0
         default_bg_style_power = 0.0
@@ -103,11 +107,13 @@ class SAEModel(ModelBase):
 
         resolution = self.options['resolution']
         ae_dims = self.options['ae_dims']
-        ed_ch_dims = self.options['ed_ch_dims']
+        e_ch_dims = self.options['e_ch_dims']
+        d_ch_dims = self.options['d_ch_dims']
+        d_residual_blocks = self.options['d_residual_blocks']
         bgr_shape = (resolution, resolution, 3)
         mask_shape = (resolution, resolution, 1)
 
-        self.ms_count = ms_count = 3 if (self.options['archi'] != 'vg' and self.options['multiscale_decoder']) else 1
+        self.ms_count = ms_count = 3 if (self.options['multiscale_decoder']) else 1
 
         masked_training = True
 
@@ -124,26 +130,27 @@ class SAEModel(ModelBase):
         target_dst_ar  = [ Input ( ( bgr_shape[0] // (2**i) ,)*2 + (bgr_shape[-1],) ) for i in range(ms_count-1, -1, -1)]
         target_dstm_ar = [ Input ( ( mask_shape[0] // (2**i) ,)*2 + (mask_shape[-1],) ) for i in range(ms_count-1, -1, -1)]
 
-        use_bn = False
+        padding = 'reflect' if self.options['remove_gray_border'] else 'zero'
+        common_flow_kwargs = { 'padding': padding }
 
         models_list = []
         weights_to_load = []
         if self.options['archi'] == 'liae':
-            self.encoder = modelify(SAEModel.LIAEEncFlow(resolution, self.options['lighter_encoder'], ed_ch_dims=ed_ch_dims, use_bn=use_bn)  ) (Input(bgr_shape))
+            self.encoder = modelify(SAEModel.LIAEEncFlow(resolution, self.options['lighter_encoder'], ch_dims=e_ch_dims, **common_flow_kwargs)  ) (Input(bgr_shape))
 
             enc_output_Inputs = [ Input(K.int_shape(x)[1:]) for x in self.encoder.outputs ]
 
-            self.inter_B = modelify(SAEModel.LIAEInterFlow(resolution, ae_dims=ae_dims, use_bn=use_bn)) (enc_output_Inputs)
-            self.inter_AB = modelify(SAEModel.LIAEInterFlow(resolution, ae_dims=ae_dims, use_bn=use_bn)) (enc_output_Inputs)
+            self.inter_B = modelify(SAEModel.LIAEInterFlow(resolution, ae_dims=ae_dims, **common_flow_kwargs)) (enc_output_Inputs)
+            self.inter_AB = modelify(SAEModel.LIAEInterFlow(resolution, ae_dims=ae_dims, **common_flow_kwargs)) (enc_output_Inputs)
 
             inter_output_Inputs = [ Input( np.array(K.int_shape(x)[1:])*(1,1,2) ) for x in self.inter_B.outputs ]
 
-            self.decoder = modelify(SAEModel.LIAEDecFlow (bgr_shape[2],ed_ch_dims=ed_ch_dims//2, multiscale_count=self.ms_count, use_bn=use_bn )) (inter_output_Inputs)
+            self.decoder = modelify(SAEModel.LIAEDecFlow (bgr_shape[2],ch_dims=d_ch_dims, multiscale_count=self.ms_count, add_residual_blocks=d_residual_blocks, **common_flow_kwargs)) (inter_output_Inputs)
 
             models_list += [self.encoder, self.inter_B, self.inter_AB, self.decoder]
 
             if self.options['learn_mask']:
-                self.decoderm = modelify(SAEModel.LIAEDecFlow (mask_shape[2],ed_ch_dims=int(ed_ch_dims/1.5), use_bn=use_bn )) (inter_output_Inputs)
+                self.decoderm = modelify(SAEModel.LIAEDecFlow (mask_shape[2],ch_dims=d_ch_dims, **common_flow_kwargs)) (inter_output_Inputs)
                 models_list += [self.decoderm]
 
             if not self.is_first_run():
@@ -176,58 +183,18 @@ class SAEModel(ModelBase):
                 pred_src_dstm = self.decoderm(warped_src_dst_inter_code)
 
         elif self.options['archi'] == 'df':
-            self.encoder = modelify(SAEModel.DFEncFlow(resolution, self.options['lighter_encoder'], ae_dims=ae_dims, ed_ch_dims=ed_ch_dims)  ) (Input(bgr_shape))
+            self.encoder = modelify(SAEModel.DFEncFlow(resolution, self.options['lighter_encoder'], ae_dims=ae_dims, ch_dims=e_ch_dims, **common_flow_kwargs)  ) (Input(bgr_shape))
 
             dec_Inputs = [ Input(K.int_shape(x)[1:]) for x in self.encoder.outputs ]
 
-            self.decoder_src = modelify(SAEModel.DFDecFlow (bgr_shape[2],ed_ch_dims=ed_ch_dims//2, multiscale_count=self.ms_count )) (dec_Inputs)
-            self.decoder_dst = modelify(SAEModel.DFDecFlow (bgr_shape[2],ed_ch_dims=ed_ch_dims//2, multiscale_count=self.ms_count )) (dec_Inputs)
+            self.decoder_src = modelify(SAEModel.DFDecFlow (bgr_shape[2],ch_dims=d_ch_dims, multiscale_count=self.ms_count, add_residual_blocks=d_residual_blocks, **common_flow_kwargs )) (dec_Inputs)
+            self.decoder_dst = modelify(SAEModel.DFDecFlow (bgr_shape[2],ch_dims=d_ch_dims, multiscale_count=self.ms_count, add_residual_blocks=d_residual_blocks, **common_flow_kwargs )) (dec_Inputs)
 
             models_list += [self.encoder, self.decoder_src, self.decoder_dst]
 
             if self.options['learn_mask']:
-                self.decoder_srcm = modelify(SAEModel.DFDecFlow (mask_shape[2],ed_ch_dims=int(ed_ch_dims/1.5) )) (dec_Inputs)
-                self.decoder_dstm = modelify(SAEModel.DFDecFlow (mask_shape[2],ed_ch_dims=int(ed_ch_dims/1.5) )) (dec_Inputs)
-                models_list += [self.decoder_srcm, self.decoder_dstm]
-
-            if not self.is_first_run():
-                weights_to_load += [  [self.encoder    , 'encoder.h5'],
-                                      [self.decoder_src, 'decoder_src.h5'],
-                                      [self.decoder_dst, 'decoder_dst.h5']
-                                    ]
-                if self.options['learn_mask']:
-                    weights_to_load += [ [self.decoder_srcm, 'decoder_srcm.h5'],
-                                         [self.decoder_dstm, 'decoder_dstm.h5'],
-                                       ]
-
-
-
-
-
-            warped_src_code = self.encoder (warped_src)
-            warped_dst_code = self.encoder (warped_dst)
-            pred_src_src = self.decoder_src(warped_src_code)
-            pred_dst_dst = self.decoder_dst(warped_dst_code)
-            pred_src_dst = self.decoder_src(warped_dst_code)
-
-            if self.options['learn_mask']:
-                pred_src_srcm = self.decoder_srcm(warped_src_code)
-                pred_dst_dstm = self.decoder_dstm(warped_dst_code)
-                pred_src_dstm = self.decoder_srcm(warped_dst_code)
-
-        elif self.options['archi'] == 'vg':
-            self.encoder = modelify(SAEModel.VGEncFlow(resolution, self.options['lighter_encoder'], ae_dims=ae_dims, ed_ch_dims=ed_ch_dims)  ) (Input(bgr_shape))
-
-            dec_Inputs = [ Input(K.int_shape(x)[1:]) for x in self.encoder.outputs ]
-
-            self.decoder_src = modelify(SAEModel.VGDecFlow (bgr_shape[2],ed_ch_dims=ed_ch_dims//2 )) (dec_Inputs)
-            self.decoder_dst = modelify(SAEModel.VGDecFlow (bgr_shape[2],ed_ch_dims=ed_ch_dims//2 )) (dec_Inputs)
-
-            models_list += [self.encoder, self.decoder_src, self.decoder_dst]
-
-            if self.options['learn_mask']:
-                self.decoder_srcm = modelify(SAEModel.VGDecFlow (mask_shape[2],ed_ch_dims=int(ed_ch_dims/1.5) )) (dec_Inputs)
-                self.decoder_dstm = modelify(SAEModel.VGDecFlow (mask_shape[2],ed_ch_dims=int(ed_ch_dims/1.5) )) (dec_Inputs)
+                self.decoder_srcm = modelify(SAEModel.DFDecFlow (mask_shape[2],ch_dims=d_ch_dims, **common_flow_kwargs )) (dec_Inputs)
+                self.decoder_dstm = modelify(SAEModel.DFDecFlow (mask_shape[2],ch_dims=d_ch_dims, **common_flow_kwargs )) (dec_Inputs)
                 models_list += [self.decoder_srcm, self.decoder_dstm]
 
             if not self.is_first_run():
@@ -246,21 +213,10 @@ class SAEModel(ModelBase):
             pred_dst_dst = self.decoder_dst(warped_dst_code)
             pred_src_dst = self.decoder_src(warped_dst_code)
 
-
             if self.options['learn_mask']:
                 pred_src_srcm = self.decoder_srcm(warped_src_code)
                 pred_dst_dstm = self.decoder_dstm(warped_dst_code)
                 pred_src_dstm = self.decoder_srcm(warped_dst_code)
-
-        if self.is_first_run() and self.options['ca_weights']:
-            io.log_info ("Initializing CA weights...")
-            conv_weights_list = []
-            for model in models_list:
-                for layer in model.layers:
-                    if type(layer) == Conv2D:
-                        conv_weights_list += [layer.weights[0]] #Conv2D kernel_weights
-            CAInitializerMP ( conv_weights_list )
-
 
         pred_src_src, pred_dst_dst, pred_src_dst, = [ [x] if type(x) != list else x for x in [pred_src_src, pred_dst_dst, pred_src_dst, ] ]
 
@@ -406,7 +362,7 @@ class SAEModel(ModelBase):
                  ]
             if self.options['learn_mask']:
                  ar += [ [self.decoderm, 'decoderm.h5'] ]
-        elif self.options['archi'] == 'df' or self.options['archi'] == 'vg':
+        elif self.options['archi'] == 'df':
            ar += [[self.encoder, 'encoder.h5'],
                  [self.decoder_src, 'decoder_src.h5'],
                  [self.decoder_dst, 'decoder_dst.h5']
@@ -490,7 +446,7 @@ class SAEModel(ModelBase):
                                base_blur_mask_modifier=base_blur_mask_modifier,
                                default_erode_mask_modifier=default_erode_mask_modifier,
                                default_blur_mask_modifier=default_blur_mask_modifier,
-                               clip_hborder_mask_per=0.0625 if self.options['face_type'] == 'f' else 0)
+                               clip_hborder_mask_per=0.0625 if (not self.options['remove_gray_border'] and self.options['face_type'] == 'f') else 0)
 
     @staticmethod
     def initialize_nn_functions():
@@ -499,96 +455,110 @@ class SAEModel(ModelBase):
         def BatchNorm():
             return BatchNormalization(axis=-1)
 
-
         class ResidualBlock(object):
-            def __init__(self, filters, kernel_size=3, padding='same', use_reflection_padding=False):
+            def __init__(self, filters, kernel_size=3, padding='zero', use_reflection_padding=False):
                 self.filters = filters
                 self.kernel_size = kernel_size
-                self.padding = padding #if not use_reflection_padding else 'valid'
-                self.use_reflection_padding = use_reflection_padding
+                self.padding = padding
 
             def __call__(self, inp):
-                var_x = LeakyReLU(alpha=0.2)(inp)
-
-                #if self.use_reflection_padding:
-                #    #var_x = ReflectionPadding2D(stride=1, kernel_size=kernel_size)(var_x)
-
+                var_x = inp
                 var_x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding)(var_x)
                 var_x = LeakyReLU(alpha=0.2)(var_x)
-
-                #if self.use_reflection_padding:
-                #    #var_x = ReflectionPadding2D(stride=1, kernel_size=kernel_size)(var_x)
-
-                var_x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding )(var_x)
-                var_x = Scale(gamma_init=keras.initializers.Constant(value=0.1))(var_x)
+                var_x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding)(var_x)
                 var_x = Add()([var_x, inp])
                 var_x = LeakyReLU(alpha=0.2)(var_x)
                 return var_x
         SAEModel.ResidualBlock = ResidualBlock
 
-        def downscale (dim, use_bn=False):
+        def ResidualBlock_pre (**base_kwargs):
+            def func(*args, **kwargs):
+                kwargs.update(base_kwargs)
+                return ResidualBlock(*args, **kwargs)
+            return func
+        SAEModel.ResidualBlock_pre = ResidualBlock_pre
+
+        def downscale (dim, padding='zero'):
             def func(x):
-                if use_bn:
-                    return LeakyReLU(0.1)(BatchNorm()(Conv2D(dim, kernel_size=5, strides=2, padding='same', use_bias=False)(x)))
-                else:
-                    return LeakyReLU(0.1)(Conv2D(dim, kernel_size=5, strides=2, padding='same')(x))
+                return LeakyReLU(0.1)(Conv2D(dim, kernel_size=5, strides=2, padding=padding)(x))
             return func
         SAEModel.downscale = downscale
 
-        def downscale_sep (dim, use_bn=False):
+        def downscale_pre (**base_kwargs):
+            def func(*args, **kwargs):
+                kwargs.update(base_kwargs)
+                return downscale(*args, **kwargs)
+            return func
+        SAEModel.downscale_pre = downscale_pre
+
+        def downscale_sep (dim, padding='zero'):
             def func(x):
-                if use_bn:
-                    return LeakyReLU(0.1)(BatchNorm()(SeparableConv2D(dim, kernel_size=5, strides=2, padding='same', use_bias=False )(x)))
-                else:
-                    return LeakyReLU(0.1)(SeparableConv2D(dim, kernel_size=5, strides=2, padding='same' )(x))
+                return LeakyReLU(0.1)(SeparableConv2D(dim, kernel_size=5, strides=2, padding=padding)(x))
             return func
         SAEModel.downscale_sep = downscale_sep
 
-        def upscale (dim, use_bn=False):
+        def downscale_sep_pre (**base_kwargs):
+            def func(*args, **kwargs):
+                kwargs.update(base_kwargs)
+                return downscale_sep(*args, **kwargs)
+            return func
+        SAEModel.downscale_sep_pre = downscale_sep_pre
+
+        def upscale (dim, padding='zero'):
             def func(x):
-                if use_bn:
-                    return SubpixelUpscaler()(LeakyReLU(0.1)(BatchNorm()(Conv2D(dim * 4, kernel_size=3, strides=1, padding='same', use_bias=False )(x))))
-                else:
-                    return SubpixelUpscaler()(LeakyReLU(0.1)(Conv2D(dim * 4, kernel_size=3, strides=1, padding='same')(x)))
+                return SubpixelUpscaler()(LeakyReLU(0.1)(Conv2D(dim * 4, kernel_size=3, strides=1, padding=padding)(x)))
             return func
         SAEModel.upscale = upscale
 
-        def to_bgr (output_nc):
+        def upscale_pre (**base_kwargs):
+            def func(*args, **kwargs):
+                kwargs.update(base_kwargs)
+                return upscale(*args, **kwargs)
+            return func
+        SAEModel.upscale_pre = upscale_pre
+
+        def to_bgr (output_nc, padding='zero'):
             def func(x):
-                return Conv2D(output_nc, kernel_size=5, padding='same', activation='sigmoid')(x)
+                return Conv2D(output_nc, kernel_size=5, padding=padding, activation='sigmoid')(x)
             return func
         SAEModel.to_bgr = to_bgr
 
+        def to_bgr_pre (**base_kwargs):
+            def func(*args, **kwargs):
+                kwargs.update(base_kwargs)
+                return to_bgr(*args, **kwargs)
+            return func
+        SAEModel.to_bgr_pre = to_bgr_pre
 
     @staticmethod
-    def LIAEEncFlow(resolution, light_enc, ed_ch_dims=42, use_bn=False):
+    def LIAEEncFlow(resolution, light_enc, ch_dims, padding='zero', **kwargs):
         exec (nnlib.import_all(), locals(), globals())
-        upscale = SAEModel.upscale
-        downscale = SAEModel.downscale
-        downscale_sep = SAEModel.downscale_sep
+        upscale = SAEModel.upscale_pre(padding=padding)
+        downscale = SAEModel.downscale_pre(padding=padding)
+        downscale_sep = SAEModel.downscale_sep_pre(padding=padding)
 
         def func(input):
-            ed_dims = K.int_shape(input)[-1]*ed_ch_dims
+            dims = K.int_shape(input)[-1]*ch_dims
 
             x = input
-            x = downscale(ed_dims)(x)
+            x = downscale(dims)(x)
             if not light_enc:
-                x = downscale(ed_dims*2, use_bn=use_bn)(x)
-                x = downscale(ed_dims*4, use_bn=use_bn)(x)
-                x = downscale(ed_dims*8, use_bn=use_bn)(x)
+                x = downscale(dims*2)(x)
+                x = downscale(dims*4)(x)
+                x = downscale(dims*8)(x)
             else:
-                x = downscale_sep(ed_dims*2, use_bn=use_bn)(x)
-                x = downscale(ed_dims*4, use_bn=use_bn)(x)
-                x = downscale_sep(ed_dims*8, use_bn=use_bn)(x)
+                x = downscale_sep(dims*2)(x)
+                x = downscale(dims*4)(x)
+                x = downscale_sep(dims*8)(x)
 
             x = Flatten()(x)
             return x
         return func
 
     @staticmethod
-    def LIAEInterFlow(resolution, ae_dims=256, use_bn=False):
+    def LIAEInterFlow(resolution, ae_dims=256, padding='zero', **kwargs):
         exec (nnlib.import_all(), locals(), globals())
-        upscale = SAEModel.upscale
+        upscale = SAEModel.upscale_pre(padding=padding)
         lowest_dense_res=resolution // 16
 
         def func(input):
@@ -596,32 +566,45 @@ class SAEModel(ModelBase):
             x = Dense(ae_dims)(x)
             x = Dense(lowest_dense_res * lowest_dense_res * ae_dims*2)(x)
             x = Reshape((lowest_dense_res, lowest_dense_res, ae_dims*2))(x)
-            x = upscale(ae_dims*2, use_bn=use_bn)(x)
+            x = upscale(ae_dims*2)(x)
             return x
         return func
 
     @staticmethod
-    def LIAEDecFlow(output_nc,ed_ch_dims=21, multiscale_count=1, use_bn=False):
+    def LIAEDecFlow(output_nc,ch_dims, multiscale_count=1, add_residual_blocks=False, padding='zero', **kwargs):
         exec (nnlib.import_all(), locals(), globals())
-        upscale = SAEModel.upscale
-        to_bgr = SAEModel.to_bgr
-        ed_dims = output_nc * ed_ch_dims
+        upscale = SAEModel.upscale_pre(padding=padding)
+        to_bgr = SAEModel.to_bgr_pre(padding=padding)
+        dims = output_nc * ch_dims
+        ResidualBlock = SAEModel.ResidualBlock_pre(padding=padding)
 
         def func(input):
             x = input[0]
 
             outputs = []
-            x1     = upscale(ed_dims*8, use_bn=use_bn)( x )
+            x1  = upscale(dims*8)( x )
+
+            if add_residual_blocks:
+                x1 = ResidualBlock(dims*8)(x1)
+                x1 = ResidualBlock(dims*8)(x1)
 
             if multiscale_count >= 3:
                 outputs += [ to_bgr(output_nc) ( x1 ) ]
 
-            x2     = upscale(ed_dims*4, use_bn=use_bn)( x1 )
+            x2 = upscale(dims*4)( x1 )
+
+            if add_residual_blocks:
+                x2 = ResidualBlock(dims*4)(x2)
+                x2 = ResidualBlock(dims*4)(x2)
 
             if multiscale_count >= 2:
                 outputs += [ to_bgr(output_nc) ( x2 ) ]
 
-            x3     = upscale(ed_dims*2, use_bn=use_bn)( x2 )
+            x3 = upscale(dims*2)( x2 )
+
+            if add_residual_blocks:
+                x3 = ResidualBlock( dims*2)(x3)
+                x3 = ResidualBlock( dims*2)(x3)
 
             outputs += [ to_bgr(output_nc) ( x3 ) ]
 
@@ -629,27 +612,27 @@ class SAEModel(ModelBase):
         return func
 
     @staticmethod
-    def DFEncFlow(resolution, light_enc, ae_dims=512, ed_ch_dims=42):
+    def DFEncFlow(resolution, light_enc, ae_dims, ch_dims, padding='zero', **kwargs):
         exec (nnlib.import_all(), locals(), globals())
-        upscale = SAEModel.upscale
-        downscale = SAEModel.downscale
-        downscale_sep = SAEModel.downscale_sep
+        upscale = SAEModel.upscale_pre(padding=padding)
+        downscale = SAEModel.downscale_pre(padding=padding)
+        downscale_sep = SAEModel.downscale_sep_pre(padding=padding)
         lowest_dense_res = resolution // 16
 
         def func(input):
             x = input
 
-            ed_dims = K.int_shape(input)[-1]*ed_ch_dims
+            dims = K.int_shape(input)[-1]*ch_dims
 
-            x = downscale(ed_dims)(x)
+            x = downscale(dims)(x)
             if not light_enc:
-                x = downscale(ed_dims*2)(x)
-                x = downscale(ed_dims*4)(x)
-                x = downscale(ed_dims*8)(x)
+                x = downscale(dims*2)(x)
+                x = downscale(dims*4)(x)
+                x = downscale(dims*8)(x)
             else:
-                x = downscale_sep(ed_dims*2)(x)
-                x = downscale_sep(ed_dims*4)(x)
-                x = downscale_sep(ed_dims*8)(x)
+                x = downscale_sep(dims*2)(x)
+                x = downscale(dims*4)(x)
+                x = downscale_sep(dims*8)(x)
 
             x = Dense(ae_dims)(Flatten()(x))
             x = Dense(lowest_dense_res * lowest_dense_res * ae_dims)(x)
@@ -660,135 +643,45 @@ class SAEModel(ModelBase):
         return func
 
     @staticmethod
-    def DFDecFlow(output_nc, ed_ch_dims=21, multiscale_count=1):
+    def DFDecFlow(output_nc, ch_dims, multiscale_count=1, add_residual_blocks=False, padding='zero', **kwargs):
         exec (nnlib.import_all(), locals(), globals())
-        upscale = SAEModel.upscale
-        to_bgr = SAEModel.to_bgr
-        ed_dims = output_nc * ed_ch_dims
+        upscale = SAEModel.upscale_pre(padding=padding)
+        to_bgr = SAEModel.to_bgr_pre(padding=padding)
+        dims = output_nc * ch_dims
+        ResidualBlock = SAEModel.ResidualBlock_pre(padding=padding)
 
         def func(input):
             x = input[0]
 
             outputs = []
-            x1     = upscale(ed_dims*8)( x )
+            x1 = upscale(dims*8)( x )
+
+            if add_residual_blocks:
+                x1 = ResidualBlock( dims*8 )(x1)
+                x1 = ResidualBlock( dims*8 )(x1)
 
             if multiscale_count >= 3:
                 outputs += [ to_bgr(output_nc) ( x1 ) ]
 
-            x2     = upscale(ed_dims*4)( x1 )
+            x2 = upscale(dims*4)( x1 )
+
+            if add_residual_blocks:
+                x2 = ResidualBlock( dims*4)(x2)
+                x2 = ResidualBlock( dims*4)(x2)
 
             if multiscale_count >= 2:
                 outputs += [ to_bgr(output_nc) ( x2 ) ]
 
-            x3     = upscale(ed_dims*2)( x2 )
+            x3 = upscale(dims*2)( x2 )
+
+            if add_residual_blocks:
+                x3 = ResidualBlock( dims*2)(x3)
+                x3 = ResidualBlock( dims*2)(x3)
 
             outputs += [ to_bgr(output_nc) ( x3 ) ]
 
             return outputs
         return func
 
-
-
-    @staticmethod
-    def VGEncFlow(resolution, light_enc, ae_dims=512, ed_ch_dims=42):
-        exec (nnlib.import_all(), locals(), globals())
-        upscale = SAEModel.upscale
-        downscale = SAEModel.downscale
-        downscale_sep = SAEModel.downscale_sep
-        ResidualBlock = SAEModel.ResidualBlock
-        lowest_dense_res = resolution // 16
-
-        def func(input):
-            x = input
-            ed_dims = K.int_shape(input)[-1]*ed_ch_dims
-            while np.modf(ed_dims / 4)[0] != 0.0:
-                ed_dims -= 1
-
-            in_conv_filters = ed_dims# if resolution <= 128 else ed_dims + (resolution//128)*ed_ch_dims
-
-            x = tmp_x = Conv2D (in_conv_filters, kernel_size=5, strides=2, padding='same') (x)
-
-            for _ in range ( 8 if light_enc else 16 ):
-                x = ResidualBlock(ed_dims)(x)
-
-            x = Add()([x, tmp_x])
-
-            x = downscale(ed_dims)(x)
-            x = SubpixelUpscaler()(x)
-
-            x = downscale(ed_dims)(x)
-            x = SubpixelUpscaler()(x)
-
-            x = downscale(ed_dims)(x)
-            if light_enc:
-                x = downscale_sep (ed_dims*2)(x)
-            else:
-                x = downscale (ed_dims*2)(x)
-
-            x = downscale(ed_dims*4)(x)
-
-            if light_enc:
-                x = downscale_sep (ed_dims*8)(x)
-            else:
-                x = downscale (ed_dims*8)(x)
-
-            x = Dense(ae_dims)(Flatten()(x))
-            x = Dense(lowest_dense_res * lowest_dense_res * ae_dims)(x)
-            x = Reshape((lowest_dense_res, lowest_dense_res, ae_dims))(x)
-            x = upscale(ae_dims)(x)
-            return x
-
-        return func
-
-    @staticmethod
-    def VGDecFlow(output_nc, ed_ch_dims=21, multiscale_count=1):
-        exec (nnlib.import_all(), locals(), globals())
-        upscale = SAEModel.upscale
-        to_bgr = SAEModel.to_bgr
-        ResidualBlock = SAEModel.ResidualBlock
-        ed_dims = output_nc * ed_ch_dims
-
-        def func(input):
-            x = input[0]
-
-            x = upscale( ed_dims*8 )(x)
-            x = ResidualBlock( ed_dims*8 )(x)
-
-            x = upscale( ed_dims*4 )(x)
-            x = ResidualBlock( ed_dims*4 )(x)
-
-            x = upscale( ed_dims*2 )(x)
-            x = ResidualBlock( ed_dims*2 )(x)
-
-            x = to_bgr(output_nc) (x)
-            return x
-
-        return func
 
 Model = SAEModel
-
-
-
-# 'worst' sample booster gives no good result, or I dont know how to filter worst samples properly.
-#
-##gathering array of sample_losses
-#self.src_sample_losses += [[src_sample_idxs[i], src_sample_losses[i]] for i in range(self.batch_size) ]
-#self.dst_sample_losses += [[dst_sample_idxs[i], dst_sample_losses[i]] for i in range(self.batch_size) ]
-#
-#if len(self.src_sample_losses) >= 128: #array is big enough
-#    #fetching idxs which losses are bigger than average
-#    x = np.array (self.src_sample_losses)
-#    self.src_sample_losses = []
-#    b = x[:,1]
-#    idxs = (x[:,0][ np.argwhere ( b [ b > (np.mean(b)+np.std(b)) ] )[:,0] ]).astype(np.uint)
-#    generators_list[0].repeat_sample_idxs(idxs) #ask generator to repeat these sample idxs
-#    print ("src repeated %d" % (len(idxs)) )
-#
-#if len(self.dst_sample_losses) >= 128: #array is big enough
-#    #fetching idxs which losses are bigger than average
-#    x = np.array (self.dst_sample_losses)
-#    self.dst_sample_losses = []
-#    b = x[:,1]
-#    idxs = (x[:,0][ np.argwhere ( b [ b > (np.mean(b)+np.std(b)) ] )[:,0] ]).astype(np.uint)
-#    generators_list[1].repeat_sample_idxs(idxs) #ask generator to repeat these sample idxs
-#    print ("dst repeated %d" % (len(idxs)) )
