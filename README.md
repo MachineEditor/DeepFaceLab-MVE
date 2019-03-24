@@ -18,6 +18,8 @@ bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr
 
 - ### Manuals:
 
+[English (google translated)](doc/manual_en_google_translated.pdf)
+
 [На русском](doc/manual_ru.pdf)
 
 - ### [Prebuilt windows app](doc/doc_prebuilt_windows_app.md)
