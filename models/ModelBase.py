@@ -374,15 +374,7 @@ class ModelBase(object):
 
         self.iter += 1
 
-        time_str = time.strftime("[%H:%M:%S]")
-        if iter_time >= 10:
-            loss_string = "{0}[#{1:06d}][{2:.5s}s]".format ( time_str, self.iter, '{:0.4f}'.format(iter_time) )
-        else:
-            loss_string = "{0}[#{1:06d}][{2:04d}ms]".format ( time_str, self.iter, int(iter_time*1000) )
-        for (loss_name, loss_value) in losses:
-            loss_string += " %s:%.3f" % (loss_name, loss_value)
-
-        return loss_string
+        return self.iter, iter_time
 
     def pass_one_iter(self):
         self.last_sample = self.generate_next_sample()
