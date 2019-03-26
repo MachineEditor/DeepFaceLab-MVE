@@ -85,7 +85,7 @@ if __name__ == "__main__":
                 'model_name'             : arguments.model_name,
                 'no_preview'             : arguments.no_preview,
                 'debug'                  : arguments.debug,
-                'execute_programs'       : [ [int(x[0]), x[1] ] for x in arguments.execute_program] if arguments.execute_program is not None else []]
+                'execute_programs'       : [ [int(x[0]), x[1] ] for x in arguments.execute_program ]
                 }
         device_args = {'cpu_only'  : arguments.cpu_only,
                        'force_gpu_idx' : arguments.force_gpu_idx,
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     p.add_argument('--debug', action="store_true", dest="debug", default=False, help="Debug samples.")
     p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Train on CPU.")
     p.add_argument('--force-gpu-idx', type=int, dest="force_gpu_idx", default=-1, help="Force to choose this GPU idx.")
-    p.add_argument('--execute-program', dest="execute_program", action='append', nargs='+')
+    p.add_argument('--execute-program', dest="execute_program", default=[], action='append', nargs='+')
     p.set_defaults (func=process_train)
 
     def process_convert(arguments):
