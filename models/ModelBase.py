@@ -368,7 +368,7 @@ class ModelBase(object):
         if self.iter % 10 == 0:
             plist = []
             if io.is_colab():
-                plist += [ (self.get_previews()[0][1], 'preview.jpg') ]
+                plist += [ (self.get_previews()[0][1], '_preview.jpg') ]
 
             if self.write_preview_history:
                 plist += [ (self.get_static_preview(), '%.6d.jpg' %(self.iter) ) ]
