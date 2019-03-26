@@ -24,7 +24,7 @@ bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr
 
 - ### [Prebuilt windows app](doc/doc_prebuilt_windows_app.md)
 
-- ### [Forks]
+- ### Forks
 
 [Google Colab fork](https://github.com/chervonij/DFL-Colab) by @chervonij
 
