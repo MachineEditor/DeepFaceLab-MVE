@@ -54,7 +54,12 @@ class ConvertSubprocessor(Subprocessor):
             if self.converter.type == Converter.TYPE_FACE and filename_path.stem not in self.alignments.keys():
                 if not self.debug:
                     self.log_info ( 'no faces found for %s, copying without faces' % (filename_path.name) )
-                    shutil.copy ( str(filename_path), str(output_filename_path) )
+
+                    if filename_path.suffix == '.png':
+                        shutil.copy ( str(filename_path), str(output_filename_path) )
+                    else:
+                        image = cv2_imread(str(filename_path))
+                        cv2_imwrite ( str(output_filename_path), image )
             else:
                 image = (cv2_imread(str(filename_path)) / 255.0).astype(np.float32)
 
