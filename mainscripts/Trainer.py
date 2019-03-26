@@ -15,12 +15,15 @@ from interact import interact as io
 def trainerThread (s2c, c2s, args, device_args):
     while True:
         try:
+            start_time = time.time()
+
             training_data_src_path = Path( args.get('training_data_src_dir', '') )
             training_data_dst_path = Path( args.get('training_data_dst_dir', '') )
             model_path = Path( args.get('model_path', '') )
             model_name = args.get('model_name', '')
             save_interval_min = 15
             debug = args.get('debug', '')
+            execute_programs = args.get('execute_programs', [])
 
             if not training_data_src_path.exists():
                 io.log_err('Training data src directory does not exist.')
@@ -75,6 +78,17 @@ def trainerThread (s2c, c2s, args, device_args):
 
             for i in itertools.count(0,1):
                 if not debug:
+                    cur_time = time.time()
+
+                    for x in execute_programs:
+                        prog_time, prog = x
+                        if prog_time != 0 and (cur_time - start_time) >= prog_time:
+                            x[0] = 0
+                            try:
+                                exec(prog)
+                            except Exception as e:
+                                print("Unable to execute program: %s" % (prog) )
+
                     if not is_reached_goal:
                         iter, iter_time = model.train_one_iter()
 
