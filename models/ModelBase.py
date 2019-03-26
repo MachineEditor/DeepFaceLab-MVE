@@ -367,16 +367,17 @@ class ModelBase(object):
 
         if self.iter % 10 == 0:
             plist = []
+
             if io.is_colab():
-                plist += [ (self.get_previews()[0][1], '_preview.jpg') ]
+                plist += [ (self.get_previews()[0][1], self.get_strpath_storage_for_file('preview.jpg') ) ]
 
             if self.write_preview_history:
-                plist += [ (self.get_static_preview(), '%.6d.jpg' %(self.iter) ) ]
+                plist += [ (self.get_static_preview(), str (self.preview_history_path / ('%.6d.jpg' % (self.iter))) ) ]
 
-            for preview, filename in plist:
+            for preview, filepath in plist:
                 preview_lh = ModelBase.get_loss_history_preview(self.loss_history, self.iter, preview.shape[1], preview.shape[2])
                 img = (np.concatenate ( [preview_lh, preview], axis=0 ) * 255).astype(np.uint8)
-                cv2_imwrite ( str (self.preview_history_path / filename), img )
+                cv2_imwrite (filepath, img )
 
 
         self.iter += 1
