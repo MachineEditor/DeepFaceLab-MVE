@@ -85,7 +85,7 @@ if __name__ == "__main__":
                 'model_name'             : arguments.model_name,
                 'no_preview'             : arguments.no_preview,
                 'debug'                  : arguments.debug,
-                'execute_programs'       : [ [int(x[0]), x[1] ] for x in arguments.execute_program]
+                'execute_programs'       : [ [int(x[0]), x[1] ] for x in arguments.execute_program] if arguments.execute_program is not None else None
                 }
         device_args = {'cpu_only'  : arguments.cpu_only,
                        'force_gpu_idx' : arguments.force_gpu_idx,
