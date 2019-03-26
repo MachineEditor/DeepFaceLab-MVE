@@ -7,7 +7,6 @@ import cv2
 from utils.DFLPNG import DFLPNG
 from utils.DFLJPG import DFLJPG
 from utils.cv2_utils import *
-from utils import image_utils
 import shutil
 import numpy as np
 import time

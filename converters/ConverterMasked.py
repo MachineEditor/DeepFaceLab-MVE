@@ -5,7 +5,7 @@ from facelib import FaceType
 from facelib import FANSegmentator
 import cv2
 import numpy as np
-from utils import image_utils
+import imagelib
 from interact import interact as io
 '''
 default_mode = {1:'overlay',
@@ -262,7 +262,7 @@ class ConverterMasked(Converter):
                         if debug:
                             debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
 
-                        prd_face_bgr = image_utils.reinhard_color_transfer ( np.clip( (prd_face_bgr*255).astype(np.uint8), 0, 255),
+                        prd_face_bgr = imagelib.reinhard_color_transfer ( np.clip( (prd_face_bgr*255).astype(np.uint8), 0, 255),
                                                                              np.clip( (dst_face_bgr*255).astype(np.uint8), 0, 255),
                                                                              source_mask=prd_face_mask_a, target_mask=prd_face_mask_a)
                         prd_face_bgr = np.clip( prd_face_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
@@ -275,7 +275,7 @@ class ConverterMasked(Converter):
                         if debug:
                             debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
 
-                        prd_face_bgr = image_utils.linear_color_transfer (prd_face_bgr, dst_face_bgr)
+                        prd_face_bgr = imagelib.linear_color_transfer (prd_face_bgr, dst_face_bgr)
                         prd_face_bgr = np.clip( prd_face_bgr, 0.0, 1.0)
 
                         if debug:
@@ -300,7 +300,7 @@ class ConverterMasked(Converter):
                     hist_match_2 = dst_face_bgr*hist_mask_a + (1.0-hist_mask_a)* np.ones ( prd_face_bgr.shape[:2] + (1,) , dtype=np.float32)
                     hist_match_2[ hist_match_1 > 1.0 ] = 1.0
 
-                    prd_face_bgr = image_utils.color_hist_match(hist_match_1, hist_match_2, self.hist_match_threshold )
+                    prd_face_bgr = imagelib.color_hist_match(hist_match_1, hist_match_2, self.hist_match_threshold )
 
                 if self.mode == 'hist-match-bw':
                     prd_face_bgr = prd_face_bgr.astype(dtype=np.float32)
@@ -334,14 +334,14 @@ class ConverterMasked(Converter):
 
                 if self.mode == 'seamless-hist-match':
                     out_face_bgr = cv2.warpAffine( out_img, face_mat, (self.output_size, self.output_size) )
-                    new_out_face_bgr = image_utils.color_hist_match(out_face_bgr, dst_face_bgr, self.hist_match_threshold)
+                    new_out_face_bgr = imagelib.color_hist_match(out_face_bgr, dst_face_bgr, self.hist_match_threshold)
                     new_out = cv2.warpAffine( new_out_face_bgr, face_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
                     out_img =  np.clip( img_bgr*(1-img_mask_blurry_aaa) + (new_out*img_mask_blurry_aaa) , 0, 1.0 )
 
                 if self.final_image_color_degrade_power != 0:
                     if debug:
                         debugs += [out_img.copy()]
-                    out_img_reduced = image_utils.reduce_colors(out_img, 256)
+                    out_img_reduced = imagelib.reduce_colors(out_img, 256)
                     if self.final_image_color_degrade_power == 100:
                         out_img = out_img_reduced
                     else:

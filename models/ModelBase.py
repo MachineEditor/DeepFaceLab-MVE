@@ -4,10 +4,10 @@ import time
 import inspect
 import pickle
 import colorsys
+import imagelib
 from pathlib import Path
 from utils import Path_utils
 from utils import std_utils
-from utils import image_utils
 from utils.cv2_utils import *
 import numpy as np
 import cv2
@@ -351,7 +351,7 @@ class ModelBase(object):
                 if len(batch.shape) == 4:
                     images.append( batch[0] )
 
-        return image_utils.equalize_and_stack_square (images)
+        return imagelib.equalize_and_stack_square (images)
 
     def generate_next_sample(self):
         return [next(generator) for generator in self.generator_list]
@@ -488,5 +488,5 @@ class ModelBase(object):
 
         lh_text = 'Iter: %d' % (iter) if iter != 0 else ''
 
-        lh_img[last_line_t:last_line_b, 0:w] += image_utils.get_text_image (  (w,last_line_b-last_line_t,c), lh_text, color=[0.8]*c )
+        lh_img[last_line_t:last_line_b, 0:w] += imagelib.get_text_image (  (w,last_line_b-last_line_t,c), lh_text, color=[0.8]*c )
         return lh_img

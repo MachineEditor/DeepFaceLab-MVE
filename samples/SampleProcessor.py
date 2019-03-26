@@ -1,7 +1,7 @@
 from enum import IntEnum
 import numpy as np
 import cv2
-from utils import image_utils
+import imagelib
 from facelib import LandmarksProcessor
 from facelib import FaceType
 
@@ -56,7 +56,7 @@ class SampleProcessor(object):
         if debug and close_sample_bgr is not None:
             LandmarksProcessor.draw_landmarks (close_sample_bgr, close_sample.landmarks, (0, 1, 0))
 
-        params = image_utils.gen_warp_params(sample_bgr, sample_process_options.random_flip, rotation_range=sample_process_options.rotation_range, scale_range=sample_process_options.scale_range, tx_range=sample_process_options.tx_range, ty_range=sample_process_options.ty_range )
+        params = imagelib.gen_warp_params(sample_bgr, sample_process_options.random_flip, rotation_range=sample_process_options.rotation_range, scale_range=sample_process_options.scale_range, tx_range=sample_process_options.tx_range, ty_range=sample_process_options.ty_range )
 
         images = [[None]*3 for _ in range(30)]
 
@@ -144,7 +144,7 @@ class SampleProcessor(object):
                         d_landmarks = d_landmarks[idxs]
                         s_landmarks = np.concatenate ( [s_landmarks, [ [0,0], [ res // 2, 0], [ res-1, 0], [0, res//2], [res-1, res//2] ,[0,res-1] ,[res//2, res-1] ,[res-1,res-1] ] ] )
                         d_landmarks = np.concatenate ( [d_landmarks, [ [0,0], [ res // 2, 0], [ res-1, 0], [0, res//2], [res-1, res//2] ,[0,res-1] ,[res//2, res-1] ,[res-1,res-1] ] ] )
-                        img = image_utils.morph_by_points (sample_bgr, s_landmarks, d_landmarks)
+                        img = imagelib.morph_by_points (sample_bgr, s_landmarks, d_landmarks)
                         cur_sample = close_sample
                     else:
                         img = sample_bgr
@@ -159,7 +159,7 @@ class SampleProcessor(object):
                             mask[mask > 0.0] = 1.0
                             img = np.concatenate( (img, mask ), -1 )
 
-                    images[img_type][face_mask_type] = image_utils.warp_by_params (params, img, (img_type==1 or img_type==2), (img_type==2 or img_type==3), img_type != 0, face_mask_type == 0)
+                    images[img_type][face_mask_type] = imagelib.warp_by_params (params, img, (img_type==1 or img_type==2), (img_type==2 or img_type==3), img_type != 0, face_mask_type == 0)
 
                 img = images[img_type][face_mask_type]
 

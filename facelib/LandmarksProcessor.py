@@ -3,8 +3,8 @@ import cv2
 import numpy as np
 from enum import IntEnum
 import mathlib
+import imagelib
 from mathlib.umeyama import umeyama
-from utils import image_utils
 from facelib import FaceType
 import math
 
@@ -315,11 +315,11 @@ def draw_landmarks (image, image_landmarks, color=(0,255,0), transparent_mask=Fa
 
 def draw_rect_landmarks (image, rect, image_landmarks, face_size, face_type, transparent_mask=False, landmarks_color=(0,255,0) ):
     draw_landmarks(image, image_landmarks, color=landmarks_color, transparent_mask=transparent_mask)
-    image_utils.draw_rect (image, rect, (255,0,0), 2 )
+    imagelib.draw_rect (image, rect, (255,0,0), 2 )
 
     image_to_face_mat = get_transform_mat (image_landmarks, face_size, face_type)
     points = transform_points ( [ (0,0), (0,face_size-1), (face_size-1, face_size-1), (face_size-1,0) ], image_to_face_mat, True)
-    image_utils.draw_polygon (image, points, (0,0,255), 2)
+    imagelib.draw_polygon (image, points, (0,0,255), 2)
 
 def calc_face_pitch(landmarks):
     if not isinstance(landmarks, np.ndarray):

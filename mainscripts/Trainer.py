@@ -7,7 +7,7 @@ import numpy as np
 import itertools
 from pathlib import Path
 from utils import Path_utils
-from utils import image_utils
+import imagelib
 import cv2
 import models
 from interact import interact as io
@@ -235,7 +235,7 @@ def main(args, device_args):
                 for i in range(0, len(head_lines)):
                     t = i*head_line_height
                     b = (i+1)*head_line_height
-                    head[t:b, 0:w] += image_utils.get_text_image (  (w,head_line_height,c) , head_lines[i], color=[0.8]*c )
+                    head[t:b, 0:w] += imagelib.get_text_image (  (w,head_line_height,c) , head_lines[i], color=[0.8]*c )
 
                 final = head
 

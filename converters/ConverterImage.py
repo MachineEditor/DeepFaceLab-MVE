@@ -4,7 +4,6 @@ from facelib import FaceType
 
 import cv2
 import numpy as np
-from utils import image_utils
 
 '''
 predictor_func:

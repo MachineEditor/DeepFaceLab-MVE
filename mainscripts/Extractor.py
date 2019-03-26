@@ -7,11 +7,11 @@ import shutil
 from pathlib import Path
 import numpy as np
 import mathlib
+import imagelib
 import cv2
 from utils import Path_utils
 from utils.DFLJPG import DFLJPG
 from utils.cv2_utils import *
-from utils import image_utils
 import facelib
 from facelib import FaceType
 from facelib import LandmarksProcessor
@@ -378,7 +378,7 @@ class ExtractSubprocessor(Subprocessor):
                     if self.cache_text_lines_img[0] == sh:
                         self.text_lines_img = self.cache_text_lines_img[1]
                     else:
-                        self.text_lines_img = (image_utils.get_draw_text_lines ( self.image, sh,
+                        self.text_lines_img = (imagelib.get_draw_text_lines ( self.image, sh,
                                                         [   '[Mouse click] - lock/unlock selection',
                                                             '[Mouse wheel] - change rect',
                                                             '[Enter] / [Space] - confirm / skip frame',

@@ -6,7 +6,6 @@ import cv2
 from shutil import copyfile
 from pathlib import Path
 from utils import Path_utils
-from utils import image_utils
 from utils.DFLPNG import DFLPNG
 from utils.DFLJPG import DFLJPG
 from utils.cv2_utils import *
