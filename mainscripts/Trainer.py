@@ -100,7 +100,11 @@ def trainerThread (s2c, c2s, args, device_args):
                         else:
                             for loss_value in loss_history[-1]:
                                 loss_string += "[%.4f]" % (loss_value)
-                            io.log_info (loss_string, end='\r')
+
+                            if io.is_colab():
+                                io.log_info ('\r' + loss_string, end='')
+                            else:
+                                io.log_info (loss_string, end='\r')
 
                         if model.get_target_iter() != 0 and model.is_reached_iter_goal():
                             io.log_info ('Reached target iteration.')
@@ -281,6 +285,9 @@ def main(args, device_args):
                 selected_preview = (selected_preview + 1) % len(previews)
                 update_preview = True
 
-            io.process_messages(0.1)
+            try:
+                io.process_messages(0.1)
+            except KeyboardInterrupt:
+                s2c.put ( {'op': 'close'} )
 
         io.destroy_all_windows()
