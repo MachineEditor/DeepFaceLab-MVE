@@ -5,10 +5,7 @@ import multiprocessing
 from utils import iter_utils
 from facelib import LandmarksProcessor
 
-from samples import SampleType
-from samples import SampleProcessor
-from samples import SampleLoader
-from samples import SampleGeneratorBase
+from samplelib import SampleType, SampleProcessor, SampleLoader, SampleGeneratorBase
 
 '''
 arg

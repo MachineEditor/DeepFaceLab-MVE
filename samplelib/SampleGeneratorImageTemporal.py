@@ -4,10 +4,7 @@ import cv2
 
 from utils import iter_utils
 
-from samples import SampleType
-from samples import SampleProcessor
-from samples import SampleLoader
-from samples import SampleGeneratorBase
+from samplelib import SampleType, SampleProcessor, SampleLoader, SampleGeneratorBase
 
 '''
 output_sample_types = [

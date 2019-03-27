@@ -4,7 +4,7 @@ from nnlib import nnlib
 from models import ModelBase
 from facelib import FaceType
 from facelib import FANSegmentator
-from samples import *
+from samplelib import *
 from interact import interact as io
 
 class Model(ModelBase):

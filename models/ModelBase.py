@@ -11,7 +11,7 @@ from utils import std_utils
 from utils.cv2_utils import *
 import numpy as np
 import cv2
-from samples import SampleGeneratorBase
+from samplelib import SampleGeneratorBase
 from nnlib import nnlib
 from interact import interact as io
 '''

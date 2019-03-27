@@ -3,7 +3,7 @@ import numpy as np
 from nnlib import nnlib
 from models import ModelBase
 from facelib import FaceType
-from samples import *
+from samplelib import *
 from interact import interact as io
 
 #SAE - Styled AutoEncoder
