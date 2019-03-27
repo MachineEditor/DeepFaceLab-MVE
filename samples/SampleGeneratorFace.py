@@ -1,6 +1,5 @@
 import traceback
 import numpy as np
-import random
 import cv2
 import multiprocessing
 from utils import iter_utils
@@ -13,7 +12,7 @@ from samples import SampleGeneratorBase
 
 '''
 arg
-output_sample_types = [ 
+output_sample_types = [
                         [SampleProcessor.TypeFlags, size, (optional)random_sub_size] ,
                         ...
                       ]
@@ -119,7 +118,8 @@ class SampleGeneratorFace(SampleGeneratorBase):
                             idx = shuffle_idxs.pop()
                             if samples[idx] != None:
                                 if len(shuffle_idxs_2D[idx]) == 0:
-                                    shuffle_idxs_2D[idx] = random.sample( range(len(samples[idx])), len(samples[idx]) )
+                                    a = shuffle_idxs_2D[idx] = [ *range(len(samples[idx])) ]
+                                    np.random.shuffle (a)
 
                                 idx2 = shuffle_idxs_2D[idx].pop()
                                 sample = samples[idx][idx2]
