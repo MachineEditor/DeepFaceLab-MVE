@@ -62,6 +62,9 @@ class ConvertSubprocessor(Subprocessor):
                         cv2_imwrite ( str(output_filename_path), image )
             else:
                 image = (cv2_imread(str(filename_path)) / 255.0).astype(np.float32)
+                h,w,c = image.shape
+                if c > 3:
+                    image = image[...,0:3]
 
                 if self.converter.type == Converter.TYPE_IMAGE:
                     image = self.converter.convert_image(image, None, self.debug)
