@@ -108,9 +108,9 @@ class ConvertSubprocessor(Subprocessor):
                                 self.log_info ( '\nConverting face_num [%d] in file [%s]' % (face_num, filename_path) )
 
                             if self.debug:
-                                debug_images += self.converter.convert_face(image, image_landmarks, self.debug)
+                                debug_images += self.converter.cli_convert_face(image, image_landmarks, self.debug)
                             else:
-                                image = self.converter.convert_face(image, image_landmarks, self.debug)
+                                image = self.converter.cli_convert_face(image, image_landmarks, self.debug)
 
                         except Exception as e:
                             e_str = traceback.format_exc()
@@ -140,9 +140,6 @@ class ConvertSubprocessor(Subprocessor):
         super().__init__('Converter', ConvertSubprocessor.Cli, 86400 if debug == True else 60)
 
         self.converter = converter
-        self.host_processor, self.cli_func = SubprocessFunctionCaller.make_pair ( self.converter.predictor_func )
-        self.process_converter = self.converter.copy_and_set_predictor(self.cli_func)
-
         self.input_data = self.input_path_image_paths = input_path_image_paths
         self.output_path = output_path
         self.alignments = alignments
@@ -158,7 +155,7 @@ class ConvertSubprocessor(Subprocessor):
         for i in r:
             yield 'CPU%d' % (i), {}, {'device_idx': i,
                                       'device_name': 'CPU%d' % (i),
-                                      'converter' : self.process_converter,
+                                      'converter' : self.converter,
                                       'output_dir' : str(self.output_path),
                                       'alignments' : self.alignments,
                                       'debug': self.debug,
@@ -202,7 +199,7 @@ class ConvertSubprocessor(Subprocessor):
 
     #override
     def on_tick(self):
-        self.host_processor.process_messages()
+        self.converter.on_host_tick()
 
     #override
     def get_result(self):
@@ -235,7 +232,6 @@ def main (args, device_args):
         import models
         model = models.import_model( args['model_name'] )(model_path, device_args=device_args)
         converter = model.get_converter()
-        converter.dummy_predict()
 
         alignments = None
 

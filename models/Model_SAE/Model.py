@@ -406,13 +406,12 @@ class SAEModel(ModelBase):
         return [ ('SAE', np.concatenate (st, axis=0 )), ]
 
     def predictor_func (self, face):
-
-        prd = [ x[0] for x in self.AE_convert ( [ face[np.newaxis,:,:,0:3] ] ) ]
-
-        if not self.options['learn_mask']:
-            prd += [ face[...,3:4] ]
-
-        return np.concatenate ( prd, -1 )
+        if self.options['learn_mask']:
+            bgr, mask = self.AE_convert ([face[np.newaxis,...]])
+            return bgr[0], mask[0][...,0]
+        else:
+            bgr, = self.AE_convert ([face[np.newaxis,...]])
+            return bgr[0]
 
     #override
     def get_converter(self):
@@ -428,7 +427,7 @@ class SAEModel(ModelBase):
         from converters import ConverterMasked
         return ConverterMasked(self.predictor_func,
                                predictor_input_size=self.options['resolution'],
-                               output_size=self.options['resolution'],
+                               predictor_masked=self.options['learn_mask'],
                                face_type=face_type,
                                default_mode = 1 if self.options['face_style_power'] or self.options['bg_style_power'] else 4,
                                base_erode_mask_modifier=base_erode_mask_modifier,

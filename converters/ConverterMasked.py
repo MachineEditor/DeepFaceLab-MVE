@@ -7,6 +7,9 @@ import cv2
 import numpy as np
 import imagelib
 from interact import interact as io
+from joblib import SubprocessFunctionCaller
+from utils.pickle_utils import AntiPickler
+
 '''
 default_mode = {1:'overlay',
              2:'hist-match',
@@ -20,7 +23,7 @@ class ConverterMasked(Converter):
     #override
     def __init__(self,  predictor_func,
                         predictor_input_size=0,
-                        output_size=0,
+                        predictor_masked=True,
                         face_type=FaceType.FULL,
                         default_mode = 4,
                         base_erode_mask_modifier = 0,
@@ -30,8 +33,12 @@ class ConverterMasked(Converter):
                         clip_hborder_mask_per = 0):
 
         super().__init__(predictor_func, Converter.TYPE_FACE)
+
+        predictor_func_host, predictor_func = SubprocessFunctionCaller.make_pair(predictor_func)
+        self.predictor_func_host = AntiPickler(predictor_func_host)
+        self.predictor_func = predictor_func
+        self.predictor_masked = predictor_masked
         self.predictor_input_size = predictor_input_size
-        self.output_size = output_size
         self.face_type = face_type
         self.clip_hborder_mask_per = clip_hborder_mask_per
 
@@ -85,6 +92,7 @@ class ConverterMasked(Converter):
 
         self.output_face_scale = np.clip ( 1.0 + io.input_int ("Choose output face scale modifier [-50..50] (skip:0) : ", 0)*0.01, 0.5, 1.5)
         self.color_transfer_mode = io.input_str ("Apply color transfer to predicted face? Choose mode ( rct/lct skip:None ) : ", None, ['rct','lct'])
+        self.super_resolution = io.input_bool("Apply super resolution? (y/n skip:n) : ", False, help_message="Enhance details by applying DCSCN network.")
 
         if self.mode != 'raw':
             self.final_image_color_degrade_power = np.clip (  io.input_int ("Degrade color power of final image [0..100] (skip:0) : ", 0), 0, 100)
@@ -93,9 +101,19 @@ class ConverterMasked(Converter):
         io.log_info ("")
         self.over_res = 4 if self.suppress_seamless_jitter else 1
 
-    #override
-    def dummy_predict(self):
-        self.predictor_func ( np.zeros ( (self.predictor_input_size,self.predictor_input_size,4), dtype=np.float32 ) )
+        if self.super_resolution:
+            host_proc, dc_upscale = SubprocessFunctionCaller.make_pair( imagelib.DCSCN().upscale )
+            self.dc_host = AntiPickler(host_proc)
+            self.dc_upscale = dc_upscale
+        else:
+            self.dc_host = None
+
+    #overridable
+    def on_host_tick(self):
+        self.predictor_func_host.obj.process_messages()
+
+        if self.dc_host is not None:
+            self.dc_host.obj.process_messages()
 
     #overridable
     def on_cli_initialize(self):
@@ -103,7 +121,7 @@ class ConverterMasked(Converter):
             self.fan_seg = FANSegmentator(256, FaceType.toString(FaceType.FULL) )
 
     #override
-    def convert_face (self, img_bgr, img_face_landmarks, debug):
+    def cli_convert_face (self, img_bgr, img_face_landmarks, debug):
         if self.over_res != 1:
             img_bgr = cv2.resize ( img_bgr, ( img_bgr.shape[1]*self.over_res, img_bgr.shape[0]*self.over_res ) )
             img_face_landmarks = img_face_landmarks*self.over_res
@@ -115,32 +133,52 @@ class ConverterMasked(Converter):
 
         img_face_mask_a = LandmarksProcessor.get_image_hull_mask (img_bgr.shape, img_face_landmarks)
 
-        face_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, self.output_size, face_type=self.face_type)
-        face_output_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, self.output_size, face_type=self.face_type, scale=self.output_face_scale)
+        output_size = self.predictor_input_size
+        if self.super_resolution:
+            output_size *= 2
 
-        dst_face_bgr      = cv2.warpAffine( img_bgr        , face_mat, (self.output_size, self.output_size), flags=cv2.INTER_LANCZOS4 )
-        dst_face_mask_a_0 = cv2.warpAffine( img_face_mask_a, face_mat, (self.output_size, self.output_size), flags=cv2.INTER_LANCZOS4 )
+        face_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, output_size, face_type=self.face_type)
+        face_output_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, output_size, face_type=self.face_type, scale=self.output_face_scale)
+
+        dst_face_bgr      = cv2.warpAffine( img_bgr        , face_mat, (output_size, output_size), flags=cv2.INTER_LANCZOS4 )
+        dst_face_mask_a_0 = cv2.warpAffine( img_face_mask_a, face_mat, (output_size, output_size), flags=cv2.INTER_LANCZOS4 )
 
         predictor_input_bgr      = cv2.resize (dst_face_bgr,      (self.predictor_input_size,self.predictor_input_size))
-        predictor_input_mask_a_0 = cv2.resize (dst_face_mask_a_0, (self.predictor_input_size,self.predictor_input_size))
-        predictor_input_mask_a   = np.expand_dims (predictor_input_mask_a_0, -1)
 
-        predicted_bgra = self.predictor_func ( np.concatenate( (predictor_input_bgr, predictor_input_mask_a), -1) )
+        if self.predictor_masked:
+            prd_face_bgr, prd_face_mask_a_0 = self.predictor_func (predictor_input_bgr)
+            prd_face_bgr      = np.clip (prd_face_bgr, 0, 1.0 )
+            prd_face_mask_a_0 = np.clip (prd_face_mask_a_0, 0.0, 1.0)
+        else:
+            predicted = self.predictor_func (predictor_input_bgr)
+            prd_face_bgr      = np.clip (predicted, 0, 1.0 )
+            prd_face_mask_a_0 = cv2.resize (dst_face_mask_a_0, (self.predictor_input_size,self.predictor_input_size))
 
-        prd_face_bgr      = np.clip (predicted_bgra[:,:,0:3], 0, 1.0 )
-        prd_face_mask_a_0 = np.clip (predicted_bgra[:,:,3], 0.0, 1.0)
+        if self.super_resolution:
+            if debug:
+                tmp = cv2.resize (prd_face_bgr,  (output_size,output_size), cv2.INTER_CUBIC)
+                debugs += [ np.clip( cv2.warpAffine( tmp, face_output_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
+
+            prd_face_bgr = self.dc_upscale(prd_face_bgr)
+            if debug:
+                debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
+
+            if self.predictor_masked:
+                prd_face_mask_a_0 = cv2.resize (prd_face_mask_a_0,  (output_size, output_size), cv2.INTER_CUBIC)
+            else:
+                prd_face_mask_a_0 = cv2.resize (dst_face_mask_a_0,  (output_size, output_size), cv2.INTER_CUBIC)
 
         if self.mask_mode == 2: #dst
-            prd_face_mask_a_0 = predictor_input_mask_a_0
+            prd_face_mask_a_0 = cv2.resize (dst_face_mask_a_0, (output_size,output_size), cv2.INTER_CUBIC)
         elif self.mask_mode == 3: #FAN-prd
             prd_face_bgr_256 = cv2.resize (prd_face_bgr, (256,256) )
-            prd_face_bgr_256_mask = self.fan_seg.extract_from_bgr( np.expand_dims(prd_face_bgr_256,0) ) [0]
-            prd_face_mask_a_0 = cv2.resize (prd_face_bgr_256_mask, (self.predictor_input_size, self.predictor_input_size))
+            prd_face_bgr_256_mask = self.fan_seg.extract_from_bgr( prd_face_bgr_256[np.newaxis,...] ) [0]
+            prd_face_mask_a_0 = cv2.resize (prd_face_bgr_256_mask, (output_size,output_size), cv2.INTER_CUBIC)
         elif self.mask_mode == 4: #FAN-dst
             face_256_mat     = LandmarksProcessor.get_transform_mat (img_face_landmarks, 256, face_type=FaceType.FULL)
             dst_face_256_bgr = cv2.warpAffine(img_bgr, face_256_mat, (256, 256), flags=cv2.INTER_LANCZOS4 )
-            dst_face_256_mask = self.fan_seg.extract_from_bgr( np.expand_dims(dst_face_256_bgr,0) ) [0]
-            prd_face_mask_a_0 = cv2.resize (dst_face_256_mask, (self.predictor_input_size, self.predictor_input_size))
+            dst_face_256_mask = self.fan_seg.extract_from_bgr( dst_face_256_bgr[np.newaxis,...] ) [0]
+            prd_face_mask_a_0 = cv2.resize (dst_face_256_mask, (output_size,output_size), cv2.INTER_CUBIC)
 
         prd_face_mask_a_0[ prd_face_mask_a_0 < 0.001 ] = 0.0
 
@@ -333,7 +371,7 @@ class ConverterMasked(Converter):
                 out_img = np.clip( img_bgr*(1-img_mask_blurry_aaa) + (out_img*img_mask_blurry_aaa) , 0, 1.0 )
 
                 if self.mode == 'seamless-hist-match':
-                    out_face_bgr = cv2.warpAffine( out_img, face_mat, (self.output_size, self.output_size) )
+                    out_face_bgr = cv2.warpAffine( out_img, face_mat, (output_size, output_size) )
                     new_out_face_bgr = imagelib.color_hist_match(out_face_bgr, dst_face_bgr, self.hist_match_threshold)
                     new_out = cv2.warpAffine( new_out_face_bgr, face_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
                     out_img =  np.clip( img_bgr*(1-img_mask_blurry_aaa) + (new_out*img_mask_blurry_aaa) , 0, 1.0 )

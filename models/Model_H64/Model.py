@@ -117,21 +117,14 @@ class Model(ModelBase):
         return [ ('H64', np.concatenate ( st, axis=0 ) ) ]
 
     def predictor_func (self, face):
-
-        face_64_bgr = face[...,0:3]
-        face_64_mask = np.expand_dims(face[...,3],-1)
-
-        x, mx = self.src_view ( [ np.expand_dims(face_64_bgr,0) ] )
-        x, mx = x[0], mx[0]
-
-        return np.concatenate ( (x,mx), -1 )
+        x, mx = self.src_view ( [ face[np.newaxis,...] ] )
+        return x[0], mx[0][...,0]
 
     #override
     def get_converter(self):
         from converters import ConverterMasked
         return ConverterMasked(self.predictor_func,
                                predictor_input_size=64,
-                               output_size=64,
                                face_type=FaceType.HALF,
                                base_erode_mask_modifier=100,
                                base_blur_mask_modifier=100)

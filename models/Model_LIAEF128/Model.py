@@ -37,11 +37,16 @@ class Model(ModelBase):
         code = self.encoder(ae_input_layer)
         AB = self.inter_AB(code)
         B = self.inter_B(code)
-        self.autoencoder_src = Model([ae_input_layer,mask_layer], self.decoder(Concatenate()([AB, AB])) )
-        self.autoencoder_dst = Model([ae_input_layer,mask_layer], self.decoder(Concatenate()([B, AB])) )
+        rec_src = self.decoder(Concatenate()([AB, AB]))
+        rec_dst = self.decoder(Concatenate()([B, AB]))
+        self.autoencoder_src = Model([ae_input_layer,mask_layer], rec_src )
+        self.autoencoder_dst = Model([ae_input_layer,mask_layer], rec_dst )
 
         self.autoencoder_src.compile(optimizer=Adam(lr=5e-5, beta_1=0.5, beta_2=0.999), loss=[DSSIMMSEMaskLoss(mask_layer, is_mse=self.options['pixel_loss']), 'mse'] )
         self.autoencoder_dst.compile(optimizer=Adam(lr=5e-5, beta_1=0.5, beta_2=0.999), loss=[DSSIMMSEMaskLoss(mask_layer, is_mse=self.options['pixel_loss']), 'mse'] )
+
+        self.convert = K.function([ae_input_layer],rec_src)
+
 
         if self.is_training_mode:
             f = SampleProcessor.TypeFlags
@@ -111,21 +116,14 @@ class Model(ModelBase):
         return [ ('LIAEF128', np.concatenate ( st, axis=0 ) ) ]
 
     def predictor_func (self, face):
-
-        face_128_bgr = face[...,0:3]
-        face_128_mask = np.expand_dims(face[...,3],-1)
-
-        x, mx = self.autoencoder_src.predict ( [ np.expand_dims(face_128_bgr,0), np.expand_dims(face_128_mask,0) ] )
-        x, mx = x[0], mx[0]
-
-        return np.concatenate ( (x,mx), -1 )
+        x, mx = self.convert ( [ face[np.newaxis,...] ] )
+        return x[0], mx[0][...,0]
 
     #override
     def get_converter(self):
         from converters import ConverterMasked
         return ConverterMasked(self.predictor_func,
                                predictor_input_size=128,
-                               output_size=128,
                                face_type=FaceType.FULL,
                                base_erode_mask_modifier=30,
                                base_blur_mask_modifier=0)
