@@ -19,7 +19,7 @@ class Converter(object):
         pass
 
     #overridable
-    def on_host_(self):
+    def on_host_tick(self):
         pass
 
     #overridable

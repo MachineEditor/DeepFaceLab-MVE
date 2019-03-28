@@ -9,7 +9,7 @@ import imagelib
 from interact import interact as io
 from joblib import SubprocessFunctionCaller
 from utils.pickle_utils import AntiPickler
-
+import time
 '''
 default_mode = {1:'overlay',
              2:'hist-match',
@@ -34,9 +34,14 @@ class ConverterMasked(Converter):
 
         super().__init__(predictor_func, Converter.TYPE_FACE)
 
+        #dummy predict and sleep, tensorflow caching kernels. If remove it, conversion speed will be x2 slower
+        predictor_func ( np.zeros ( (predictor_input_size,predictor_input_size,3), dtype=np.float32 ) )
+        time.sleep(2)
+
         predictor_func_host, predictor_func = SubprocessFunctionCaller.make_pair(predictor_func)
         self.predictor_func_host = AntiPickler(predictor_func_host)
         self.predictor_func = predictor_func
+
         self.predictor_masked = predictor_masked
         self.predictor_input_size = predictor_input_size
         self.face_type = face_type
@@ -147,6 +152,7 @@ class ConverterMasked(Converter):
 
         if self.predictor_masked:
             prd_face_bgr, prd_face_mask_a_0 = self.predictor_func (predictor_input_bgr)
+
             prd_face_bgr      = np.clip (prd_face_bgr, 0, 1.0 )
             prd_face_mask_a_0 = np.clip (prd_face_mask_a_0, 0.0, 1.0)
         else:
@@ -182,7 +188,7 @@ class ConverterMasked(Converter):
 
         prd_face_mask_a_0[ prd_face_mask_a_0 < 0.001 ] = 0.0
 
-        prd_face_mask_a   = np.expand_dims (prd_face_mask_a_0, axis=-1)
+        prd_face_mask_a   = prd_face_mask_a_0[...,np.newaxis]
         prd_face_mask_aaa = np.repeat (prd_face_mask_a, (3,), axis=-1)
 
         img_face_mask_aaa = cv2.warpAffine( prd_face_mask_aaa, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), flags=cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4 )
