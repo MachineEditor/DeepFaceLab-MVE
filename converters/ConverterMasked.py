@@ -68,7 +68,7 @@ class ConverterMasked(Converter):
         if self.mode != 'raw':
 
             if self.mode == 'seamless':
-                io.input_bool ("Suppress seamless jitter? [ y/n ] (?:help skip:n ) : ", False, help_message="Seamless clone produces face jitter. You can suppress it, but process can take a long time." )
+                self.suppress_seamless_jitter = io.input_bool ("Suppress seamless jitter? [ y/n ] (?:help skip:n ) : ", False, help_message="Seamless clone produces face jitter. You can suppress it, but process can take a long time." )
 
                 if io.input_bool("Seamless hist match? (y/n skip:n) : ", False):
                     self.mode = 'seamless-hist-match'
