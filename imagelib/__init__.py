@@ -19,3 +19,5 @@ from .color_transfer import reinhard_color_transfer
 from .color_transfer import linear_color_transfer
 
 from .DCSCN import DCSCN
+
+from .common import normalize_channels
