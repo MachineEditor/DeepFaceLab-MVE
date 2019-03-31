@@ -1,3 +1,5 @@
+import numpy as np
+
 def normalize_channels(img, target_channels):
     img_shape_len = len(img.shape)
     if img_shape_len == 2:
