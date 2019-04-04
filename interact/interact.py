@@ -134,10 +134,10 @@ class InteractBase(object):
             self.mouse_events[wnd_name] = []
         self.mouse_events[wnd_name] += [ (x, y, ev, flags) ]
 
-    def add_key_event(self, wnd_name, key):
+    def add_key_event(self, wnd_name, ord_key, ctrl_pressed, alt_pressed, shift_pressed):
         if wnd_name not in self.key_events:
             self.key_events[wnd_name] = []
-        self.key_events[wnd_name] += [ (key,) ]
+        self.key_events[wnd_name] += [ (ord_key, chr(ord_key), ctrl_pressed, alt_pressed, shift_pressed) ]
 
     def get_mouse_events(self, wnd_name):
         ar = self.mouse_events.get(wnd_name, [])
@@ -289,14 +289,19 @@ class InteractDesktop(InteractBase):
 
         if has_windows or has_capture_keys:
             wait_key_time = max(1, int(sleep_time*1000) )
-            key = cv2.waitKey(wait_key_time) & 0xFF
+            ord_key = cv2.waitKey(wait_key_time)
+            shift_pressed = False
+            if ord_key != -1:
+                if chr(ord_key) >= 'A' and chr(ord_key) <= 'Z':
+                    shift_pressed = True
+                    ord_key += 32
         else:
             if sleep_time != 0:
                 time.sleep(sleep_time)
 
-        if has_capture_keys and key != 255:
+        if has_capture_keys and ord_key != -1:
             for wnd_name in self.capture_keys_windows:
-                self.add_key_event (wnd_name, key)
+                self.add_key_event (wnd_name, ord_key, False, False, shift_pressed)
 
     def on_wait_any_key(self):
         cv2.waitKey(0)

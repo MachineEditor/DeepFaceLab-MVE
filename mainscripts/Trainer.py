@@ -273,8 +273,8 @@ def main(args, device_args):
                 is_showing = True
 
             key_events = io.get_key_events(wnd_name)
-            key, = key_events[-1] if len(key_events) > 0 else (0,)
-
+            key, chr_key, ctrl_pressed, alt_pressed, shift_pressed = key_events[-1] if len(key_events) > 0 else (0,0,False,False,False)
+            
             if key == ord('\n') or key == ord('\r'):
                 s2c.put ( {'op': 'close'} )
             elif key == ord('s'):

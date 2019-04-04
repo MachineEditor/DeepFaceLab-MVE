@@ -17,12 +17,11 @@ class fixPathAction(argparse.Action):
 if __name__ == "__main__":
     multiprocessing.set_start_method("spawn")
 
-    os_utils.set_process_lowest_prio()
     parser = argparse.ArgumentParser()
-
     subparsers = parser.add_subparsers()
 
     def process_extract(arguments):
+        os_utils.set_process_lowest_prio()
         from mainscripts import Extractor
         Extractor.main( arguments.input_dir,
                         arguments.output_dir,
@@ -51,6 +50,7 @@ if __name__ == "__main__":
     p.set_defaults (func=process_extract)
 
     def process_sort(arguments):
+        os_utils.set_process_lowest_prio()
         from mainscripts import Sorter
         Sorter.main (input_path=arguments.input_dir, sort_by_method=arguments.sort_by_method)
 
@@ -60,6 +60,7 @@ if __name__ == "__main__":
     p.set_defaults (func=process_sort)
 
     def process_util(arguments):
+        os_utils.set_process_lowest_prio()
         from mainscripts import Util
 
         if arguments.convert_png_to_jpg:
@@ -79,6 +80,7 @@ if __name__ == "__main__":
     p.set_defaults (func=process_util)
 
     def process_train(arguments):
+        os_utils.set_process_lowest_prio()
         args = {'training_data_src_dir'  : arguments.training_data_src_dir,
                 'training_data_dst_dir'  : arguments.training_data_dst_dir,
                 'model_path'             : arguments.model_dir,
@@ -106,6 +108,7 @@ if __name__ == "__main__":
     p.set_defaults (func=process_train)
 
     def process_convert(arguments):
+        os_utils.set_process_lowest_prio()
         args = {'input_dir'   : arguments.input_dir,
                 'output_dir'  : arguments.output_dir,
                 'aligned_dir' : arguments.aligned_dir,
@@ -133,6 +136,7 @@ if __name__ == "__main__":
     videoed_parser = subparsers.add_parser( "videoed", help="Video processing.").add_subparsers()
 
     def process_videoed_extract_video(arguments):
+        os_utils.set_process_lowest_prio()
         from mainscripts import VideoEd
         VideoEd.extract_video (arguments.input_file, arguments.output_dir, arguments.output_ext, arguments.fps)
     p = videoed_parser.add_parser( "extract-video", help="Extract images from video file.")
@@ -143,6 +147,7 @@ if __name__ == "__main__":
     p.set_defaults(func=process_videoed_extract_video)
 
     def process_videoed_cut_video(arguments):
+        os_utils.set_process_lowest_prio()
         from mainscripts import VideoEd
         VideoEd.cut_video (arguments.input_file,
                            arguments.from_time,
@@ -158,6 +163,7 @@ if __name__ == "__main__":
     p.set_defaults(func=process_videoed_cut_video)
 
     def process_videoed_denoise_image_sequence(arguments):
+        os_utils.set_process_lowest_prio()
         from mainscripts import VideoEd
         VideoEd.denoise_image_sequence (arguments.input_dir, arguments.ext, arguments.factor)
     p = videoed_parser.add_parser( "denoise-image-sequence", help="Denoise sequence of images, keeping sharp edges. This allows you to make the final fake more believable, since the neural network is not able to make a detailed skin texture, but it makes the edges quite clear. Therefore, if the whole frame is more `blurred`, then a fake will seem more believable. Especially true for scenes of the film, which are usually very clear.")
@@ -167,6 +173,7 @@ if __name__ == "__main__":
     p.set_defaults(func=process_videoed_denoise_image_sequence)
 
     def process_videoed_video_from_sequence(arguments):
+        os_utils.set_process_lowest_prio()
         from mainscripts import VideoEd
         VideoEd.video_from_sequence (arguments.input_dir,
                                      arguments.output_file,

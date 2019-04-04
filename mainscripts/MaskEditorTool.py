@@ -46,9 +46,11 @@ class MaskEditor:
         
         self.polys_mask = None
         
+        self.mouse_x = self.mouse_y = 9999
         self.screen_status_block = None
         self.screen_status_block_dirty = True
-    
+        self.screen_changed = True
+        
     def set_state(self, state):
         self.state = state
     
@@ -175,10 +177,12 @@ class MaskEditor:
     def set_screen_status_block_dirty(self):
         self.screen_status_block_dirty = True
         
+    def switch_screen_changed(self):
+        result = self.screen_changed
+        self.screen_changed = False
+        return result
+        
     def make_screen(self):
-       
-        
-        
         screen_overlay = self.get_screen_overlay()
         final_mask = self.get_mask()
   
@@ -201,6 +205,7 @@ class MaskEditor:
         
     def mask_finish(self, n_clip=True):
         if self.state == self.STATE_MASKING:
+            self.screen_changed = True
             if self.ie_polys.n_list().n <= 2:
                 self.ie_polys.n_dec()
             self.state = self.STATE_NONE
@@ -210,10 +215,13 @@ class MaskEditor:
     def set_mouse_pos(self,x,y):
         mouse_x = x % (self.sw) - self.pw
         mouse_y = y % (self.sh) - self.ph
-        self.mouse_xy = np.array( [mouse_x, mouse_y] )
-        self.mouse_x, self.mouse_y = self.mouse_xy
+        if mouse_x != self.mouse_x and mouse_y != self.mouse_y:
+            self.mouse_xy = np.array( [mouse_x, mouse_y] )
+            self.mouse_x, self.mouse_y = self.mouse_xy
+            self.screen_changed = True
 
     def mask_point(self, type):
+        self.screen_changed = True
         if self.state == self.STATE_MASKING and \
            self.ie_polys.n_list().type != type:
             self.mask_finish()
@@ -252,9 +260,12 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None):
     done_paths = []
     
     image_paths_total = len(image_paths)
-    
-    
-                    
+
+    do_prev_count = 0
+    do_save_move_count = 0
+    do_save_count = 0
+    do_skip_move_count = 0
+    do_skip_count = 0
     
     is_exit = False
     while not is_exit:
@@ -294,6 +305,7 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None):
                     '[Mouse wheel] - undo/redo poly or point. [+ctrl] - undo to begin/redo to end',
                     '[q] - prev image. [w] - skip and move to %s. [e] - save and move to %s. ' % (skipped_path.name, confirmed_path.name),
                     '[z] - prev image. [x] - skip. [c] - save. ',
+                    'hold [shift] - speed up the frame counter by 10.'
                     '[esc] - quit'
                     ]
         ed = MaskEditor(img, mask, ie_polys, get_status_lines_func)
@@ -301,75 +313,101 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None):
         next = False
         while not next:
             io.process_messages(0.005)
-
-            for (x,y,ev,flags) in io.get_mouse_events(wnd_name):
-                ed.set_mouse_pos(x, y) 
-                if filepath is not None:
-                    if ev == io.EVENT_LBUTTONDOWN:
-                        ed.mask_point(1)
-                    elif ev == io.EVENT_RBUTTONDOWN:
-                        ed.mask_point(0)
-                    elif ev == io.EVENT_MBUTTONDOWN:
-                        ed.mask_finish()
-                    elif ev == io.EVENT_MOUSEWHEEL:
-                        if flags & 0x80000000 != 0:
-                            if flags & 0x8 != 0:
-                                ed.undo_to_begin_point()
+            
+            if do_prev_count + do_save_move_count + do_save_count + do_skip_move_count + do_skip_count == 0:
+                for (x,y,ev,flags) in io.get_mouse_events(wnd_name):
+                    ed.set_mouse_pos(x, y) 
+                    if filepath is not None:
+                        if ev == io.EVENT_LBUTTONDOWN:
+                            ed.mask_point(1)
+                        elif ev == io.EVENT_RBUTTONDOWN:
+                            ed.mask_point(0)
+                        elif ev == io.EVENT_MBUTTONDOWN:
+                            ed.mask_finish()
+                        elif ev == io.EVENT_MOUSEWHEEL:
+                            if flags & 0x80000000 != 0:
+                                if flags & 0x8 != 0:
+                                    ed.undo_to_begin_point()
+                                else:
+                                    ed.undo_point()
                             else:
-                                ed.undo_point()
-                        else:
-                            if flags & 0x8 != 0:
-                                ed.redo_to_end_point()
-                            else:
-                                ed.redo_point()
+                                if flags & 0x8 != 0:
+                                    ed.redo_to_end_point()
+                                else:
+                                    ed.redo_point()
 
-            key_events = [ ev for ev, in io.get_key_events(wnd_name) ]
-            for key in key_events:         
-                if key == ord('q') or key == ord('z'):
-                    if len(done_paths) > 0:
-                        image_paths.insert(0, filepath)                        
-                        filepath = done_paths.pop(-1)
-                        
-                        if filepath.parent != input_path:
-                            new_filename_path = input_path / filepath.name
-                            filepath.rename ( new_filename_path )                            
-                            image_paths.insert(0, new_filename_path)   
-                        else:
-                            image_paths.insert(0, filepath)   
-                            
+                for key, chr_key, ctrl_pressed, alt_pressed, shift_pressed in io.get_key_events(wnd_name):
+                    if chr_key == 'q' or chr_key == 'z':
+                        do_prev_count = 1 if not shift_pressed else 10
+                    elif key == 27: #esc
+                        is_exit = True
                         next = True
                         break
-                elif filepath is not None and ( key == ord('e') or key == ord('c') ):
+                    elif filepath is not None:
+                        if chr_key == 'e':
+                            do_save_move_count = 1 if not shift_pressed else 10
+                        elif chr_key == 'c':
+                            do_save_count = 1 if not shift_pressed else 10
+                        elif chr_key == 'w':
+                            do_skip_move_count = 1 if not shift_pressed else 10
+                        elif chr_key == 'x':
+                            do_skip_count = 1 if not shift_pressed else 10
+                            
+            if do_prev_count > 0:
+                do_prev_count -= 1
+                if len(done_paths) > 0:
+                    image_paths.insert(0, filepath)                        
+                    filepath = done_paths.pop(-1)
+                    
+                    if filepath.parent != input_path:
+                        new_filename_path = input_path / filepath.name
+                        filepath.rename ( new_filename_path )                            
+                        image_paths.insert(0, new_filename_path)   
+                    else:
+                        image_paths.insert(0, filepath)   
+                        
+                    next = True
+            elif filepath is not None:
+                if do_save_move_count > 0:
+                    do_save_move_count -= 1
+                    
+                    ed.mask_finish()
+                    dflimg.embed_and_set (str(filepath), ie_polys=ed.get_ie_polys() )
+
+                    done_paths += [ confirmed_path / filepath.name ]
+                    filepath.rename(done_paths[-1])
+
+                    next = True      
+                elif do_save_count > 0:
+                    do_save_count -= 1
+                        
                     ed.mask_finish()
                     dflimg.embed_and_set (str(filepath), ie_polys=ed.get_ie_polys() )
                     
-                    if key == ord('e'):
-                        new_filename_path = confirmed_path / filepath.name
-                        filepath.rename(new_filename_path)
-                        done_paths += [new_filename_path]
-                    else:
-                        done_paths += [filepath]                         
+                    done_paths += [filepath]                         
                     
+                    next = True         
+                elif do_skip_move_count > 0:
+                    do_skip_move_count -= 1
+                    
+                    done_paths += [skipped_path / filepath.name]
+                    filepath.rename(done_paths[-1])
+                                        
+                    next = True         
+                elif do_skip_count > 0:
+                    do_skip_count -= 1
+                        
+                    done_paths += [filepath]     
+                                        
                     next = True
-                    break
+            else:
+                do_save_move_count = do_save_count = do_skip_move_count = do_skip_count = 0
                 
-                elif filepath is not None and ( key == ord('w') or key == ord('x') ):           
-                    if key == ord('w'):
-                        new_filename_path = skipped_path / filepath.name
-                        filepath.rename(new_filename_path)
-                        done_paths += [new_filename_path]
-                    else:
-                        done_paths += [filepath]     
-                                       
-                    next = True
-                    break
-                elif key == 27: #esc
-                    is_exit = True
-                    next = True
-                    break
-            screen = ed.make_screen()
+            if do_prev_count + do_save_move_count + do_save_count + do_skip_move_count + do_skip_count == 0:
+                if ed.switch_screen_changed():
+                    io.show_image (wnd_name, ed.make_screen() )
 
-            io.show_image (wnd_name, screen )
+            
         io.process_messages(0.005)
         
     io.destroy_all_windows()    

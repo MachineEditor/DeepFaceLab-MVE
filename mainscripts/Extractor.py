@@ -411,7 +411,7 @@ class ExtractSubprocessor(Subprocessor):
                                 new_y = np.clip (y, 0, h-1) / self.view_scale
 
                         key_events = io.get_key_events(self.wnd_name)
-                        key, = key_events[-1] if len(key_events) > 0 else (0,)
+                        key, chr_key, ctrl_pressed, alt_pressed, shift_pressed = key_events[-1] if len(key_events) > 0 else (0,0,False,False,False)
 
                         if key == ord('\r') or key == ord('\n'):
                             #confirm frame
