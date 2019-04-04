@@ -186,24 +186,23 @@ if __name__ == "__main__":
     p.add_argument('--lossless', action="store_true", dest="lossless", default=False, help="PNG codec.")
     p.set_defaults(func=process_videoed_video_from_sequence)
 
-    def process_labelingtool(arguments):
-        from mainscripts import LabelingTool
-        LabelingTool.main (arguments.input_dir, arguments.output_dir)
+    def process_labelingtool_edit_mask(arguments):
+        from mainscripts import MaskEditorTool
+        MaskEditorTool.mask_editor_main (arguments.input_dir, arguments.confirmed_dir, arguments.skipped_dir)
 
-    p = subparsers.add_parser( "labelingtool", help="Labeling tool.")
+    labeling_parser = subparsers.add_parser( "labelingtool", help="Labeling tool.").add_subparsers()
+    p = labeling_parser.add_parser ( "edit_mask", help="")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory of aligned faces.")
-    p.add_argument('--output-dir', required=True, action=fixPathAction, dest="output_dir", help="Output directory. This is where the labeled faces will be stored.")
-    p.set_defaults(func=process_labelingtool)
-
+    p.add_argument('--confirmed-dir', required=True, action=fixPathAction, dest="confirmed_dir", help="This is where the labeled faces will be stored.")
+    p.add_argument('--skipped-dir', required=True, action=fixPathAction, dest="skipped_dir", help="This is where the labeled faces will be stored.")
+    p.set_defaults(func=process_labelingtool_edit_mask)
+    
     def bad_args(arguments):
         parser.print_help()
         exit(0)
     parser.set_defaults(func=bad_args)
 
     arguments = parser.parse_args()
-
-    #os.environ['force_plaidML'] = '1'
-
     arguments.func(arguments)
 
     print ("Done.")

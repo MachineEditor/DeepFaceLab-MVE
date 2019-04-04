@@ -496,5 +496,5 @@ class ModelBase(object):
 
         lh_text = 'Iter: %d' % (iter) if iter != 0 else ''
 
-        lh_img[last_line_t:last_line_b, 0:w] += imagelib.get_text_image (  (w,last_line_b-last_line_t,c), lh_text, color=[0.8]*c )
+        lh_img[last_line_t:last_line_b, 0:w] += imagelib.get_text_image (  (last_line_b-last_line_t,w,c), lh_text, color=[0.8]*c )
         return lh_img

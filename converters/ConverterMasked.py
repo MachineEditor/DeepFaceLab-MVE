@@ -77,11 +77,11 @@ class ConverterMasked(Converter):
                 self.hist_match_threshold = np.clip ( io.input_int("Hist match threshold [0..255] (skip:255) :  ", 255), 0, 255)
 
         if face_type == FaceType.FULL:
-            self.mask_mode = np.clip ( io.input_int ("Mask mode: (1) learned, (2) dst, (3) FAN-prd, (4) FAN-dst , (5) FAN-prd&dst (?) help. Default - %d : " % (1) , 1, help_message="If you learned mask, then option 1 should be choosed. 'dst' mask is raw shaky mask from dst aligned images. 'FAN-prd' - using super smooth mask by pretrained FAN-model from predicted face. 'FAN-dst' - using super smooth mask by pretrained FAN-model from dst face. 'FAN-prd&dst' - using multiplied FAN prd and dst mask. "), 1, 5 )
+            self.mask_mode = np.clip ( io.input_int ("Mask mode: (1) learned, (2) dst, (3) FAN-prd, (4) FAN-dst , (5) FAN-prd*FAN-dst (6) learned*FAN-prd*FAN-dst (?) help. Default - %d : " % (1) , 1, help_message="If you learned mask, then option 1 should be choosed. 'dst' mask is raw shaky mask from dst aligned images. 'FAN-prd' - using super smooth mask by pretrained FAN-model from predicted face. 'FAN-dst' - using super smooth mask by pretrained FAN-model from dst face. 'FAN-prd*FAN-dst' or 'learned*FAN-prd*FAN-dst' - using multiplied masks."), 1, 6 )
         else:
             self.mask_mode = np.clip ( io.input_int ("Mask mode: (1) learned, (2) dst . Default - %d : " % (1) , 1), 1, 2 )
 
-        if self.mask_mode == 3 or self.mask_mode == 4 or self.mask_mode == 5:
+        if self.mask_mode >= 3 or self.mask_mode <= 6:
             self.fan_seg = None
 
         if self.mode != 'raw':
@@ -117,7 +117,7 @@ class ConverterMasked(Converter):
 
     #overridable
     def on_cli_initialize(self):
-        if (self.mask_mode == 3 or self.mask_mode == 4 or self.mask_mode == 5) and self.fan_seg == None:
+        if (self.mask_mode >= 3 and self.mask_mode <= 6) and self.fan_seg == None:
             self.fan_seg = FANSegmentator(256, FaceType.toString(FaceType.FULL) )
 
     #override
@@ -167,26 +167,28 @@ class ConverterMasked(Converter):
 
         if self.mask_mode == 2: #dst
             prd_face_mask_a_0 = cv2.resize (dst_face_mask_a_0, (output_size,output_size), cv2.INTER_CUBIC)
-        elif self.mask_mode >= 3 and self.mask_mode <= 5:
+        elif self.mask_mode >= 3 and self.mask_mode <= 6:
 
-            if self.mask_mode == 3 or self.mask_mode == 5: #FAN-prd
+            if self.mask_mode == 3 or self.mask_mode == 5 or self.mask_mode == 6: 
                 prd_face_bgr_256 = cv2.resize (prd_face_bgr, (256,256) )
                 prd_face_bgr_256_mask = self.fan_seg.extract_from_bgr( prd_face_bgr_256[np.newaxis,...] ) [0]
                 FAN_prd_face_mask_a_0 = cv2.resize (prd_face_bgr_256_mask, (output_size,output_size), cv2.INTER_CUBIC)
 
-            if self.mask_mode == 4 or self.mask_mode == 5: #FAN-dst
+            if self.mask_mode == 4 or self.mask_mode == 5 or self.mask_mode == 6: 
                 face_256_mat     = LandmarksProcessor.get_transform_mat (img_face_landmarks, 256, face_type=FaceType.FULL)
                 dst_face_256_bgr = cv2.warpAffine(img_bgr, face_256_mat, (256, 256), flags=cv2.INTER_LANCZOS4 )
                 dst_face_256_mask = self.fan_seg.extract_from_bgr( dst_face_256_bgr[np.newaxis,...] ) [0]
                 FAN_dst_face_mask_a_0 = cv2.resize (dst_face_256_mask, (output_size,output_size), cv2.INTER_CUBIC)
 
-            if self.mask_mode == 3:
+            if self.mask_mode == 3:   #FAN-prd
                 prd_face_mask_a_0 = FAN_prd_face_mask_a_0
-            elif self.mask_mode == 4:
+            elif self.mask_mode == 4: #FAN-dst
                 prd_face_mask_a_0 = FAN_dst_face_mask_a_0
             elif self.mask_mode == 5:
                 prd_face_mask_a_0 = FAN_prd_face_mask_a_0 * FAN_dst_face_mask_a_0
-
+            elif self.mask_mode == 6:
+                prd_face_mask_a_0 = prd_face_mask_a_0 * FAN_prd_face_mask_a_0 * FAN_dst_face_mask_a_0
+                
         prd_face_mask_a_0[ prd_face_mask_a_0 < 0.001 ] = 0.0
 
         prd_face_mask_a   = prd_face_mask_a_0[...,np.newaxis]
@@ -269,11 +271,12 @@ class ConverterMasked(Converter):
                         img_mask_blurry_aaa = cv2.blur(img_mask_blurry_aaa, (blur, blur) )
 
                 img_mask_blurry_aaa = np.clip( img_mask_blurry_aaa, 0, 1.0 )
+                face_mask_blurry_aaa = cv2.warpAffine( img_mask_blurry_aaa, face_mat, (output_size, output_size) )
 
                 if debug:
                     debugs += [img_mask_blurry_aaa.copy()]
 
-                if self.color_transfer_mode is not None:
+                if 'seamless' not in self.mode and self.color_transfer_mode is not None:
                     if self.color_transfer_mode == 'rct':
                         if debug:
                             debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
@@ -309,15 +312,20 @@ class ConverterMasked(Converter):
 
                     if self.masked_hist_match:
                         hist_mask_a *= prd_face_mask_a
+                        
+                    white =  (1.0-hist_mask_a)* np.ones ( prd_face_bgr.shape[:2] + (1,) , dtype=np.float32)
 
-                    hist_match_1 = prd_face_bgr*hist_mask_a + (1.0-hist_mask_a)* np.ones ( prd_face_bgr.shape[:2] + (1,) , dtype=np.float32)
+                    hist_match_1 = prd_face_bgr*hist_mask_a + white
                     hist_match_1[ hist_match_1 > 1.0 ] = 1.0
 
-                    hist_match_2 = dst_face_bgr*hist_mask_a + (1.0-hist_mask_a)* np.ones ( prd_face_bgr.shape[:2] + (1,) , dtype=np.float32)
+                    hist_match_2 = dst_face_bgr*hist_mask_a + white
                     hist_match_2[ hist_match_1 > 1.0 ] = 1.0
 
                     prd_face_bgr = imagelib.color_hist_match(hist_match_1, hist_match_2, self.hist_match_threshold )
-
+                    
+                    #if self.masked_hist_match:
+                    #    prd_face_bgr -= white
+                        
                 if self.mode == 'hist-match-bw':
                     prd_face_bgr = prd_face_bgr.astype(dtype=np.float32)
 
@@ -363,6 +371,35 @@ class ConverterMasked(Converter):
                         debugs += [out_img.copy()]
 
                 out_img = np.clip( img_bgr*(1-img_mask_blurry_aaa) + (out_img*img_mask_blurry_aaa) , 0, 1.0 )
+
+                if 'seamless' in self.mode and self.color_transfer_mode is not None:
+                    out_face_bgr = cv2.warpAffine( out_img, face_mat, (output_size, output_size) )
+
+                    if self.color_transfer_mode == 'rct':
+                        if debug:
+                            debugs += [ np.clip( cv2.warpAffine( out_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
+
+                        new_out_face_bgr = imagelib.reinhard_color_transfer ( np.clip( (out_face_bgr*255).astype(np.uint8), 0, 255),
+                                                                              np.clip( (dst_face_bgr*255).astype(np.uint8), 0, 255),
+                                                                             source_mask=face_mask_blurry_aaa, target_mask=face_mask_blurry_aaa)
+                        new_out_face_bgr = np.clip( new_out_face_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
+
+                        if debug:
+                            debugs += [ np.clip( cv2.warpAffine( new_out_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
+
+
+                    elif self.color_transfer_mode == 'lct':
+                        if debug:
+                            debugs += [ np.clip( cv2.warpAffine( out_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
+
+                        new_out_face_bgr = imagelib.linear_color_transfer (out_face_bgr, dst_face_bgr)
+                        new_out_face_bgr = np.clip( new_out_face_bgr, 0.0, 1.0)
+
+                        if debug:
+                            debugs += [ np.clip( cv2.warpAffine( new_out_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
+                    
+                    new_out = cv2.warpAffine( new_out_face_bgr, face_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
+                    out_img =  np.clip( img_bgr*(1-img_mask_blurry_aaa) + (new_out*img_mask_blurry_aaa) , 0, 1.0 )
 
                 if self.mode == 'seamless-hist-match':
                     out_face_bgr = cv2.warpAffine( out_img, face_mat, (output_size, output_size) )

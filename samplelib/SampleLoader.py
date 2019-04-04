@@ -75,6 +75,7 @@ class SampleLoader:
                                                    face_type=FaceType.fromString (dflimg.get_face_type()),
                                                    shape=dflimg.get_shape(),
                                                    landmarks=dflimg.get_landmarks(),
+                                                   ie_polys=dflimg.get_ie_polys(),
                                                    pitch=pitch,
                                                    yaw=yaw) )
             except:

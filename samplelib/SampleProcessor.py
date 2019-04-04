@@ -152,7 +152,7 @@ class SampleProcessor(object):
 
                     if is_face_sample:
                         if face_mask_type == 1:
-                            img = np.concatenate( (img, LandmarksProcessor.get_image_hull_mask (img.shape, cur_sample.landmarks) ), -1 )
+                            img = np.concatenate( (img, LandmarksProcessor.get_image_hull_mask (img.shape, cur_sample.landmarks, cur_sample.ie_polys) ), -1 )
                         elif face_mask_type == 2:
                             mask = LandmarksProcessor.get_image_eye_mask (img.shape, cur_sample.landmarks)
                             mask = np.expand_dims (cv2.blur (mask, ( w // 32, w // 32 ) ), -1)

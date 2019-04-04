@@ -6,6 +6,7 @@ import zlib
 import pickle
 import numpy as np
 from facelib import FaceType
+from imagelib import IEPolys
 
 class Chunk(object):
     def __init__(self, name=None, data=None):
@@ -226,7 +227,7 @@ class DFLPNG(object):
             with open(filename, "rb") as f:
                 data = f.read()
         except:
-            raise FileNotFoundError(data)
+            raise FileNotFoundError(filename)
 
         inst = DFLPNG()
         inst.data = data
@@ -267,18 +268,22 @@ class DFLPNG(object):
     @staticmethod
     def embed_data(filename, face_type=None,
                              landmarks=None,
+                             ie_polys=None,
                              source_filename=None,
                              source_rect=None,
-                             source_landmarks=None
+                             source_landmarks=None,
+                             image_to_face_mat=None
                    ):
 
         inst = DFLPNG.load_raw (filename)
         inst.setDFLDictData ({
                                 'face_type': face_type,
                                 'landmarks': landmarks,
+                                'ie_polys' : ie_polys.dump() if ie_polys is not None else None,
                                 'source_filename': source_filename,
                                 'source_rect': source_rect,
-                                'source_landmarks': source_landmarks
+                                'source_landmarks': source_landmarks,
+                                'image_to_face_mat':image_to_face_mat
                              })
 
         try:
@@ -286,6 +291,29 @@ class DFLPNG(object):
                 f.write ( inst.dump() )
         except:
             raise Exception( 'cannot save %s' % (filename) )
+
+    def embed_and_set(self, filename, face_type=None,
+                                landmarks=None,
+                                ie_polys=None,
+                                source_filename=None,
+                                source_rect=None,
+                                source_landmarks=None,
+                                image_to_face_mat=None
+                        ):
+        if face_type is None: face_type = self.get_face_type()
+        if landmarks is None: landmarks = self.get_landmarks()
+        if ie_polys is None: ie_polys = self.get_ie_polys()
+        if source_filename is None: source_filename = self.get_source_filename()
+        if source_rect is None: source_rect = self.get_source_rect()
+        if source_landmarks is None: source_landmarks = self.get_source_landmarks()
+        if image_to_face_mat is None: image_to_face_mat = self.get_image_to_face_mat()
+        DFLPNG.embed_data (filename, face_type=face_type,
+                                     landmarks=landmarks,
+                                     ie_polys=ie_polys,
+                                     source_filename=source_filename,
+                                     source_rect=source_rect,
+                                     source_landmarks=source_landmarks,
+                                     image_to_face_mat=image_to_face_mat)
 
     def dump(self):
         data = PNG_HEADER
@@ -326,9 +354,15 @@ class DFLPNG(object):
 
     def get_face_type(self): return self.fcwp_dict['face_type']
     def get_landmarks(self): return np.array ( self.fcwp_dict['landmarks'] )
+    def get_ie_polys(self): return IEPolys.load(self.fcwp_dict.get('ie_polys',None))
     def get_source_filename(self): return self.fcwp_dict['source_filename']
     def get_source_rect(self): return self.fcwp_dict['source_rect']
     def get_source_landmarks(self): return np.array ( self.fcwp_dict['source_landmarks'] )
+    def get_image_to_face_mat(self):
+        mat = self.fcwp_dict.get ('image_to_face_mat', None)
+        if mat is not None:
+            return np.array (mat)
+        return None
 
     def __str__(self):
         return "<PNG length={length} chunks={}>".format(len(self.chunks), **self.__dict__)

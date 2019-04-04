@@ -21,3 +21,5 @@ from .color_transfer import linear_color_transfer
 from .DCSCN import DCSCN
 
 from .common import normalize_channels
+
+from .IEPolys import IEPolys

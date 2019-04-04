@@ -2,6 +2,7 @@ import struct
 import pickle
 import numpy as np
 from facelib import FaceType
+from imagelib import IEPolys
 from utils.struct_utils import *
 
 class DFLJPG(object):
@@ -18,7 +19,7 @@ class DFLJPG(object):
             with open(filename, "rb") as f:
                 data = f.read()
         except:
-            raise FileNotFoundError(data)
+            raise FileNotFoundError(filename)
 
         try:
             inst = DFLJPG()
@@ -150,6 +151,7 @@ class DFLJPG(object):
     @staticmethod
     def embed_data(filename, face_type=None,
                              landmarks=None,
+                             ie_polys=None,
                              source_filename=None,
                              source_rect=None,
                              source_landmarks=None,
@@ -160,6 +162,7 @@ class DFLJPG(object):
         inst.setDFLDictData ({
                                 'face_type': face_type,
                                 'landmarks': landmarks,
+                                'ie_polys' : ie_polys.dump() if ie_polys is not None else None,
                                 'source_filename': source_filename,
                                 'source_rect': source_rect,
                                 'source_landmarks': source_landmarks,
@@ -172,6 +175,29 @@ class DFLJPG(object):
         except:
             raise Exception( 'cannot save %s' % (filename) )
 
+    def embed_and_set(self, filename, face_type=None,
+                                landmarks=None,
+                                ie_polys=None,
+                                source_filename=None,
+                                source_rect=None,
+                                source_landmarks=None,
+                                image_to_face_mat=None
+                    ):
+        if face_type is None: face_type = self.get_face_type()
+        if landmarks is None: landmarks = self.get_landmarks()
+        if ie_polys is None: ie_polys = self.get_ie_polys()
+        if source_filename is None: source_filename = self.get_source_filename()
+        if source_rect is None: source_rect = self.get_source_rect()
+        if source_landmarks is None: source_landmarks = self.get_source_landmarks()
+        if image_to_face_mat is None: image_to_face_mat = self.get_image_to_face_mat()
+        DFLJPG.embed_data (filename, face_type=face_type,
+                                     landmarks=landmarks,
+                                     ie_polys=ie_polys,
+                                     source_filename=source_filename,
+                                     source_rect=source_rect,
+                                     source_landmarks=source_landmarks,
+                                     image_to_face_mat=image_to_face_mat)
+        
     def dump(self):
         data = b""
 
@@ -222,6 +248,12 @@ class DFLJPG(object):
 
     def get_face_type(self): return self.dfl_dict['face_type']
     def get_landmarks(self): return np.array ( self.dfl_dict['landmarks'] )
+    def get_ie_polys(self): return IEPolys.load(self.dfl_dict.get('ie_polys',None))
     def get_source_filename(self): return self.dfl_dict['source_filename']
     def get_source_rect(self): return self.dfl_dict['source_rect']
     def get_source_landmarks(self): return np.array ( self.dfl_dict['source_landmarks'] )
+    def get_image_to_face_mat(self): 
+        mat = self.dfl_dict.get ('image_to_face_mat', None)
+        if mat is not None:
+            return np.array (mat)
+        return None

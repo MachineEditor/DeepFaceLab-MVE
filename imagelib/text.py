@@ -15,23 +15,24 @@ def _get_pil_font (font, size):
         return ImageFont.load_default()
 
 def get_text_image( shape, text, color=(1,1,1), border=0.2, font=None):
-    try:
-        size = shape[1]
-        pil_font = _get_pil_font( localization.get_default_ttf_font_name() , size)
-        text_width, text_height = pil_font.getsize(text)
+    h,w,c = shape
+    try:        
+        pil_font = _get_pil_font( localization.get_default_ttf_font_name() , h-2)
 
-        canvas = Image.new('RGB', shape[0:2], (0,0,0) )
+        canvas = Image.new('RGB', (w,h) , (0,0,0) )
         draw = ImageDraw.Draw(canvas)
         offset = ( 0, 0)
         draw.text(offset, text, font=pil_font, fill=tuple((np.array(color)*255).astype(np.int)) )
 
         result = np.asarray(canvas) / 255
-        if shape[2] != 3:
-            result = np.concatenate ( (result, np.ones ( (shape[1],) + (shape[0],) + (shape[2]-3,)) ), axis=2 )
-
+        
+        if c > 3:
+            result = np.concatenate ( (result, np.ones ((h,w,c-3)) ), axis=-1 )
+        elif c < 3:
+            result = result[...,0:c]
         return result
     except:
-        return np.zeros ( (shape[1], shape[0], shape[2]), dtype=np.float32 )
+        return np.zeros ( (h,w,c) )
 
 def draw_text( image, rect, text, color=(1,1,1), border=0.2, font=None):
     h,w,c = image.shape

@@ -253,7 +253,7 @@ def main(args, device_args):
                 for i in range(0, len(head_lines)):
                     t = i*head_line_height
                     b = (i+1)*head_line_height
-                    head[t:b, 0:w] += imagelib.get_text_image (  (w,head_line_height,c) , head_lines[i], color=[0.8]*c )
+                    head[t:b, 0:w] += imagelib.get_text_image (  (head_line_height,w,c) , head_lines[i], color=[0.8]*c )
 
                 final = head
 

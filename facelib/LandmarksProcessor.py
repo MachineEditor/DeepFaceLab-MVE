@@ -4,6 +4,7 @@ import numpy as np
 from enum import IntEnum
 import mathlib
 import imagelib
+from imagelib import IEPolys
 from mathlib.umeyama import umeyama
 from facelib import FaceType
 import math
@@ -153,7 +154,7 @@ def transform_points(points, mat, invert=False):
     return points
 
 
-def get_image_hull_mask (image_shape, image_landmarks):
+def get_image_hull_mask (image_shape, image_landmarks, ie_polys=None):
     if len(image_landmarks) != 68:
         raise Exception('get_image_hull_mask works only with 68 landmarks')
     int_lmrks = np.array(image_landmarks, dtype=np.int)
@@ -198,6 +199,9 @@ def get_image_hull_mask (image_shape, image_landmarks):
     #nose
     cv2.fillConvexPoly( hull_mask, cv2.convexHull(int_lmrks[27:36]), (1,) )
 
+    if ie_polys is not None:
+        ie_polys.overlay_mask(hull_mask)
+
     return hull_mask
 
 def get_image_eye_mask (image_shape, image_landmarks):
@@ -210,11 +214,6 @@ def get_image_eye_mask (image_shape, image_landmarks):
     cv2.fillConvexPoly( hull_mask, cv2.convexHull( image_landmarks[42:48]), (1,) )
 
     return hull_mask
-
-def get_image_hull_mask_3D (image_shape, image_landmarks):
-    result = get_image_hull_mask(image_shape, image_landmarks)
-
-    return np.repeat ( result, (3,), -1 )
 
 def blur_image_hull_mask (hull_mask):
 
@@ -234,9 +233,6 @@ def blur_image_hull_mask (hull_mask):
     hull_mask = np.expand_dims (hull_mask,-1)
 
     return hull_mask
-
-def get_blurred_image_hull_mask(image_shape, image_landmarks):
-    return blur_image_hull_mask ( get_image_hull_mask(image_shape, image_landmarks) )
 
 mirror_idxs = [
     [0,16],
@@ -282,7 +278,7 @@ def mirror_landmarks (landmarks, val):
     result[:,0] = val - result[:,0] - 1
     return result
 
-def draw_landmarks (image, image_landmarks, color=(0,255,0), transparent_mask=False):
+def draw_landmarks (image, image_landmarks, color=(0,255,0), transparent_mask=False, ie_polys=None):
     if len(image_landmarks) != 68:
         raise Exception('get_image_eye_mask works only with 68 landmarks')
 
@@ -310,11 +306,11 @@ def draw_landmarks (image, image_landmarks, color=(0,255,0), transparent_mask=Fa
         cv2.circle(image, (x, y), 2, color, lineType=cv2.LINE_AA)
 
     if transparent_mask:
-        mask = get_image_hull_mask (image.shape, image_landmarks)
+        mask = get_image_hull_mask (image.shape, image_landmarks, ie_polys)
         image[...] = ( image * (1-mask) + image * mask / 2 )[...]
 
-def draw_rect_landmarks (image, rect, image_landmarks, face_size, face_type, transparent_mask=False, landmarks_color=(0,255,0) ):
-    draw_landmarks(image, image_landmarks, color=landmarks_color, transparent_mask=transparent_mask)
+def draw_rect_landmarks (image, rect, image_landmarks, face_size, face_type, transparent_mask=False, ie_polys=None, landmarks_color=(0,255,0) ):
+    draw_landmarks(image, image_landmarks, color=landmarks_color, transparent_mask=transparent_mask, ie_polys=ie_polys)
     imagelib.draw_rect (image, rect, (255,0,0), 2 )
 
     image_to_face_mat = get_transform_mat (image_landmarks, face_size, face_type)

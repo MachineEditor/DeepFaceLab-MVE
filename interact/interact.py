@@ -18,8 +18,10 @@ except:
 class InteractBase(object):
     EVENT_LBUTTONDOWN = 1
     EVENT_LBUTTONUP = 2
+    EVENT_MBUTTONDOWN = 3
+    EVENT_MBUTTONUP = 4
     EVENT_RBUTTONDOWN = 5
-    EVENT_RBUTTONUP = 6
+    EVENT_RBUTTONUP = 6    
     EVENT_MOUSEWHEEL = 10
 
     def __init__(self):
@@ -263,6 +265,8 @@ class InteractDesktop(InteractBase):
             elif event == cv2.EVENT_LBUTTONUP: ev = InteractBase.EVENT_LBUTTONUP
             elif event == cv2.EVENT_RBUTTONDOWN: ev = InteractBase.EVENT_RBUTTONDOWN
             elif event == cv2.EVENT_RBUTTONUP: ev = InteractBase.EVENT_RBUTTONUP
+            elif event == cv2.EVENT_MBUTTONDOWN: ev = InteractBase.EVENT_MBUTTONDOWN
+            elif event == cv2.EVENT_MBUTTONUP: ev = InteractBase.EVENT_MBUTTONUP
             elif event == cv2.EVENT_MOUSEWHEEL: ev = InteractBase.EVENT_MOUSEWHEEL
 
             else: ev = 0

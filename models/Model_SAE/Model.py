@@ -63,13 +63,11 @@ class SAEModel(ModelBase):
             self.options['e_ch_dims'] = np.clip ( io.input_int("Encoder dims per channel (21-85 ?:help skip:%d) : " % (default_e_ch_dims) , default_e_ch_dims, help_message="More encoder dims help to recognize more facial features, but require more VRAM. You can fine-tune model size to fit your GPU." ), 21, 85 )
             default_d_ch_dims = self.options['e_ch_dims'] // 2
             self.options['d_ch_dims'] = np.clip ( io.input_int("Decoder dims per channel (10-85 ?:help skip:%d) : " % (default_d_ch_dims) , default_d_ch_dims, help_message="More decoder dims help to get better details, but require more VRAM. You can fine-tune model size to fit your GPU." ), 10, 85 )
-            self.options['d_residual_blocks'] = io.input_bool ("Add residual blocks to decoder? (y/n, ?:help skip:n) : ", False, help_message="These blocks help to get better details, but require more computing time.")
             self.options['remove_gray_border'] = io.input_bool ("Remove gray border? (y/n, ?:help skip:n) : ", False, help_message="Removes gray border of predicted face, but requires more computing resources.")
         else:
             self.options['ae_dims'] = self.options.get('ae_dims', default_ae_dims)
             self.options['e_ch_dims'] = self.options.get('e_ch_dims', default_e_ch_dims)
             self.options['d_ch_dims'] = self.options.get('d_ch_dims', default_d_ch_dims)
-            self.options['d_residual_blocks'] = self.options.get('d_residual_blocks', False)
             self.options['remove_gray_border'] = self.options.get('remove_gray_border', False)
 
         if is_first_run:
@@ -81,7 +79,7 @@ class SAEModel(ModelBase):
         default_bg_style_power = 0.0
         if is_first_run or ask_override:
             def_pixel_loss = self.options.get('pixel_loss', False)
-            self.options['pixel_loss'] = io.input_bool ("Use pixel loss? (y/n, ?:help skip: %s ) : " % (yn_str[def_pixel_loss]), def_pixel_loss, help_message="Default DSSIM loss good for initial understanding structure of faces. Use pixel loss after 60k iters to enhance fine details. Warning: this option may cause collapse the model, make a backup of Model folder before apply it.")
+            self.options['pixel_loss'] = io.input_bool ("Use pixel loss? (y/n, ?:help skip: %s ) : " % (yn_str[def_pixel_loss]), def_pixel_loss, help_message="Pixel loss may help to enhance fine details and stabilize face color. Use it only if quality does not improve over time.")
 
             default_face_style_power = default_face_style_power if is_first_run else self.options.get('face_style_power', default_face_style_power)
             self.options['face_style_power'] = np.clip ( io.input_number("Face style power ( 0.0 .. 100.0 ?:help skip:%.2f) : " % (default_face_style_power), default_face_style_power,
@@ -105,7 +103,7 @@ class SAEModel(ModelBase):
         ae_dims = self.options['ae_dims']
         e_ch_dims = self.options['e_ch_dims']
         d_ch_dims = self.options['d_ch_dims']
-        d_residual_blocks = self.options['d_residual_blocks']
+        d_residual_blocks = True
         bgr_shape = (resolution, resolution, 3)
         mask_shape = (resolution, resolution, 1)
 
@@ -127,7 +125,9 @@ class SAEModel(ModelBase):
         target_dstm_ar = [ Input ( ( mask_shape[0] // (2**i) ,)*2 + (mask_shape[-1],) ) for i in range(ms_count-1, -1, -1)]
 
         padding = 'reflect' if self.options['remove_gray_border'] else 'zero'
-        common_flow_kwargs = { 'padding': padding }
+        common_flow_kwargs = { 'padding': padding,
+                               'norm': 'bn',
+                               'act':'prelu' }
 
         weights_to_load = []
         if self.options['archi'] == 'liae':
@@ -302,7 +302,7 @@ class SAEModel(ModelBase):
                 self.src_dst_mask_train = K.function (feed,[src_mask_loss, dst_mask_loss], self.src_dst_mask_opt.get_updates(src_mask_loss+dst_mask_loss, src_dst_mask_loss_train_weights) )
 
             if self.options['learn_mask']:
-                self.AE_view = K.function ([warped_src, warped_dst], [pred_src_src[-1], pred_dst_dst[-1], pred_src_dst[-1], pred_src_dstm[-1]])
+                self.AE_view = K.function ([warped_src, warped_dst], [pred_src_src[-1], pred_dst_dst[-1], pred_dst_dstm[-1], pred_src_dst[-1], pred_src_dstm[-1]])
             else:
                 self.AE_view = K.function ([warped_src, warped_dst], [pred_src_src[-1], pred_dst_dst[-1], pred_src_dst[-1] ] )
 
@@ -310,7 +310,7 @@ class SAEModel(ModelBase):
         else:
             self.load_weights_safe(weights_to_load)
             if self.options['learn_mask']:
-                self.AE_convert = K.function ([warped_dst],[ pred_src_dst[-1], pred_src_dstm[-1] ])
+                self.AE_convert = K.function ([warped_dst],[ pred_src_dst[-1], pred_dst_dstm[-1], pred_src_dstm[-1] ])
             else:
                 self.AE_convert = K.function ([warped_dst],[ pred_src_dst[-1] ])
 
@@ -391,24 +391,34 @@ class SAEModel(ModelBase):
         test_B_m = sample[1][2][0:4]
 
         if self.options['learn_mask']:
-            S, D, SS, DD, SD, SDM = [ np.clip(x, 0.0, 1.0) for x in ([test_A,test_B] + self.AE_view ([test_A, test_B]) ) ]
-            SDM, = [ np.repeat (x, (3,), -1) for x in [SDM] ]
+            S, D, SS, DD, DDM, SD, SDM = [ np.clip(x, 0.0, 1.0) for x in ([test_A,test_B] + self.AE_view ([test_A, test_B]) ) ]
+            DDM, SDM, = [ np.repeat (x, (3,), -1) for x in [DDM, SDM] ]
         else:
             S, D, SS, DD, SD, = [ np.clip(x, 0.0, 1.0) for x in ([test_A,test_B] + self.AE_view ([test_A, test_B]) ) ]
 
+        result = []
         st = []
         for i in range(0, len(test_A)):
             ar = S[i], SS[i], D[i], DD[i], SD[i]
-            #if self.options['learn_mask']:
-            #    ar += (SDM[i],)
             st.append ( np.concatenate ( ar, axis=1) )
-
-        return [ ('SAE', np.concatenate (st, axis=0 )), ]
+        
+        result += [ ('SAE', np.concatenate (st, axis=0 )), ]
+        
+        if self.options['learn_mask']:
+            st_m = []
+            for i in range(0, len(test_A)):
+                ar = S[i], SS[i], D[i], DD[i]*DDM[i], SD[i]*(DDM[i]*SDM[i])
+                st_m.append ( np.concatenate ( ar, axis=1) )
+                
+            result += [ ('SAE masked', np.concatenate (st_m, axis=0 )), ]
+            
+        return result
 
     def predictor_func (self, face):
         if self.options['learn_mask']:
-            bgr, mask = self.AE_convert ([face[np.newaxis,...]])
-            return bgr[0], mask[0][...,0]
+            bgr, mask_dst_dstm, mask_src_dstm = self.AE_convert ([face[np.newaxis,...]])
+            mask = mask_dst_dstm[0] * mask_src_dstm[0]            
+            return bgr[0], mask[...,0]
         else:
             bgr, = self.AE_convert ([face[np.newaxis,...]])
             return bgr[0]
@@ -440,23 +450,39 @@ class SAEModel(ModelBase):
     def initialize_nn_functions():
         exec (nnlib.import_all(), locals(), globals())
 
-        def BatchNorm():
-            return BatchNormalization(axis=-1)
+        def NormPass(x):
+            return x
+            
+        def Norm(norm=''):
+            if norm == 'bn':
+                return BatchNormalization(axis=-1)
+            else:
+                return NormPass
+        
+        def Act(act='', lrelu_alpha=0.1):
+            if act == 'prelu':
+                return PReLU()
+            else:
+                return LeakyReLU(alpha=lrelu_alpha)
 
         class ResidualBlock(object):
-            def __init__(self, filters, kernel_size=3, padding='zero', use_reflection_padding=False):
+            def __init__(self, filters, kernel_size=3, padding='zero', use_reflection_padding=False, norm='', act='', **kwargs):
                 self.filters = filters
                 self.kernel_size = kernel_size
                 self.padding = padding
+                self.norm = norm
+                self.act = act
 
             def __call__(self, inp):
-                var_x = inp
-                var_x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding)(var_x)
-                var_x = LeakyReLU(alpha=0.2)(var_x)
-                var_x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding)(var_x)
-                var_x = Add()([var_x, inp])
-                var_x = LeakyReLU(alpha=0.2)(var_x)
-                return var_x
+                x = inp
+                x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding)(x)
+                x = Act(self.act, lrelu_alpha=0.2)(x)
+                x = Norm(self.norm)(x)
+                x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding)(x)
+                x = Add()([x, inp])
+                x = Act(self.act, lrelu_alpha=0.2)(x)
+                x = Norm(self.norm)(x)
+                return x
         SAEModel.ResidualBlock = ResidualBlock
 
         def ResidualBlock_pre (**base_kwargs):
@@ -466,9 +492,9 @@ class SAEModel(ModelBase):
             return func
         SAEModel.ResidualBlock_pre = ResidualBlock_pre
 
-        def downscale (dim, padding='zero'):
+        def downscale (dim, padding='zero', norm='', act='', **kwargs):
             def func(x):
-                return LeakyReLU(0.1)(Conv2D(dim, kernel_size=5, strides=2, padding=padding)(x))
+                return Norm(norm)( Act(act) (Conv2D(dim, kernel_size=5, strides=2, padding=padding)(x)) )
             return func
         SAEModel.downscale = downscale
 
@@ -479,9 +505,9 @@ class SAEModel(ModelBase):
             return func
         SAEModel.downscale_pre = downscale_pre
 
-        def upscale (dim, padding='zero'):
+        def upscale (dim, padding='zero', norm='', act='', **kwargs):
             def func(x):
-                return SubpixelUpscaler()(LeakyReLU(0.1)(Conv2D(dim * 4, kernel_size=3, strides=1, padding=padding)(x)))
+                return SubpixelUpscaler()(Norm(norm)(Act(act)(Conv2D(dim * 4, kernel_size=3, strides=1, padding=padding)(x))))
             return func
         SAEModel.upscale = upscale
 
@@ -492,7 +518,7 @@ class SAEModel(ModelBase):
             return func
         SAEModel.upscale_pre = upscale_pre
 
-        def to_bgr (output_nc, padding='zero'):
+        def to_bgr (output_nc, padding='zero', **kwargs):
             def func(x):
                 return Conv2D(output_nc, kernel_size=5, padding=padding, activation='sigmoid')(x)
             return func
@@ -506,10 +532,10 @@ class SAEModel(ModelBase):
         SAEModel.to_bgr_pre = to_bgr_pre
 
     @staticmethod
-    def LIAEEncFlow(resolution, ch_dims, padding='zero', **kwargs):
+    def LIAEEncFlow(resolution, ch_dims, **kwargs):
         exec (nnlib.import_all(), locals(), globals())
-        upscale = SAEModel.upscale_pre(padding=padding)
-        downscale = SAEModel.downscale_pre(padding=padding)
+        upscale = SAEModel.upscale_pre(**kwargs)
+        downscale = SAEModel.downscale_pre(**kwargs)
 
         def func(input):
             dims = K.int_shape(input)[-1]*ch_dims
@@ -525,9 +551,9 @@ class SAEModel(ModelBase):
         return func
 
     @staticmethod
-    def LIAEInterFlow(resolution, ae_dims=256, padding='zero', **kwargs):
+    def LIAEInterFlow(resolution, ae_dims=256, **kwargs):
         exec (nnlib.import_all(), locals(), globals())
-        upscale = SAEModel.upscale_pre(padding=padding)
+        upscale = SAEModel.upscale_pre(**kwargs)
         lowest_dense_res=resolution // 16
 
         def func(input):
@@ -540,12 +566,12 @@ class SAEModel(ModelBase):
         return func
 
     @staticmethod
-    def LIAEDecFlow(output_nc,ch_dims, multiscale_count=1, add_residual_blocks=False, padding='zero', **kwargs):
+    def LIAEDecFlow(output_nc,ch_dims, multiscale_count=1, add_residual_blocks=False, padding='zero', norm='', **kwargs):
         exec (nnlib.import_all(), locals(), globals())
-        upscale = SAEModel.upscale_pre(padding=padding)
-        to_bgr = SAEModel.to_bgr_pre(padding=padding)
+        upscale = SAEModel.upscale_pre(**kwargs)
+        to_bgr = SAEModel.to_bgr_pre(**kwargs)
         dims = output_nc * ch_dims
-        ResidualBlock = SAEModel.ResidualBlock_pre(padding=padding)
+        ResidualBlock = SAEModel.ResidualBlock_pre(**kwargs)
 
         def func(input):
             x = input[0]
