@@ -81,7 +81,7 @@ class ConverterMasked(Converter):
         else:
             self.mask_mode = np.clip ( io.input_int ("Mask mode: (1) learned, (2) dst . Default - %d : " % (1) , 1), 1, 2 )
 
-        if self.mask_mode >= 3 or self.mask_mode <= 6:
+        if self.mask_mode >= 3 and self.mask_mode <= 6:
             self.fan_seg = None
 
         if self.mode != 'raw':

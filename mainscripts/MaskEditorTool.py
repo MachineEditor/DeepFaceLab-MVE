@@ -187,7 +187,7 @@ class MaskEditor:
         pink = np.full ( (self.h, self.w, 3), (1,0,1) )        
         pink_masked_img = self.img*final_mask + pink*(1-final_mask)
         
-        screens = [ (self.img, None),
+        screens = [ (self.img, screen_overlay),
                     (masked_img, screen_overlay),
                     (pink_masked_img, screen_overlay),                    
                     ]                
