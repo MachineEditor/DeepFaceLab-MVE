@@ -43,7 +43,7 @@ def draw_text( image, rect, text, color=(1,1,1), border=0.2, font=None):
     t = np.clip (t, 0, h-1)
     b = np.clip (b, 0, h-1)
 
-    image[t:b, l:r] += get_text_image (  (r-l,b-t,c) , text, color, border, font )
+    image[t:b, l:r] += get_text_image (  (b-t,r-l,c) , text, color, border, font )
 
 
 def draw_text_lines (image, rect, text_lines, color=(1,1,1), border=0.2, font=None):
