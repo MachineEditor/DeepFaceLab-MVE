@@ -185,7 +185,10 @@ def main(args, device_args):
                 op = input.get('op','')
                 if op == 'close':
                     break
-            io.process_messages(0.1)
+            try:
+                io.process_messages(0.1)
+            except KeyboardInterrupt:
+                s2c.put ( {'op': 'close'} )
     else:
         wnd_name = "Training preview"
         io.named_window(wnd_name)
