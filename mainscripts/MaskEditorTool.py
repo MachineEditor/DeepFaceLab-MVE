@@ -93,6 +93,7 @@ class MaskEditor:
             pass
         
     def undo_point(self):
+        self.screen_changed = True
         if self.state == self.STATE_NONE:
             if self.ie_polys.n > 0:                   
                 self.state = self.STATE_MASKING
@@ -111,6 +112,7 @@ class MaskEditor:
             pass
                 
     def redo_point(self):
+        self.screen_changed = True
         if self.state == self.STATE_NONE:
             if self.ie_polys.n_max > 0:                    
                 self.state = self.STATE_MASKING
