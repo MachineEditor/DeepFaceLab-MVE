@@ -215,7 +215,7 @@ class MaskEditor:
     def set_mouse_pos(self,x,y):
         mouse_x = x % (self.sw) - self.pw
         mouse_y = y % (self.sh) - self.ph
-        if mouse_x != self.mouse_x and mouse_y != self.mouse_y:
+        if mouse_x != self.mouse_x or mouse_y != self.mouse_y:
             self.mouse_xy = np.array( [mouse_x, mouse_y] )
             self.mouse_x, self.mouse_y = self.mouse_xy
             self.screen_changed = True
