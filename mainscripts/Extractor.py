@@ -682,8 +682,11 @@ def main(input_dir,
 
     if output_path.exists():
         if not manual_output_debug_fix and input_path != output_path:
-            for filename in Path_utils.get_image_paths(output_path):
-                Path(filename).unlink()
+            output_images_paths = Path_utils.get_image_paths(output_path)
+            if len(output_images_paths) > 0:
+                io.input_bool("WARNING !!! \n %s contains files! \n They will be deleted. \n Press enter to continue." % (str(output_path)), False )
+                for filename in output_images_paths:
+                    Path(filename).unlink()
     else:
         output_path.mkdir(parents=True, exist_ok=True)
 
