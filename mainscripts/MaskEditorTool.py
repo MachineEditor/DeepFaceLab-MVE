@@ -21,10 +21,18 @@ class MaskEditor:
     STATE_NONE=0
     STATE_MASKING=1
     
-    def __init__(self, img, mask=None, ie_polys=None, get_status_lines_func=None):
-        self.img = imagelib.normalize_channels (img,3)
+    def __init__(self, img, prev_images, next_images, mask=None, ie_polys=None, get_status_lines_func=None):
+        self.img = imagelib.normalize_channels (img,3)        
         h, w, c = img.shape
-        ph, pw = h // 4, w // 4
+
+        if h != w and w != 256:
+            #to support any square res, scale img,mask and ie_polys to 256, then scale ie_polys back on .get_ie_polys()
+            raise Exception ("MaskEditor does not support image size != 256x256")
+        
+        ph, pw = h // 4, w // 4 #pad wh
+        
+        self.prev_images = prev_images
+        self.next_images = next_images
         
         if mask is not None:
             self.mask = imagelib.normalize_channels (mask,3)
@@ -39,12 +47,14 @@ class MaskEditor:
         self.pwh = np.array([self.pw, self.ph])
         self.pwh2 = np.array([self.pw*2, self.ph*2])
         self.sw, self.sh = w+pw*2, h+ph*2
+        self.prwh = 64 #preview wh
 
         if ie_polys is None:
             ie_polys = IEPolys()
         self.ie_polys = ie_polys
         
         self.polys_mask = None
+        self.preview_images = None
         
         self.mouse_x = self.mouse_y = 9999
         self.screen_status_block = None
@@ -193,15 +203,79 @@ class MaskEditor:
         pink = np.full ( (self.h, self.w, 3), (1,0,1) )        
         pink_masked_img = self.img*final_mask + pink*(1-final_mask)
         
+        
+        
+        
         screens = [ (self.img, screen_overlay),
                     (masked_img, screen_overlay),
                     (pink_masked_img, screen_overlay),                    
                     ]                
         screens = self.combine_screens(screens)
         
+        if self.preview_images is None:
+            sh,sw,sc = screens.shape
+            
+            prh, prw = self.prwh, self.prwh
+            
+            total_w = sum ([ img.shape[1] for (t,img) in self.prev_images ]) + \
+                      sum ([ img.shape[1] for (t,img) in self.next_images ])
+                    
+            total_images_len = len(self.prev_images) + len(self.next_images)
+            
+            max_hor_images_count = sw // prw
+            max_side_images_count = (max_hor_images_count - 1) // 2
+            
+            prev_images = self.prev_images[-max_side_images_count:]
+            next_images = self.next_images[:max_side_images_count]
+            
+            border = 2
+            
+            max_wh_bordered = (prw-border*2, prh-border*2)
+                        
+            prev_images = [ (t, cv2.resize( imagelib.normalize_channels(img, 3), max_wh_bordered )) for t,img in prev_images ]
+            next_images = [ (t, cv2.resize( imagelib.normalize_channels(img, 3), max_wh_bordered )) for t,img in next_images ]
+            
+            for images in [prev_images, next_images]:
+                for i, (t, img) in enumerate(images):
+                    new_img = np.zeros ( (prh,prw, sc) )
+                    new_img[border:-border,border:-border] = img
+     
+                    if t == 2:
+                        cv2.line (new_img, (       prw//2, int(prh//1.5) ), (int(prw/1.5), prh      ) , (0,1,0), thickness=2 )
+                        cv2.line (new_img, ( int(prw/1.5), prh           ), (         prw, prh // 2 ) , (0,1,0), thickness=2 )
+                    elif t == 1:
+                        cv2.line (new_img, ( prw//2, prh//2 ), ( prw, prh      ) , (0,0,1), thickness=2 )
+                        cv2.line (new_img, ( prw//2, prh    ), ( prw, prh // 2 ) , (0,0,1), thickness=2 )
+                
+                    images[i] = new_img
+
+
+            preview_images = []
+            if len(prev_images) > 0:
+                preview_images += [ np.concatenate (prev_images, axis=1) ]
+
+            img = np.full ( (prh,prw, sc), (0,0,1), dtype=np.float )
+            img[border:-border,border:-border] = cv2.resize( self.img, max_wh_bordered )
+
+            preview_images += [ img ]
+            
+            if len(next_images) > 0:
+                preview_images += [ np.concatenate (next_images, axis=1) ]
+            
+            preview_images = np.concatenate ( preview_images, axis=1  )
+            
+            left_pad = sw // 2 - len(prev_images) * prw - prw // 2        
+            right_pad = sw // 2 - len(next_images) * prw - prw // 2
+            
+            preview_images = np.concatenate ([np.zeros ( (preview_images.shape[0], left_pad, preview_images.shape[2]) ),
+                                              preview_images,
+                                              np.zeros ( (preview_images.shape[0], right_pad, preview_images.shape[2]) )                
+                                             ], axis=1)
+            self.preview_images = np.clip(preview_images * 255, 0, 255 ).astype(np.uint8)
+
         status_img = self.get_screen_status_block( screens.shape[1], screens.shape[2] )
            
-        result = np.concatenate ( [screens, status_img], axis=0  )
+        result = np.concatenate ( [self.preview_images, screens, status_img], axis=0  )
         
         return result
         
@@ -215,8 +289,14 @@ class MaskEditor:
                 self.ie_polys.n_clip()
             
     def set_mouse_pos(self,x,y):
+        if self.preview_images is not None:
+            y -= self.preview_images.shape[0]
+            
         mouse_x = x % (self.sw) - self.pw
         mouse_y = y % (self.sh) - self.ph
+        
+        
+        
         if mouse_x != self.mouse_x or mouse_y != self.mouse_y:
             self.mouse_xy = np.array( [mouse_x, mouse_y] )
             self.mouse_x, self.mouse_y = self.mouse_xy
@@ -258,10 +338,16 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None):
     io.capture_mouse(wnd_name)
     io.capture_keys(wnd_name)
 
-    image_paths = [ Path(x) for x in Path_utils.get_image_paths(input_path)]
-    done_paths = []
+    cached_images = {}
     
+    image_paths = [ Path(x) for x in Path_utils.get_image_paths(input_path)]
+    done_paths = []    
+    done_images_types = {}
     image_paths_total = len(image_paths)
+
+    preview_images_count = 9
+
+    target_wh = 256
 
     do_prev_count = 0
     do_save_move_count = 0
@@ -269,6 +355,9 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None):
     do_skip_move_count = 0
     do_skip_count = 0
     
+    def jobs_count():
+        return do_prev_count + do_save_move_count + do_save_count + do_skip_move_count + do_skip_count
+
     is_exit = False
     while not is_exit:
         
@@ -276,6 +365,21 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None):
             filepath = image_paths.pop(0)
         else:
             filepath = None
+
+        next_image_paths = image_paths[0:preview_images_count]
+        next_image_paths_names = [ path.name for path in next_image_paths ]
+        prev_image_paths = done_paths[-preview_images_count:]
+        prev_image_paths_names = [ path.name for path in prev_image_paths ]
+        
+        for key in list( cached_images.keys() ):
+            if key not in prev_image_paths_names and \
+               key not in next_image_paths_names:
+                cached_images.pop(key)
+        
+        for paths in [prev_image_paths, next_image_paths]:
+            for path in paths:
+                if path.name not in cached_images:
+                    cached_images[path.name] = cv2_imread(str(path)) / 255.0
 
         if filepath is not None:
             if filepath.suffix == '.png':
@@ -288,17 +392,21 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None):
             if dflimg is None:
                 io.log_err ("%s is not a dfl image file" % (filepath.name) )
                 continue
+            else:
+                lmrks = dflimg.get_landmarks()
+                ie_polys = dflimg.get_ie_polys()
                 
-            lmrks = dflimg.get_landmarks()
-            ie_polys = dflimg.get_ie_polys()
-            
-            img = cv2_imread(str(filepath)) / 255.0
-            mask = LandmarksProcessor.get_image_hull_mask( img.shape, lmrks)
+                if filepath.name in cached_images:
+                    img = cached_images[filepath.name]
+                else:
+                    img = cached_images[filepath.name] = cv2_imread(str(filepath)) / 255.0
+                
+                mask = LandmarksProcessor.get_image_hull_mask( img.shape, lmrks)
         else:
-            img = np.zeros ( (256,256,3) )
-            mask = np.ones ( (256,256,3) )
+            img = np.zeros ( (target_wh,target_wh,3) )
+            mask = np.ones ( (target_wh,target_wh,3) )
             ie_polys = None
-            
+
         def get_status_lines_func():
             return ['Progress: %d / %d . Current file: %s' % (len(done_paths), image_paths_total, str(filepath.name) if filepath is not None else "end" ), 
                     '[Left mouse button] - mark include mask.',
@@ -307,16 +415,24 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None):
                     '[Mouse wheel] - undo/redo poly or point. [+ctrl] - undo to begin/redo to end',
                     '[q] - prev image. [w] - skip and move to %s. [e] - save and move to %s. ' % (skipped_path.name, confirmed_path.name),
                     '[z] - prev image. [x] - skip. [c] - save. ',
-                    'hold [shift] - speed up the frame counter by 10.'
-                    '[esc] - quit'
+                    'hold [shift] - speed up the frame counter by 10.',
+                    '[esc] - quit',
                     ]
-        ed = MaskEditor(img, mask, ie_polys, get_status_lines_func)
-
+                    
+        try:
+            ed = MaskEditor(img, 
+                            [ (done_images_types[name], cached_images[name]) for name in prev_image_paths_names ],
+                            [ (0, cached_images[name]) for name in next_image_paths_names ],
+                            mask, ie_polys, get_status_lines_func)
+        except Exception as e:
+            print(e)
+            continue
+            
         next = False
         while not next:
             io.process_messages(0.005)
             
-            if do_prev_count + do_save_move_count + do_save_count + do_skip_move_count + do_skip_count == 0:
+            if jobs_count() == 0:
                 for (x,y,ev,flags) in io.get_mouse_events(wnd_name):
                     ed.set_mouse_pos(x, y) 
                     if filepath is not None:
@@ -358,8 +474,11 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None):
             if do_prev_count > 0:
                 do_prev_count -= 1
                 if len(done_paths) > 0:
-                    image_paths.insert(0, filepath)                        
+                    if filepath is not None:
+                        image_paths.insert(0, filepath)
+                        
                     filepath = done_paths.pop(-1)
+                    done_images_types[filepath.name] = 0
                     
                     if filepath.parent != input_path:
                         new_filename_path = input_path / filepath.name
@@ -376,36 +495,40 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None):
                     ed.mask_finish()
                     dflimg.embed_and_set (str(filepath), ie_polys=ed.get_ie_polys() )
 
-                    done_paths += [ confirmed_path / filepath.name ]
+                    done_paths += [ confirmed_path / filepath.name ]                    
+                    done_images_types[filepath.name] = 2
                     filepath.rename(done_paths[-1])
-
+                    
                     next = True      
                 elif do_save_count > 0:
                     do_save_count -= 1
-                        
+                    
                     ed.mask_finish()
                     dflimg.embed_and_set (str(filepath), ie_polys=ed.get_ie_polys() )
                     
-                    done_paths += [filepath]                         
+                    done_paths += [ filepath ]
+                    done_images_types[filepath.name] = 2
                     
                     next = True         
                 elif do_skip_move_count > 0:
                     do_skip_move_count -= 1
                     
-                    done_paths += [skipped_path / filepath.name]
+                    done_paths += [ skipped_path / filepath.name ]                    
+                    done_images_types[filepath.name] = 1
                     filepath.rename(done_paths[-1])
-                                        
+                    
                     next = True         
                 elif do_skip_count > 0:
                     do_skip_count -= 1
                         
-                    done_paths += [filepath]     
+                    done_paths += [ filepath ]
+                    done_images_types[filepath.name] = 1
                                         
                     next = True
             else:
                 do_save_move_count = do_save_count = do_skip_move_count = do_skip_count = 0
                 
-            if do_prev_count + do_save_move_count + do_save_count + do_skip_move_count + do_skip_count == 0:
+            if jobs_count() == 0:
                 if ed.switch_screen_changed():
                     io.show_image (wnd_name, ed.make_screen() )
 
