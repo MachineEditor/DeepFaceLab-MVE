@@ -150,7 +150,7 @@ class ConvertSubprocessor(Subprocessor):
 
     #override
     def process_info_generator(self):
-        r = [0] if self.debug else range( max(6,multiprocessing.cpu_count()) )
+        r = [0] if self.debug else range( min(6,multiprocessing.cpu_count()) )
 
         for i in r:
             yield 'CPU%d' % (i), {}, {'device_idx': i,
