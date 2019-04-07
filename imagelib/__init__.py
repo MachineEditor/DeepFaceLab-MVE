@@ -23,3 +23,5 @@ from .DCSCN import DCSCN
 from .common import normalize_channels
 
 from .IEPolys import IEPolys
+
+from .blur import LinearMotionBlur

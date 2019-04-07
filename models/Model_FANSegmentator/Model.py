@@ -33,12 +33,12 @@ class Model(ModelBase):
 
         if self.is_training_mode:
             f = SampleProcessor.TypeFlags
-            f_type = f.FACE_ALIGN_FULL
+            f_type = f.FACE_TYPE_FULL
             
             self.set_training_data_generators ([    
                     SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size, 
-                            sample_process_options=SampleProcessor.Options(random_flip=True, normalize_tanh = True ), 
-                            output_sample_types=[ [f.TRANSFORMED | f_type | f.MODE_BGR_SHUFFLE, self.resolution],
+                            sample_process_options=SampleProcessor.Options(random_flip=True, motion_blur = [25, 1], normalize_tanh = True ), 
+                            output_sample_types=[ [f.TRANSFORMED | f_type | f.MODE_BGR_SHUFFLE | f.OPT_APPLY_MOTION_BLUR, self.resolution],
                                                   [f.TRANSFORMED | f_type | f.MODE_M | f.FACE_MASK_FULL, self.resolution]
                                                 ]),
                                                 

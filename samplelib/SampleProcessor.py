@@ -2,46 +2,58 @@ from enum import IntEnum
 import numpy as np
 import cv2
 import imagelib
+
 from facelib import LandmarksProcessor
 from facelib import FaceType
 
-
 class SampleProcessor(object):
     class TypeFlags(IntEnum):
-        SOURCE                = 0x00000001,
-        WARPED                = 0x00000002,
-        WARPED_TRANSFORMED    = 0x00000004,
-        TRANSFORMED           = 0x00000008,
-        LANDMARKS_ARRAY       = 0x00000010, #currently unused
+        SOURCE                     = 0x00000001,
+        WARPED                     = 0x00000002,
+        WARPED_TRANSFORMED         = 0x00000004,
+        TRANSFORMED                = 0x00000008,
+        LANDMARKS_ARRAY            = 0x00000010, #currently unused
+     
+        RANDOM_CLOSE               = 0x00000020, #currently unused
+        MORPH_TO_RANDOM_CLOSE      = 0x00000040, #currently unused
+     
+        FACE_TYPE_HALF             = 0x00000100,
+        FACE_TYPE_FULL             = 0x00000200,
+        FACE_TYPE_HEAD             = 0x00000400,  #currently unused
+        FACE_TYPE_AVATAR           = 0x00000800,  #currently unused
+      
+        FACE_MASK_FULL             = 0x00001000,
+        FACE_MASK_EYES             = 0x00002000, #currently unused
+      
+        MODE_BGR                   = 0x00010000,  #BGR
+        MODE_G                     = 0x00020000,  #Grayscale
+        MODE_GGG                   = 0x00040000,  #3xGrayscale
+        MODE_M                     = 0x00080000,  #mask only
+        MODE_BGR_SHUFFLE           = 0x00100000,  #BGR shuffle
 
-        RANDOM_CLOSE          = 0x00000020,
-        MORPH_TO_RANDOM_CLOSE = 0x00000040,
-
-        FACE_ALIGN_HALF       = 0x00000100,
-        FACE_ALIGN_FULL       = 0x00000200,
-        FACE_ALIGN_HEAD       = 0x00000400,
-        FACE_ALIGN_AVATAR     = 0x00000800,
-
-        FACE_MASK_FULL        = 0x00001000,
-        FACE_MASK_EYES        = 0x00002000,
-
-        MODE_BGR              = 0x01000000,  #BGR
-        MODE_G                = 0x02000000,  #Grayscale
-        MODE_GGG              = 0x04000000,  #3xGrayscale
-        MODE_M                = 0x08000000,  #mask only
-        MODE_BGR_SHUFFLE      = 0x10000000,  #BGR shuffle
+        OPT_APPLY_MOTION_BLUR      = 0x10000000,
 
     class Options(object):
-        def __init__(self, random_flip = True, normalize_tanh = False, rotation_range=[-10,10], scale_range=[-0.05, 0.05], tx_range=[-0.05, 0.05], ty_range=[-0.05, 0.05]):
+        #motion_blur = [chance_int, range] - chance 0..100 to apply to face (not mask), and range [1..3] where 3 is highest power of motion blur
+        
+        def __init__(self, random_flip = True, normalize_tanh = False, rotation_range=[-10,10], scale_range=[-0.05, 0.05], tx_range=[-0.05, 0.05], ty_range=[-0.05, 0.05], motion_blur=None ):
             self.random_flip = random_flip
             self.normalize_tanh = normalize_tanh
             self.rotation_range = rotation_range
             self.scale_range = scale_range
             self.tx_range = tx_range
             self.ty_range = ty_range
-
+            self.motion_blur = motion_blur
+            if self.motion_blur is not None:
+                chance, range = self.motion_blur
+                chance = np.clip(chance, 0, 100)
+                range = [3,5,7,9][ : np.clip(range, 0, 3)+1 ]
+                self.motion_blur = (chance, range)
+                
     @staticmethod
     def process (sample, sample_process_options, output_sample_types, debug):
+        SPTF = SampleProcessor.TypeFlags
+        
         sample_bgr = sample.load_bgr()
         h,w,c = sample_bgr.shape
 
@@ -68,39 +80,41 @@ class SampleProcessor(object):
             size = sample_type[1]
             random_sub_size = 0 if len (sample_type) < 3 else min( sample_type[2] , size)
 
-            if f & SampleProcessor.TypeFlags.SOURCE != 0:
+            if f & SPTF.SOURCE != 0:
                 img_type = 0
-            elif f & SampleProcessor.TypeFlags.WARPED != 0:
+            elif f & SPTF.WARPED != 0:
                 img_type = 1
-            elif f & SampleProcessor.TypeFlags.WARPED_TRANSFORMED != 0:
+            elif f & SPTF.WARPED_TRANSFORMED != 0:
                 img_type = 2
-            elif f & SampleProcessor.TypeFlags.TRANSFORMED != 0:
+            elif f & SPTF.TRANSFORMED != 0:
                 img_type = 3
-            elif f & SampleProcessor.TypeFlags.LANDMARKS_ARRAY != 0:
+            elif f & SPTF.LANDMARKS_ARRAY != 0:
                 img_type = 4
             else:
                 raise ValueError ('expected SampleTypeFlags type')
 
-            if f & SampleProcessor.TypeFlags.RANDOM_CLOSE != 0:
+            if f & SPTF.RANDOM_CLOSE != 0:
                 img_type += 10
-            elif f & SampleProcessor.TypeFlags.MORPH_TO_RANDOM_CLOSE != 0:
+            elif f & SPTF.MORPH_TO_RANDOM_CLOSE != 0:
                 img_type += 20
 
             face_mask_type = 0
-            if f & SampleProcessor.TypeFlags.FACE_MASK_FULL != 0:
+            if f & SPTF.FACE_MASK_FULL != 0:
                 face_mask_type = 1
-            elif f & SampleProcessor.TypeFlags.FACE_MASK_EYES != 0:
+            elif f & SPTF.FACE_MASK_EYES != 0:
                 face_mask_type = 2
 
             target_face_type = -1
-            if f & SampleProcessor.TypeFlags.FACE_ALIGN_HALF != 0:
+            if f & SPTF.FACE_TYPE_HALF != 0:
                 target_face_type = FaceType.HALF
-            elif f & SampleProcessor.TypeFlags.FACE_ALIGN_FULL != 0:
+            elif f & SPTF.FACE_TYPE_FULL != 0:
                 target_face_type = FaceType.FULL
-            elif f & SampleProcessor.TypeFlags.FACE_ALIGN_HEAD != 0:
+            elif f & SPTF.FACE_TYPE_HEAD != 0:
                 target_face_type = FaceType.HEAD
-            elif f & SampleProcessor.TypeFlags.FACE_ALIGN_AVATAR != 0:
+            elif f & SPTF.FACE_TYPE_AVATAR != 0:
                 target_face_type = FaceType.AVATAR
+            
+            apply_motion_blur = f & SPTF.OPT_APPLY_MOTION_BLUR != 0
 
             if img_type == 4:
                 l = sample.landmarks
@@ -151,8 +165,15 @@ class SampleProcessor(object):
                         cur_sample = sample
 
                     if is_face_sample:
+                        if apply_motion_blur and sample_process_options.motion_blur is not None:
+                            chance, mb_range = sample_process_options.motion_blur
+                            if np.random.randint(100) < chance :
+                                dim = mb_range[ np.random.randint(len(mb_range) ) ]
+                                img = imagelib.LinearMotionBlur (img, dim, np.random.randint(180) )
+                        
                         if face_mask_type == 1:
-                            img = np.concatenate( (img, LandmarksProcessor.get_image_hull_mask (img.shape, cur_sample.landmarks, cur_sample.ie_polys) ), -1 )
+                            mask = LandmarksProcessor.get_image_hull_mask (img.shape, cur_sample.landmarks, cur_sample.ie_polys)
+                            img = np.concatenate( (img, mask ), -1 )
                         elif face_mask_type == 2:
                             mask = LandmarksProcessor.get_image_eye_mask (img.shape, cur_sample.landmarks)
                             mask = np.expand_dims (cv2.blur (mask, ( w // 32, w // 32 ) ), -1)
@@ -180,16 +201,16 @@ class SampleProcessor(object):
                 img_bgr  = img[...,0:3]
                 img_mask = img[...,3:4]
 
-                if f & SampleProcessor.TypeFlags.MODE_BGR != 0:
+                if f & SPTF.MODE_BGR != 0:
                     img = img
-                elif f & SampleProcessor.TypeFlags.MODE_BGR_SHUFFLE != 0:
+                elif f & SPTF.MODE_BGR_SHUFFLE != 0:
                     img_bgr = np.take (img_bgr, np.random.permutation(img_bgr.shape[-1]), axis=-1)
                     img = np.concatenate ( (img_bgr,img_mask) , -1 )
-                elif f & SampleProcessor.TypeFlags.MODE_G != 0:
+                elif f & SPTF.MODE_G != 0:
                     img = np.concatenate ( (np.expand_dims(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY),-1),img_mask) , -1 )
-                elif f & SampleProcessor.TypeFlags.MODE_GGG != 0:
+                elif f & SPTF.MODE_GGG != 0:
                     img = np.concatenate ( ( np.repeat ( np.expand_dims(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY),-1), (3,), -1), img_mask), -1)
-                elif is_face_sample and f & SampleProcessor.TypeFlags.MODE_M != 0:
+                elif is_face_sample and f & SPTF.MODE_M != 0:
                     if face_mask_type== 0:
                         raise ValueError ('no face_mask_type defined')
                     img = img_mask
