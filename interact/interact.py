@@ -259,6 +259,8 @@ class InteractDesktop(InteractBase):
         cv2.imshow (wnd_name, img)
 
     def on_capture_mouse (self, wnd_name):
+        self.last_xy = (0,0)
+        
         def onMouse(event, x, y, flags, param):
             (inst, wnd_name) = param
             if event == cv2.EVENT_LBUTTONDOWN: ev = InteractBase.EVENT_LBUTTONDOWN
@@ -267,9 +269,12 @@ class InteractDesktop(InteractBase):
             elif event == cv2.EVENT_RBUTTONUP: ev = InteractBase.EVENT_RBUTTONUP
             elif event == cv2.EVENT_MBUTTONDOWN: ev = InteractBase.EVENT_MBUTTONDOWN
             elif event == cv2.EVENT_MBUTTONUP: ev = InteractBase.EVENT_MBUTTONUP
-            elif event == cv2.EVENT_MOUSEWHEEL: ev = InteractBase.EVENT_MOUSEWHEEL
-
+            elif event == cv2.EVENT_MOUSEWHEEL: 
+                ev = InteractBase.EVENT_MOUSEWHEEL
+                x,y = self.last_xy #fix opencv bug when window size more than screen size
             else: ev = 0
+                
+            self.last_xy = (x,y)
             inst.add_mouse_event (wnd_name, x, y, ev, flags)
         cv2.setMouseCallback(wnd_name, onMouse, (self,wnd_name) )
 
