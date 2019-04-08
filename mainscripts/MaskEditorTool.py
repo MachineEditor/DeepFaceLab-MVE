@@ -188,7 +188,10 @@ class MaskEditor:
         
     def set_screen_status_block_dirty(self):
         self.screen_status_block_dirty = True
-        
+      
+    def set_screen_changed(self):
+        self.screen_changed = True
+          
     def switch_screen_changed(self):
         result = self.screen_changed
         self.screen_changed = False
@@ -345,9 +348,9 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None):
     done_images_types = {}
     image_paths_total = len(image_paths)
 
+    zoom_factor = 1.0
     preview_images_count = 9
-
-    target_wh = 256
+    target_wh = 256    
 
     do_prev_count = 0
     do_save_move_count = 0
@@ -416,7 +419,7 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None):
                     '[q] - prev image. [w] - skip and move to %s. [e] - save and move to %s. ' % (skipped_path.name, confirmed_path.name),
                     '[z] - prev image. [x] - skip. [c] - save. ',
                     'hold [shift] - speed up the frame counter by 10.',
-                    '[esc] - quit',
+                    '[-/+] - window zoom [esc] - quit',
                     ]
                     
         try:
@@ -434,6 +437,8 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None):
             
             if jobs_count() == 0:
                 for (x,y,ev,flags) in io.get_mouse_events(wnd_name):
+                    x, y = int (x / zoom_factor), int(y / zoom_factor)
+                    
                     ed.set_mouse_pos(x, y) 
                     if filepath is not None:
                         if ev == io.EVENT_LBUTTONDOWN:
@@ -455,8 +460,15 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None):
                                     ed.redo_point()
 
                 for key, chr_key, ctrl_pressed, alt_pressed, shift_pressed in io.get_key_events(wnd_name):
+                    
                     if chr_key == 'q' or chr_key == 'z':
                         do_prev_count = 1 if not shift_pressed else 10
+                    elif chr_key == '-':
+                        zoom_factor = np.clip (zoom_factor-0.1, 0.1, 4.0)
+                        ed.set_screen_changed()
+                    elif chr_key == '=':
+                        zoom_factor = np.clip (zoom_factor+0.1, 0.1, 4.0)
+                        ed.set_screen_changed()
                     elif key == 27: #esc
                         is_exit = True
                         next = True
@@ -530,7 +542,11 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None):
                 
             if jobs_count() == 0:
                 if ed.switch_screen_changed():
-                    io.show_image (wnd_name, ed.make_screen() )
+                    screen = ed.make_screen()
+                    if zoom_factor != 1.0:
+                        h,w,c = screen.shape
+                        screen = cv2.resize ( screen, ( int(w*zoom_factor), int(h*zoom_factor) ) )
+                    io.show_image (wnd_name, screen )
 
             
         io.process_messages(0.005)
