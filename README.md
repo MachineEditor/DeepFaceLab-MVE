@@ -38,7 +38,9 @@ bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr
 
 (Chinese) QQ group 951138799 for ML/AI experts
 
-[deepfakes (Chinese)](https://deepfakes.com.cn/)
+[deepfakes (Chinese)](https://deepfakescn.com)
+
+[deepfakes (Chinese) (outdated) ](https://deepfakes.com.cn/)
 
 [mrdeepfakes (English)](https://mrdeepfakes.com/forums/)
 
