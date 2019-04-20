@@ -101,7 +101,7 @@ class ModelBase(object):
 
         if ask_sort_by_yaw:
             if (self.iter == 0):
-                self.options['sort_by_yaw'] = io.input_bool("Feed faces to network sorted by yaw? (y/n ?:help skip:n) : ", False, help_message="NN will not learn src face directions that don't match dst face directions." )
+                self.options['sort_by_yaw'] = io.input_bool("Feed faces to network sorted by yaw? (y/n ?:help skip:n) : ", False, help_message="NN will not learn src face directions that don't match dst face directions. Do not use if the dst face has hair that covers the jaw." )
             else:
                 self.options['sort_by_yaw'] = self.options.get('sort_by_yaw', False)
 
@@ -125,12 +125,12 @@ class ModelBase(object):
         if self.options['target_iter'] == 0:
             self.options.pop('target_iter')
 
-        self.batch_size = self.options['batch_size']
-        self.sort_by_yaw = self.options['sort_by_yaw']
-        self.random_flip = self.options['random_flip']
+        self.batch_size = self.options.get('batch_size',0)
+        self.sort_by_yaw = self.options.get('sort_by_yaw',False)
+        self.random_flip = self.options.get('random_flip',True)
 
-        self.src_scale_mod = self.options['src_scale_mod']
-        if self.src_scale_mod == 0:
+        self.src_scale_mod = self.options.get('src_scale_mod',0)
+        if self.src_scale_mod == 0 and 'src_scale_mod' in self.options:
             self.options.pop('src_scale_mod')
 
         self.onInitializeOptions(self.iter == 0, ask_override)
