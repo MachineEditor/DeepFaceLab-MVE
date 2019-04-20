@@ -13,18 +13,18 @@ class SampleProcessor(object):
         WARPED_TRANSFORMED         = 0x00000004,
         TRANSFORMED                = 0x00000008,
         LANDMARKS_ARRAY            = 0x00000010, #currently unused
-     
+
         RANDOM_CLOSE               = 0x00000020, #currently unused
         MORPH_TO_RANDOM_CLOSE      = 0x00000040, #currently unused
-     
+
         FACE_TYPE_HALF             = 0x00000100,
         FACE_TYPE_FULL             = 0x00000200,
         FACE_TYPE_HEAD             = 0x00000400,  #currently unused
         FACE_TYPE_AVATAR           = 0x00000800,  #currently unused
-      
+
         FACE_MASK_FULL             = 0x00001000,
         FACE_MASK_EYES             = 0x00002000, #currently unused
-      
+
         MODE_BGR                   = 0x00010000,  #BGR
         MODE_G                     = 0x00020000,  #Grayscale
         MODE_GGG                   = 0x00040000,  #3xGrayscale
@@ -35,7 +35,7 @@ class SampleProcessor(object):
 
     class Options(object):
         #motion_blur = [chance_int, range] - chance 0..100 to apply to face (not mask), and range [1..3] where 3 is highest power of motion blur
-        
+
         def __init__(self, random_flip = True, normalize_tanh = False, rotation_range=[-10,10], scale_range=[-0.05, 0.05], tx_range=[-0.05, 0.05], ty_range=[-0.05, 0.05], motion_blur=None ):
             self.random_flip = random_flip
             self.normalize_tanh = normalize_tanh
@@ -49,11 +49,11 @@ class SampleProcessor(object):
                 chance = np.clip(chance, 0, 100)
                 range = [3,5,7,9][ : np.clip(range, 0, 3)+1 ]
                 self.motion_blur = (chance, range)
-                
+
     @staticmethod
     def process (sample, sample_process_options, output_sample_types, debug):
         SPTF = SampleProcessor.TypeFlags
-        
+
         sample_bgr = sample.load_bgr()
         h,w,c = sample_bgr.shape
 
@@ -113,7 +113,7 @@ class SampleProcessor(object):
                 target_face_type = FaceType.HEAD
             elif f & SPTF.FACE_TYPE_AVATAR != 0:
                 target_face_type = FaceType.AVATAR
-            
+
             apply_motion_blur = f & SPTF.OPT_APPLY_MOTION_BLUR != 0
 
             if img_type == 4:
@@ -170,9 +170,16 @@ class SampleProcessor(object):
                             if np.random.randint(100) < chance :
                                 dim = mb_range[ np.random.randint(len(mb_range) ) ]
                                 img = imagelib.LinearMotionBlur (img, dim, np.random.randint(180) )
-                        
+
                         if face_mask_type == 1:
-                            mask = LandmarksProcessor.get_image_hull_mask (img.shape, cur_sample.landmarks, cur_sample.ie_polys)
+                            mask = cur_sample.load_fanseg_mask() #using fanseg_mask if exist
+
+                            if mask is None:
+                                mask = LandmarksProcessor.get_image_hull_mask (img.shape, cur_sample.landmarks)
+
+                            if cur_sample.ie_polys is not None:
+                                cur_sample.ie_polys.overlay_mask(mask)
+
                             img = np.concatenate( (img, mask ), -1 )
                         elif face_mask_type == 2:
                             mask = LandmarksProcessor.get_image_eye_mask (img.shape, cur_sample.landmarks)
@@ -202,7 +209,7 @@ class SampleProcessor(object):
                 img_mask = img[...,3:4]
 
                 if f & SPTF.MODE_BGR != 0:
-                    img = img
+                    img = img_bgr
                 elif f & SPTF.MODE_BGR_SHUFFLE != 0:
                     img_bgr = np.take (img_bgr, np.random.permutation(img_bgr.shape[-1]), axis=-1)
                     img = np.concatenate ( (img_bgr,img_mask) , -1 )

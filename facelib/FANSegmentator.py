@@ -1,15 +1,30 @@
-import numpy as np
 import os
-import cv2
+import pickle
+from functools import partial
 from pathlib import Path
-from nnlib import nnlib
+
+import cv2
+import numpy as np
+
 from interact import interact as io
+from nnlib import nnlib
+
+"""
+FANSegmentator is designed to segment faces aligned by 2DFAN-4 landmarks extractor.
+
+Dataset used to train located in official DFL mega.nz folder
+https://mega.nz/#F!b9MzCK4B!zEAG9txu7uaRUjXz9PtBqg
+
+using https://github.com/ternaus/TernausNet
+TernausNet: U-Net with VGG11 Encoder Pre-Trained on ImageNet for Image Segmentation
+"""
 
 class FANSegmentator(object):
+    VERSION = 1
     def __init__ (self, resolution, face_type_str, load_weights=True, weights_file_root=None, training=False):
         exec( nnlib.import_all(), locals(), globals() )
 
-        self.model = FANSegmentator.BuildModel(resolution, ngf=32)
+        self.model = FANSegmentator.BuildModel(resolution, ngf=64)
 
         if weights_file_root:
             weights_file_root = Path(weights_file_root)
@@ -22,14 +37,21 @@ class FANSegmentator(object):
             self.model.load_weights (str(self.weights_path))
         else:
             if training:
-                conv_weights_list = []
-                for layer in self.model.layers:
-                    if type(layer) == keras.layers.Conv2D:
-                        conv_weights_list += [layer.weights[0]]  # Conv2D kernel_weights
-                CAInitializerMP(conv_weights_list)
-        if training:
-            self.model.compile(loss='mse', optimizer=Adam(tf_cpu_mode=2))
+                try:
+                    with open( Path(__file__).parent / 'vgg11_enc_weights.npy', 'rb' ) as f:
+                        d = pickle.loads (f.read())
 
+                    for i in [0,3,6,8,11,13,16,18]:
+                        s = 'features.%d' % i
+
+                        self.model.get_layer (s).set_weights ( d[s] )
+                except:
+                    io.log_err("Unable to load VGG11 pretrained weights from vgg11_enc_weights.npy")
+
+        if training:
+            #self.model.compile(loss='mse', optimizer=Adam(tf_cpu_mode=2))
+            self.model.compile(loss='binary_crossentropy', optimizer=Adam(tf_cpu_mode=2), metrics=['accuracy'])
+            
     def __enter__(self):
         return self
 
@@ -42,66 +64,76 @@ class FANSegmentator(object):
     def train_on_batch(self, inp, outp):
         return self.model.train_on_batch(inp, outp)
 
-    def extract_from_bgr (self, input_image):
-        return np.clip ( (self.model.predict(input_image) + 1) / 2.0, 0, 1.0 )
+    def extract (self, input_image, is_input_tanh=False):
+        input_shape_len = len(input_image.shape)
+        if input_shape_len == 3:
+            input_image = input_image[np.newaxis,...]
+
+        result = np.clip ( self.model.predict( [input_image] ), 0, 1.0 )
+        result[result < 0.1] = 0 #get rid of noise
+
+        if input_shape_len == 3:
+            result = result[0]
+
+        return result
 
     @staticmethod
-    def BuildModel ( resolution, ngf=64):
+    def BuildModel ( resolution, ngf=64, norm='', act='lrelu'):
         exec( nnlib.import_all(), locals(), globals() )
         inp = Input ( (resolution,resolution,3) )
         x = inp
-        x = FANSegmentator.EncFlow(ngf=ngf)(x)
-        x = FANSegmentator.DecFlow(ngf=ngf)(x)
+        x = FANSegmentator.Flow(ngf=ngf, norm=norm, act=act)(x)
         model = Model(inp,x)
         return model
 
     @staticmethod
-    def EncFlow(ngf=64, num_downs=4):
+    def Flow(ngf=64, num_downs=4, norm='', act='lrelu'):
         exec( nnlib.import_all(), locals(), globals() )
-
-        use_bias = True
-        def XNormalization(x):
-            return InstanceNormalization (axis=3, gamma_initializer=RandomNormal(1., 0.02))(x)
-
-        def downscale (dim):
-            def func(x):
-                return LeakyReLU(0.1)(XNormalization(Conv2D(dim, kernel_size=5, strides=2, padding='same', kernel_initializer=RandomNormal(0, 0.02))(x)))
-            return func
 
         def func(input):
             x = input
 
-            result = []
-            for i in range(num_downs):
-               x = downscale ( min(ngf*(2**i), ngf*8) )(x)
-               result += [x]
+            x0 = x = Conv2D(ngf, kernel_size=3, strides=1, padding='same', activation='relu', name='features.0')(x)
+            x = MaxPooling2D()(x)
 
-            return result
-        return func
+            x1 = x = Conv2D(ngf*2, kernel_size=3, strides=1, padding='same', activation='relu', name='features.3')(x)
+            x = MaxPooling2D()(x)
 
-    @staticmethod
-    def DecFlow(output_nc=1, ngf=64, activation='tanh'):
-        exec (nnlib.import_all(), locals(), globals())
+            x = Conv2D(ngf*4, kernel_size=3, strides=1, padding='same', activation='relu', name='features.6')(x)
+            x2 = x = Conv2D(ngf*4, kernel_size=3, strides=1, padding='same', activation='relu', name='features.8')(x)
+            x = MaxPooling2D()(x)
 
-        use_bias = True
-        def XNormalization(x):
-            return InstanceNormalization (axis=3, gamma_initializer=RandomNormal(1., 0.02))(x)
+            x = Conv2D(ngf*8, kernel_size=3, strides=1, padding='same', activation='relu', name='features.11')(x)
+            x3 = x = Conv2D(ngf*8, kernel_size=3, strides=1, padding='same', activation='relu', name='features.13')(x)
+            x = MaxPooling2D()(x)
 
-        def Conv2D (filters, kernel_size, strides=(1, 1), padding='valid', data_format=None, dilation_rate=(1, 1), activation=None, use_bias=use_bias, kernel_initializer=RandomNormal(0, 0.02), bias_initializer='zeros', kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, bias_constraint=None):
-            return keras.layers.Conv2D( filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, data_format=data_format, dilation_rate=dilation_rate, activation=activation, use_bias=use_bias, kernel_initializer=kernel_initializer, bias_initializer=bias_initializer, kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer, activity_regularizer=activity_regularizer, kernel_constraint=kernel_constraint, bias_constraint=bias_constraint )
+            x = Conv2D(ngf*8, kernel_size=3, strides=1, padding='same', activation='relu', name='features.16')(x)
+            x4 = x = Conv2D(ngf*8, kernel_size=3, strides=1, padding='same', activation='relu', name='features.18')(x)
+            x = MaxPooling2D()(x)
 
-        def upscale (dim):
-            def func(x):
-                return SubpixelUpscaler()( LeakyReLU(0.1)(XNormalization(Conv2D(dim, kernel_size=3, strides=1, padding='same', kernel_initializer=RandomNormal(0, 0.02))(x))))
-            return func
+            x = Conv2D(ngf*8, kernel_size=3, strides=1, padding='same')(x)
 
-        def func(input):
-            input_len = len(input)
-            x = input[input_len-1]
-            for i in range(input_len-1, -1, -1):
-                x = upscale( min(ngf* (2**i) *4, ngf*8 *4 ) )(x)
-                if i != 0:
-                    x = Concatenate(axis=3)([ input[i-1] , x])
+            x = Conv2DTranspose (ngf*4, 3, strides=2, padding='same', activation='relu') (x)
+            x = Concatenate(axis=3)([ x, x4])
+            x = Conv2D (ngf*8, 3, strides=1, padding='same', activation='relu') (x)
 
-            return Conv2D(output_nc, 3, 1, 'same', activation=activation)(x)
+            x = Conv2DTranspose (ngf*4, 3, strides=2, padding='same', activation='relu') (x)
+            x = Concatenate(axis=3)([ x, x3])
+            x = Conv2D (ngf*8, 3, strides=1, padding='same', activation='relu') (x)
+
+            x = Conv2DTranspose (ngf*2, 3, strides=2, padding='same', activation='relu') (x)
+            x = Concatenate(axis=3)([ x, x2])
+            x = Conv2D (ngf*4, 3, strides=1, padding='same', activation='relu') (x)
+
+            x = Conv2DTranspose (ngf, 3, strides=2, padding='same', activation='relu') (x)
+            x = Concatenate(axis=3)([ x, x1])
+            x = Conv2D (ngf*2, 3, strides=1, padding='same', activation='relu') (x)
+
+            x = Conv2DTranspose (ngf // 2, 3, strides=2, padding='same', activation='relu') (x)
+            x = Concatenate(axis=3)([ x, x0])
+            x = Conv2D (ngf, 3, strides=1, padding='same', activation='relu') (x)
+
+            return Conv2D(1, 3, strides=1, padding='same', activation='sigmoid')(x)
+
+
         return func

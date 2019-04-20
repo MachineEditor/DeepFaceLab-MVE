@@ -8,9 +8,9 @@ class SubprocessFunctionCaller(object):
             self.c2s = c2s
             self.lock = lock
 
-        def __call__(self, value):
+        def __call__(self, *args, **kwargs):
             self.lock.acquire()
-            self.c2s.put (value)
+            self.c2s.put ( {'args':args, 'kwargs':kwargs} )
             while True:
                 if not self.s2c.empty():
                     obj = self.s2c.get()
@@ -27,7 +27,7 @@ class SubprocessFunctionCaller(object):
         def process_messages(self):
             while not self.c2s.empty():
                 obj = self.c2s.get()
-                result = self.func (obj)
+                result = self.func ( *obj['args'], **obj['kwargs'] )
                 self.s2c.put (result)
 
     @staticmethod

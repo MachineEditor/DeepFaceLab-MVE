@@ -15,7 +15,7 @@ output_sample_types = [
                       ]
 '''
 class SampleGeneratorFace(SampleGeneratorBase):
-    def __init__ (self, samples_path, debug, batch_size, sort_by_yaw=False, sort_by_yaw_target_samples_path=None, with_close_to_self=False, sample_process_options=SampleProcessor.Options(), output_sample_types=[], add_sample_idx=False, add_pitch=False, add_yaw=False, generators_count=2, generators_random_seed=None, **kwargs):
+    def __init__ (self, samples_path, debug, batch_size, sort_by_yaw=False, sort_by_yaw_target_samples_path=None, sample_process_options=SampleProcessor.Options(), output_sample_types=[], add_sample_idx=False, add_pitch=False, add_yaw=False, generators_count=2, generators_random_seed=None, **kwargs):
         super().__init__(samples_path, debug, batch_size)
         self.sample_process_options = sample_process_options
         self.output_sample_types = output_sample_types
@@ -27,8 +27,6 @@ class SampleGeneratorFace(SampleGeneratorBase):
             self.sample_type = SampleType.FACE_YAW_SORTED_AS_TARGET
         elif sort_by_yaw:
             self.sample_type = SampleType.FACE_YAW_SORTED
-        elif with_close_to_self:
-            self.sample_type = SampleType.FACE_WITH_CLOSE_TO_SELF
         else:
             self.sample_type = SampleType.FACE
 
@@ -82,7 +80,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
             if all ( [ samples[idx] == None for idx in samples_idxs] ):
                 raise ValueError('Not enough training data. Gather more faces!')
 
-        if self.sample_type == SampleType.FACE or self.sample_type == SampleType.FACE_WITH_CLOSE_TO_SELF:
+        if self.sample_type == SampleType.FACE:
             shuffle_idxs = []
         elif self.sample_type == SampleType.FACE_YAW_SORTED or self.sample_type == SampleType.FACE_YAW_SORTED_AS_TARGET:
             shuffle_idxs = []
@@ -102,12 +100,12 @@ class SampleGeneratorFace(SampleGeneratorBase):
 
                     if len(repeat_samples_idxs) > 0:
                         idx = repeat_samples_idxs.pop()
-                        if self.sample_type == SampleType.FACE or self.sample_type == SampleType.FACE_WITH_CLOSE_TO_SELF:
+                        if self.sample_type == SampleType.FACE:
                             sample = samples[idx]
                         elif self.sample_type == SampleType.FACE_YAW_SORTED or self.sample_type == SampleType.FACE_YAW_SORTED_AS_TARGET:
                             sample = samples[(idx >> 16) & 0xFFFF][idx & 0xFFFF]
                     else:
-                        if self.sample_type == SampleType.FACE or self.sample_type == SampleType.FACE_WITH_CLOSE_TO_SELF:
+                        if self.sample_type == SampleType.FACE:
                             if len(shuffle_idxs) == 0:
                                 shuffle_idxs = samples_idxs.copy()
                                 np.random.shuffle(shuffle_idxs)

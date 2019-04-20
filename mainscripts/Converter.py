@@ -1,19 +1,23 @@
 ﻿import sys
+import multiprocessing
+import operator
 import os
+import shutil
+import time
 import traceback
 from pathlib import Path
-from utils import Path_utils
+
 import cv2
-from utils.DFLPNG import DFLPNG
-from utils.DFLJPG import DFLJPG
-from utils.cv2_utils import *
-import shutil
 import numpy as np
-import time
-import multiprocessing
+
 from converters import Converter
-from joblib import Subprocessor, SubprocessFunctionCaller
 from interact import interact as io
+from joblib import SubprocessFunctionCaller, Subprocessor
+from utils import Path_utils
+from utils.cv2_utils import *
+from utils.DFLJPG import DFLJPG
+from utils.DFLPNG import DFLPNG
+from imagelib import normalize_channels
 
 class ConvertSubprocessor(Subprocessor):
     class Cli(Subprocessor.Cli):
@@ -26,6 +30,7 @@ class ConvertSubprocessor(Subprocessor):
             self.converter   = client_dict['converter']
             self.output_path = Path(client_dict['output_dir']) if 'output_dir' in client_dict.keys() else None
             self.alignments  = client_dict['alignments']
+            self.avatar_image_paths = client_dict['avatar_image_paths']
             self.debug       = client_dict['debug']
 
             #transfer and set stdin in order to work code.interact in debug subprocess
@@ -45,13 +50,15 @@ class ConvertSubprocessor(Subprocessor):
 
         #override
         def process_data(self, data):
-            filename_path = Path(data)
+            idx, filename = data
+            filename_path = Path(filename)
             files_processed = 1
             faces_processed = 0
 
             output_filename_path = self.output_path / (filename_path.stem + '.png')
 
-            if self.converter.type == Converter.TYPE_FACE and filename_path.stem not in self.alignments.keys():
+            if (self.converter.type == Converter.TYPE_FACE or self.converter.type == Converter.TYPE_FACE_AVATAR ) \
+                   and filename_path.stem not in self.alignments.keys():
                 if not self.debug:
                     self.log_info ( 'no faces found for %s, copying without faces' % (filename_path.name) )
 
@@ -62,19 +69,18 @@ class ConvertSubprocessor(Subprocessor):
                         cv2_imwrite ( str(output_filename_path), image )
             else:
                 image = (cv2_imread(str(filename_path)) / 255.0).astype(np.float32)
-                h,w,c = image.shape
-                if c > 3:
-                    image = image[...,0:3]
-
+                image = normalize_channels (image, 3)
+                
                 if self.converter.type == Converter.TYPE_IMAGE:
-                    image = self.converter.convert_image(image, None, self.debug)
+                    image = self.converter.cli_convert_image(image, None, self.debug)
+
                     if self.debug:
-                        raise NotImplementedError
-                        #for img in image:
-                        #    io.show_image ('Debug convert', img )
-                        #    cv2.waitKey(0)
+                        return (1, image)
+                        
                     faces_processed = 1
+                    
                 elif self.converter.type == Converter.TYPE_IMAGE_WITH_LANDMARKS:
+                    #currently unused
                     if filename_path.suffix == '.png':
                         dflimg = DFLPNG.load( str(filename_path) )
                     elif filename_path.suffix == '.jpg':
@@ -85,7 +91,7 @@ class ConvertSubprocessor(Subprocessor):
                     if dflimg is not None:
                         image_landmarks = dflimg.get_landmarks()
 
-                        image = self.converter.convert_image(image, image_landmarks, self.debug)
+                        image = self.converter.convert_image(image, image_landmarks, self.debug) 
 
                         if self.debug:
                             raise NotImplementedError
@@ -96,7 +102,13 @@ class ConvertSubprocessor(Subprocessor):
                     else:
                         self.log_err ("%s is not a dfl image file" % (filename_path.name) )
 
-                elif self.converter.type == Converter.TYPE_FACE:
+                elif self.converter.type == Converter.TYPE_FACE or self.converter.type == Converter.TYPE_FACE_AVATAR:
+                    
+                    ava_face = None
+                    if self.converter.type == Converter.TYPE_FACE_AVATAR:
+                        ava_filename_path = self.avatar_image_paths[idx]
+                        ava_face = (cv2_imread(str(ava_filename_path)) / 255.0).astype(np.float32)
+                        ava_face = normalize_channels (ava_face, 3)
                     faces = self.alignments[filename_path.stem]
 
                     if self.debug:
@@ -108,9 +120,9 @@ class ConvertSubprocessor(Subprocessor):
                                 self.log_info ( '\nConverting face_num [%d] in file [%s]' % (face_num, filename_path) )
 
                             if self.debug:
-                                debug_images += self.converter.cli_convert_face(image, image_landmarks, self.debug)
+                                debug_images += self.converter.cli_convert_face(image, image_landmarks, self.debug, avaperator_face_bgr=ava_face)
                             else:
-                                image = self.converter.cli_convert_face(image, image_landmarks, self.debug)
+                                image = self.converter.cli_convert_face(image, image_landmarks, self.debug, avaperator_face_bgr=ava_face)
 
                         except Exception as e:
                             e_str = traceback.format_exc()
@@ -133,16 +145,19 @@ class ConvertSubprocessor(Subprocessor):
         #overridable
         def get_data_name (self, data):
             #return string identificator of your data
-            return data
+            idx, filename = data
+            return filename
 
     #override
-    def __init__(self, converter, input_path_image_paths, output_path, alignments, debug = False):
+    def __init__(self, converter, input_path_image_paths, output_path, alignments, avatar_image_paths=None, debug = False):
         super().__init__('Converter', ConvertSubprocessor.Cli, 86400 if debug == True else 60)
 
         self.converter = converter
         self.input_data = self.input_path_image_paths = input_path_image_paths
+        self.input_data_idxs = [ *range(len(self.input_data)) ]
         self.output_path = output_path
         self.alignments = alignments
+        self.avatar_image_paths = avatar_image_paths
         self.debug = debug
 
         self.files_processed = 0
@@ -158,6 +173,7 @@ class ConvertSubprocessor(Subprocessor):
                                       'converter' : self.converter,
                                       'output_dir' : str(self.output_path),
                                       'alignments' : self.alignments,
+                                      'avatar_image_paths' : self.avatar_image_paths,
                                       'debug': self.debug,
                                       'stdin_fd': sys.stdin.fileno() if self.debug else None
                                       }
@@ -167,7 +183,7 @@ class ConvertSubprocessor(Subprocessor):
         if self.debug:
             io.named_window ("Debug convert")
 
-        io.progress_bar ("Converting", len (self.input_data) )
+        io.progress_bar ("Converting", len (self.input_data_idxs) )
 
     #overridable optional
     def on_clients_finalized(self):
@@ -178,13 +194,15 @@ class ConvertSubprocessor(Subprocessor):
 
     #override
     def get_data(self, host_dict):
-        if len (self.input_data) > 0:
-            return self.input_data.pop(0)
+        if len (self.input_data_idxs) > 0:
+            idx = self.input_data_idxs.pop(0)
+            return (idx, self.input_data[idx])
         return None
 
     #override
     def on_data_return (self, host_dict, data):
-        self.input_data.insert(0, data)
+        idx, filename = data
+        self.input_data_idxs.insert(0, idx)
 
     #override
     def on_result (self, host_dict, data, result):
@@ -209,7 +227,8 @@ def main (args, device_args):
     io.log_info ("Running converter.\r\n")
 
     aligned_dir = args.get('aligned_dir', None)
-
+    avaperator_aligned_dir = args.get('avaperator_aligned_dir', None)
+    
     try:
         input_path = Path(args['input_dir'])
         output_path = Path(args['output_dir'])
@@ -233,9 +252,10 @@ def main (args, device_args):
         model = models.import_model( args['model_name'] )(model_path, device_args=device_args)
         converter = model.get_converter()
 
+        input_path_image_paths = Path_utils.get_image_paths(input_path)
         alignments = None
-
-        if converter.type == Converter.TYPE_FACE:
+        avatar_image_paths = None
+        if converter.type == Converter.TYPE_FACE or converter.type == Converter.TYPE_FACE_AVATAR:
             if aligned_dir is None:
                 io.log_err('Aligned directory not found. Please ensure it exists.')
                 return
@@ -267,12 +287,45 @@ def main (args, device_args):
                     alignments[ source_filename_stem ] = []
 
                 alignments[ source_filename_stem ].append (dflimg.get_source_landmarks())
+        
+        
+        if converter.type == Converter.TYPE_FACE_AVATAR:
+            if avaperator_aligned_dir is None:
+                io.log_err('Avatar operator aligned directory not found. Please ensure it exists.')
+                return
 
+            avaperator_aligned_path = Path(avaperator_aligned_dir)
+            if not avaperator_aligned_path.exists():
+                io.log_err('Avatar operator aligned directory not found. Please ensure it exists.')
+                return
+
+            avatar_image_paths = []
+            for filename in io.progress_bar_generator( Path_utils.get_image_paths(avaperator_aligned_path) , "Sorting avaperator faces"):
+                filepath = Path(filename)
+                if filepath.suffix == '.png':
+                    dflimg = DFLPNG.load( str(filepath) )
+                elif filepath.suffix == '.jpg':
+                    dflimg = DFLJPG.load ( str(filepath) )
+                else:
+                    dflimg = None
+
+                if dflimg is None:
+                    io.log_err ("Fatal error: %s is not a dfl image file" % (filepath.name) )
+                    return
+                
+                avatar_image_paths += [ (filename, dflimg.get_source_filename() ) ]
+            avatar_image_paths = [ p[0] for p in sorted(avatar_image_paths, key=operator.itemgetter(1)) ]
+                    
+            if len(input_path_image_paths) < len(avatar_image_paths):
+                io.log_err("Input faces count must be >= avatar operator faces count.")
+                return
+                
         files_processed, faces_processed = ConvertSubprocessor (
                     converter              = converter,
-                    input_path_image_paths = Path_utils.get_image_paths(input_path),
+                    input_path_image_paths = input_path_image_paths,                    
                     output_path            = output_path,
                     alignments             = alignments,
+                    avatar_image_paths     = avatar_image_paths,
                     debug                  = args.get('debug',False)
                     ).run()
 

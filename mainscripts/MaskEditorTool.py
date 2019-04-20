@@ -397,13 +397,17 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None):
             else:
                 lmrks = dflimg.get_landmarks()
                 ie_polys = dflimg.get_ie_polys()
+                fanseg_mask = dflimg.get_fanseg_mask()
 
                 if filepath.name in cached_images:
                     img = cached_images[filepath.name]
                 else:
                     img = cached_images[filepath.name] = cv2_imread(str(filepath)) / 255.0
 
-                mask = LandmarksProcessor.get_image_hull_mask( img.shape, lmrks)
+                if fanseg_mask is not None:
+                    mask = fanseg_mask
+                else:
+                    mask = LandmarksProcessor.get_image_hull_mask( img.shape, lmrks)
         else:
             img = np.zeros ( (target_wh,target_wh,3) )
             mask = np.ones ( (target_wh,target_wh,3) )

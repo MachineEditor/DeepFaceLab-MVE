@@ -1,12 +1,15 @@
-PNG_HEADER = b"\x89PNG\r\n\x1a\n"
-
+import pickle
 import string
 import struct
 import zlib
-import pickle
+
+import cv2
 import numpy as np
+
 from facelib import FaceType
 from imagelib import IEPolys
+
+PNG_HEADER = b"\x89PNG\r\n\x1a\n"
 
 class Chunk(object):
     def __init__(self, name=None, data=None):
@@ -219,7 +222,7 @@ class DFLPNG(object):
         self.data = b""
         self.length = 0
         self.chunks = []
-        self.fcwp_dict = None
+        self.dfl_dict = None
 
     @staticmethod
     def load_raw(filename):
@@ -252,12 +255,19 @@ class DFLPNG(object):
     def load(filename):
         try:
             inst = DFLPNG.load_raw (filename)
-            inst.fcwp_dict = inst.getDFLDictData()
+            inst.dfl_dict = inst.getDFLDictData()
 
-            if (inst.fcwp_dict is not None) and ('face_type' not in inst.fcwp_dict.keys()):
-                inst.fcwp_dict['face_type'] = FaceType.toString (FaceType.FULL)
+            if inst.dfl_dict is not None:
+                if 'face_type' not in inst.dfl_dict:
+                    inst.dfl_dict['face_type'] = FaceType.toString (FaceType.FULL)
 
-            if inst.fcwp_dict == None:
+                if 'fanseg_mask' in inst.dfl_dict:
+                    fanseg_mask = inst.dfl_dict['fanseg_mask']
+                    if fanseg_mask is not None:
+                        numpyarray = np.asarray( inst.dfl_dict['fanseg_mask'], dtype=np.uint8)
+                        inst.dfl_dict['fanseg_mask'] = cv2.imdecode(numpyarray, cv2.IMREAD_UNCHANGED)
+
+            if inst.dfl_dict == None:
                 return None
 
             return inst
@@ -272,8 +282,20 @@ class DFLPNG(object):
                              source_filename=None,
                              source_rect=None,
                              source_landmarks=None,
-                             image_to_face_mat=None
+                             image_to_face_mat=None,
+                             fanseg_mask=None, **kwargs
                    ):
+
+        if fanseg_mask is not None:
+            fanseg_mask = np.clip ( (fanseg_mask*255).astype(np.uint8), 0, 255 )
+
+            ret, buf = cv2.imencode( '.jpg', fanseg_mask, [int(cv2.IMWRITE_JPEG_QUALITY), 85] )
+
+            if ret and len(buf) < 60000:
+                fanseg_mask = buf
+            else:
+                io.log_err("Unable to encode fanseg_mask for %s" % (filename) )
+                fanseg_mask = None
 
         inst = DFLPNG.load_raw (filename)
         inst.setDFLDictData ({
@@ -283,7 +305,8 @@ class DFLPNG(object):
                                 'source_filename': source_filename,
                                 'source_rect': source_rect,
                                 'source_landmarks': source_landmarks,
-                                'image_to_face_mat':image_to_face_mat
+                                'image_to_face_mat':image_to_face_mat,
+                                'fanseg_mask' : fanseg_mask,
                              })
 
         try:
@@ -292,13 +315,14 @@ class DFLPNG(object):
         except:
             raise Exception( 'cannot save %s' % (filename) )
 
-    def embed_and_set(self, filename, face_type=None,
-                                landmarks=None,
-                                ie_polys=None,
-                                source_filename=None,
-                                source_rect=None,
-                                source_landmarks=None,
-                                image_to_face_mat=None
+    def embed_and_set(self, filename,   face_type=None,
+                                        landmarks=None,
+                                        ie_polys=None,
+                                        source_filename=None,
+                                        source_rect=None,
+                                        source_landmarks=None,
+                                        image_to_face_mat=None,
+                                        fanseg_mask=None, **kwargs
                         ):
         if face_type is None: face_type = self.get_face_type()
         if landmarks is None: landmarks = self.get_landmarks()
@@ -307,13 +331,18 @@ class DFLPNG(object):
         if source_rect is None: source_rect = self.get_source_rect()
         if source_landmarks is None: source_landmarks = self.get_source_landmarks()
         if image_to_face_mat is None: image_to_face_mat = self.get_image_to_face_mat()
+        if fanseg_mask is None: fanseg_mask = self.get_fanseg_mask()
         DFLPNG.embed_data (filename, face_type=face_type,
                                      landmarks=landmarks,
                                      ie_polys=ie_polys,
                                      source_filename=source_filename,
                                      source_rect=source_rect,
                                      source_landmarks=source_landmarks,
-                                     image_to_face_mat=image_to_face_mat)
+                                     image_to_face_mat=image_to_face_mat,
+                                     fanseg_mask=fanseg_mask)
+
+    def remove_fanseg_mask(self):
+        self.dfl_dict['fanseg_mask'] = None
 
     def dump(self):
         data = PNG_HEADER
@@ -352,17 +381,21 @@ class DFLPNG(object):
             chunk = DFLChunk(dict_data)
             self.chunks.insert(-1, chunk)
 
-    def get_face_type(self): return self.fcwp_dict['face_type']
-    def get_landmarks(self): return np.array ( self.fcwp_dict['landmarks'] )
-    def get_ie_polys(self): return IEPolys.load(self.fcwp_dict.get('ie_polys',None))
-    def get_source_filename(self): return self.fcwp_dict['source_filename']
-    def get_source_rect(self): return self.fcwp_dict['source_rect']
-    def get_source_landmarks(self): return np.array ( self.fcwp_dict['source_landmarks'] )
+    def get_face_type(self): return self.dfl_dict['face_type']
+    def get_landmarks(self): return np.array ( self.dfl_dict['landmarks'] )
+    def get_ie_polys(self): return IEPolys.load(self.dfl_dict.get('ie_polys',None))
+    def get_source_filename(self): return self.dfl_dict['source_filename']
+    def get_source_rect(self): return self.dfl_dict['source_rect']
+    def get_source_landmarks(self): return np.array ( self.dfl_dict['source_landmarks'] )
     def get_image_to_face_mat(self):
-        mat = self.fcwp_dict.get ('image_to_face_mat', None)
+        mat = self.dfl_dict.get ('image_to_face_mat', None)
         if mat is not None:
             return np.array (mat)
         return None
-
+    def get_fanseg_mask(self):
+        fanseg_mask = self.dfl_dict.get ('fanseg_mask', None)
+        if fanseg_mask is not None:
+            return np.clip ( np.array (fanseg_mask) / 255.0, 0.0, 1.0 )[...,np.newaxis]
+        return None
     def __str__(self):
         return "<PNG length={length} chunks={}>".format(len(self.chunks), **self.__dict__)

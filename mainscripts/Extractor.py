@@ -10,11 +10,13 @@ import mathlib
 import imagelib
 import cv2
 from utils import Path_utils
+from utils.DFLPNG import DFLPNG
 from utils.DFLJPG import DFLJPG
 from utils.cv2_utils import *
 import facelib
 from facelib import FaceType
 from facelib import LandmarksProcessor
+from facelib import FANSegmentator
 from nnlib import nnlib
 from joblib import Subprocessor
 from interact import interact as io
@@ -79,7 +81,12 @@ class ExtractSubprocessor(Subprocessor):
                     self.second_pass_e.__enter__()
                 else:
                     self.second_pass_e = None
-
+                    
+            elif self.type == 'fanseg':
+                nnlib.import_all (device_config)
+                self.e = facelib.FANSegmentator(256, FaceType.toString(FaceType.FULL) )
+                self.e.__enter__()
+                    
             elif self.type == 'final':
                 pass
 
@@ -124,6 +131,8 @@ class ExtractSubprocessor(Subprocessor):
             h, w, ch = image.shape
             if h == w:
                 #extracting from already extracted jpg image?
+                if filename_path.suffix == '.png':
+                    src_dflimg = DFLPNG.load ( str(filename_path) )
                 if filename_path.suffix == '.jpg':
                     src_dflimg = DFLJPG.load ( str(filename_path) )
 
@@ -253,15 +262,22 @@ class ExtractSubprocessor(Subprocessor):
                     cv2_imwrite(debug_output_file, debug_image, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )
 
                 return data
-
-
+                
+            elif self.type == 'fanseg':
+                if src_dflimg is not None:
+                    fanseg_mask = self.e.extract( image / 255.0 )
+                    src_dflimg.embed_and_set( filename_path_str, 
+                                              fanseg_mask=fanseg_mask,
+                                              #fanseg_mask_ver=FANSegmentator.VERSION,
+                                              )
+        
         #overridable
         def get_data_name (self, data):
             #return string identificator of your data
             return data.filename
 
     #override
-    def __init__(self, input_data, type, image_size, face_type, debug_dir=None, multi_gpu=False, cpu_only=False, manual=False, manual_window_size=0, final_output_path=None):
+    def __init__(self, input_data, type, image_size=None, face_type=None, debug_dir=None, multi_gpu=False, cpu_only=False, manual=False, manual_window_size=0, final_output_path=None):
         self.input_data = input_data
         self.type = type
         self.image_size = image_size
@@ -561,7 +577,7 @@ class ExtractSubprocessor(Subprocessor):
         if 'cpu' in backend:
             cpu_only = True
 
-        if 'rects' in type or type == 'landmarks':
+        if 'rects' in type or type == 'landmarks' or type == 'fanseg':
             if not cpu_only and type == 'rects-mt' and backend == "plaidML": #plaidML works with MT very slowly
                 cpu_only = True
 
@@ -583,7 +599,7 @@ class ExtractSubprocessor(Subprocessor):
                     dev_name = nnlib.device.getDeviceName(idx)
                     dev_vram = nnlib.device.getDeviceVRAMTotalGb(idx)
 
-                    if not manual and (type == 'rects-dlib' or type == 'rects-mt'):
+                    if not manual and (type == 'rects-dlib' or type == 'rects-mt' ):
                         for i in range ( int (max (1, dev_vram / 2) ) ):
                             result += [ (idx, 'GPU', '%s #%d' % (dev_name,i) , dev_vram) ]
                     else:
@@ -658,7 +674,34 @@ class DeletedFilesSearcherSubprocessor(Subprocessor):
         return self.result
 
 
+#currently unused
+def extract_fanseg(input_dir, device_args={} ):
+    multi_gpu = device_args.get('multi_gpu', False)
+    cpu_only = device_args.get('cpu_only', False)
+    
+    input_path = Path(input_dir)
+    if not input_path.exists():
+        raise ValueError('Input directory not found. Please ensure it exists.')
+    
+    paths_to_extract = []
+    for filename in Path_utils.get_image_paths(input_path) :
+        filepath = Path(filename)
+        if filepath.suffix == '.png':
+            dflimg = DFLPNG.load( str(filepath) )
+        elif filepath.suffix == '.jpg':
+            dflimg = DFLJPG.load ( str(filepath) )
+        else:
+            dflimg = None
 
+        if dflimg is not None:
+            paths_to_extract.append (filepath)
+    
+    paths_to_extract_len = len(paths_to_extract)
+    if paths_to_extract_len > 0:
+        io.log_info ("Performing extract fanseg for %d files..." % (paths_to_extract_len) )
+        data = ExtractSubprocessor ([ ExtractSubprocessor.Data(filename) for filename in paths_to_extract ], 'fanseg', multi_gpu=multi_gpu, cpu_only=cpu_only).run()
+
+    
 def main(input_dir,
          output_dir,
          debug_dir=None,

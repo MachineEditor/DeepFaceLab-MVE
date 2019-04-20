@@ -52,7 +52,7 @@ Input = KL.Input
 
 Dense = KL.Dense
 Conv2D = nnlib.Conv2D
-Conv2DTranspose = KL.Conv2DTranspose
+Conv2DTranspose = nnlib.Conv2DTranspose
 SeparableConv2D = KL.SeparableConv2D
 MaxPooling2D = KL.MaxPooling2D
 UpSampling2D = KL.UpSampling2D
@@ -695,6 +695,26 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                     x = ReflectionPadding2D( self.pad ) (x)
                 return self.func(x)
         nnlib.Conv2D = Conv2D
+        
+        class Conv2DTranspose():
+            def __init__ (self, *args, **kwargs):
+                self.reflect_pad = False
+                padding = kwargs.get('padding','')
+                if padding == 'zero':
+                    kwargs['padding'] = 'same'
+                if padding == 'reflect':
+                    kernel_size = kwargs['kernel_size']
+                    if (kernel_size % 2) == 1:
+                        self.pad = (kernel_size // 2,)*2
+                        kwargs['padding'] = 'valid'
+                        self.reflect_pad = True
+                self.func = keras.layers.Conv2DTranspose (*args, **kwargs)
+
+            def __call__(self,x):
+                if self.reflect_pad:
+                    x = ReflectionPadding2D( self.pad ) (x)
+                return self.func(x)
+        nnlib.Conv2DTranspose = Conv2DTranspose
 
     @staticmethod
     def import_keras_contrib(device_config):

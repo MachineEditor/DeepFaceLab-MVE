@@ -274,28 +274,34 @@ has_nvml_cap = False
 #- CUDA build of DFL
 has_nvidia_device = os.environ.get("DFL_FORCE_HAS_NVIDIA_DEVICE", "0") == "1"
 
-plaidML_devices = []
-
-# Using plaidML OpenCL backend to determine system devices and has_nvidia_device
-try:
-    os.environ['PLAIDML_EXPERIMENTAL'] = 'false' #this enables work plaidML without run 'plaidml-setup'
-    import plaidml
-    ctx = plaidml.Context()
-    for d in plaidml.devices(ctx, return_all=True)[0]:
-        details = json.loads(d.details)
-        if details['type'] == 'CPU': #skipping opencl-CPU
-            continue
-        if 'nvidia' in details['vendor'].lower():
-            has_nvidia_device = True
-        plaidML_devices += [ {'id':d.id,
-                              'globalMemSize' : int(details['globalMemSize']),
-                              'description' : d.description.decode()
-                           }]
-    ctx.shutdown()
-except:
-    pass
-
-plaidML_devices_count = len(plaidML_devices)
+plaidML_devices = None
+def get_plaidML_devices():
+    global plaidML_devices
+    global has_nvidia_device
+    if plaidML_devices is None:
+        plaidML_devices = []
+        # Using plaidML OpenCL backend to determine system devices and has_nvidia_device
+        try:
+            os.environ['PLAIDML_EXPERIMENTAL'] = 'false' #this enables work plaidML without run 'plaidml-setup'
+            import plaidml
+            ctx = plaidml.Context()
+            for d in plaidml.devices(ctx, return_all=True)[0]:
+                details = json.loads(d.details)
+                if details['type'] == 'CPU': #skipping opencl-CPU
+                    continue
+                if 'nvidia' in details['vendor'].lower():
+                    has_nvidia_device = True
+                plaidML_devices += [ {'id':d.id,
+                                    'globalMemSize' : int(details['globalMemSize']),
+                                    'description' : d.description.decode()
+                                }]
+            ctx.shutdown()
+        except:
+            pass
+    return plaidML_devices
+ 
+if not has_nvidia_device:
+    get_plaidML_devices()    
 
 #choosing backend
 
@@ -324,7 +330,7 @@ if device.backend is None and not force_tf_cpu:
 
 if force_plaidML or (device.backend is None and not has_nvidia_device):
     #tensorflow backend was failed without has_nvidia_device , or forcing plaidML, trying to use plaidML backend
-    if plaidML_devices_count == 0:
+    if len(get_plaidML_devices()) == 0:
         #print ("plaidML: No capable OpenCL devices found. Falling back to tensorflow backend.")
         device.backend = None
     else:
