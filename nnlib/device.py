@@ -301,7 +301,7 @@ def get_plaidML_devices():
     return plaidML_devices
  
 if not has_nvidia_device:
-    get_plaidML_devices()    
+    get_plaidML_devices()
 
 #choosing backend
 
@@ -335,6 +335,7 @@ if force_plaidML or (device.backend is None and not has_nvidia_device):
         device.backend = None
     else:
         device.backend = "plaidML"
+        plaidML_devices_count = len(get_plaidML_devices())
 
 if device.backend is None:
     if force_tf_cpu:
