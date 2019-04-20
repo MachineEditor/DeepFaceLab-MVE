@@ -211,7 +211,8 @@ class SampleProcessor(object):
                 if f & SPTF.MODE_BGR != 0:
                     img = img_bgr
                 elif f & SPTF.MODE_BGR_SHUFFLE != 0:
-                    img_bgr = np.take (img_bgr, np.random.permutation(img_bgr.shape[-1]), axis=-1)
+                    rnd_state = np.random.RandomState (sample_rnd_seed)
+                    img_bgr = np.take (img_bgr, rnd_state.permutation(img_bgr.shape[-1]), axis=-1)
                     img = np.concatenate ( (img_bgr,img_mask) , -1 )
                 elif f & SPTF.MODE_G != 0:
                     img = np.concatenate ( (np.expand_dims(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY),-1),img_mask) , -1 )
