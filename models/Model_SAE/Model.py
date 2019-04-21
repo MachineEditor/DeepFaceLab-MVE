@@ -127,7 +127,7 @@ class SAEModel(ModelBase):
 
         padding = 'reflect' if self.options['remove_gray_border'] else 'zero'
         common_flow_kwargs = { 'padding': padding,
-                               'norm': '',
+                               'norm': 'bn',
                                'act':'' }
 
         weights_to_load = []
