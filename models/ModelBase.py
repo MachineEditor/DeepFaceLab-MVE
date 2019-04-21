@@ -117,12 +117,12 @@ class ModelBase(object):
             else:
                 self.options['src_scale_mod'] = self.options.get('src_scale_mod', 0)
 
-        self.write_preview_history = self.options['write_preview_history']
-        if not self.options['write_preview_history']:
+        self.write_preview_history = self.options.get('write_preview_history', False)
+        if not self.write_preview_history and 'write_preview_history' in self.options:
             self.options.pop('write_preview_history')
 
-        self.target_iter = self.options['target_iter']
-        if self.options['target_iter'] == 0:
+        self.target_iter = self.options.get('target_iter',0)
+        if self.target_iter == 0 and 'target_iter' in self.options:
             self.options.pop('target_iter')
 
         self.batch_size = self.options.get('batch_size',0)
