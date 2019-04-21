@@ -374,7 +374,7 @@ class ModelBase(object):
 
             if io.is_colab():
                 previews = self.get_previews()
-                for i in range(previews):
+                for i in range(len(previews)):
                     name, bgr = previews[i]
                     plist += [ (bgr, self.get_strpath_storage_for_file('preview_%s.jpg' % (name) ) ) ]
 
