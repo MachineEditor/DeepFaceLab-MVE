@@ -373,7 +373,10 @@ class ModelBase(object):
             plist = []
 
             if io.is_colab():
-                plist += [ (self.get_previews()[0][1], self.get_strpath_storage_for_file('preview.jpg') ) ]
+                previews = self.get_previews()
+                for i in range(previews):
+                    name, bgr = previews[i]
+                    plist += [ (bgr, self.get_strpath_storage_for_file('preview_%s.jpg' % (name) ) ) ]
 
             if self.write_preview_history:
                 plist += [ (self.get_static_preview(), str (self.preview_history_path / ('%.6d.jpg' % (self.iter))) ) ]
