@@ -539,7 +539,7 @@ class SAEModel(ModelBase):
         return func
 
     @staticmethod
-    def LIAEDecFlow(output_nc,ch_dims, multiscale_count=1, add_residual_blocks=False, padding='zero', norm='', **kwargs):
+    def LIAEDecFlow(output_nc,ch_dims, multiscale_count=1, add_residual_blocks=False, **kwargs):
         exec (nnlib.import_all(), locals(), globals())
         upscale = partial(SAEModel.upscale, **kwargs)
         to_bgr = partial(SAEModel.to_bgr, **kwargs)
