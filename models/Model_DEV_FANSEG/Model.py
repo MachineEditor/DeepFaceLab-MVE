@@ -21,7 +21,7 @@ class Model(ModelBase):
     def onInitializeOptions(self, is_first_run, ask_override):            
         default_face_type = 'f'
         if is_first_run:
-            self.options['face_type'] = io.input_str ("Half or Full face? (h/f, ?:help skip:f) : ", default_face_type, ['h','f'], help_message="Half face has better resolution, but covers less area of cheeks.").lower()
+            self.options['face_type'] = io.input_str ("Half or Full face? (h/f, ?:help skip:f) : ", default_face_type, ['h','f'], help_message="").lower()
         else:
             self.options['face_type'] = self.options.get('face_type', default_face_type)
      
@@ -48,12 +48,12 @@ class Model(ModelBase):
                     SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size, 
                             sample_process_options=SampleProcessor.Options(random_flip=True, motion_blur = [25, 1] ), 
                             output_sample_types=[ [f.WARPED_TRANSFORMED | face_type | f.MODE_BGR_SHUFFLE | f.OPT_APPLY_MOTION_BLUR, self.resolution],
-                                                  [f.WARPED_TRANSFORMED | face_type | f.MODE_M | f.FACE_MASK_FULL, self.resolution]
+                                                  [f.WARPED_TRANSFORMED | face_type | f.MODE_M | f.FACE_MASK_FULL, self.resolution],                                          
                                                 ]),
                                                 
                     SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size, 
                             sample_process_options=SampleProcessor.Options(random_flip=True ), 
-                            output_sample_types=[ [f.TRANSFORMED | face_type | f.MODE_BGR_SHUFFLE, self.resolution]
+                            output_sample_types=[ [f.TRANSFORMED | face_type | f.MODE_BGR_SHUFFLE, self.resolution],
                                                 ])
                                                ])
                 
@@ -71,8 +71,8 @@ class Model(ModelBase):
         
     #override
     def onGetPreview(self, sample):
-        test_A   = sample[0][0][0:4] #first 4 samples
-        test_B   = sample[1][0][0:4] #first 4 samples
+        test_A      = sample[0][0][0:4] #first 4 samples
+        test_B      = sample[1][0][0:4] #first 4 samples
         
         mAA = self.fan_seg.extract(test_A)
         mBB = self.fan_seg.extract(test_B)

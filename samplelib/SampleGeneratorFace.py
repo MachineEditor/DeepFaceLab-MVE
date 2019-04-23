@@ -10,7 +10,7 @@ from samplelib import SampleType, SampleProcessor, SampleLoader, SampleGenerator
 '''
 arg
 output_sample_types = [
-                        [SampleProcessor.TypeFlags, size, (optional)random_sub_size] ,
+                        [SampleProcessor.TypeFlags, size, (optional) {} opts ] ,
                         ...
                       ]
 '''

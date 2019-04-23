@@ -31,6 +31,8 @@ class SampleProcessor(object):
         MODE_GGG                   = 0x00040000,  #3xGrayscale
         MODE_M                     = 0x00080000,  #mask only
         MODE_BGR_SHUFFLE           = 0x00100000,  #BGR shuffle
+        
+        
 
         OPT_APPLY_MOTION_BLUR      = 0x10000000,
 
@@ -79,7 +81,10 @@ class SampleProcessor(object):
         for sample_type in output_sample_types:
             f = sample_type[0]
             size = 0 if len (sample_type) < 2 else sample_type[1]
-            random_sub_size = 0 if len (sample_type) < 3 else min( sample_type[2] , size)
+            opts = {} if len (sample_type) < 3 else sample_type[2]
+            
+            random_sub_size = opts.get('random_sub_size', 0)
+            normalize_std_dev = opts.get('normalize_std_dev', False)
 
             if f & SPTF.SOURCE != 0:
                 img_type = 0
@@ -220,6 +225,9 @@ class SampleProcessor(object):
 
                 img_bgr  = img[...,0:3]
                 img_mask = img[...,3:4]
+                
+                if normalize_std_dev:
+                    img_bgr = (img_bgr - img_bgr.mean( (0,1)) ) / img_bgr.std( (0,1) )
 
                 if f & SPTF.MODE_BGR != 0:
                     img = img_bgr
