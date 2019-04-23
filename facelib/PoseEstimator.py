@@ -19,7 +19,7 @@ class PoseEstimator(object):
     def __init__ (self, resolution, face_type_str, load_weights=True, weights_file_root=None, training=False):
         exec( nnlib.import_all(), locals(), globals() )
 
-        self.class_num = 180
+        self.class_num = 91
         
         self.model = PoseEstimator.BuildModel(resolution, class_num=self.class_num)
 
@@ -35,9 +35,7 @@ class PoseEstimator(object):
 
         idx_tensor = np.array([idx for idx in range(self.class_num)], dtype=K.floatx() )
         idx_tensor = K.constant(idx_tensor)
-        
-        #inp_t = Input ( (resolution,resolution,3) )
-        
+
         inp_t, = self.model.inputs
         pitch_bins_t, yaw_bins_t, roll_bins_t = self.model.outputs
         
@@ -51,22 +49,26 @@ class PoseEstimator(object):
         
         inp_roll_bins_t = Input ( (self.class_num,) )
         inp_roll_t = Input ( (1,) )
+        
+        alpha = 0.001
 
         pitch_loss = K.categorical_crossentropy(inp_pitch_bins_t, pitch_bins_t) \
-                        + 0.001 * K.mean(K.square( inp_pitch_t - pitch_t), -1)
+                        + alpha * K.mean(K.square( inp_pitch_t - pitch_t), -1)
         
         yaw_loss = K.categorical_crossentropy(inp_yaw_bins_t, yaw_bins_t) \
-                        + 0.001 * K.mean(K.square( inp_yaw_t - yaw_t), -1)
+                        + alpha * K.mean(K.square( inp_yaw_t - yaw_t), -1)
                         
         roll_loss = K.categorical_crossentropy(inp_roll_bins_t, roll_bins_t) \
-                        + 0.001 * K.mean(K.square( inp_roll_t - roll_t), -1)
+                        + alpha * K.mean(K.square( inp_roll_t - roll_t), -1)
         
         
         loss = K.mean( pitch_loss + yaw_loss + roll_loss )
-
+    
+        opt = Adam(lr=0.001, tf_cpu_mode=2)
+        
         if training:
             self.train = K.function ([inp_t, inp_pitch_bins_t, inp_pitch_t, inp_yaw_bins_t, inp_yaw_t, inp_roll_bins_t, inp_roll_t],
-                                     [loss], Adam(tf_cpu_mode=2).get_updates(loss, self.model.trainable_weights) )
+                                     [loss], opt.get_updates(loss, self.model.trainable_weights) )
 
         self.view = K.function ([inp_t], [pitch_t, yaw_t, roll_t] )
             
@@ -80,7 +82,7 @@ class PoseEstimator(object):
         self.model.save_weights (str(self.weights_path))
 
     def train_on_batch(self, imgs, pitch_yaw_roll):
-        c = ( (pitch_yaw_roll+1) * 90.0 ).astype(np.int).astype(K.floatx())
+        c = ( (pitch_yaw_roll+1) * 45.0 ).astype(np.int).astype(K.floatx())
         
         inp_pitch = c[:,0:1]
         inp_yaw = c[:,1:2]
@@ -104,7 +106,7 @@ class PoseEstimator(object):
 
         pitch, yaw, roll = self.view( [input_image] )
         result = np.concatenate( (pitch[...,np.newaxis], yaw[...,np.newaxis], roll[...,np.newaxis]), -1 )
-        result = np.clip ( result / 90.0 - 1, -1, 1 )
+        result = np.clip ( result / 45.0 - 1, -1.0, 1.0 )
 
         if input_shape_len == 3:
             result = result[0]
@@ -126,7 +128,15 @@ class PoseEstimator(object):
 
         def func(input):
             x = input
-
+            
+            # resnet50 = keras.applications.ResNet50(include_top=False, weights='imagenet', input_shape=K.int_shape(x)[1:], pooling='avg')
+            # x = resnet50(x)
+            # pitch = Dense(class_num, activation='softmax', name='pitch')(x)
+            # yaw = Dense(class_num, activation='softmax', name='yaw')(x)
+            # roll = Dense(class_num, activation='softmax', name='roll')(x)
+            
+            # return [pitch, yaw, roll]
+            
             x = Conv2D(64, kernel_size=11, strides=4, padding='same', activation='relu')(x)
             x = MaxPooling2D( (3,3), strides=2 )(x)
 
@@ -139,17 +149,14 @@ class PoseEstimator(object):
             x = MaxPooling2D( (3,3), strides=2 )(x)
             
             x = Flatten()(x)
-            x = Dense(4096, activation='relu')(x)
+            x = Dense(1024, activation='relu')(x)
             x = Dropout(0.5)(x)
-            x = Dense(4096, activation='relu')(x)
-            x = Dropout(0.5)(x)            
-            x = Dense(1000, activation='relu')(x)
+            x = Dense(1024, activation='relu')(x)
             
             pitch = Dense(class_num, activation='softmax', name='pitch')(x)
             yaw = Dense(class_num, activation='softmax', name='yaw')(x)
             roll = Dense(class_num, activation='softmax', name='roll')(x)
             
             return [pitch, yaw, roll]
-
 
         return func

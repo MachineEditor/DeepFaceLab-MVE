@@ -85,7 +85,8 @@ class SampleProcessor(object):
             
             random_sub_size = opts.get('random_sub_size', 0)
             normalize_std_dev = opts.get('normalize_std_dev', False)
-
+            normalize_vgg = opts.get('normalize_vgg', False)
+            
             if f & SPTF.SOURCE != 0:
                 img_type = 0
             elif f & SPTF.WARPED != 0:
@@ -228,7 +229,12 @@ class SampleProcessor(object):
                 
                 if normalize_std_dev:
                     img_bgr = (img_bgr - img_bgr.mean( (0,1)) ) / img_bgr.std( (0,1) )
-
+                elif normalize_vgg:
+                    img_bgr = np.clip(img_bgr*255, 0, 255)
+                    img_bgr[:,:,0] -= 103.939
+                    img_bgr[:,:,1] -= 116.779
+                    img_bgr[:,:,2] -= 123.68
+                    
                 if f & SPTF.MODE_BGR != 0:
                     img = img_bgr
                 elif f & SPTF.MODE_BGR_SHUFFLE != 0:

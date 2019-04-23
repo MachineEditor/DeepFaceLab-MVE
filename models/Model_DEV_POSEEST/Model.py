@@ -29,9 +29,9 @@ class Model(ModelBase):
     #override
     def onInitialize(self):
         exec(nnlib.import_all(), locals(), globals())
-        self.set_vram_batch_requirements( {4:64} )
+        self.set_vram_batch_requirements( {4:32} )
 
-        self.resolution = 227
+        self.resolution = 128
         self.face_type = FaceType.FULL if self.options['face_type'] == 'f' else FaceType.HALF
 
         
@@ -45,16 +45,17 @@ class Model(ModelBase):
             f = SampleProcessor.TypeFlags
             face_type = f.FACE_TYPE_FULL if self.options['face_type'] == 'f' else f.FACE_TYPE_HALF
             
+        normalize_vgg = False
         self.set_training_data_generators ([    
                 SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size,
                         sample_process_options=SampleProcessor.Options( motion_blur = [25, 1] ), #random_flip=True,
-                        output_sample_types=[ [f.TRANSFORMED | face_type | f.MODE_BGR_SHUFFLE | f.OPT_APPLY_MOTION_BLUR, self.resolution],
+                        output_sample_types=[ [f.TRANSFORMED | face_type | f.MODE_BGR_SHUFFLE | f.OPT_APPLY_MOTION_BLUR, self.resolution, {'normalize_vgg':normalize_vgg} ],
                                               [f.PITCH_YAW_ROLL],
                                             ]),
                                             
                 SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size,
                         sample_process_options=SampleProcessor.Options(), #random_flip=True,
-                        output_sample_types=[ [f.TRANSFORMED | face_type | f.MODE_BGR_SHUFFLE, self.resolution],
+                        output_sample_types=[ [f.TRANSFORMED | face_type | f.MODE_BGR_SHUFFLE, self.resolution, {'normalize_vgg':normalize_vgg} ],
                                                [f.PITCH_YAW_ROLL],
                                             ])
                                            ])
