@@ -51,7 +51,7 @@ class SAEModel(ModelBase):
             self.options['optimizer_mode'] = self.options.get('optimizer_mode', 1)
 
         if is_first_run:
-            self.options['archi'] = io.input_str ("AE architecture (df, liae, df-s, liae-s ?:help skip:%s) : " % (default_archi) , default_archi, ['df','df-s','liae','liae-s'], help_message="'df' keeps faces more natural. 'liae' can fix overly different face shapes. -s version is slower, but has decreased change to collapse.").lower()
+            self.options['archi'] = io.input_str ("AE architecture (df, liae ?:help skip:%s) : " % (default_archi) , default_archi, ['df','liae'], help_message="'df' keeps faces more natural. 'liae' can fix overly different face shapes.").lower() #-s version is slower, but has decreased change to collapse.
         else:
             self.options['archi'] = self.options.get('archi', default_archi)
 
