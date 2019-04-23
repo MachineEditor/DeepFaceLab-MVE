@@ -10,7 +10,7 @@ from interact import interact as io
 from nnlib import nnlib
 
 """
-FANSegmentator is designed to segment faces aligned by 2DFAN-4 landmarks extractor.
+FANSegmentator is designed to exclude obstructions from faces such as hair, fingers, etc.
 
 Dataset used to train located in official DFL mega.nz folder
 https://mega.nz/#F!b9MzCK4B!zEAG9txu7uaRUjXz9PtBqg
