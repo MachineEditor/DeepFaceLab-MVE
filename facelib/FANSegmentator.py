@@ -50,7 +50,7 @@ class FANSegmentator(object):
 
         if training:
             #self.model.compile(loss='mse', optimizer=Adam(tf_cpu_mode=2))
-            self.model.compile(loss='binary_crossentropy', optimizer=Adam(tf_cpu_mode=2), metrics=['accuracy'])
+            self.model.compile(loss='binary_crossentropy', optimizer=Adam(tf_cpu_mode=2) )
             
     def __enter__(self):
         return self
