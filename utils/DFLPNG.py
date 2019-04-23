@@ -283,7 +283,9 @@ class DFLPNG(object):
                              source_rect=None,
                              source_landmarks=None,
                              image_to_face_mat=None,
-                             fanseg_mask=None, **kwargs
+                             fanseg_mask=None,
+                             pitch_yaw_roll=None,
+                             **kwargs
                    ):
 
         if fanseg_mask is not None:
@@ -307,6 +309,7 @@ class DFLPNG(object):
                                 'source_landmarks': source_landmarks,
                                 'image_to_face_mat':image_to_face_mat,
                                 'fanseg_mask' : fanseg_mask,
+                                'pitch_yaw_roll' : pitch_yaw_roll
                              })
 
         try:
@@ -322,7 +325,9 @@ class DFLPNG(object):
                                         source_rect=None,
                                         source_landmarks=None,
                                         image_to_face_mat=None,
-                                        fanseg_mask=None, **kwargs
+                                        fanseg_mask=None,
+                                        pitch_yaw_roll=None,
+                                        **kwargs
                         ):
         if face_type is None: face_type = self.get_face_type()
         if landmarks is None: landmarks = self.get_landmarks()
@@ -332,6 +337,7 @@ class DFLPNG(object):
         if source_landmarks is None: source_landmarks = self.get_source_landmarks()
         if image_to_face_mat is None: image_to_face_mat = self.get_image_to_face_mat()
         if fanseg_mask is None: fanseg_mask = self.get_fanseg_mask()
+        if pitch_yaw_roll is None: pitch_yaw_roll = self.get_pitch_yaw_roll()
         DFLPNG.embed_data (filename, face_type=face_type,
                                      landmarks=landmarks,
                                      ie_polys=ie_polys,
@@ -339,7 +345,8 @@ class DFLPNG(object):
                                      source_rect=source_rect,
                                      source_landmarks=source_landmarks,
                                      image_to_face_mat=image_to_face_mat,
-                                     fanseg_mask=fanseg_mask)
+                                     fanseg_mask=fanseg_mask,
+                                     pitch_yaw_roll=pitch_yaw_roll)
 
     def remove_fanseg_mask(self):
         self.dfl_dict['fanseg_mask'] = None
@@ -397,5 +404,7 @@ class DFLPNG(object):
         if fanseg_mask is not None:
             return np.clip ( np.array (fanseg_mask) / 255.0, 0.0, 1.0 )[...,np.newaxis]
         return None
+    def get_pitch_yaw_roll(self):
+        return self.dfl_dict.get ('pitch_yaw_roll', None)
     def __str__(self):
         return "<PNG length={length} chunks={}>".format(len(self.chunks), **self.__dict__)

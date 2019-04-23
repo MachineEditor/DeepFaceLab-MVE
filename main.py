@@ -48,7 +48,22 @@ if __name__ == "__main__":
     p.add_argument('--manual-window-size', type=int, dest="manual_window_size", default=1368, help="Manual fix window size. Default: 1368.")
     p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Extract on CPU. Forces to use MT extractor.")
     p.set_defaults (func=process_extract)
+    
+    
+    def process_dev_extract_umd_csv(arguments):
+        os_utils.set_process_lowest_prio()
+        from mainscripts import Extractor
+        Extractor.extract_umd_csv( arguments.input_csv_file,
+                                  device_args={'cpu_only'  : arguments.cpu_only,
+                                               'multi_gpu' : arguments.multi_gpu,
+                                              }
+                                )
 
+    p = subparsers.add_parser( "dev_extract_umd_csv", help="")
+    p.add_argument('--input-csv-file', required=True, action=fixPathAction, dest="input_csv_file", help="input_csv_file")
+    p.add_argument('--multi-gpu', action="store_true", dest="multi_gpu", default=False, help="Enables multi GPU.")
+    p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Extract on CPU.")
+    p.set_defaults (func=process_dev_extract_umd_csv)
     """
     def process_extract_fanseg(arguments):
         os_utils.set_process_lowest_prio()

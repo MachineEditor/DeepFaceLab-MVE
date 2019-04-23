@@ -13,9 +13,10 @@ class SampleProcessor(object):
         WARPED_TRANSFORMED         = 0x00000004,
         TRANSFORMED                = 0x00000008,
         LANDMARKS_ARRAY            = 0x00000010, #currently unused
+        PITCH_YAW_ROLL             = 0x00000020,
 
-        RANDOM_CLOSE               = 0x00000020, #currently unused
-        MORPH_TO_RANDOM_CLOSE      = 0x00000040, #currently unused
+        RANDOM_CLOSE               = 0x00000040, #currently unused
+        MORPH_TO_RANDOM_CLOSE      = 0x00000080, #currently unused
 
         FACE_TYPE_HALF             = 0x00000100,
         FACE_TYPE_FULL             = 0x00000200,
@@ -77,7 +78,7 @@ class SampleProcessor(object):
         outputs = []
         for sample_type in output_sample_types:
             f = sample_type[0]
-            size = sample_type[1]
+            size = 0 if len (sample_type) < 2 else sample_type[1]
             random_sub_size = 0 if len (sample_type) < 3 else min( sample_type[2] , size)
 
             if f & SPTF.SOURCE != 0:
@@ -90,6 +91,8 @@ class SampleProcessor(object):
                 img_type = 3
             elif f & SPTF.LANDMARKS_ARRAY != 0:
                 img_type = 4
+            elif f & SPTF.PITCH_YAW_ROLL != 0:
+                img_type = 5
             else:
                 raise ValueError ('expected SampleTypeFlags type')
 
@@ -121,6 +124,16 @@ class SampleProcessor(object):
                 l = np.concatenate ( [ np.expand_dims(l[:,0] / w,-1), np.expand_dims(l[:,1] / h,-1) ], -1 )
                 l = np.clip(l, 0.0, 1.0)
                 img = l
+            elif img_type == 5:
+                pitch_yaw_roll = sample.pitch_yaw_roll
+                if pitch_yaw_roll is not None:
+                    pitch, yaw, roll = pitch_yaw_roll
+                else:
+                    pitch, yaw, roll = LandmarksProcessor.estimate_pitch_yaw_roll (sample.landmarks)
+                if params['flip']:
+                    yaw = -yaw
+                    
+                img = (pitch, yaw, roll)                
             else:
                 if images[img_type][face_mask_type] is None:
                     if img_type >= 10 and img_type <= 19: #RANDOM_CLOSE

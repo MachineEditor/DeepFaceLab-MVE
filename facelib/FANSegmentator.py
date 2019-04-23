@@ -26,7 +26,7 @@ class FANSegmentator(object):
 
         self.model = FANSegmentator.BuildModel(resolution, ngf=64)
 
-        if weights_file_root:
+        if weights_file_root is not None:
             weights_file_root = Path(weights_file_root)
         else:
             weights_file_root = Path(__file__).parent

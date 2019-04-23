@@ -202,7 +202,11 @@ def sort_by_face_yaw(input_path):
             trash_img_list.append ( [str(filepath)] )
             continue
 
-        pitch, yaw = LandmarksProcessor.estimate_pitch_yaw ( dflimg.get_landmarks() )
+        pitch_yaw_roll = dflimg.get_pitch_yaw_roll()
+        if pitch_yaw_roll is not None:
+            pitch, yaw, roll = pitch_yaw_roll
+        else:
+            pitch, yaw, roll = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks() )
 
         img_list.append( [str(filepath), yaw ] )
 
@@ -229,8 +233,12 @@ def sort_by_face_pitch(input_path):
             io.log_err ("%s is not a dfl image file" % (filepath.name) )
             trash_img_list.append ( [str(filepath)] )
             continue
-
-        pitch, yaw = LandmarksProcessor.estimate_pitch_yaw ( dflimg.get_landmarks() )
+            
+        pitch_yaw_roll = dflimg.get_pitch_yaw_roll()
+        if pitch_yaw_roll is not None:
+            pitch, yaw, roll = pitch_yaw_roll
+        else:
+            pitch, yaw, roll = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks() )
 
         img_list.append( [str(filepath), pitch ] )
 
@@ -532,7 +540,7 @@ class FinalLoaderSubprocessor(Subprocessor):
 
                 gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
                 sharpness = estimate_sharpness(gray) if self.include_by_blur else 0
-                pitch, yaw = LandmarksProcessor.estimate_pitch_yaw ( dflimg.get_landmarks() )
+                pitch, yaw, roll = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks() )
 
                 hist = cv2.calcHist([gray], [0], None, [256], [0, 256])
             except Exception as e:

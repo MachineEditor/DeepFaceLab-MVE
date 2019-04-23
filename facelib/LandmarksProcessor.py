@@ -332,7 +332,7 @@ def calc_face_yaw(landmarks):
     return float(r-l)
 
 #returns pitch,yaw [-1...+1]
-def estimate_pitch_yaw(aligned_256px_landmarks):
+def estimate_pitch_yaw_roll(aligned_256px_landmarks):
     shape = (256,256)
     focal_length = shape[1]
     camera_center = (shape[1] / 2, shape[0] / 2)
@@ -347,7 +347,8 @@ def estimate_pitch_yaw(aligned_256px_landmarks):
         camera_matrix,
         np.zeros((4, 1)) )
 
-    pitch, yaw, _ = mathlib.rotationMatrixToEulerAngles( cv2.Rodrigues(rotation_vector)[0] )
+    pitch, yaw, roll = mathlib.rotationMatrixToEulerAngles( cv2.Rodrigues(rotation_vector)[0] )
     pitch = np.clip ( pitch*1.25, -1.0, 1.0 )
     yaw = np.clip ( yaw*1.25, -1.0, 1.0 )
-    return pitch, yaw
+    roll = np.clip ( roll*1.25, -1.0, 1.0 )
+    return pitch, yaw, roll
