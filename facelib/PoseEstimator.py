@@ -21,7 +21,7 @@ class PoseEstimator(object):
         exec( nnlib.import_all(), locals(), globals() )
 
         self.angles = [90, 45, 30, 10, 2]
-        self.alpha_cat_losses = [0.07,0.05,0.03,0.01,0.01]
+        self.alpha_cat_losses = [7,5,3,1,1]
         self.class_nums = [ angle+1 for angle in self.angles ]
         
         self.model = PoseEstimator.BuildModel(resolution, class_nums=self.class_nums)
@@ -36,7 +36,13 @@ class PoseEstimator(object):
 
         if load_weights:
             self.model.load_weights (str(self.weights_path))
-
+        else:
+            conv_weights_list = []
+            for layer in self.model.layers:
+                if type(layer) == keras.layers.Conv2D:
+                    conv_weights_list += [layer.weights[0]] #Conv2D kernel_weights            
+            CAInitializerMP ( conv_weights_list )
+            
         inp_t, = self.model.inputs
         bins_t = self.model.outputs
         
@@ -61,7 +67,7 @@ class PoseEstimator(object):
         idx_tensor =  K.constant( np.array([idx for idx in range(self.class_nums[0])], dtype=K.floatx() ) )
         pitch_t, yaw_t, roll_t = K.sum ( bins_t[0] * idx_tensor, 1), K.sum ( bins_t[1] * idx_tensor, 1), K.sum ( bins_t[2] * idx_tensor, 1)
         
-        reg_alpha = 0.02
+        reg_alpha = 2
         reg_pitch_loss = reg_alpha * K.mean(K.square( inp_pitch_t - pitch_t), -1)        
         reg_yaw_loss = reg_alpha   * K.mean(K.square( inp_yaw_t - yaw_t), -1)                        
         reg_roll_loss =  reg_alpha * K.mean(K.square( inp_roll_t - roll_t), -1)
@@ -70,7 +76,7 @@ class PoseEstimator(object):
         yaw_loss   = reg_yaw_loss   + sum(loss_yaw)
         roll_loss  = reg_roll_loss  + sum(loss_roll)
     
-        opt = Adam(lr=0.001, tf_cpu_mode=0)
+        opt = Adam(lr=0.000001)
         
         if training:
             self.train = K.function ([inp_t, inp_pitch_t, inp_yaw_t, inp_roll_t] + inp_bins_t,
