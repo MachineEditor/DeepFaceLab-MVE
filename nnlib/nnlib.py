@@ -1009,7 +1009,7 @@ class CAInitializerMPSubprocessor(Subprocessor):
 
     #override
     def on_clients_initialized(self):
-        io.progress_bar ("Initializing", len (self.idx_shapes_list))
+        io.progress_bar ("Initializing CA weights", len (self.idx_shapes_list))
 
     #override
     def on_clients_finalized(self):

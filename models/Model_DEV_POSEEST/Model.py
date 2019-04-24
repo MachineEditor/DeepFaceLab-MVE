@@ -42,22 +42,22 @@ class Model(ModelBase):
                                       training=True)
 
         if self.is_training_mode:
-            f = SampleProcessor.TypeFlags
-            face_type = f.FACE_TYPE_FULL if self.options['face_type'] == 'f' else f.FACE_TYPE_HALF
+            t = SampleProcessor.Types
+            face_type = t.FACE_TYPE_FULL if self.options['face_type'] == 'f' else t.FACE_TYPE_HALF
 
-        self.set_training_data_generators ([    
-                SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size, generators_count=4,
-                        sample_process_options=SampleProcessor.Options( rotation_range=[0,0], motion_blur = [25, 1] ), #random_flip=True,
-                        output_sample_types=[ [f.TRANSFORMED | face_type | f.MODE_BGR_SHUFFLE | f.OPT_APPLY_MOTION_BLUR, self.resolution ],
-                                              [f.PITCH_YAW_ROLL],
-                                            ]),
-                                            
-                SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size, generators_count=4,
-                        sample_process_options=SampleProcessor.Options( rotation_range=[0,0] ), #random_flip=True,
-                        output_sample_types=[ [f.TRANSFORMED | face_type | f.MODE_BGR_SHUFFLE, self.resolution ],
-                                               [f.PITCH_YAW_ROLL],
+            self.set_training_data_generators ([    
+                    SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size, generators_count=4,
+                            sample_process_options=SampleProcessor.Options( rotation_range=[0,0] ), #random_flip=True,
+                            output_sample_types=[ {'types': (t.IMG_TRANSFORMED, face_type, t.MODE_BGR_SHUFFLE), 'resolution':self.resolution, 'motion_blur':(25, 1) },
+                                                  {'types': (t.IMG_PITCH_YAW_ROLL,)}
+                                                ]),
+                                                
+                    SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size, generators_count=4,
+                            sample_process_options=SampleProcessor.Options( rotation_range=[0,0] ), #random_flip=True,
+                            output_sample_types=[ {'types': (t.IMG_TRANSFORMED, face_type, t.MODE_BGR_SHUFFLE), 'resolution':self.resolution },
+                                                  {'types': (t.IMG_PITCH_YAW_ROLL,)}
+                                                ])
                                             ])
-                                           ])
                 
     #override
     def onSave(self):        

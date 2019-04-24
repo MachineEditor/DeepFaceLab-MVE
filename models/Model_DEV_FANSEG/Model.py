@@ -41,19 +41,19 @@ class Model(ModelBase):
                                       training=True)
 
         if self.is_training_mode:
-            f = SampleProcessor.TypeFlags
-            face_type = f.FACE_TYPE_FULL if self.options['face_type'] == 'f' else f.FACE_TYPE_HALF
+            t = SampleProcessor.Types
+            face_type = t.FACE_TYPE_FULL if self.options['face_type'] == 'f' else t.FACE_TYPE_HALF
             
             self.set_training_data_generators ([    
                     SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size, 
-                            sample_process_options=SampleProcessor.Options(random_flip=True, motion_blur = [25, 1] ), 
-                            output_sample_types=[ [f.WARPED_TRANSFORMED | face_type | f.MODE_BGR_SHUFFLE | f.OPT_APPLY_MOTION_BLUR, self.resolution],
-                                                  [f.WARPED_TRANSFORMED | face_type | f.MODE_M | f.FACE_MASK_FULL, self.resolution],                                          
+                            sample_process_options=SampleProcessor.Options(random_flip=True), 
+                            output_sample_types=[ { 'types': (t.IMG_WARPED_TRANSFORMED, face_type, t.MODE_BGR_SHUFFLE), 'resolution' : self.resolution, 'motion_blur':(25, 1) },
+                                                  { 'types': (t.IMG_WARPED_TRANSFORMED, face_type, t.MODE_M, t.FACE_MASK_FULL), 'resolution': self.resolution },
                                                 ]),
                                                 
                     SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size, 
                             sample_process_options=SampleProcessor.Options(random_flip=True ), 
-                            output_sample_types=[ [f.TRANSFORMED | face_type | f.MODE_BGR_SHUFFLE, self.resolution],
+                            output_sample_types=[ { 'types': (t.IMG_TRANSFORMED , face_type, t.MODE_BGR_SHUFFLE), 'resolution' : self.resolution},
                                                 ])
                                                ])
                 
