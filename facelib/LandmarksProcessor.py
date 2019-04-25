@@ -331,7 +331,7 @@ def calc_face_yaw(landmarks):
     r = ( (landmarks[16][0]-landmarks[27][0]) + (landmarks[15][0]-landmarks[28][0]) + (landmarks[14][0]-landmarks[29][0]) ) / 3.0
     return float(r-l)
 
-#returns pitch,yaw [-1...+1]
+#returns pitch,yaw,roll [-1...+1]
 def estimate_pitch_yaw_roll(aligned_256px_landmarks):
     shape = (256,256)
     focal_length = shape[1]
@@ -351,4 +351,4 @@ def estimate_pitch_yaw_roll(aligned_256px_landmarks):
     pitch = np.clip ( pitch*1.25, -1.0, 1.0 )
     yaw = np.clip ( yaw*1.25, -1.0, 1.0 )
     roll = np.clip ( roll*1.25, -1.0, 1.0 )
-    return pitch, yaw, roll
+    return -pitch, yaw, roll
