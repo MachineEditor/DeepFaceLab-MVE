@@ -31,7 +31,11 @@ class InteractBase(object):
         self.mouse_events = {}
         self.key_events = {}
         self.pg_bar = None
+        self.focus_wnd_name = None
 
+    def is_support_windows(self):
+        return False
+        
     def is_colab(self):
         return False
 
@@ -40,7 +44,10 @@ class InteractBase(object):
 
     def on_create_window (self, wnd_name):
         raise NotImplemented
-
+        
+    def on_destroy_window (self, wnd_name):
+        raise NotImplemented
+        
     def on_show_image (self, wnd_name, img):
         raise NotImplemented
 
@@ -66,17 +73,39 @@ class InteractBase(object):
         if wnd_name not in self.named_windows:
             #we will show window only on first show_image
             self.named_windows[wnd_name] = 0
+            self.focus_wnd_name = wnd_name
         else: print("named_window: ", wnd_name, " already created.")
 
     def destroy_all_windows(self):
-        if len( self.named_windows ) != 0:
-            self.on_destroy_all_windows()
+        if len( self.named_windows ) != 0:            
+            self.on_destroy_all_windows()            
             self.named_windows = {}
             self.capture_mouse_windows = {}
             self.capture_keys_windows = {}
             self.mouse_events = {}
             self.key_events = {}
-
+            self.focus_wnd_name = None
+            
+    def destroy_window(self, wnd_name):
+        if wnd_name in self.named_windows:
+            self.on_destroy_window(wnd_name)
+            self.named_windows.pop(wnd_name)
+            
+            if wnd_name == self.focus_wnd_name:                
+                self.focus_wnd_name = list(self.named_windows.keys())[-1] if len( self.named_windows ) != 0 else None
+            
+            if wnd_name in self.capture_mouse_windows:
+                self.capture_mouse_windows.pop(wnd_name)
+                
+            if wnd_name in self.capture_keys_windows:
+                self.capture_keys_windows.pop(wnd_name)
+                
+            if wnd_name in self.mouse_events:
+                self.mouse_events.pop(wnd_name)
+                
+            if wnd_name in self.key_events:
+                self.key_events.pop(wnd_name)
+            
     def show_image(self, wnd_name, img):
         if wnd_name in self.named_windows:
             if self.named_windows[wnd_name] == 0:
@@ -248,12 +277,18 @@ class InteractBase(object):
 
 
 class InteractDesktop(InteractBase):
-
+    
+    def is_support_windows(self):
+        return True
+        
     def on_destroy_all_windows(self):
         cv2.destroyAllWindows()
 
     def on_create_window (self, wnd_name):
         cv2.namedWindow(wnd_name)
+        
+    def on_destroy_window (self, wnd_name):
+        cv2.destroyWindow(wnd_name)
 
     def on_show_image (self, wnd_name, img):
         cv2.imshow (wnd_name, img)
@@ -305,14 +340,16 @@ class InteractDesktop(InteractBase):
                 time.sleep(sleep_time)
 
         if has_capture_keys and ord_key != -1:
-            for wnd_name in self.capture_keys_windows:
-                self.add_key_event (wnd_name, ord_key, False, False, shift_pressed)
+            self.add_key_event ( self.focus_wnd_name, ord_key, False, False, shift_pressed)
 
     def on_wait_any_key(self):
         cv2.waitKey(0)
 
 class InteractColab(InteractBase):
 
+    def is_support_windows(self):
+        return False
+        
     def is_colab(self):
         return True
 
@@ -323,6 +360,9 @@ class InteractColab(InteractBase):
     def on_create_window (self, wnd_name):
         pass
         #clear_output()
+        
+    def on_destroy_window (self, wnd_name):
+        pass
 
     def on_show_image (self, wnd_name, img):
         pass

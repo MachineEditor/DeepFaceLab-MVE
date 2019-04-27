@@ -85,6 +85,11 @@ class ModelBase(object):
         else:
             self.options['write_preview_history'] = self.options.get('write_preview_history', False)
 
+        if self.iter == 0 and self.options['write_preview_history'] and io.is_support_windows():
+            choose_preview_history = io.input_bool("Choose image for the preview history? (y/n skip:%s) : " % (yn_str[False]) , False)
+        else:
+            choose_preview_history = False
+        
         if ask_target_iter:
             if (self.iter == 0 or ask_override):
                 self.options['target_iter'] = max(0, io.input_int("Target iteration (skip:unlimited/default) : ", 0))
@@ -168,7 +173,35 @@ class ModelBase(object):
                         raise ValueError('training data generator is not subclass of SampleGeneratorBase')
 
             if (self.sample_for_preview is None) or (self.iter == 0):
-                self.sample_for_preview = self.generate_next_sample()
+                
+                if self.iter == 0:
+                    if choose_preview_history and io.is_support_windows():
+                        wnd_name = "[p] - next. [enter] - confirm."
+                        io.named_window(wnd_name)
+                        io.capture_keys(wnd_name)
+                        choosed = False
+                        while not choosed:
+                            self.sample_for_preview = self.generate_next_sample()
+                            preview = self.get_static_preview()
+                            io.show_image( wnd_name, (preview*255).astype(np.uint8) )
+  
+                            while True:
+                                key_events = io.get_key_events(wnd_name)
+                                key, chr_key, ctrl_pressed, alt_pressed, shift_pressed = key_events[-1] if len(key_events) > 0 else (0,0,False,False,False)
+                                if key == ord('\n') or key == ord('\r'):
+                                    choosed = True
+                                    break
+                                elif key == ord('p'):
+                                    break
+                                    
+                                try:
+                                    io.process_messages(0.1)
+                                except KeyboardInterrupt:
+                                    choosed = True
+                                         
+                        io.destroy_window(wnd_name)
+                    else:    
+                        self.sample_for_preview = self.generate_next_sample()
 
         model_summary_text = []
 
