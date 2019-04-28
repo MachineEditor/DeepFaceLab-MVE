@@ -4,7 +4,7 @@ from PIL import Image
 
 #n_colors = [0..256]
 def reduce_colors (img_bgr, n_colors):
-    img_rgb = (cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB) * 255.0).astype(np.uint8)
+    img_rgb = (img_bgr[...,::-1] * 255.0).astype(np.uint8)
     img_rgb_pil = Image.fromarray(img_rgb)
     img_rgb_pil_p = img_rgb_pil.convert('P', palette=Image.ADAPTIVE, colors=n_colors)
 
