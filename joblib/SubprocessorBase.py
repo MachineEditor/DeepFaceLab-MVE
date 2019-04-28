@@ -157,6 +157,23 @@ class Subprocessor(object):
 
                 self.clis.append (cli)
 
+                while True:
+                    while not cli.c2s.empty():
+                        obj = cli.c2s.get()
+                        op = obj.get('op','')
+                        if op == 'init_ok':
+                            cli.state = 0
+                        elif op == 'log_info':
+                            io.log_info(obj['msg'])
+                        elif op == 'log_err':
+                            io.log_err(obj['msg'])
+                        elif op == 'error':
+                            cli.kill()
+                            self.clis.remove(cli)
+                            break
+                    if cli.state == 0:
+                        break
+                    io.process_messages(0.005)
             except:
                 raise Exception ("Unable to start subprocess %s" % (name))
 
