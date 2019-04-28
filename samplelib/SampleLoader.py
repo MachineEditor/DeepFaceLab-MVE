@@ -68,13 +68,19 @@ class SampleLoader:
                 if dflimg is None:
                     print ("%s is not a dfl image file required for training" % (s_filename_path.name) )
                     continue
+                    
+                landmarks = dflimg.get_landmarks()
+                pitch_yaw_roll = dflimg.get_pitch_yaw_roll()
+                if pitch_yaw_roll is None:
+                    pitch_yaw_roll = LandmarksProcessor.estimate_pitch_yaw_roll(landmarks)
+                
 
                 sample_list.append( s.copy_and_set(sample_type=SampleType.FACE,
                                                    face_type=FaceType.fromString (dflimg.get_face_type()),
                                                    shape=dflimg.get_shape(),
-                                                   landmarks=dflimg.get_landmarks(),
+                                                   landmarks=landmarks,
                                                    ie_polys=dflimg.get_ie_polys(),
-                                                   pitch_yaw_roll=dflimg.get_pitch_yaw_roll(),
+                                                   pitch_yaw_roll=pitch_yaw_roll,
                                                    source_filename=dflimg.get_source_filename(),
                                                    fanseg_mask_exist=dflimg.get_fanseg_mask() is not None, ) )
             except:
@@ -104,7 +110,7 @@ class SampleLoader:
 
             yaw_samples = []
             for s in samples:
-                s_yaw = s.yaw
+                s_yaw = s.pitch_yaw_roll[1]
                 if (i == 0            and s_yaw < next_yaw) or \
                    (i  < gradations-1 and s_yaw >= yaw and s_yaw < next_yaw) or \
                    (i == gradations-1 and s_yaw >= yaw):
@@ -137,7 +143,7 @@ class SampleLoader:
                     mirrored = ( t_idx != search_idx and ((t_idx < b and search_idx >= b) or (search_idx < b and t_idx >= b)) )
                     new_s[t_idx] = [ sample.copy_and_set(sample_type=SampleType.FACE_YAW_SORTED_AS_TARGET,
                                                          mirror=True,
-                                                         yaw=-sample.yaw,
+                                                         pitch_yaw_roll=(sample.pitch_yaw_roll[0],-sample.pitch_yaw_roll[1],sample.pitch_yaw_roll[2]),
                                                          landmarks=LandmarksProcessor.mirror_landmarks (sample.landmarks, sample.shape[1] ))
                                           for sample in s[search_idx]
                                         ] if mirrored else s[search_idx]
