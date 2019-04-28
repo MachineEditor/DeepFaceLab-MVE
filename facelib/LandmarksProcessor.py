@@ -348,7 +348,7 @@ def estimate_pitch_yaw_roll(aligned_256px_landmarks):
         np.zeros((4, 1)) )
 
     pitch, yaw, roll = mathlib.rotationMatrixToEulerAngles( cv2.Rodrigues(rotation_vector)[0] )
-    pitch = np.clip ( pitch*1.25, -1.0, 1.0 )
-    yaw = np.clip ( yaw*1.25, -1.0, 1.0 )
-    roll = np.clip ( roll*1.25, -1.0, 1.0 )
+    pitch = np.clip ( pitch/1.30, -1.0, 1.0 )
+    yaw = np.clip ( yaw / 1.11, -1.0, 1.0 )
+    roll = np.clip ( roll/3.15, -1.0, 1.0 )
     return -pitch, yaw, roll
