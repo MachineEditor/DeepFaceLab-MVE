@@ -38,21 +38,31 @@ class PoseEstimator(object):
         self.model_weights_path = weights_file_root / ('PoseEst_%d_%s.h5' % (resolution, face_type_str) )
   
         self.input_bgr_shape = (resolution, resolution, 3)
+        
+        def ResamplerFunc(input):
+            mean_t, logvar_t = input
+            return mean_t + K.exp(0.5*logvar_t)*K.random_normal(K.shape(mean_t))
+
+        self.BVAEResampler = Lambda ( lambda x: x[0] + K.exp(0.5*x[1])*K.random_normal(K.shape(x[0])),        
+                                        output_shape=K.int_shape(self.encoder.outputs[0])[1:] )
+
         inp_t = Input (self.input_bgr_shape)
-        inp_mask_t = Input ( (resolution, resolution, 1) )
         inp_real_t = Input (self.input_bgr_shape)
         inp_pitch_t = Input ( (1,) )
         inp_yaw_t = Input ( (1,) )
         inp_roll_t = Input ( (1,) )
         
+
+        mean_t, logvar_t = self.encoder(inp_t)
+    
+        latent_t = self.BVAEResampler([mean_t, logvar_t])
+        
         if training:
-            latent_t = self.encoder(inp_t)
             bgr_t = self.decoder (latent_t)        
             pyrs_t = self.model_l(latent_t)
         else:
-            self.model = Model(inp_t, self.model_l(self.encoder(inp_t)) )
+            self.model = Model(inp_t, self.model_l(latent_t) )
             pyrs_t = self.model(inp_t)
-        
         
         if load_weights:
             if training:
@@ -87,20 +97,32 @@ class PoseEstimator(object):
             for i,class_num in enumerate(self.class_nums):
                 a = self.alpha_cat_losses[i]
                 pyr_loss += [ a*K.mean( K.square ( inp_pyrs_t[i] - pyrs_t[i]) ) ]
+    
+            def BVAELoss(beta=4):
+                #keep in mind loss per sample, not per minibatch
+                def func(input):
+                    mean_t, logvar_t = input
+                    return beta * K.mean ( K.sum( -0.5*(1 + logvar_t - K.exp(logvar_t) - K.square(mean_t)), axis=1 ), axis=0, keepdims=True )
+                return func
+                
+            BVAE_loss = BVAELoss(4)([mean_t, logvar_t])#beta * K.mean ( K.sum( -0.5*(1 + logvar_t - K.exp(logvar_t) - K.square(mean_t)), axis=1 ), axis=0, keepdims=True )
 
-            bgr_loss = K.mean( 10*dssim(kernel_size=int(resolution/11.6),max_value=1.0)( inp_real_t*inp_mask_t, bgr_t*inp_mask_t) )
 
+            bgr_loss = K.mean(K.square(inp_real_t-bgr_t), axis=0, keepdims=True)
+
+            #train_loss = BVAE_loss + bgr_loss
+            
             pyr_loss = sum(pyr_loss)
+
             
-            
-            self.train = K.function ([inp_t, inp_real_t, inp_mask_t],
-                                     [bgr_loss], Adam(lr=2e-4, beta_1=0.5, beta_2=0.999).get_updates( bgr_loss, self.encoder.trainable_weights+self.decoder.trainable_weights ) )
+            self.train = K.function ([inp_t, inp_real_t],
+                                     [ K.mean (BVAE_loss)+K.mean(bgr_loss) ], Adam(lr=0.0005, beta_1=0.9, beta_2=0.999).get_updates( [BVAE_loss, bgr_loss], self.encoder.trainable_weights+self.decoder.trainable_weights ) )
             
             self.train_l = K.function ([inp_t] + inp_pyrs_t,
                                      [pyr_loss], Adam(lr=0.0001).get_updates( pyr_loss, self.model_l.trainable_weights) )
 
 
-        self.view = K.function ([inp_t], [ pyrs_t[0] ] )
+            self.view = K.function ([inp_t], [ bgr_t, pyrs_t[0] ] )
      
     def __enter__(self):
         return self
@@ -114,21 +136,25 @@ class PoseEstimator(object):
         self.model_l.save_weights (str(self.l_weights_path))
         
         inp_t = Input (self.input_bgr_shape)
-        Model(inp_t, self.model_l(self.encoder(inp_t)) ).save_weights (str(self.model_weights_path)) 
 
-    def train_on_batch(self, warps, imgs, masks, pitch_yaw_roll, skip_bgr_train=False):
+        Model(inp_t, self.model_l(self.BVAEResampler(self.encoder(inp_t))) ).save_weights (str(self.model_weights_path)) 
+
+    def train_on_batch(self, warps, imgs, pyr_tanh, skip_bgr_train=False):
 
         if not skip_bgr_train:
-            bgr_loss, = self.train( [warps, imgs, masks] )
+            bgr_loss, = self.train( [warps, imgs] )
+            pyr_loss = 0
         else:
-            bgr_loss = 0
-        
-        feed = [imgs]
-        for i, (angle, class_num) in enumerate(zip(self.angles, self.class_nums)):
-            c = np.round( np.round(pitch_yaw_roll * angle)  / angle ) #.astype(K.floatx())
-            feed += [c] 
+            bgr_loss = 0      
+              
+            feed = [imgs]        
+            for i, (angle, class_num) in enumerate(zip(self.angles, self.class_nums)):
+                a = angle / 2
+                c = np.round( (pyr_tanh+1) * a )  / a -1 #.astype(K.floatx())
+                feed += [c] 
 
-        pyr_loss, = self.train_l(feed)
+            pyr_loss, = self.train_l(feed)
+            
         return bgr_loss, pyr_loss
 
     def extract (self, input_image, is_input_tanh=False):
@@ -139,26 +165,27 @@ class PoseEstimator(object):
         if input_shape_len == 3:
             input_image = input_image[np.newaxis,...]
 
-        result, = self.view( [input_image] )
+        bgr, result, = self.view( [input_image] )
         
         
         #result = np.clip ( result / (self.angles[0] / 2) - 1, 0.0, 1.0 )
 
         if input_shape_len == 3:
+            bgr = bgr[0]
             result = result[0]
 
-        return result
+        return bgr, result
 
     @staticmethod
-    def BuildModels ( resolution, class_nums):
+    def BuildModels ( resolution, class_nums, ae_dims=128):
         exec( nnlib.import_all(), locals(), globals() )
         
         x = inp = Input ( (resolution,resolution,3) )
-        x = PoseEstimator.EncFlow()(x)
+        x = PoseEstimator.EncFlow(ae_dims)(x)
         encoder = Model(inp,x)
         
         x = inp = Input ( K.int_shape(encoder.outputs[0][1:]) )
-        x = PoseEstimator.DecFlow(resolution)(x)
+        x = PoseEstimator.DecFlow(resolution, ae_dims)(x)
         decoder = Model(inp,x)
         
         x = inp = Input ( K.int_shape(encoder.outputs[0][1:]) )
@@ -168,61 +195,52 @@ class PoseEstimator(object):
         return encoder, decoder, model_l
 
     @staticmethod
-    def EncFlow():
+    def EncFlow(ae_dims):
         exec( nnlib.import_all(), locals(), globals() )
 
         XConv2D = partial(Conv2D, padding='zero')
         
-        def Act(lrelu_alpha=0.1):
-            return LeakyReLU(alpha=lrelu_alpha)
-            
+
         def downscale (dim, **kwargs):
             def func(x):
-                return Act() ( XConv2D(dim, kernel_size=5, strides=2)(x))
+                return ReLU() (  ( XConv2D(dim, kernel_size=4, strides=2)(x)) )
             return func
-            
-        def upscale (dim, **kwargs):
-            def func(x):
-                return SubpixelUpscaler()(Act()( XConv2D(dim * 4, kernel_size=3, strides=1)(x)))
-            return func
-            
-        def to_bgr (output_nc, **kwargs):
-            def func(x):
-                return XConv2D(output_nc, kernel_size=5, activation='sigmoid')(x)
-            return func
-            
-        upscale = partial(upscale)
+           
+
         downscale = partial(downscale)
-        ae_dims = 512
+        
+        ed_ch_dims = 128
+
         def func(input):
             x = input
             x = downscale(64)(x)
             x = downscale(128)(x)
-            x = downscale(256)(x)
-            x = downscale(512)(x)            
-            x = Dense(ae_dims, name="latent", use_bias=False)(Flatten()(x))            
-            x = Lambda ( lambda x: x + 0.1*K.random_normal(K.shape(x), 0, 1) , output_shape=(None,ae_dims) ) (x)            
-            return x
+            x = downscale(256)(x)            
+            x = downscale(512)(x)    
+            x = Flatten()(x)
+
+            x = Dense(256)(x)
+            x = ReLU()(x)
+            
+            x = Dense(256)(x)
+            x = ReLU()(x)
+
+            mean = Dense(ae_dims)(x)
+            logvar = Dense(ae_dims)(x)
+            
+            return mean, logvar
             
         return func
         
     @staticmethod
-    def DecFlow(resolution):
+    def DecFlow(resolution, ae_dims):
         exec( nnlib.import_all(), locals(), globals() )
 
         XConv2D = partial(Conv2D, padding='zero')
         
-        def Act(lrelu_alpha=0.1):
-            return LeakyReLU(alpha=lrelu_alpha)
-            
-        def downscale (dim, **kwargs):
+        def upscale (dim, strides=2, **kwargs):
             def func(x):
-                return MaxPooling2D()( Act() ( XConv2D(dim, kernel_size=5, strides=1)(x)) )
-            return func
-            
-        def upscale (dim, **kwargs):
-            def func(x):
-                return SubpixelUpscaler()(Act()( XConv2D(dim * 4, kernel_size=3, strides=1)(x)))
+                return ReLU()(  ( Conv2DTranspose(dim, kernel_size=4, strides=strides, padding='same')(x)) )
             return func
             
         def to_bgr (output_nc, **kwargs):
@@ -231,21 +249,29 @@ class PoseEstimator(object):
             return func
             
         upscale = partial(upscale)
-        downscale = partial(downscale)
         lowest_dense_res = resolution // 16
-        
+
         def func(input):
             x = input
-
-            x = Dense(lowest_dense_res * lowest_dense_res * 256, use_bias=False)(x)
-            x = Reshape((lowest_dense_res, lowest_dense_res, 256))(x)
             
-            x = upscale(512)(x)
+            x = Dense(256)(x)
+            x = ReLU()(x)
+            
+            x = Dense(256)(x)
+            x = ReLU()(x)            
+            
+            x = Dense( (lowest_dense_res*lowest_dense_res*256) ) (x)      
+            x = ReLU()(x)   
+            
+            x = Reshape( (lowest_dense_res,lowest_dense_res,256) )(x)
+            
+            x = upscale(512)(x)            
             x = upscale(256)(x)
             x = upscale(128)(x)
             x = upscale(64)(x)
-            bgr = to_bgr(3)(x)                
-            return [bgr]
+            x = to_bgr(3)(x)           
+                 
+            return x
         return func
         
     @staticmethod
@@ -253,40 +279,19 @@ class PoseEstimator(object):
         exec( nnlib.import_all(), locals(), globals() )
 
         XConv2D = partial(Conv2D, padding='zero')
-        
-        def Act(lrelu_alpha=0.1):
-            return LeakyReLU(alpha=lrelu_alpha)
-            
-        def downscale (dim, **kwargs):
-            def func(x):
-                return MaxPooling2D()( Act() ( XConv2D(dim, kernel_size=5, strides=1)(x)) )
-            return func
-            
-        def upscale (dim, **kwargs):
-            def func(x):
-                return SubpixelUpscaler()(Act()( XConv2D(dim * 4, kernel_size=3, strides=1)(x)))
-            return func
-            
-        def to_bgr (output_nc, **kwargs):
-            def func(x):
-                return XConv2D(output_nc, kernel_size=5, use_bias=True, activation='sigmoid')(x)
-            return func
-            
-        upscale = partial(upscale)
-        downscale = partial(downscale)
-        
+
         def func(latent):
             x = latent
 
             x = Dense(1024, activation='relu')(x)
             x = Dropout(0.5)(x)
-            x = Dense(2048, activation='relu')(x)
-            x = Dropout(0.5)(x)
-            x = Dense(4096, activation='relu')(x)
+            x = Dense(1024, activation='relu')(x)
+            # x = Dropout(0.5)(x)
+            # x = Dense(4096, activation='relu')(x)
             
             output = []
             for class_num in class_nums:
-                pyr = Dense(3, activation='sigmoid')(x)
+                pyr = Dense(3, activation='tanh')(x)
                 output += [pyr]
                 
             return output
