@@ -20,9 +20,13 @@ You can implement your own model. Check examples.
 class ModelBase(object):
 
 
-    def __init__(self, model_path, training_data_src_path=None, training_data_dst_path=None, debug = False, device_args = None,
-                 ask_write_preview_history=True, ask_target_iter=True, ask_batch_size=True, ask_sort_by_yaw=True,
-                 ask_random_flip=True, ask_src_scale_mod=True):
+    def __init__(self, model_path, training_data_src_path=None, training_data_dst_path=None, pretraining_data_path=None, debug = False, device_args = None,
+                 ask_write_preview_history=True, 
+                 ask_target_iter=True, 
+                 ask_batch_size=True, 
+                 ask_sort_by_yaw=True,
+                 ask_random_flip=True, 
+                 ask_src_scale_mod=True):
 
         device_args['force_gpu_idx'] = device_args.get('force_gpu_idx',-1)
         device_args['cpu_only'] = device_args.get('cpu_only',False)
@@ -46,7 +50,8 @@ class ModelBase(object):
 
         self.training_data_src_path = training_data_src_path
         self.training_data_dst_path = training_data_dst_path
-
+        self.pretraining_data_path = pretraining_data_path
+        
         self.src_images_paths = None
         self.dst_images_paths = None
         self.src_yaw_images_paths = None
@@ -85,7 +90,7 @@ class ModelBase(object):
         else:
             self.options['write_preview_history'] = self.options.get('write_preview_history', False)
 
-        if self.iter == 0 and self.options['write_preview_history'] and io.is_support_windows():
+        if (self.iter == 0 or ask_override) and self.options['write_preview_history'] and io.is_support_windows():
             choose_preview_history = io.input_bool("Choose image for the preview history? (y/n skip:%s) : " % (yn_str[False]) , False)
         else:
             choose_preview_history = False

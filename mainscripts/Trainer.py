@@ -19,6 +19,7 @@ def trainerThread (s2c, c2s, args, device_args):
 
             training_data_src_path = Path( args.get('training_data_src_dir', '') )
             training_data_dst_path = Path( args.get('training_data_dst_dir', '') )
+            pretraining_data_path = Path( args.get('pretraining_data_dir', '') )
             model_path = Path( args.get('model_path', '') )
             model_name = args.get('model_name', '')
             save_interval_min = 15
@@ -40,6 +41,7 @@ def trainerThread (s2c, c2s, args, device_args):
                         model_path,
                         training_data_src_path=training_data_src_path,
                         training_data_dst_path=training_data_dst_path,
+                        pretraining_data_path=pretraining_data_path,
                         debug=debug,
                         device_args=device_args)
 
