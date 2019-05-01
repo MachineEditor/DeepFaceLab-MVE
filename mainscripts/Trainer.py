@@ -19,7 +19,10 @@ def trainerThread (s2c, c2s, args, device_args):
 
             training_data_src_path = Path( args.get('training_data_src_dir', '') )
             training_data_dst_path = Path( args.get('training_data_dst_dir', '') )
-            pretraining_data_path = Path( args.get('pretraining_data_dir', '') )
+            
+            pretraining_data_path = args.get('pretraining_data_dir', '')
+            pretraining_data_path = Path(pretraining_data_path) if pretraining_data_path is not None else None
+            
             model_path = Path( args.get('model_path', '') )
             model_name = args.get('model_name', '')
             save_interval_min = 15

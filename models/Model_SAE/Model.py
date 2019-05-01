@@ -353,7 +353,7 @@ class SAEModel(ModelBase):
             training_data_dst_path = self.training_data_dst_path
             sort_by_yaw = self.sort_by_yaw
             
-            if self.pretrain:
+            if self.pretrain and self.pretraining_data_path is not None:
                 training_data_src_path = self.pretraining_data_path
                 training_data_dst_path = self.pretraining_data_path
                 sort_by_yaw = False
