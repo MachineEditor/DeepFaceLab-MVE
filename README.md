@@ -6,8 +6,6 @@
 
 If you like this software, please consider a donation.
 
-Goal: RTX 2080 TI
-
 [Donate via Yandex.Money](https://money.yandex.ru/to/41001142318065)
 
 [Donate via Paypal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=KK5ZCH4JXWMQS&source=url)
@@ -28,7 +26,7 @@ bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr
 
 [Google Colab fork](https://github.com/chervonij/DFL-Colab) by @chervonij
 
-[Linux fork](https://github.com/lbfs/DeepFaceLab_Linux) by @lbfs
+[Linux fork](https://github.com/lbfs/DeepFaceLab_Linux) by @lbfs - may be outdated
 
 - ### [Ready to work facesets](doc/doc_ready_to_work_facesets.md)
 
