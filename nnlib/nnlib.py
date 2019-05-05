@@ -315,7 +315,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 cs = (num1 - num0 + c2) / (den1 - den0 + c2)
 
                 ssim_val = K.mean(luminance * cs, axis=(-3, -2) )
-                return K.mean( (1.0 - ssim_val ) / 2.0 )
+                return(1.0 - ssim_val ) / 2.0
 
             return func
 
