@@ -81,14 +81,23 @@ def trainerThread (s2c, c2s, args, device_args):
 
             last_save_time = time.time()
 
+            execute_programs = [ [x[0], x[1], time.time() ] for x in execute_programs ]
+
             for i in itertools.count(0,1):
                 if not debug:
                     cur_time = time.time()
 
                     for x in execute_programs:
-                        prog_time, prog = x
-                        if prog_time != 0 and (cur_time - start_time) >= prog_time:
+                        prog_time, prog, last_time = x
+                        exec_prog = False
+                        if prog_time > 0 and (cur_time - start_time) >= prog_time:
                             x[0] = 0
+                            exec_prog = True                            
+                        elif prog_time < 0 and (cur_time - last_time)  >= -prog_time:
+                            x[2] = cur_time                            
+                            exec_prog = True
+                            
+                        if exec_prog:
                             try:
                                 exec(prog)
                             except Exception as e:
