@@ -47,5 +47,5 @@ def warp_by_params (params, img, warp, transform, flip, is_border_replicate):
     if transform:
         img = cv2.warpAffine( img, params['rmat'], (params['w'], params['w']), borderMode=(cv2.BORDER_REPLICATE if is_border_replicate else cv2.BORDER_CONSTANT), flags=cv2.INTER_CUBIC )
     if flip and params['flip']:
-        img = img[:,::-1,:]
+        img = img[:,::-1,...]
     return img
