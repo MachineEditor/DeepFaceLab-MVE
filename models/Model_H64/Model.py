@@ -58,7 +58,7 @@ class Model(ModelBase):
             t = SampleProcessor.Types
             output_sample_types=[ { 'types': (t.IMG_WARPED_TRANSFORMED, t.FACE_TYPE_HALF, t.MODE_BGR), 'resolution':64},
                                   { 'types': (t.IMG_TRANSFORMED, t.FACE_TYPE_HALF, t.MODE_BGR), 'resolution':64},
-                                  { 'types': (t.IMG_TRANSFORMED, t.FACE_TYPE_HALF, t.MODE_M, t.FACE_MASK_FULL), 'resolution':64} ]
+                                  { 'types': (t.IMG_TRANSFORMED, t.FACE_TYPE_HALF, t.MODE_M), 'resolution':64} ]
 
             self.set_training_data_generators ([
                     SampleGeneratorFace(self.training_data_src_path, sort_by_yaw_target_samples_path=self.training_data_dst_path if self.sort_by_yaw else None,

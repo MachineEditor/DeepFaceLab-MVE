@@ -13,7 +13,7 @@ output_sample_types = [
                         {} opts,
                         ...
                       ]
-                      
+
 opts:
     'types' : (S,S,...,S)
         where S:
@@ -23,31 +23,30 @@ opts:
             'IMG_TRANSFORMED'
             'IMG_LANDMARKS_ARRAY' #currently unused
             'IMG_PITCH_YAW_ROLL'
-            
+
             'FACE_TYPE_HALF'
             'FACE_TYPE_FULL'
             'FACE_TYPE_HEAD'    #currently unused
             'FACE_TYPE_AVATAR'  #currently unused
-
-            'FACE_MASK_FULL' 
-            'FACE_MASK_EYES' #currently unused
 
             'MODE_BGR'         #BGR
             'MODE_G'           #Grayscale
             'MODE_GGG'         #3xGrayscale
             'MODE_M'           #mask only
             'MODE_BGR_SHUFFLE' #BGR shuffle
-        
+
     'resolution' : N
-       
+
     'motion_blur' : (chance_int, range) - chance 0..100 to apply to face (not mask), and range [1..3] where 3 is highest power of motion blur
+
+    'apply_ct' : bool
 
 """
 
 class SampleProcessor(object):
     class Types(IntEnum):
         NONE = 0
-        
+
         IMG_TYPE_BEGIN = 1
         IMG_SOURCE                     = 1
         IMG_WARPED                     = 2
@@ -57,19 +56,14 @@ class SampleProcessor(object):
         IMG_PITCH_YAW_ROLL             = 6
         IMG_PITCH_YAW_ROLL_SIGMOID     = 7
         IMG_TYPE_END = 10
-        
+
         FACE_TYPE_BEGIN = 10
         FACE_TYPE_HALF             = 10
         FACE_TYPE_FULL             = 11
         FACE_TYPE_HEAD             = 12  #currently unused
         FACE_TYPE_AVATAR           = 13  #currently unused
         FACE_TYPE_END = 20
-        
-        FACE_MASK_BEGIN = 20
-        FACE_MASK_FULL             = 20
-        FACE_MASK_EYES             = 21 #currently unused
-        FACE_MASK_END = 30
-        
+
         MODE_BEGIN = 40
         MODE_BGR                   = 40  #BGR
         MODE_G                     = 41  #Grayscale
@@ -77,7 +71,7 @@ class SampleProcessor(object):
         MODE_M                     = 43  #mask only
         MODE_BGR_SHUFFLE           = 44  #BGR shuffle
         MODE_END = 50
-        
+
     class Options(object):
 
         def __init__(self, random_flip = True, normalize_tanh = False, rotation_range=[-10,10], scale_range=[-0.05, 0.05], tx_range=[-0.05, 0.05], ty_range=[-0.05, 0.05] ):
@@ -89,10 +83,12 @@ class SampleProcessor(object):
             self.ty_range = ty_range
 
     @staticmethod
-    def process (sample, sample_process_options, output_sample_types, debug):
+    def process (sample, sample_process_options, output_sample_types, debug, ct_sample=None):
         SPTF = SampleProcessor.Types
 
         sample_bgr = sample.load_bgr()
+        ct_sample_bgr = None
+        ct_sample_mask = None
         h,w,c = sample_bgr.shape
 
         is_face_sample = sample.landmarks is not None
@@ -103,25 +99,26 @@ class SampleProcessor(object):
         params = imagelib.gen_warp_params(sample_bgr, sample_process_options.random_flip, rotation_range=sample_process_options.rotation_range, scale_range=sample_process_options.scale_range, tx_range=sample_process_options.tx_range, ty_range=sample_process_options.ty_range )
 
         cached_images = collections.defaultdict(dict)
-        
+
         sample_rnd_seed = np.random.randint(0x80000000)
 
         SPTF_FACETYPE_TO_FACETYPE =  {  SPTF.FACE_TYPE_HALF : FaceType.HALF,
                                         SPTF.FACE_TYPE_FULL : FaceType.FULL,
                                         SPTF.FACE_TYPE_HEAD : FaceType.HEAD,
                                         SPTF.FACE_TYPE_AVATAR : FaceType.AVATAR }
-                            
+
         outputs = []
         for opts in output_sample_types:
- 
+
             resolution = opts.get('resolution', 0)
             types = opts.get('types', [] )
-            
+
             random_sub_res = opts.get('random_sub_res', 0)
             normalize_std_dev = opts.get('normalize_std_dev', False)
             normalize_vgg = opts.get('normalize_vgg', False)
             motion_blur = opts.get('motion_blur', None)
-            
+            apply_ct = opts.get('apply_ct', False)
+
             img_type = SPTF.NONE
             target_face_type = SPTF.NONE
             face_mask_type = SPTF.NONE
@@ -131,11 +128,9 @@ class SampleProcessor(object):
                     img_type = t
                 elif t >= SPTF.FACE_TYPE_BEGIN and t < SPTF.FACE_TYPE_END:
                     target_face_type = t
-                elif t >= SPTF.FACE_MASK_BEGIN and t < SPTF.FACE_MASK_END:
-                    face_mask_type = t
                 elif t >= SPTF.MODE_BEGIN and t < SPTF.MODE_END:
                     mode_type = t
-                    
+
             if img_type == SPTF.NONE:
                 raise ValueError ('expected IMG_ type')
 
@@ -152,55 +147,52 @@ class SampleProcessor(object):
                     pitch, yaw, roll = LandmarksProcessor.estimate_pitch_yaw_roll (sample.landmarks)
                 if params['flip']:
                     yaw = -yaw
-                    
+
                 if img_type == SPTF.IMG_PITCH_YAW_ROLL_SIGMOID:
                     pitch = (pitch+1.0) / 2.0
                     yaw = (yaw+1.0) / 2.0
                     roll = (roll+1.0) / 2.0
-                
-                img = (pitch, yaw, roll)                
+
+                img = (pitch, yaw, roll)
             else:
                 if mode_type == SPTF.NONE:
                     raise ValueError ('expected MODE_ type')
-                    
-                img = cached_images.get(img_type, {}).get(face_mask_type, None)
+
+                img = cached_images.get(img_type, None)
                 if img is None:
-                    
+
                     img = sample_bgr
+                    mask = None
                     cur_sample = sample
 
                     if is_face_sample:
                         if motion_blur is not None:
                             chance, mb_range = motion_blur
-                            chance = np.clip(chance, 0, 100)                            
-                            
+                            chance = np.clip(chance, 0, 100)
+
                             if np.random.randint(100) < chance:
                                 mb_range = [3,5,7,9][ : np.clip(mb_range, 0, 3)+1 ]
                                 dim = mb_range[ np.random.randint(len(mb_range) ) ]
                                 img = imagelib.LinearMotionBlur (img, dim, np.random.randint(180) )
 
-                        if face_mask_type == SPTF.FACE_MASK_FULL:
-                            mask = cur_sample.load_fanseg_mask() #using fanseg_mask if exist
+                        mask = cur_sample.load_fanseg_mask() #using fanseg_mask if exist
 
-                            if mask is None:
-                                mask = LandmarksProcessor.get_image_hull_mask (img.shape, cur_sample.landmarks)
+                        if mask is None:
+                            mask = LandmarksProcessor.get_image_hull_mask (img.shape, cur_sample.landmarks)
 
-                            if cur_sample.ie_polys is not None:
-                                cur_sample.ie_polys.overlay_mask(mask)
+                        if cur_sample.ie_polys is not None:
+                            cur_sample.ie_polys.overlay_mask(mask)
 
-                            img = np.concatenate( (img, mask ), -1 )
-                        elif face_mask_type == SPTF.FACE_MASK_EYES:
-                            mask = LandmarksProcessor.get_image_eye_mask (img.shape, cur_sample.landmarks)
-                            mask = np.expand_dims (cv2.blur (mask, ( w // 32, w // 32 ) ), -1)
-                            mask[mask > 0.0] = 1.0
-                            img = np.concatenate( (img, mask ), -1 )
-         
                     warp = (img_type==SPTF.IMG_WARPED or img_type==SPTF.IMG_WARPED_TRANSFORMED)
                     transform = (img_type==SPTF.IMG_WARPED_TRANSFORMED or img_type==SPTF.IMG_TRANSFORMED)
                     flip = img_type != SPTF.IMG_WARPED
-                    is_border_replicate = face_mask_type == SPTF.NONE
-                    
-                    img = cached_images[img_type][face_mask_type] = imagelib.warp_by_params (params, img, warp, transform, flip, is_border_replicate)
+
+                    img = imagelib.warp_by_params (params, img, warp, transform, flip, True)
+                    if mask is not None:
+                        mask = imagelib.warp_by_params (params, mask, warp, transform, flip, False)[...,np.newaxis]
+                        img = np.concatenate( (img, mask ), -1 )
+
+                    cached_images[img_type] = img
 
                 if is_face_sample and target_face_type != SPTF.NONE:
                     ft = SPTF_FACETYPE_TO_FACETYPE[target_face_type]
@@ -217,9 +209,24 @@ class SampleProcessor(object):
                     start_y = rnd_state.randint(sub_size+1)
                     img = img[start_y:start_y+sub_size,start_x:start_x+sub_size,:]
 
+                img = np.clip(img, 0, 1)
                 img_bgr  = img[...,0:3]
                 img_mask = img[...,3:4]
-                
+
+                if apply_ct:
+                    if ct_sample_bgr is None:
+                        ct_sample_bgr = ct_sample.load_bgr()
+                        ct_sample_mask = LandmarksProcessor.get_image_hull_mask (ct_sample_bgr.shape, ct_sample.landmarks)
+
+                    ct_sample_bgr_resized = cv2.resize( ct_sample_bgr, (resolution,resolution), cv2.INTER_LINEAR )
+                    ct_sample_mask_resized = cv2.resize( ct_sample_mask, (resolution,resolution), cv2.INTER_LINEAR )[...,np.newaxis]
+
+                    img_bgr = imagelib.reinhard_color_transfer ( np.clip( (img_bgr*255)  .astype(np.uint8), 0, 255),
+                                                                 np.clip( (ct_sample_bgr_resized*255).astype(np.uint8), 0, 255),
+                                                                 source_mask=img_mask, target_mask=ct_sample_mask_resized)
+
+                    img_bgr = np.clip( img_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
+
                 if normalize_std_dev:
                     img_bgr = (img_bgr - img_bgr.mean( (0,1)) ) / img_bgr.std( (0,1) )
                 elif normalize_vgg:
@@ -227,7 +234,7 @@ class SampleProcessor(object):
                     img_bgr[:,:,0] -= 103.939
                     img_bgr[:,:,1] -= 116.779
                     img_bgr[:,:,2] -= 123.68
-                    
+
                 if mode_type == SPTF.MODE_BGR:
                     img = img_bgr
                 elif mode_type == SPTF.MODE_BGR_SHUFFLE:
@@ -239,8 +246,6 @@ class SampleProcessor(object):
                 elif mode_type == SPTF.MODE_GGG:
                     img = np.concatenate ( ( np.repeat ( np.expand_dims(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY),-1), (3,), -1), img_mask), -1)
                 elif mode_type == SPTF.MODE_M and is_face_sample:
-                    if face_mask_type == SPTF.NONE:
-                        raise ValueError ('no face_mask_type defined')
                     img = img_mask
 
                 if not debug:

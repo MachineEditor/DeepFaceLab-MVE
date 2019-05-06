@@ -1,15 +1,18 @@
+import time
 import traceback
-from .Converter import Converter
-from facelib import LandmarksProcessor
-from facelib import FaceType
-from facelib import FANSegmentator
+
 import cv2
 import numpy as np
+
 import imagelib
+from facelib import FaceType, FANSegmentator, LandmarksProcessor
 from interact import interact as io
 from joblib import SubprocessFunctionCaller
 from utils.pickle_utils import AntiPickler
-import time
+
+from .Converter import Converter
+
+
 '''
 default_mode = {1:'overlay',
              2:'hist-match',
@@ -93,10 +96,10 @@ class ConverterMasked(Converter):
             self.blur_mask_modifier = base_blur_mask_modifier + np.clip ( io.input_int ("Choose blur mask modifier [-200..200] (skip:%d) : " % (default_blur_mask_modifier), default_blur_mask_modifier), -200, 200)
 
         self.output_face_scale = np.clip ( 1.0 + io.input_int ("Choose output face scale modifier [-50..50] (skip:0) : ", 0)*0.01, 0.5, 1.5)
-        
+
         if self.mode != 'raw':
             self.color_transfer_mode = io.input_str ("Apply color transfer to predicted face? Choose mode ( rct/lct skip:None ) : ", None, ['rct','lct'])
-        
+
         self.super_resolution = io.input_bool("Apply super resolution? (y/n ?:help skip:n) : ", False, help_message="Enhance details by applying DCSCN network.")
 
         if self.mode != 'raw':
@@ -173,12 +176,12 @@ class ConverterMasked(Converter):
             prd_face_mask_a_0 = cv2.resize (dst_face_mask_a_0, (output_size,output_size), cv2.INTER_CUBIC)
         elif self.mask_mode >= 3 and self.mask_mode <= 6:
 
-            if self.mask_mode == 3 or self.mask_mode == 5 or self.mask_mode == 6: 
+            if self.mask_mode == 3 or self.mask_mode == 5 or self.mask_mode == 6:
                 prd_face_bgr_256 = cv2.resize (prd_face_bgr, (256,256) )
                 prd_face_bgr_256_mask = self.fan_seg.extract( prd_face_bgr_256 )
                 FAN_prd_face_mask_a_0 = cv2.resize (prd_face_bgr_256_mask, (output_size,output_size), cv2.INTER_CUBIC)
 
-            if self.mask_mode == 4 or self.mask_mode == 5 or self.mask_mode == 6: 
+            if self.mask_mode == 4 or self.mask_mode == 5 or self.mask_mode == 6:
                 face_256_mat     = LandmarksProcessor.get_transform_mat (img_face_landmarks, 256, face_type=FaceType.FULL)
                 dst_face_256_bgr = cv2.warpAffine(img_bgr, face_256_mat, (256, 256), flags=cv2.INTER_LANCZOS4 )
                 dst_face_256_mask = self.fan_seg.extract( dst_face_256_bgr )
@@ -192,7 +195,7 @@ class ConverterMasked(Converter):
                 prd_face_mask_a_0 = FAN_prd_face_mask_a_0 * FAN_dst_face_mask_a_0
             elif self.mask_mode == 6:
                 prd_face_mask_a_0 = prd_face_mask_a_0 * FAN_prd_face_mask_a_0 * FAN_dst_face_mask_a_0
-                
+
         prd_face_mask_a_0[ prd_face_mask_a_0 < 0.001 ] = 0.0
 
         prd_face_mask_a   = prd_face_mask_a_0[...,np.newaxis]
@@ -316,7 +319,7 @@ class ConverterMasked(Converter):
 
                     if self.masked_hist_match:
                         hist_mask_a *= prd_face_mask_a
-                        
+
                     white =  (1.0-hist_mask_a)* np.ones ( prd_face_bgr.shape[:2] + (1,) , dtype=np.float32)
 
                     hist_match_1 = prd_face_bgr*hist_mask_a + white
@@ -326,10 +329,10 @@ class ConverterMasked(Converter):
                     hist_match_2[ hist_match_1 > 1.0 ] = 1.0
 
                     prd_face_bgr = imagelib.color_hist_match(hist_match_1, hist_match_2, self.hist_match_threshold )
-                    
+
                     #if self.masked_hist_match:
                     #    prd_face_bgr -= white
-                        
+
                 if self.mode == 'hist-match-bw':
                     prd_face_bgr = prd_face_bgr.astype(dtype=np.float32)
 
@@ -401,7 +404,7 @@ class ConverterMasked(Converter):
 
                         if debug:
                             debugs += [ np.clip( cv2.warpAffine( new_out_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
-                    
+
                     new_out = cv2.warpAffine( new_out_face_bgr, face_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4, cv2.BORDER_TRANSPARENT )
                     out_img =  np.clip( img_bgr*(1-img_mask_blurry_aaa) + (new_out*img_mask_blurry_aaa) , 0, 1.0 )
 
@@ -430,4 +433,3 @@ class ConverterMasked(Converter):
             debugs += [out_img.copy()]
 
         return debugs if debug else out_img
-
