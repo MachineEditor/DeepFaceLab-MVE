@@ -6,6 +6,8 @@
 
 If you like this software, please consider a donation.
 
+GOAL: next DeepFacelab update.
+
 [Donate via Yandex.Money](https://money.yandex.ru/to/41001142318065)
 
 [Donate via Paypal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=KK5ZCH4JXWMQS&source=url)
