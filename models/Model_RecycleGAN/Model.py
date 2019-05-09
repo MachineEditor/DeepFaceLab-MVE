@@ -185,17 +185,17 @@ class RecycleGANModel(ModelBase):
         
         if self.is_training_mode:
             t = SampleProcessor.Types
-            output_sample_types=[ { 'types': (t.IMG_SOURCE, t.MODE_BGR), 'resolution':resolution} ]
+            output_sample_types=[ { 'types': (t.IMG_SOURCE, t.MODE_BGR), 'resolution':resolution, 'normalize_tanh' : True} ]
                                   
             self.set_training_data_generators ([            
                     SampleGeneratorImageTemporal(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size, 
                         temporal_image_count=3,
-                        sample_process_options=SampleProcessor.Options(random_flip = False, normalize_tanh = True), 
+                        sample_process_options=SampleProcessor.Options(random_flip = False), 
                         output_sample_types=output_sample_types ),
                         
                     SampleGeneratorImageTemporal(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size, 
                         temporal_image_count=3,
-                        sample_process_options=SampleProcessor.Options(random_flip = False, normalize_tanh = True), 
+                        sample_process_options=SampleProcessor.Options(random_flip = False), 
                         output_sample_types=output_sample_types ),
                    ])
         else:

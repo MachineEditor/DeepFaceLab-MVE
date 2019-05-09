@@ -36,10 +36,9 @@ opts:
             'MODE_BGR_SHUFFLE' #BGR shuffle
 
     'resolution' : N
-
     'motion_blur' : (chance_int, range) - chance 0..100 to apply to face (not mask), and range [1..3] where 3 is highest power of motion blur
-
     'apply_ct' : bool
+    'normalize_tanh' : bool
 
 """
 
@@ -74,9 +73,8 @@ class SampleProcessor(object):
 
     class Options(object):
 
-        def __init__(self, random_flip = True, normalize_tanh = False, rotation_range=[-10,10], scale_range=[-0.05, 0.05], tx_range=[-0.05, 0.05], ty_range=[-0.05, 0.05] ):
+        def __init__(self, random_flip = True, rotation_range=[-10,10], scale_range=[-0.05, 0.05], tx_range=[-0.05, 0.05], ty_range=[-0.05, 0.05] ):
             self.random_flip = random_flip
-            self.normalize_tanh = normalize_tanh
             self.rotation_range = rotation_range
             self.scale_range = scale_range
             self.tx_range = tx_range
@@ -118,6 +116,7 @@ class SampleProcessor(object):
             normalize_vgg = opts.get('normalize_vgg', False)
             motion_blur = opts.get('motion_blur', None)
             apply_ct = opts.get('apply_ct', False)
+            normalize_tanh = opts.get('normalize_tanh', False)
 
             img_type = SPTF.NONE
             target_face_type = SPTF.NONE
@@ -246,7 +245,7 @@ class SampleProcessor(object):
                     img = img_mask
 
                 if not debug:
-                    if sample_process_options.normalize_tanh:
+                    if normalize_tanh:
                         img = np.clip (img * 2.0 - 1.0, -1.0, 1.0)
                     else:
                         img = np.clip (img, 0.0, 1.0)
