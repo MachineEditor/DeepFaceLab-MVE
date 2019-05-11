@@ -213,7 +213,7 @@ class SampleProcessor(object):
                 img_mask = img[...,3:4]
 
                 if apply_ct:
-                    if ct_sample_bgr is None:
+                    if ct_sample_bgr is not None:
                         ct_sample_bgr = ct_sample.load_bgr()
 
                     ct_sample_bgr_resized = cv2.resize( ct_sample_bgr, (resolution,resolution), cv2.INTER_LINEAR )
