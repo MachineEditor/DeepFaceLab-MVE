@@ -39,6 +39,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
         samples = SampleLoader.load (self.sample_type, self.samples_path, sort_by_yaw_target_samples_path)
 
         ct_samples = SampleLoader.load (SampleType.FACE, random_ct_samples_path) if random_ct_samples_path is not None else None
+        self.random_ct_sample_chance = 20
 
         if self.debug:
             self.generators_count = 1
@@ -113,8 +114,12 @@ class SampleGeneratorFace(SampleGeneratorBase):
 
                     if sample is not None:
                         try:
-                            x = SampleProcessor.process (sample, self.sample_process_options, self.output_sample_types, self.debug,
-                                        ct_sample=ct_samples[np.random.randint(ct_samples_len)] if ct_samples is not None else None )
+                            ct_sample=None                            
+                            if ct_samples is not None:                                
+                                if np.random.randint(100) < self.random_ct_sample_chance:
+                                    ct_sample=ct_samples[np.random.randint(ct_samples_len)]
+                            
+                            x = SampleProcessor.process (sample, self.sample_process_options, self.output_sample_types, self.debug, ct_sample=ct_sample)
                         except:
                             raise Exception ("Exception occured in sample %s. Error: %s" % (sample.filename, traceback.format_exc() ) )
 
