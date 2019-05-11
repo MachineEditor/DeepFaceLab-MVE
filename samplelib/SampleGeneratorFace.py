@@ -39,7 +39,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
         samples = SampleLoader.load (self.sample_type, self.samples_path, sort_by_yaw_target_samples_path)
 
         ct_samples = SampleLoader.load (SampleType.FACE, random_ct_samples_path) if random_ct_samples_path is not None else None
-        self.random_ct_sample_chance = 80
+        self.random_ct_sample_chance = 100
 
         if self.debug:
             self.generators_count = 1
