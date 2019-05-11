@@ -16,6 +16,8 @@ GOAL: next DeepFacelab update.
 
 bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr
 
+- ### [Gallery](doc/gallery/doc_gallery.md)
+
 - ### Manuals:
 
 [English (google translated)](doc/manual_en_google_translated.pdf)
