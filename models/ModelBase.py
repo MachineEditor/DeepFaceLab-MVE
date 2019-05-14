@@ -109,9 +109,10 @@ class ModelBase(object):
         else:
             self.options['batch_size'] = self.options.get('batch_size', 0)
 
-        if ask_sort_by_yaw:
-            if (self.iter == 0):
-                self.options['sort_by_yaw'] = io.input_bool("Feed faces to network sorted by yaw? (y/n ?:help skip:n) : ", False, help_message="NN will not learn src face directions that don't match dst face directions. Do not use if the dst face has hair that covers the jaw." )
+        if ask_sort_by_yaw:            
+            if (self.iter == 0 or ask_override):
+                default_sort_by_yaw = self.options.get('sort_by_yaw', False)
+                self.options['sort_by_yaw'] = io.input_bool("Feed faces to network sorted by yaw? (y/n ?:help skip:%s) : " % (yn_str[default_sort_by_yaw]), default_sort_by_yaw, help_message="NN will not learn src face directions that don't match dst face directions. Do not use if the dst face has hair that covers the jaw." )
             else:
                 self.options['sort_by_yaw'] = self.options.get('sort_by_yaw', False)
 
