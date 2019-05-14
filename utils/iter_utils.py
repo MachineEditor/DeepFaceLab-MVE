@@ -48,6 +48,11 @@ class SubprocessGenerator(object):
     def __iter__(self):
         return self
 
+    def __getstate__(self):
+        self_dict = self.__dict__.copy()
+        del self_dict['p']
+        return self_dict
+
     def __next__(self):
         if self.p == None:
             user_param = self.user_param
