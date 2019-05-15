@@ -12,7 +12,7 @@ GOAL: next DeepFacelab update.
 
 [Donate via Yandex.Money](https://money.yandex.ru/to/41001142318065)
 
-[Donate via Paypal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WZ872T22BQ5AU&source=url)
+[Donate via Paypal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=lepersorium@gmail.com&lc=US&no_note=0&item_name=Support+DeepFaceLab&cn=&curency_code=USD&bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted)
                     
 [Donate via Alipay](https://i.loli.net/2019/01/13/5c3ae3829809f.jpg)
 
