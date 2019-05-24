@@ -299,7 +299,7 @@ def get_plaidML_devices():
         except:
             pass
     return plaidML_devices
- 
+
 if not has_nvidia_device:
     get_plaidML_devices()
 
