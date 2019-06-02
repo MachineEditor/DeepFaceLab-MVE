@@ -244,9 +244,15 @@ class InteractBase(object):
                     print (help_message)
                     continue
 
-                if (valid_list is not None) and (inp.lower() not in valid_list):
+                if valid_list is not None:
+                    if inp.lower() in valid_list:
+                        return inp.lower()
+                    if inp in valid_list:
+                        return inp
                     return default_value
+
                 return inp
+
             except:
                 print (default_value)
                 return default_value
