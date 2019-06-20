@@ -72,10 +72,14 @@ class Model(ModelBase):
                 ])
 
     #override
+    def get_model_filename_list(self):
+        return [[self.encoder, 'encoder.h5'],
+                [self.decoder_src, 'decoder_src.h5'],
+                [self.decoder_dst, 'decoder_dst.h5']]
+        
+    #override
     def onSave(self):
-        self.save_weights_safe( [[self.encoder,     'encoder.h5'],
-                                 [self.decoder_src, 'decoder_src.h5'],
-                                 [self.decoder_dst, 'decoder_dst.h5']] )
+        self.save_weights_safe( self.get_model_filename_list() )
 
     #override
     def onTrainOneIter(self, sample, generators_list):

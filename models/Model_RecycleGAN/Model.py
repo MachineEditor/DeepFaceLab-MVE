@@ -202,13 +202,17 @@ class RecycleGANModel(ModelBase):
             self.G_convert = K.function([real_B0],[fake_A0])
             
     #override
+    def get_model_filename_list(self):
+        return [ [self.GA,   'GA.h5'],
+                 [self.GB,   'GB.h5'],
+                 [self.DA,   'DA.h5'],
+                 [self.DB,   'DB.h5'],
+                 [self.PA,   'PA.h5'],
+                 [self.PB,   'PB.h5'] ]
+
+    #override
     def onSave(self):
-        self.save_weights_safe( [[self.GA,   'GA.h5'],
-                                 [self.GB,   'GB.h5'],
-                                 [self.DA,   'DA.h5'],
-                                 [self.DB,   'DB.h5'],
-                                 [self.PA,   'PA.h5'],
-                                 [self.PB,   'PB.h5'] ])
+        self.save_weights_safe( self.get_model_filename_list() )
         
     #override
     def onTrainOneIter(self, generators_samples, generators_list):

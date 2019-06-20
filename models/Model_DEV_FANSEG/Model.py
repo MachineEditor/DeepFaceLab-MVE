@@ -11,6 +11,7 @@ class Model(ModelBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs, 
+                            ask_enable_autobackup=False,
                             ask_write_preview_history=False, 
                             ask_target_iter=False,
                             ask_sort_by_yaw=False,

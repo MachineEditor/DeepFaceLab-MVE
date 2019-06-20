@@ -27,7 +27,24 @@ def get_image_unique_filestem_paths(dir_path, verbose_print_func=None):
         result_dup.add(f_stem)
 
     return result
+    
+def get_file_paths(dir_path):
+    dir_path = Path (dir_path)
 
+    result = []
+    if dir_path.exists():
+        return [ x.path for x in list(scandir(str(dir_path))) if x.is_file() ]
+    return result
+    
+def get_all_dir_names (dir_path):
+    dir_path = Path (dir_path)
+
+    result = []
+    if dir_path.exists():
+        return [ x.name for x in list(scandir(str(dir_path))) if x.is_dir() ]
+        
+    return result
+    
 def get_all_dir_names_startswith (dir_path, startswith):
     dir_path = Path (dir_path)
     startswith = startswith.lower()
@@ -52,3 +69,15 @@ def get_first_file_by_stem (dir_path, stem, exts=None):
                 return xp
 
     return None
+
+def move_all_files (src_dir_path, dst_dir_path):
+    paths = get_file_paths(src_dir_path)
+    for p in paths:
+        p = Path(p)
+        p.rename ( Path(dst_dir_path) / p.name )
+        
+def delete_all_files (dir_path):
+    paths = get_file_paths(dir_path)
+    for p in paths:
+        p = Path(p)
+        p.unlink()

@@ -24,7 +24,7 @@ class SAEModel(ModelBase):
     #override
     def onInitializeOptions(self, is_first_run, ask_override):
         yn_str = {True:'y',False:'n'}
-
+        
         default_resolution = 128
         default_archi = 'df'
         default_face_type = 'f'
@@ -90,12 +90,20 @@ class SAEModel(ModelBase):
 
             default_apply_random_ct = False if is_first_run else self.options.get('apply_random_ct', False)
             self.options['apply_random_ct'] = io.input_bool ("Apply random color transfer to src faceset? (y/n, ?:help skip:%s) : " % (yn_str[default_apply_random_ct]), default_apply_random_ct, help_message="Increase variativity of src samples by apply LCT color transfer from random dst samples. It is like 'face_style' learning, but more precise color transfer and without risk of model collapse, also it does not require additional GPU resources, but the training time may be longer, due to the src faceset is becoming more diverse.")
+            
+            if nnlib.device.backend != 'plaidML': # todo https://github.com/plaidml/plaidml/issues/301
+                default_clipgrad = False if is_first_run else self.options.get('clipgrad', False)
+                self.options['clipgrad'] = io.input_bool ("Enable gradient clipping? (y/n, ?:help skip:%s) : " % (yn_str[default_clipgrad]), default_clipgrad, help_message="Gradient clipping reduces chance of model collapse, sacrificing speed of training.")
+            else:
+                self.options['clipgrad'] = False
+                
         else:
             self.options['pixel_loss'] = self.options.get('pixel_loss', False)
             self.options['face_style_power'] = self.options.get('face_style_power', default_face_style_power)
             self.options['bg_style_power'] = self.options.get('bg_style_power', default_bg_style_power)
             self.options['apply_random_ct'] = self.options.get('apply_random_ct', False)
-
+            self.options['clipgrad'] = self.options.get('clipgrad', False)
+            
         if is_first_run:
             self.options['pretrain'] = io.input_bool ("Pretrain the model? (y/n, ?:help skip:n) : ", False, help_message="Pretrain the model with large amount of various faces. This technique may help to train the fake with overly different face shapes and light conditions of src/dst data. Face will be look more like a morphed. To reduce the morph effect, some model files will be initialized but not be updated after pretrain: LIAE: inter_AB.h5 DF: encoder.h5. The longer you pretrain the model the more morphed face will look. After that, save and run the training again.")
         else:
@@ -271,8 +279,8 @@ class SAEModel(ModelBase):
         psd_target_dst_anti_masked_ar = [ pred_src_dst_sigm_ar[i]*target_dstm_anti_sigm_ar[i]  for i in range(len(pred_src_dst_sigm_ar))]
 
         if self.is_training_mode:
-            self.src_dst_opt      = Adam(lr=5e-5, beta_1=0.5, beta_2=0.999, tf_cpu_mode=self.options['optimizer_mode']-1)
-            self.src_dst_mask_opt = Adam(lr=5e-5, beta_1=0.5, beta_2=0.999, tf_cpu_mode=self.options['optimizer_mode']-1)
+            self.src_dst_opt      = Adam(lr=5e-5, beta_1=0.5, beta_2=0.999, clipnorm=1.0 if self.options['clipgrad'] else 0.0, tf_cpu_mode=self.options['optimizer_mode']-1)
+            self.src_dst_mask_opt = Adam(lr=5e-5, beta_1=0.5, beta_2=0.999, clipnorm=1.0 if self.options['clipgrad'] else 0.0, tf_cpu_mode=self.options['optimizer_mode']-1)
 
             if 'liae' in self.options['archi']:
                 src_dst_loss_train_weights = self.encoder.trainable_weights + self.inter_B.trainable_weights + self.inter_AB.trainable_weights + self.decoder.trainable_weights
@@ -375,12 +383,9 @@ class SAEModel(ModelBase):
                                               [ {'types' : (t.IMG_TRANSFORMED, face_type, t_mode_bgr), 'resolution': resolution // (2**i)} for i in range(ms_count)] + \
                                               [ {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_M), 'resolution': resolution // (2**i) } for i in range(ms_count)])
                     ])
-
+                    
     #override
-    def onSave(self):
-        opt_ar = [ [self.src_dst_opt,      'src_dst_opt'],
-                   [self.src_dst_mask_opt, 'src_dst_mask_opt']
-                 ]
+    def get_model_filename_list(self):
         ar = []
         if 'liae' in self.options['archi']:
             ar += [[self.encoder, 'encoder.h5'],
@@ -407,9 +412,11 @@ class SAEModel(ModelBase):
             if self.options['learn_mask']:
                 ar += [ [self.decoder_srcm, 'decoder_srcm.h5'],
                         [self.decoder_dstm, 'decoder_dstm.h5'] ]
-
-        self.save_weights_safe(ar)
-
+        return ar
+        
+    #override
+    def onSave(self):
+        self.save_weights_safe( self.get_model_filename_list() )
 
     #override
     def onTrainOneIter(self, generators_samples, generators_list):
