@@ -1,4 +1,4 @@
-![](doc/DFL_welcome.jpg)
+﻿![](doc/DFL_welcome.jpg)
 
 ![](doc/logo_cuda.jpg)![](doc/logo_opencl.jpg)![](doc/logo_keras.jpg)![](doc/logo_tensorflow.jpg)![](doc/logo_plaidml.jpg)
 
@@ -14,8 +14,6 @@ GOAL: next DeepFacelab update.
 
 [Donate via Paypal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=lepersorium@gmail.com&lc=US&no_note=0&item_name=Support+DeepFaceLab&cn=&curency_code=USD&bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted)
                     
-[Donate via Alipay](https://i.loli.net/2019/01/13/5c3ae3829809f.jpg)
-
 bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr
 
 - ### [Gallery](doc/gallery/doc_gallery.md)
