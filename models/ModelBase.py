@@ -102,6 +102,8 @@ class ModelBase(object):
 
         if (self.iter == 0 or ask_override) and self.options['write_preview_history'] and io.is_support_windows():
             choose_preview_history = io.input_bool("Choose image for the preview history? (y/n skip:%s) : " % (yn_str[False]) , False)
+        elif (self.iter == 0 or ask_override) and self.options['write_preview_history'] and io.is_colab():
+            choose_preview_history = io.input_bool("Randomly choose new image for preview history? (y/n ?:help skip:%s) : " % (yn_str[False]), False, help_message="Preview image history will stay stuck with old faces if you reuse the same model on different celebs. Choose no unless you are changing src/dst to a new person")
         else:
             choose_preview_history = False
         
