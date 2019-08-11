@@ -423,14 +423,11 @@ def sort_by_hist_dissim(input_path):
         else:
             dflimg = None
 
-        if dflimg is None:
-            io.log_err ("%s is not a dfl image file" % (filepath.name) )
-            trash_img_list.append ([str(filepath)])
-            continue
-
         image = cv2_imread(str(filepath))
-        face_mask = LandmarksProcessor.get_image_hull_mask (image.shape, dflimg.get_landmarks())
-        image = (image*face_mask).astype(np.uint8)
+
+        if dflimg is not None:
+            face_mask = LandmarksProcessor.get_image_hull_mask (image.shape, dflimg.get_landmarks())
+            image = (image*face_mask).astype(np.uint8)
 
         img_list.append ([str(filepath), cv2.calcHist([cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)], [0], None, [256], [0, 256]), 0 ])
 

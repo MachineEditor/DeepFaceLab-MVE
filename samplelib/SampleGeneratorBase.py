@@ -13,7 +13,18 @@ class SampleGeneratorBase(object):
         self.samples_path = Path(samples_path)
         self.debug = debug
         self.batch_size = 1 if self.debug else batch_size
-
+        self.last_generation = None
+        self.active = True
+        
+    def set_active(self, is_active):
+        self.active = is_active
+        
+    def generate_next(self):
+        if not self.active and self.last_generation is not None:
+            return self.last_generation
+        self.last_generation = next(self)
+        return self.last_generation
+        
     #overridable
     def __iter__(self):
         #implement your own iterator

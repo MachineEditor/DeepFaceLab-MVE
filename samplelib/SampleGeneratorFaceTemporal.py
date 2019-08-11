@@ -8,7 +8,7 @@ from samplelib import SampleType, SampleProcessor, SampleLoader, SampleGenerator
 
 '''
 output_sample_types = [
-                        [SampleProcessor.TypeFlags, size, (optional)random_sub_size] ,
+                        [SampleProcessor.TypeFlags, size, (optional) {} opts ] ,
                         ...
                       ]
 '''
@@ -46,9 +46,9 @@ class SampleGeneratorFaceTemporal(SampleGeneratorBase):
             raise ValueError('No training data provided.')
             
         mult_max = 1
-        l = samples_len - (self.temporal_image_count-1)*mult_max + 1
+        l = samples_len - ( (self.temporal_image_count)*mult_max - (mult_max-1)  )
 
-        samples_idxs = [ *range(l) ] [generator_id::self.generators_count]
+        samples_idxs = [ *range(l+1) ] [generator_id::self.generators_count]
         
         if len(samples_idxs) - self.temporal_image_count < 0:
             raise ValueError('Not enough samples to fit temporal line.')
@@ -67,7 +67,7 @@ class SampleGeneratorFaceTemporal(SampleGeneratorBase):
                 idx = shuffle_idxs.pop()
 
                 temporal_samples = []
-                mult = np.random.randint(mult_max)
+                mult = np.random.randint(mult_max)+1
                 for i in range( self.temporal_image_count ):
                     sample = samples[ idx+i*mult ]
                     try:

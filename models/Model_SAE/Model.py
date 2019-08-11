@@ -545,6 +545,12 @@ class SAEModel(ModelBase):
                 return Norm(norm)( Act(act) (Conv2D(dim, kernel_size=5, strides=2, padding=padding)(x)) )
             return func
         SAEModel.downscale = downscale
+        
+        #def downscale (dim, padding='zero', norm='', act='', **kwargs):
+        #    def func(x):
+        #        return BlurPool()( Norm(norm)( Act(act) (Conv2D(dim, kernel_size=5, strides=1, padding=padding)(x)) ) )
+        #    return func
+        #SAEModel.downscale = downscale
 
         def upscale (dim, padding='zero', norm='', act='', **kwargs):
             def func(x):

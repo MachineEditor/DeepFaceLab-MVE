@@ -378,7 +378,6 @@ class RecycleGANModel(ModelBase):
 
             return x
         return func
-    nnlib.UNet = UNet
 
     @staticmethod
     def UNetTemporalPredictor(output_nc, use_batch_norm, ngf=64, use_dropout=False):

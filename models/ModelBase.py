@@ -466,7 +466,7 @@ class ModelBase(object):
         return imagelib.equalize_and_stack_square (images)
 
     def generate_next_sample(self):
-        return [next(generator) for generator in self.generator_list]
+        return [ generator.generate_next() for generator in self.generator_list]
 
     def train_one_iter(self):
         sample = self.generate_next_sample()
