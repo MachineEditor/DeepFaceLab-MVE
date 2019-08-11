@@ -260,6 +260,7 @@ class ConverterMasked(Converter):
                     prd_border_size = int ( prd_hborder_rect_mask_a.shape[1] * self.clip_hborder_mask_per )
                     prd_hborder_rect_mask_a[:,0:prd_border_size,:] = 0
                     prd_hborder_rect_mask_a[:,-prd_border_size:,:] = 0
+                    prd_hborder_rect_mask_a[-prd_border_size:,:,:] = 0
                     prd_hborder_rect_mask_a = np.expand_dims(cv2.blur(prd_hborder_rect_mask_a, (prd_border_size, prd_border_size) ),-1)
 
                     img_prd_hborder_rect_mask_a = cv2.warpAffine( prd_hborder_rect_mask_a, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4 )
