@@ -231,36 +231,54 @@ class ModelBase(object):
                 else:    
                     self.sample_for_preview = self.generate_next_sample()                    
                 self.last_sample = self.sample_for_preview
+                
+        ###Generate text summary of model hyperparameters
+        #Find the longest key name and value string. Used as column widths.
+        width_name = max([len(k) for k in self.options.keys()] + [17]) + 1 # Single space buffer to left edge. Minimum of 17, the length of the longest static string used "Current iteration"
+        width_value = max([len(str(x)) for x in self.options.values()] + [len(str(self.iter)), len(self.get_model_name())]) + 1 # Single space buffer to right edge
+        if not self.device_config.cpu_only: #Check length of GPU names
+            width_value = max([len(nnlib.device.getDeviceName(idx))+1 for idx in self.device_config.gpu_idxs] + [width_value]) 
+        width_total = width_name + width_value + 2 #Plus 2 for ": "
+        
         model_summary_text = []
-
-        model_summary_text += ["===== Model summary ====="]
-        model_summary_text += ["== Model name: " + self.get_model_name()]
-        model_summary_text += ["=="]
-        model_summary_text += ["== Current iteration: " + str(self.iter)]
-        model_summary_text += ["=="]
-        model_summary_text += ["== Model options:"]
+        model_summary_text += [f'=={" Model Summary ":=^{width_total}}=='] # Model/status summary
+        model_summary_text += [f'=={" "*width_total}==']
+        model_summary_text += [f'=={"Model name": >{width_name}}: {self.get_model_name(): <{width_value}}=='] # Name
+        model_summary_text += [f'=={" "*width_total}==']
+        model_summary_text += [f'=={"Current iteration": >{width_name}}: {str(self.iter): <{width_value}}=='] # Iter
+        model_summary_text += [f'=={" "*width_total}==']
+        
+        model_summary_text += [f'=={" Model Options ":-^{width_total}}=='] # Model options
+        model_summary_text += [f'=={" "*width_total}==']
         for key in self.options.keys():
-            model_summary_text += ["== |== %s : %s" % (key, self.options[key])]
-
+            model_summary_text += [f'=={key: >{width_name}}: {str(self.options[key]): <{width_value}}=='] # self.options key/value pairs
+        model_summary_text += [f'=={" "*width_total}==']
+        
+        model_summary_text += [f'=={" Running On ":-^{width_total}}=='] # Training hardware info
+        model_summary_text += [f'=={" "*width_total}==']
         if self.device_config.multi_gpu:
-            model_summary_text += ["== |== multi_gpu : True "]
-
-        model_summary_text += ["== Running on:"]
+            model_summary_text += [f'=={"Using multi_gpu": >{width_name}}: {"True": <{width_value}}=='] # multi_gpu
+            model_summary_text += [f'=={" "*width_total}==']
         if self.device_config.cpu_only:
-            model_summary_text += ["== |== [CPU]"]
+            model_summary_text += [f'=={"Using device": >{width_name}}: {"CPU": <{width_value}}=='] # cpu_only
         else:
             for idx in self.device_config.gpu_idxs:
-                model_summary_text += ["== |== [%d : %s]" % (idx, nnlib.device.getDeviceName(idx))]
-
-        if not self.device_config.cpu_only and self.device_config.gpu_vram_gb[0] == 2:
-            model_summary_text += ["=="]
-            model_summary_text += ["== WARNING: You are using 2GB GPU. Result quality may be significantly decreased."]
-            model_summary_text += ["== If training does not start, close all programs and try again."]
-            model_summary_text += ["== Also you can disable Windows Aero Desktop to get extra free VRAM."]
-            model_summary_text += ["=="]
-
-        model_summary_text += ["========================="]
-        model_summary_text = "\r\n".join (model_summary_text)
+                model_summary_text += [f'=={"Device index": >{width_name}}: {idx: <{width_value}}=='] # GPU hardware device index
+                model_summary_text += [f'=={"Name": >{width_name}}: {nnlib.device.getDeviceName(idx): <{width_value}}=='] # GPU name
+                vram_str = f'{nnlib.device.getDeviceVRAMTotalGb(idx):.2f}GB' # GPU VRAM - Formated as #.## (or ##.##)
+                model_summary_text += [f'=={"VRAM": >{width_name}}: {vram_str: <{width_value}}=='] 
+        model_summary_text += [f'=={" "*width_total}==']
+        model_summary_text += [f'=={"="*width_total}==']
+        
+        if not self.device_config.cpu_only and self.device_config.gpu_vram_gb[0] <= 2: # Low VRAM warning
+            model_summary_text += ["/!\\"]
+            model_summary_text += ["/!\\ WARNING:"]
+            model_summary_text += ["/!\\ You are using a GPU with 2GB or less VRAM. This may significantly reduce the quality of your result!"]
+            model_summary_text += ["/!\\ If training does not start, close all programs and try again."]
+            model_summary_text += ["/!\\ Also you can disable Windows Aero Desktop to increase available VRAM."]
+            model_summary_text += ["/!\\"]
+ 
+        model_summary_text = "\n".join (model_summary_text)
         self.model_summary_text = model_summary_text
         io.log_info(model_summary_text)
 
