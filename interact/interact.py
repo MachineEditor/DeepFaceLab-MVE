@@ -33,6 +33,7 @@ class InteractBase(object):
         self.key_events = {}
         self.pg_bar = None
         self.focus_wnd_name = None
+        self.error_log_line_prefix = '/!\\ '
 
     def is_support_windows(self):
         return False
@@ -65,10 +66,22 @@ class InteractBase(object):
         raise NotImplemented
 
     def log_info(self, msg, end='\n'):
+        if self.pg_bar is not None:
+            try: # Attempt print before the pb
+                tqdm.write(msg)
+                return
+            except: 
+                pass #Fallback to normal print upon failure
         print (msg, end=end)
 
     def log_err(self, msg, end='\n'):
-        print (msg, end=end)
+        if self.pg_bar is not None:
+            try: # Attempt print before the pb
+                tqdm.write(f'{self.error_log_line_prefix}{msg}')
+                return
+            except: 
+                pass #Fallback to normal print upon failure
+        print (f'{self.error_log_line_prefix}{msg}', end=end)
 
     def named_window(self, wnd_name):
         if wnd_name not in self.named_windows:
@@ -150,9 +163,12 @@ class InteractBase(object):
         else: print("progress_bar not set.")
 
     def progress_bar_generator(self, data, desc, leave=True):
-        for x in tqdm( data, desc=desc, leave=leave, ascii=True ):
+        self.pg_bar = tqdm( data, desc=desc, leave=leave, ascii=True )
+        for x in self.pg_bar:
             yield x
-
+        self.pg_bar.close()   
+        self.pg_bar = None
+        
     def process_messages(self, sleep_time=0):
         self.on_process_messages(sleep_time)
 
