@@ -31,19 +31,18 @@ def get_image_unique_filestem_paths(dir_path, verbose_print_func=None):
 def get_file_paths(dir_path):
     dir_path = Path (dir_path)
 
-    result = []
     if dir_path.exists():
-        return [ x.path for x in list(scandir(str(dir_path))) if x.is_file() ]
-    return sorted(result)
+        return sorted([ x.path for x in list(scandir(str(dir_path))) if x.is_file() ])
+    else:
+        return []
     
 def get_all_dir_names (dir_path):
     dir_path = Path (dir_path)
 
-    result = []
     if dir_path.exists():
-        return [ x.name for x in list(scandir(str(dir_path))) if x.is_dir() ]
-        
-    return sorted(result)
+        return sorted([ x.name for x in list(scandir(str(dir_path))) if x.is_dir() ])
+    else:
+        return []
     
 def get_all_dir_names_startswith (dir_path, startswith):
     dir_path = Path (dir_path)
@@ -61,7 +60,7 @@ def get_first_file_by_stem (dir_path, stem, exts=None):
     stem = stem.lower()
 
     if dir_path.exists():
-        for x in sorted(list(scandir(str(dir_path)))):
+        for x in sorted(list(scandir(str(dir_path))), key=lambda x: x.name):
             if not x.is_file():
                 continue
             xp = Path(x.path)
