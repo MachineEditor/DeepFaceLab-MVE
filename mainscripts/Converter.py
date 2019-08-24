@@ -84,8 +84,6 @@ class ConvertSubprocessor(Subprocessor):
             #therefore forcing active_DeviceConfig to CPU only
             nnlib.active_DeviceConfig = nnlib.DeviceConfig (cpu_only=True)
 
-            print(nnlib.backend)
-
             self.fanseg_by_face_type = {}
             self.fanseg_input_size = 256
 
@@ -247,6 +245,7 @@ class ConvertSubprocessor(Subprocessor):
         self.dcscn_host.process_messages()
 
         go_prev_frame = False
+        go_prev_frame_overriding_cfg = False
         go_next_frame = self.process_remain_frames
         go_next_frame_overriding_cfg = False
 
@@ -346,9 +345,10 @@ class ConvertSubprocessor(Subprocessor):
                                 cur_frame.is_done = False
                                 cur_frame.is_shown = False
                     else:
-                        if chr_key == ',':
+                        if chr_key == ',' or chr_key == 'm':
                             self.process_remain_frames = False
                             go_prev_frame = True
+                            go_prev_frame_overriding_cfg = chr_key == 'm'
                         elif chr_key == '.' or chr_key == '/':
                             self.process_remain_frames = False
                             go_next_frame = True
@@ -364,12 +364,19 @@ class ConvertSubprocessor(Subprocessor):
         if go_prev_frame:
             if cur_frame is not None and cur_frame.is_done:
                 cur_frame.image = None
+          
 
             if len(self.frames_done_idxs) > 0:
                 prev_frame = self.frames[self.frames_done_idxs.pop()]
                 self.frames_idxs.insert(0, prev_frame.idx)
                 prev_frame.is_shown = False
                 io.progress_bar_inc(-1)
+                
+                if go_prev_frame_overriding_cfg:
+                    if cur_frame is not None:
+                        if prev_frame.cfg != cur_frame.cfg:
+                            prev_frame.cfg = cur_frame.cfg
+                            prev_frame.is_done = False
 
         elif go_next_frame:
             if cur_frame is not None and cur_frame.is_done:
