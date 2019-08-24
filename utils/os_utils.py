@@ -23,3 +23,14 @@ def set_process_lowest_prio():
 def set_process_dpi_aware():
     if sys.platform[0:3] == 'win':
         windll.user32.SetProcessDPIAware(True)
+
+def get_screen_size():
+    if sys.platform[0:3] == 'win':
+        user32 = windll.user32
+        return user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+    elif 'darwin' in sys.platform:
+        pass
+    elif 'linux' in sys.platform:
+        pass
+        
+    return (1366, 768)

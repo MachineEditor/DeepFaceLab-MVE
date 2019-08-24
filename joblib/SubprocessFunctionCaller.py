@@ -30,8 +30,15 @@ class SubprocessFunctionCaller(object):
                 result = self.func ( *obj['args'], **obj['kwargs'] )
                 self.s2c.put (result)
 
+        def __getstate__(self):
+            #disable pickling this class
+            return dict()
+
+        def __setstate__(self, d):
+            self.__dict__.update(d)
+
     @staticmethod
-    def make_pair( func ):
+    def make_pair(func):
         s2c = multiprocessing.Queue()
         c2s = multiprocessing.Queue()
         lock = multiprocessing.Lock()

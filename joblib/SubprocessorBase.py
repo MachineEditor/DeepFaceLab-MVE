@@ -87,13 +87,15 @@ class Subprocessor(object):
             c2s.put ( {'op': 'error', 'data' : data} )
 
     #overridable
-    def __init__(self, name, SubprocessorCli_class, no_response_time_sec = 0):
+    def __init__(self, name, SubprocessorCli_class, no_response_time_sec = 0, io_loop_sleep_time=0.005, initialize_subprocesses_in_serial=True):
         if not issubclass(SubprocessorCli_class, Subprocessor.Cli):
             raise ValueError("SubprocessorCli_class must be subclass of Subprocessor.Cli")
 
         self.name = name
         self.SubprocessorCli_class = SubprocessorCli_class
         self.no_response_time_sec = no_response_time_sec
+        self.io_loop_sleep_time = io_loop_sleep_time
+        self.initialize_subprocesses_in_serial = initialize_subprocesses_in_serial
 
     #overridable
     def process_info_generator(self):
@@ -133,7 +135,8 @@ class Subprocessor(object):
     #overridable
     def on_tick(self):
         #tick in main loop
-        pass
+        #return True if system can be finalized when no data in get_data, orelse False
+        return True
 
     #overridable
     def on_check_run(self):
@@ -157,23 +160,24 @@ class Subprocessor(object):
 
                 self.clis.append (cli)
 
-                while True:
-                    while not cli.c2s.empty():
-                        obj = cli.c2s.get()
-                        op = obj.get('op','')
-                        if op == 'init_ok':
-                            cli.state = 0
-                        elif op == 'log_info':
-                            io.log_info(obj['msg'])
-                        elif op == 'log_err':
-                            io.log_err(obj['msg'])
-                        elif op == 'error':
-                            cli.kill()
-                            self.clis.remove(cli)
+                if self.initialize_subprocesses_in_serial:
+                    while True:
+                        while not cli.c2s.empty():
+                            obj = cli.c2s.get()
+                            op = obj.get('op','')
+                            if op == 'init_ok':
+                                cli.state = 0
+                            elif op == 'log_info':
+                                io.log_info(obj['msg'])
+                            elif op == 'log_err':
+                                io.log_err(obj['msg'])
+                            elif op == 'error':
+                                cli.kill()
+                                self.clis.remove(cli)
+                                break
+                        if cli.state == 0:
                             break
-                    if cli.state == 0:
-                        break
-                    io.process_messages(0.005)
+                        io.process_messages(0.005)
             except:
                 raise Exception ("Unable to start subprocess %s" % (name))
 
@@ -233,6 +237,15 @@ class Subprocessor(object):
                         io.progress_bar_inc(obj['c'])
 
             for cli in self.clis[:]:
+                if cli.state == 1:
+                    if self.no_response_time_sec != 0 and (time.time() - cli.sent_time) > self.no_response_time_sec:
+                        #subprocess busy too long
+                        print ( '%s doesnt response, terminating it.' % (cli.name) )
+                        self.on_data_return (cli.host_dict, cli.sent_data )
+                        cli.kill()
+                        self.clis.remove(cli)
+
+            for cli in self.clis[:]:
                 if cli.state == 0:
                     #free state of subprocess, get some data from get_data
                     data = self.get_data(cli.host_dict)
@@ -243,19 +256,14 @@ class Subprocessor(object):
                         cli.sent_data = data
                         cli.state = 1
 
-                elif cli.state == 1:
-                    if self.no_response_time_sec != 0 and (time.time() - cli.sent_time) > self.no_response_time_sec:
-                        #subprocess busy too long
-                        print ( '%s doesnt response, terminating it.' % (cli.name) )
-                        self.on_data_return (cli.host_dict, cli.sent_data )
-                        cli.kill()
-                        self.clis.remove(cli)
+            if self.io_loop_sleep_time != 0:
+                io.process_messages(self.io_loop_sleep_time)
 
-            if all ([cli.state == 0 for cli in self.clis]):
+            if self.on_tick() and all ([cli.state == 0 for cli in self.clis]):
                 #all subprocesses free and no more data available to process, ending loop
                 break
-            io.process_messages(0.005)
-            self.on_tick()
+
+
 
         #gracefully terminating subprocesses
         for cli in self.clis[:]:

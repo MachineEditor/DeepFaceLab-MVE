@@ -76,7 +76,7 @@ class Model(ModelBase):
         return [[self.encoder, 'encoder.h5'],
                 [self.decoder_src, 'decoder_src.h5'],
                 [self.decoder_dst, 'decoder_dst.h5']]
-        
+
     #override
     def onSave(self):
         self.save_weights_safe( self.get_model_filename_list() )
@@ -120,18 +120,26 @@ class Model(ModelBase):
 
         return [ ('H64', np.concatenate ( st, axis=0 ) ) ]
 
-    def predictor_func (self, face):
-        x, mx = self.src_view ( [ face[np.newaxis,...] ] )
-        return x[0], mx[0][...,0]
+    def predictor_func (self, face=None, dummy_predict=False):
+        if dummy_predict:
+            self.AE_convert ([ np.zeros ( (1, 64, 64, 3) ), dtype=np.float32 ) ])
+        else:
+            x, mx = self.src_view ( [ face[np.newaxis,...] ] )
+            return x[0], mx[0][...,0]
 
     #override
-    def get_converter(self):
-        from converters import ConverterMasked
-        return ConverterMasked(self.predictor_func,
-                               predictor_input_size=64,
-                               face_type=FaceType.HALF,
-                               base_erode_mask_modifier=100,
-                               base_blur_mask_modifier=100)
+    def get_ConverterConfig(self):
+        import converters
+        return converters.ConverterConfigMasked(predictor_func=self.predictor_func,
+                                                predictor_input_shape=(64,64,3),
+                                                predictor_masked=True,
+                                                face_type=FaceType.HALF,
+                                                default_mode=4,
+                                                base_erode_mask_modifier=100,
+                                                base_blur_mask_modifier=100,
+                                                default_erode_mask_modifier=0,
+                                                default_blur_mask_modifier=0,
+                                               )
 
     def Build(self, lighter_ae):
         exec(nnlib.code_import_all, locals(), globals())

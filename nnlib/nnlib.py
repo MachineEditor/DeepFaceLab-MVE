@@ -133,6 +133,10 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
 
         os.environ['TF_MIN_GPU_MULTIPROCESSOR_COUNT'] = '2'
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' #tf log errors only
+
+        import warnings
+        warnings.simplefilter(action='ignore', category=FutureWarning)
+
         import tensorflow as tf
         nnlib.tf = tf
 
@@ -457,7 +461,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
 
         nnlib.PixelShuffler = PixelShuffler
         nnlib.SubpixelUpscaler = PixelShuffler
-        
+
         class BlurPool(KL.Layer):
             """
             https://arxiv.org/abs/1904.11486 https://github.com/adobe/antialiased-cnns
@@ -472,36 +476,36 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                     self.a = np.array([1., 1.])
                 elif(self.filt_size==3):
                     self.a = np.array([1., 2., 1.])
-                elif(self.filt_size==4):    
+                elif(self.filt_size==4):
                     self.a = np.array([1., 3., 3., 1.])
-                elif(self.filt_size==5):    
+                elif(self.filt_size==5):
                     self.a = np.array([1., 4., 6., 4., 1.])
-                elif(self.filt_size==6):    
+                elif(self.filt_size==6):
                     self.a = np.array([1., 5., 10., 10., 5., 1.])
-                elif(self.filt_size==7):    
+                elif(self.filt_size==7):
                     self.a = np.array([1., 6., 15., 20., 15., 6., 1.])
-        
+
                 super(BlurPool, self).__init__(**kwargs)
 
             def compute_output_shape(self, input_shape):
                 height = input_shape[1] // self.strides[0]
-                width = input_shape[2] // self.strides[1] 
+                width = input_shape[2] // self.strides[1]
                 channels = input_shape[3]
                 return (input_shape[0], height, width, channels)
-                
+
             def call(self, x):
                 k = self.a
                 k = k[:,None]*k[None,:]
                 k = k / np.sum(k)
-                k = np.tile (k[:,:,None,None], (1,1,K.int_shape(x)[-1],1) )                
+                k = np.tile (k[:,:,None,None], (1,1,K.int_shape(x)[-1],1) )
                 k = K.constant (k, dtype=K.floatx() )
-                
+
                 x = K.spatial_2d_padding(x, padding=self.padding)
                 x = K.depthwise_conv2d(x, k, strides=self.strides, padding='valid')
                 return x
-                
+
         nnlib.BlurPool = BlurPool
-        
+
 
         class Scale(KL.Layer):
             """
@@ -537,40 +541,40 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         class SelfAttention(KL.Layer):
             def __init__(self, nc, squeeze_factor=8, **kwargs):
                 assert nc//squeeze_factor > 0, f"Input channels must be >= {squeeze_factor}, recieved nc={nc}"
-                
+
                 self.nc = nc
                 self.squeeze_factor = squeeze_factor
                 super(SelfAttention, self).__init__(**kwargs)
-                
+
             def compute_output_shape(self, input_shape):
                 return (input_shape[0], input_shape[1], input_shape[2], self.nc)
-                    
+
             def call(self, inp):
                 x = inp
                 shape_x = x.get_shape().as_list()
-                
+
                 f = Conv2D(self.nc//self.squeeze_factor, 1, kernel_regularizer=keras.regularizers.l2(1e-4))(x)
                 g = Conv2D(self.nc//self.squeeze_factor, 1, kernel_regularizer=keras.regularizers.l2(1e-4))(x)
                 h = Conv2D(self.nc, 1, kernel_regularizer=keras.regularizers.l2(1e-4))(x)
-                
+
                 shape_f = f.get_shape().as_list()
                 shape_g = g.get_shape().as_list()
                 shape_h = h.get_shape().as_list()
                 flat_f = Reshape( (-1, shape_f[-1]) )(f)
                 flat_g = Reshape( (-1, shape_g[-1]) )(g)
-                flat_h = Reshape( (-1, shape_h[-1]) )(h)   
+                flat_h = Reshape( (-1, shape_h[-1]) )(h)
 
                 s = Lambda(lambda x: K.batch_dot(x[0], keras.layers.Permute((2,1))(x[1]) ))([flat_g, flat_f])
                 beta = keras.layers.Softmax(axis=-1)(s)
                 o = Lambda(lambda x: K.batch_dot(x[0], x[1]))([beta, flat_h])
-                
+
                 o = Reshape(shape_x[1:])(o)
                 o = Scale()(o)
-                
+
                 out = Add()([o, inp])
-                return out     
+                return out
         nnlib.SelfAttention = SelfAttention
-            
+
         class Adam(keras.optimizers.Optimizer):
             """Adam optimizer.
 

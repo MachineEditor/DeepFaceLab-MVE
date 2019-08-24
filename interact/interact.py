@@ -67,20 +67,12 @@ class InteractBase(object):
 
     def log_info(self, msg, end='\n'):
         if self.pg_bar is not None:
-            try: # Attempt print before the pb
-                tqdm.write(msg)
-                return
-            except: 
-                pass #Fallback to normal print upon failure
+            print ("\n")
         print (msg, end=end)
 
     def log_err(self, msg, end='\n'):
         if self.pg_bar is not None:
-            try: # Attempt print before the pb
-                tqdm.write(f'{self.error_log_line_prefix}{msg}')
-                return
-            except: 
-                pass #Fallback to normal print upon failure
+            print ("\n")
         print (f'{self.error_log_line_prefix}{msg}', end=end)
 
     def named_window(self, wnd_name):
@@ -166,9 +158,9 @@ class InteractBase(object):
         self.pg_bar = tqdm( data, desc=desc, leave=leave, ascii=True )
         for x in self.pg_bar:
             yield x
-        self.pg_bar.close()   
+        self.pg_bar.close()
         self.pg_bar = None
-        
+
     def process_messages(self, sleep_time=0):
         self.on_process_messages(sleep_time)
 
