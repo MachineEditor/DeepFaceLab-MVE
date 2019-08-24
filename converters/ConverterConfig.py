@@ -120,7 +120,7 @@ class ConverterConfigMasked(ConverterConfig):
                                          7:'learned*FAN-dst'}
 
         self.ctm_dict = { 0: "None", 1:"rct", 2:"lct" }
-        self.ctm_str_dict = {None:None, "rct":1, "lct": 2 }
+        self.ctm_str_dict = {None:0, "rct":1, "lct": 2 }
 
     def copy(self):
         return copy.copy(self)
