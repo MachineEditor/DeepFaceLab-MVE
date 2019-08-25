@@ -23,15 +23,15 @@ class AVATARModel(ModelBase):
     #override
     def onInitializeOptions(self, is_first_run, ask_override):
         if is_first_run:
-            avatar_type = io.input_int("Avatar type ( 0:source, 1:full_face, 2:head ?:help skip:0) : ", 0, [0,1,2],
+            avatar_type = io.input_int("Avatar type ( 0:source, 1:head, 2:full_face ?:help skip:1) : ", 1, [0,1,2],
                                        help_message="Training target for the model. Source is direct untouched images. Full_face or head are centered nose unaligned faces.")
             avatar_type = {0:'source',
-                           1:'full_face',
-                           2:'head'}[avatar_type]
+                           1:'head',
+                           2:'full_face'}[avatar_type]
 
             self.options['avatar_type'] = avatar_type
         else:
-            self.options['avatar_type'] = self.options.get('avatar_type', 'source')
+            self.options['avatar_type'] = self.options.get('avatar_type', 'head')
 
         if is_first_run or ask_override:
             def_stage = self.options.get('stage', 1)
