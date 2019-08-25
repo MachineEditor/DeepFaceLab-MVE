@@ -119,7 +119,7 @@ class Model(ModelBase):
 
     def predictor_func (self, face=None, dummy_predict=False):
         if dummy_predict:
-            self.AE_convert ([ np.zeros ( (1, 128, 128, 3) ), dtype=np.float32 ) ])
+            self.convert ([ np.zeros ( (1, 128, 128, 3), dtype=np.float32 ) ])
         else:
             x, mx = self.convert ( [ face[np.newaxis,...] ] )
             return x[0], mx[0][...,0]
