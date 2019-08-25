@@ -4,8 +4,8 @@ from utils import random_utils
 
 def gen_warp_params (source, flip, rotation_range=[-10,10], scale_range=[-0.5, 0.5], tx_range=[-0.05, 0.05], ty_range=[-0.05, 0.05]  ):
     h,w,c = source.shape
-    if (h != w) or (w != 64 and w != 128 and w != 256 and w != 512 and w != 1024):
-        raise ValueError ('TrainingDataGenerator accepts only square power of 2 images.')
+    if (h != w):
+        raise ValueError ('gen_warp_params accepts only square images.')
 
     rotation = np.random.uniform( rotation_range[0], rotation_range[1] )
     scale = np.random.uniform(1 +scale_range[0], 1 +scale_range[1])
