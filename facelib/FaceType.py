@@ -1,12 +1,13 @@
 from enum import IntEnum
 
 class FaceType(IntEnum):
+    #enumerating in order "next contains prev"
     HALF = 0,
     FULL = 1,
-    HEAD = 2,
-
-    FULL_NO_ALIGN = 5,
-    HEAD_NO_ALIGN = 6,
+    FULL_NO_ALIGN = 3,
+    HEAD = 4,
+    HEAD_NO_ALIGN = 5,
+        
     MARK_ONLY = 10, #no align at all, just embedded faceinfo
 
     @staticmethod
