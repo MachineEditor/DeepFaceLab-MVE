@@ -293,43 +293,35 @@ def ConvertMaskedFace (cfg, frame_info, img_bgr_uint8, img_bgr, img_face_landmar
 
             out_img = img_bgr*(1-img_face_mask_aaa) + (out_img*img_face_mask_aaa)
 
+            out_face_bgr = cv2.warpAffine( out_img, face_mat, (output_size, output_size) )
+            
             if 'seamless' in cfg.mode and cfg.color_transfer_mode != 0:
-                out_face_bgr = cv2.warpAffine( out_img, face_mat, (output_size, output_size) )
-
                 if cfg.color_transfer_mode == 1:
                     #if debug:
                     #    debugs += [ np.clip( cv2.warpAffine( out_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
                     face_mask_aaa = cv2.warpAffine( img_face_mask_aaa, face_mat, (output_size, output_size) )
 
-                    new_out_face_bgr = imagelib.reinhard_color_transfer ( np.clip( (out_face_bgr*255).astype(np.uint8), 0, 255),
+                    out_face_bgr = imagelib.reinhard_color_transfer ( np.clip( (out_face_bgr*255).astype(np.uint8), 0, 255),
                                                                             np.clip( (dst_face_bgr*255).astype(np.uint8), 0, 255),
                                                                             source_mask=face_mask_aaa, target_mask=face_mask_aaa)
-                    new_out_face_bgr = np.clip( new_out_face_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
+                    out_face_bgr = np.clip( out_face_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
 
                     #if debug:
-                    #    debugs += [ np.clip( cv2.warpAffine( new_out_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
-
+                    #    debugs += [ np.clip( cv2.warpAffine( out_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
 
                 elif cfg.color_transfer_mode == 2:
                     #if debug:
                     #    debugs += [ np.clip( cv2.warpAffine( out_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
 
-                    new_out_face_bgr = imagelib.linear_color_transfer (out_face_bgr, dst_face_bgr)
-                    new_out_face_bgr = np.clip( new_out_face_bgr, 0.0, 1.0)
+                    out_face_bgr = imagelib.linear_color_transfer (out_face_bgr, dst_face_bgr)
+                    out_face_bgr = np.clip( out_face_bgr, 0.0, 1.0)
 
                     #if debug:
-                    #    debugs += [ np.clip( cv2.warpAffine( new_out_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
-
-                new_out = cv2.warpAffine( new_out_face_bgr, face_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT )
-                out_img =  np.clip( img_bgr*(1-img_face_mask_aaa) + (new_out*img_face_mask_aaa) , 0, 1.0 )
-
+                    #    debugs += [ np.clip( cv2.warpAffine( out_face_bgr, face_output_mat, img_size, np.zeros(img_bgr.shape, dtype=np.float32), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
+            
             if cfg.mode == 'seamless-hist-match':
-                out_face_bgr = cv2.warpAffine( out_img, face_mat, (output_size, output_size) )
-                new_out_face_bgr = imagelib.color_hist_match(out_face_bgr, dst_face_bgr, cfg.hist_match_threshold)
-                new_out = cv2.warpAffine( new_out_face_bgr, face_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT )
-                out_img =  np.clip( img_bgr*(1-img_face_mask_aaa) + (new_out*img_face_mask_aaa) , 0, 1.0 )
-
-
+                out_face_bgr = imagelib.color_hist_match(out_face_bgr, dst_face_bgr, cfg.hist_match_threshold)
+            
             cfg_mp = cfg.motion_blur_power / 100.0
             if cfg_mp != 0:
                 k_size = int(frame_info.motion_power*cfg_mp)
@@ -337,10 +329,14 @@ def ConvertMaskedFace (cfg, frame_info, img_bgr_uint8, img_bgr, img_face_landmar
                     k_size = np.clip (k_size+1, 2, 50)
                     if cfg.super_resolution_mode:
                         k_size *= 2
-                    out_face_bgr = cv2.warpAffine( out_img, face_mat, (output_size, output_size) )
-                    new_out_face_bgr = imagelib.LinearMotionBlur (out_face_bgr, k_size , frame_info.motion_deg)
-                    new_out = cv2.warpAffine( new_out_face_bgr, face_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT )
-                    out_img =  np.clip( img_bgr*(1-img_face_mask_aaa) + (new_out*img_face_mask_aaa) , 0, 1.0 )
+                    out_face_bgr = imagelib.LinearMotionBlur (out_face_bgr, k_size , frame_info.motion_deg)
+
+            if cfg.sharpen_mode != 0 and cfg.sharpen_amount != 0:
+                out_face_bgr = cfg.sharpen_func ( out_face_bgr, cfg.sharpen_mode, 0.003, cfg.sharpen_amount)
+            
+            new_out = cv2.warpAffine( out_face_bgr, face_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT )
+            out_img =  np.clip( img_bgr*(1-img_face_mask_aaa) + (new_out*img_face_mask_aaa) , 0, 1.0 )
+
 
             if cfg.color_degrade_power != 0:
                 #if debug:
