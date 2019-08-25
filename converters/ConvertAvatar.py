@@ -26,6 +26,9 @@ def ConvertFaceAvatar (cfg, prev_temporal_frame_infos, frame_info, next_temporal
 
     prd_f = cfg.predictor_func ( prev_imgs, img, next_imgs )
 
+    if cfg.super_resolution_mode != 0:
+        prd_f = cfg.superres_func(cfg.super_resolution_mode, prd_f)
+        
     out_img = np.clip(prd_f, 0.0, 1.0)
 
     if cfg.add_source_image:

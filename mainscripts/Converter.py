@@ -71,7 +71,7 @@ class ConvertSubprocessor(Subprocessor):
             self.device_idx  = client_dict['device_idx']
             self.device_name = client_dict['device_name']
             self.predictor_func = client_dict['predictor_func']
-            self.dcscn_upscale_func = client_dict['dcscn_upscale_func']
+            self.superres_func = client_dict['superres_func']
 
             #transfer and set stdin in order to work code.interact in debug subprocess
             stdin_fd         = client_dict['stdin_fd']
@@ -103,7 +103,8 @@ class ConvertSubprocessor(Subprocessor):
         def process_data(self, pf): #pf=ProcessingFrame
             cfg = pf.cfg.copy()
             cfg.predictor_func = self.predictor_func
-
+            cfg.superres_func = self.superres_func
+            
             frame_info = pf.frame_info
 
             filename = frame_info.filename
@@ -127,7 +128,6 @@ class ConvertSubprocessor(Subprocessor):
                     pf.image = img_bgr
             else:
                 if cfg.type == ConverterConfig.TYPE_MASKED:
-                    cfg.dcscn_upscale_func = self.dcscn_upscale_func
                     cfg.fanseg_input_size = self.fanseg_input_size
                     cfg.fanseg_extract_func = self.fanseg_extract_func
 
@@ -176,12 +176,14 @@ class ConvertSubprocessor(Subprocessor):
         self.converter_config.predictor_func = None
 
         self.dcscn = None
-        def DCSCN_upscale(*args, **kwargs):
-            if self.dcscn is None:
-                self.dcscn = imagelib.DCSCN()
-            return self.dcscn.upscale(*args, **kwargs)
+        self.ranksrgan = None
+        def superres_func(mode, *args, **kwargs):
+            if mode == 1:
+                if self.ranksrgan is None:
+                    self.ranksrgan = imagelib.RankSRGAN()
+                return self.ranksrgan.upscale(*args, **kwargs)
 
-        self.dcscn_host, self.dcscn_upscale_func = SubprocessFunctionCaller.make_pair(DCSCN_upscale)
+        self.dcscn_host, self.superres_func = SubprocessFunctionCaller.make_pair(superres_func)
 
         self.frames = frames
         self.output_path = output_path
@@ -205,7 +207,7 @@ class ConvertSubprocessor(Subprocessor):
             yield 'CPU%d' % (i), {}, {'device_idx': i,
                                       'device_name': 'CPU%d' % (i),
                                       'predictor_func': self.predictor_func,
-                                      'dcscn_upscale_func': self.dcscn_upscale_func,
+                                      'superres_func': self.superres_func,
                                       'stdin_fd': sys.stdin.fileno() if CONVERTER_DEBUG else None
                                       }
 
@@ -333,12 +335,14 @@ class ConvertSubprocessor(Subprocessor):
                                 elif chr_key == 'c':
                                     cfg.toggle_color_transfer_mode()
                                 elif chr_key == 'v':
-                                    cfg.toggle_super_resolution()
+                                    cfg.toggle_super_resolution_mode()
                                 elif chr_key == 'b':
                                     cfg.toggle_export_mask_alpha()
                             else:
                                 if chr_key == 's':
                                     cfg.toggle_add_source_image()
+                                elif chr_key == 'v':
+                                    cfg.toggle_super_resolution_mode()
 
                             if prev_cfg != cfg:
                                 io.log_info (cfg)

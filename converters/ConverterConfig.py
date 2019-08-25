@@ -92,7 +92,7 @@ class ConverterConfigMasked(ConverterConfig):
         self.motion_blur_power = 0
         self.output_face_scale = 0
         self.color_transfer_mode = 0
-        self.super_resolution = False
+        self.super_resolution_mode = 0
         self.color_degrade_power = 0
         self.export_mask_alpha = False
 
@@ -118,9 +118,11 @@ class ConverterConfigMasked(ConverterConfig):
                                          2:'dst',
                                          4:'FAN-dst',
                                          7:'learned*FAN-dst'}
-
+                                         
         self.ctm_dict = { 0: "None", 1:"rct", 2:"lct" }
         self.ctm_str_dict = {None:0, "rct":1, "lct": 2 }
+        
+        self.super_res_dict = {0:"None", 1:'RankSRGAN'}
 
     def copy(self):
         return copy.copy(self)
@@ -158,8 +160,9 @@ class ConverterConfigMasked(ConverterConfig):
     def toggle_color_transfer_mode(self):
         self.color_transfer_mode = (self.color_transfer_mode+1) % 3
 
-    def toggle_super_resolution(self):
-        self.super_resolution = not self.super_resolution
+    def toggle_super_resolution_mode(self):
+        a = list( self.super_res_dict.keys() )
+        self.super_resolution_mode = a[ (a.index(self.super_resolution_mode)+1) % len(a) ]
 
     def add_color_degrade_power(self, diff):
         self.color_degrade_power = np.clip ( self.color_degrade_power+diff , 0, 100)
@@ -210,8 +213,13 @@ class ConverterConfigMasked(ConverterConfig):
             self.color_transfer_mode = io.input_str ("Apply color transfer to predicted face? Choose mode ( rct/lct skip:None ) : ", None, ['rct','lct'])
             self.color_transfer_mode = self.ctm_str_dict[self.color_transfer_mode]
 
-        self.super_resolution = io.input_bool("Apply super resolution? (y/n ?:help skip:n) : ", False, help_message="Enhance details by applying DCSCN network.")
+        s = """Choose super resolution mode: \n"""
+        for key in self.super_res_dict.keys():
+            s += f"""({key}) {self.super_res_dict[key]}\n"""
+        s += f"""?:help Default: {list(self.super_res_dict.keys())[0]} : """
+        self.super_resolution_mode = io.input_int (s, 0, valid_list=self.super_res_dict.keys(), help_message="Enhance details by applying superresolution network.")
 
+  
         if 'raw' not in self.mode:
             self.color_degrade_power = np.clip (  io.input_int ("Degrade color power of final image [0..100] (skip:0) : ", 0), 0, 100)
             self.export_mask_alpha = io.input_bool("Export png with alpha channel of the mask? (y/n skip:n) : ", False)
@@ -231,7 +239,7 @@ class ConverterConfigMasked(ConverterConfig):
                    self.motion_blur_power == other.motion_blur_power and \
                    self.output_face_scale == other.output_face_scale and \
                    self.color_transfer_mode == other.color_transfer_mode and \
-                   self.super_resolution == other.super_resolution and \
+                   self.super_resolution_mode == other.super_resolution_mode and \
                    self.color_degrade_power == other.color_degrade_power and \
                    self.export_mask_alpha == other.export_mask_alpha
 
@@ -264,7 +272,7 @@ class ConverterConfigMasked(ConverterConfig):
         if 'raw' not in self.mode:
             r += f"""color_transfer_mode: { self.ctm_dict[self.color_transfer_mode]}\n"""
 
-        r += f"""super_resolution: {self.super_resolution}\n"""
+        r += f"""super_resolution_mode: {self.super_res_dict[self.super_resolution_mode]}\n"""
 
         if 'raw' not in self.mode:
             r += (f"""color_degrade_power: {self.color_degrade_power}\n"""
@@ -289,6 +297,8 @@ class ConverterConfigFaceAvatar(ConverterConfig):
 
         #changeable params
         self.add_source_image = False
+        self.super_resolution_mode = 0
+        self.super_res_dict = {0:"None", 1:'RankSRGAN'}
 
     def copy(self):
         return copy.copy(self)
@@ -296,22 +306,33 @@ class ConverterConfigFaceAvatar(ConverterConfig):
     #override
     def ask_settings(self):
         self.add_source_image = io.input_bool("Add source image? (y/n ?:help skip:n) : ", False, help_message="Add source image for comparison.")
+        
+        s = """Choose super resolution mode: \n"""
+        for key in self.super_res_dict.keys():
+            s += f"""({key}) {self.super_res_dict[key]}\n"""
+        s += f"""?:help Default: {list(self.super_res_dict.keys())[0]} : """
+        self.super_resolution_mode = io.input_int (s, 0, valid_list=self.super_res_dict.keys(), help_message="Enhance details by applying superresolution network.")
 
     def toggle_add_source_image(self):
         self.add_source_image = not self.add_source_image
+        
+    def toggle_super_resolution_mode(self):
+        a = list( self.super_res_dict.keys() )
+        self.super_resolution_mode = a[ (a.index(self.super_resolution_mode)+1) % len(a) ]
 
     #override
     def __eq__(self, other):
         #check equality of changeable params
 
         if isinstance(other, ConverterConfigFaceAvatar):
-            return self.add_source_image == other.add_source_image
-
+            return self.add_source_image == other.add_source_image and \
+                   self.super_resolution_mode == other.super_resolution_mode
         return False
 
     #override
     def __str__(self):
         return ("ConverterConfig: \n"
                 f"add_source_image : {self.add_source_image}\n"
+                f"super_resolution_mode : {self.super_res_dict[self.super_resolution_mode]}\n"
                 "================"
                 )

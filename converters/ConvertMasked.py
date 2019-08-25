@@ -27,7 +27,7 @@ def ConvertMaskedFace (cfg, frame_info, img_bgr_uint8, img_bgr, img_face_landmar
     out_merging_mask = None
 
     output_size = cfg.predictor_input_shape[0]
-    if cfg.super_resolution:
+    if cfg.super_resolution_mode != 0:
         output_size *= 2
 
     face_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, output_size, face_type=cfg.face_type)
@@ -48,12 +48,12 @@ def ConvertMaskedFace (cfg, frame_info, img_bgr_uint8, img_bgr, img_face_landmar
         prd_face_bgr      = np.clip (predicted, 0, 1.0 )
         prd_face_mask_a_0 = cv2.resize (dst_face_mask_a_0, cfg.predictor_input_shape[0:2] )
 
-    if cfg.super_resolution:
+    if cfg.super_resolution_mode:
         #if debug:
         #    tmp = cv2.resize (prd_face_bgr,  (output_size,output_size), cv2.INTER_CUBIC)
         #    debugs += [ np.clip( cv2.warpAffine( tmp, face_output_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
 
-        prd_face_bgr = cfg.dcscn_upscale_func(prd_face_bgr)
+        prd_face_bgr = cfg.superres_func(cfg.super_resolution_mode, prd_face_bgr)
         #if debug:
         #    debugs += [ np.clip( cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT ), 0, 1.0) ]
 
@@ -335,7 +335,7 @@ def ConvertMaskedFace (cfg, frame_info, img_bgr_uint8, img_bgr, img_face_landmar
                 k_size = int(frame_info.motion_power*cfg_mp)
                 if k_size >= 1:
                     k_size = np.clip (k_size+1, 2, 50)
-                    if cfg.super_resolution:
+                    if cfg.super_resolution_mode:
                         k_size *= 2
                     out_face_bgr = cv2.warpAffine( out_img, face_mat, (output_size, output_size) )
                     new_out_face_bgr = imagelib.LinearMotionBlur (out_face_bgr, k_size , frame_info.motion_deg)

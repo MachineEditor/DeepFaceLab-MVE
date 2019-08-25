@@ -13,7 +13,7 @@ from .reduce_colors import reduce_colors
 
 from .color_transfer import color_hist_match, reinhard_color_transfer, linear_color_transfer
 
-from .DCSCN import DCSCN
+from .RankSRGAN import RankSRGAN
 
 from .common import normalize_channels, overlay_alpha_image
 
