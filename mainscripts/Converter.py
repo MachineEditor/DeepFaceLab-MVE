@@ -213,7 +213,7 @@ class ConvertSubprocessor(Subprocessor):
         for i in range( len(self.frames) ):
             frame = self.frames[i]
             frame.idx = i
-            frame.output_filename = self.output_path / ('%.5d.png' % i)
+            frame.output_filename = self.output_path / ('%.5d.png' % (i+1)  )
 
         frames[0].cfg = self.converter_config.copy()
 
