@@ -46,4 +46,7 @@ bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr
 
 [deepfakes (Chinese) (outdated) ](https://deepfakes.com.cn/)
 
-[reddit (English)](https://www.reddit.com/r/GifFakes/new/)
+[reddit r/GifFakes/ (English)](https://www.reddit.com/r/GifFakes/new/)
+
+[reddit r/SFWdeepfakes/ (English)](https://www.reddit.com/r/SFWdeepfakes/new/)
+
