@@ -210,10 +210,16 @@ class ConvertSubprocessor(Subprocessor):
         self.frames_idxs = [ *range(len(self.frames)) ]
         self.frames_done_idxs = []
 
+        digits = [ str(i) for i in range(10)]
         for i in range( len(self.frames) ):
             frame = self.frames[i]
             frame.idx = i
-            frame.output_filename = self.output_path / ('%.5d.png' % (i+1)  )
+
+            inp_stem = Path(frame.frame_info.filename).stem
+            if len([ True for symbol in inp_stem if symbol not in digits ]) > 0:
+                frame.output_filename = self.output_path / ('%.5d.png' % (i+1)  )
+            else:
+                frame.output_filename = self.output_path / ( inp_stem + '.png' )
 
         frames[0].cfg = self.converter_config.copy()
 
