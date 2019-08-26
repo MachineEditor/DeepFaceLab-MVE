@@ -84,10 +84,10 @@ class ConvertSubprocessor(Subprocessor):
             #therefore forcing active_DeviceConfig to CPU only
             nnlib.active_DeviceConfig = nnlib.DeviceConfig (cpu_only=True)
 
-            def sharpen_func (img, sharpen_mode=0, radius=0.003, amount=150):
-                h,w,c = img.shape
-                radius = max(1, round(w * radius))
-                kernel_size = int((radius * 2) + 1)
+            def sharpen_func (img, sharpen_mode=0, kernel_size=3, amount=150):
+                if kernel_size % 2 == 0:
+                    kernel_size += 1
+                    
                 if sharpen_mode == 1: #box
                     kernel = np.zeros( (kernel_size, kernel_size), dtype=np.float32)
                     kernel[ kernel_size//2, kernel_size//2] = 1.0                    

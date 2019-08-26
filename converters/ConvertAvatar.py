@@ -30,7 +30,7 @@ def ConvertFaceAvatar (cfg, prev_temporal_frame_infos, frame_info, next_temporal
         prd_f = cfg.superres_func(cfg.super_resolution_mode, prd_f)
         
     if cfg.sharpen_mode != 0 and cfg.sharpen_amount != 0:
-        prd_f = cfg.sharpen_func ( prd_f, cfg.sharpen_mode, 0.003, cfg.sharpen_amount)
+        prd_f = cfg.sharpen_func ( prd_f, cfg.sharpen_mode, 3, cfg.sharpen_amount)
     
     out_img = np.clip(prd_f, 0.0, 1.0)
 
