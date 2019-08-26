@@ -397,17 +397,19 @@ class ConvertSubprocessor(Subprocessor):
 
 
         if go_prev_frame:
-            if cur_frame is not None and cur_frame.is_done:
-                cur_frame.image = None
+            if cur_frame is None or cur_frame.is_done:
+                if cur_frame is not None:
+                    cur_frame.image = None
+                    
                 if len(self.frames_done_idxs) > 0:
                     prev_frame = self.frames[self.frames_done_idxs.pop()]
                     self.frames_idxs.insert(0, prev_frame.idx)
                     prev_frame.is_shown = False
                     io.progress_bar_inc(-1)
                     
-                    if go_prev_frame_overriding_cfg:
+                    if cur_frame is not None and go_prev_frame_overriding_cfg:
                         if prev_frame.cfg != cur_frame.cfg:
-                            prev_frame.cfg = cur_frame.cfg
+                            prev_frame.cfg = cur_frame.cfg.copy()
                             prev_frame.is_done = False
 
         elif go_next_frame:
