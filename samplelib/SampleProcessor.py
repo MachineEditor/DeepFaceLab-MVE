@@ -210,19 +210,19 @@ class SampleProcessor(object):
                     cached_images[img_type] = img
 
                 if is_face_sample and target_face_type != SPTF.NONE:
-                    ft = SampleProcessor.SPTF_FACETYPE_TO_FACETYPE[target_face_type]
-                    if ft > sample.face_type:
-                        raise Exception ('sample %s type %s does not match model requirement %s. Consider extract necessary type of faces.' % (sample.filename, sample.face_type, ft) )
+                    target_ft = SampleProcessor.SPTF_FACETYPE_TO_FACETYPE[target_face_type]
+                    if target_ft > sample.face_type:
+                        raise Exception ('sample %s type %s does not match model requirement %s. Consider extract necessary type of faces.' % (sample.filename, sample.face_type, target_ft) )
 
                     if sample.face_type == FaceType.MARK_ONLY:
-                        img = cv2.warpAffine( img, LandmarksProcessor.get_transform_mat (sample.landmarks, sample.shape[0], ft), (sample.shape[0],sample.shape[0]), flags=cv2.INTER_CUBIC )
+                        img = cv2.warpAffine( img, LandmarksProcessor.get_transform_mat (sample.landmarks, sample.shape[0], target_ft), (sample.shape[0],sample.shape[0]), flags=cv2.INTER_CUBIC )
 
                         mask = img[...,3:4] if img.shape[2] > 3 else None
                         img  = img[...,0:3]
                         img = do_transform (img, mask)
                         img = cv2.resize( img, (resolution,resolution), cv2.INTER_CUBIC )
                     else:
-                        img = cv2.warpAffine( img, LandmarksProcessor.get_transform_mat (sample.landmarks, resolution, ft), (resolution,resolution), flags=cv2.INTER_CUBIC )
+                        img = cv2.warpAffine( img, LandmarksProcessor.get_transform_mat (sample.landmarks, resolution, target_ft), (resolution,resolution), borderMode=cv2.BORDER_REPLICATE, flags=cv2.INTER_CUBIC )
 
                 else:
                     img = cv2.resize( img, (resolution,resolution), cv2.INTER_CUBIC )

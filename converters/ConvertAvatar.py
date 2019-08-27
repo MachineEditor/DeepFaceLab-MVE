@@ -11,7 +11,7 @@ def process_frame_info(frame_info, inp_sh):
     img = img_uint8.astype(np.float32) / 255.0        
 
     img_mat = LandmarksProcessor.get_transform_mat (frame_info.landmarks_list[0], inp_sh[0], face_type=FaceType.FULL_NO_ALIGN)
-    img = cv2.warpAffine( img, img_mat, inp_sh[0:2], flags=cv2.INTER_CUBIC )
+    img = cv2.warpAffine( img, img_mat, inp_sh[0:2], borderMode=cv2.BORDER_REPLICATE, flags=cv2.INTER_CUBIC )
     return img
     
 def ConvertFaceAvatar (cfg, prev_temporal_frame_infos, frame_info, next_temporal_frame_infos):
