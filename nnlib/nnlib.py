@@ -53,10 +53,12 @@ Input = KL.Input
 Dense = KL.Dense
 Conv2D = nnlib.Conv2D
 Conv2DTranspose = nnlib.Conv2DTranspose
+EqualConv2D = nnlib.EqualConv2D
 SeparableConv2D = KL.SeparableConv2D
 MaxPooling2D = KL.MaxPooling2D
 UpSampling2D = KL.UpSampling2D
 BatchNormalization = KL.BatchNormalization
+PixelNormalization = nnlib.PixelNormalization
 
 LeakyReLU = KL.LeakyReLU
 ReLU = KL.ReLU
@@ -808,7 +810,89 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                     x = ReflectionPadding2D( self.pad ) (x)
                 return self.func(x)
         nnlib.Conv2DTranspose = Conv2DTranspose
+        
+        class EqualConv2D(KL.Conv2D):            
+            def __init__(self, filters,
+                        kernel_size,
+                        strides=(1, 1),
+                        padding='valid',
+                        data_format=None,
+                        dilation_rate=(1, 1),
+                        activation=None,
+                        use_bias=True,
+                        gain=np.sqrt(2),
+                        **kwargs):
+                super().__init__(
+                    filters=filters,
+                    kernel_size=kernel_size,
+                    strides=strides,
+                    padding=padding,
+                    data_format=data_format,
+                    dilation_rate=dilation_rate,
+                    activation=activation,
+                    use_bias=use_bias,
+                    kernel_initializer=keras.initializers.RandomNormal(mean=0.0, stddev=1.0),
+                    bias_initializer='zeros',
+                    kernel_regularizer=None,
+                    bias_regularizer=None,
+                    activity_regularizer=None,
+                    kernel_constraint=None,
+                    bias_constraint=None,
+                    **kwargs)
+                self.gain = gain
+                
+            def build(self, input_shape):
+                super().build(input_shape)
+                
+                self.wscale = self.gain / np.sqrt( np.prod( K.int_shape(self.kernel)[:-1]) )
+                self.wscale_t = K.constant (self.wscale, dtype=K.floatx() )
+       
+            def call(self, inputs):
+                k = self.kernel * self.wscale_t
+                
+                outputs = K.conv2d(
+                        inputs,
+                        k,
+                        strides=self.strides,
+                        padding=self.padding,
+                        data_format=self.data_format,
+                        dilation_rate=self.dilation_rate)
 
+                if self.use_bias:
+                    outputs = K.bias_add(
+                        outputs,
+                        self.bias,
+                        data_format=self.data_format)
+
+                if self.activation is not None:
+                    return self.activation(outputs)
+                return outputs
+        nnlib.EqualConv2D = EqualConv2D
+        
+        class PixelNormalization(KL.Layer):
+            # initialize the layer
+            def __init__(self, **kwargs):
+                super(PixelNormalization, self).__init__(**kwargs)
+        
+            # perform the operation
+            def call(self, inputs):
+                # calculate square pixel values
+                values = inputs**2.0
+                # calculate the mean pixel values
+                mean_values = K.mean(values, axis=-1, keepdims=True)
+                # ensure the mean is not zero
+                mean_values += 1.0e-8
+                # calculate the sqrt of the mean squared value (L2 norm)
+                l2 = K.sqrt(mean_values)
+                # normalize values by the l2 norm
+                normalized = inputs / l2
+                return normalized
+        
+            # define the output shape of the layer
+            def compute_output_shape(self, input_shape):
+                return input_shape                
+        nnlib.PixelNormalization = PixelNormalization
+        
     @staticmethod
     def import_keras_contrib(device_config):
         if nnlib.keras_contrib is not None:

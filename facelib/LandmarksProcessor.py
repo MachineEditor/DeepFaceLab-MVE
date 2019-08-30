@@ -1,13 +1,16 @@
 import colorsys
+import math
+from enum import IntEnum
+
 import cv2
 import numpy as np
-from enum import IntEnum
-import mathlib
+import numpy.linalg as npla
+
 import imagelib
+import mathlib
+from facelib import FaceType
 from imagelib import IEPolys
 from mathlib.umeyama import umeyama
-from facelib import FaceType
-import math
 
 landmarks_2D = np.array([
 [ 0.000213256,  0.106454  ], #17
@@ -61,9 +64,9 @@ landmarks_2D = np.array([
 [ 0.553364,     0.824182  ], #65
 [ 0.490127,     0.831803  ], #66
 [ 0.42689 ,     0.824182  ]  #67
-], dtype=np.float32)                        
-             
-            
+], dtype=np.float32)
+
+
 landmarks_2D_new = np.array([
 [ 0.000213256,  0.106454  ], #17
 [ 0.0752622,    0.038915  ], #18
@@ -98,7 +101,7 @@ landmarks_2D_new = np.array([
 [ 0.719335,     0.245099  ], #47
 [ 0.254149,     0.780233  ], #48
 [ 0.726104,     0.780233  ], #54
-], dtype=np.float32)                  
+], dtype=np.float32)
 
 # 68 point landmark definitions
 landmarks_68_pt = { "mouth": (48,68),
@@ -228,7 +231,7 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
 
     #mat = umeyama(image_landmarks[17:], landmarks_2D, True)[0:2]
     mat = umeyama( np.concatenate ( [ image_landmarks[17:49] , image_landmarks[54:55] ] ) , landmarks_2D_new, True)[0:2]
-    
+
     mat = mat * (output_size - 2 * padding)
     mat[:,2] += padding
     mat *= (1 / scale)
@@ -246,7 +249,7 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
 
     return mat
 
-def get_image_hull_mask (image_shape, image_landmarks, ie_polys=None):
+def get_image_hull_mask (image_shape, image_landmarks, eyebrows_expand_mod=1.0, ie_polys=None):
     if len(image_landmarks) != 68:
         raise Exception('get_image_hull_mask works only with 68 landmarks')
     int_lmrks = np.array(image_landmarks.copy(), dtype=np.int)
@@ -270,8 +273,8 @@ def get_image_hull_mask (image_shape, image_landmarks, ie_polys=None):
     top_r = int_lmrks[22:27]
 
     # Adjust eyebrow arrays
-    int_lmrks[17:22] = top_l + ((top_l - bot_l) // 2)
-    int_lmrks[22:27] = top_r + ((top_r - bot_r) // 2)
+    int_lmrks[17:22] = top_l + eyebrows_expand_mod * 0.5 * (top_l - bot_l)
+    int_lmrks[22:27] = top_r + eyebrows_expand_mod * 0.5 * (top_r - bot_r)
 
     r_jaw = (int_lmrks[0:9], int_lmrks[17:18])
     l_jaw = (int_lmrks[8:17], int_lmrks[26:27])
@@ -394,7 +397,7 @@ def draw_landmarks (image, image_landmarks, color=(0,255,0), transparent_mask=Fa
         cv2.circle(image, (x, y), 2, color, lineType=cv2.LINE_AA)
 
     if transparent_mask:
-        mask = get_image_hull_mask (image.shape, image_landmarks, ie_polys)
+        mask = get_image_hull_mask (image.shape, image_landmarks, ie_polys=ie_polys)
         image[...] = ( image * (1-mask) + image * mask / 2 )[...]
 
 def draw_rect_landmarks (image, rect, image_landmarks, face_size, face_type, transparent_mask=False, ie_polys=None, landmarks_color=(0,255,0)):
