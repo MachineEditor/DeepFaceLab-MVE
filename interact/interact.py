@@ -137,9 +137,9 @@ class InteractBase(object):
             else: print("capture_keys: already set for window ", wnd_name)
         else: print("capture_keys: named_window ", wnd_name, " not found.")
 
-    def progress_bar(self, desc, total, leave=True):
+    def progress_bar(self, desc, total, leave=True, initial=0):
         if self.pg_bar is None:
-            self.pg_bar = tqdm( total=total, desc=desc, leave=leave, ascii=True )
+            self.pg_bar = tqdm( total=total, desc=desc, leave=leave, ascii=True, initial=initial )
         else: print("progress_bar: already set.")
 
     def progress_bar_inc(self, c):
@@ -154,8 +154,8 @@ class InteractBase(object):
             self.pg_bar = None
         else: print("progress_bar not set.")
 
-    def progress_bar_generator(self, data, desc, leave=True):
-        self.pg_bar = tqdm( data, desc=desc, leave=leave, ascii=True )
+    def progress_bar_generator(self, data, desc, leave=True, initial=0):
+        self.pg_bar = tqdm( data, desc=desc, leave=leave, ascii=True, initial=initial )
         for x in self.pg_bar:
             yield x
         self.pg_bar.close()
