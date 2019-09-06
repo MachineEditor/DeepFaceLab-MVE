@@ -118,18 +118,8 @@ class ExtractSubprocessor(Subprocessor):
                     self.log_err ( 'Failed to extract %s, reason: cv2_imread() fail.' % ( str(filename_path) ) )
                     return data
 
-                image_shape = image.shape
-                if len(image_shape) == 2:
-                    h, w = image.shape
-                    image = image[:,:,np.newaxis]
-                    ch = 1
-                else:
-                    h, w, ch = image.shape
-
-                if ch == 1:
-                    image = np.repeat (image, 3, -1)
-                elif ch == 4:
-                    image = image[:,:,0:3]
+                image = imagelib.normalize_channels(image, 3)
+                h, w, ch = image.shape
 
                 wm, hm = w % 2, h % 2
                 if wm + hm != 0: #fix odd image
@@ -393,7 +383,8 @@ class ExtractSubprocessor(Subprocessor):
                     if self.cache_original_image[0] == filename:
                         self.original_image = self.cache_original_image[1]
                     else:
-                        self.original_image = cv2_imread( filename )
+                        self.original_image = imagelib.normalize_channels( cv2_imread( filename ), 3 )
+                        
                         self.cache_original_image = (filename, self.original_image )
 
                     (h,w,c) = self.original_image.shape
