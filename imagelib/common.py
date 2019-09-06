@@ -12,8 +12,12 @@ def normalize_channels(img, target_channels):
 
     if c == 0 and target_channels > 0:
         img = img[...,np.newaxis]
+        c = 1
+        
     if c == 1 and target_channels > 1:
         img = np.repeat (img, target_channels, -1)
+        c = target_channels
+        
     if c > target_channels:
         img = img[...,0:target_channels]
         c = target_channels
