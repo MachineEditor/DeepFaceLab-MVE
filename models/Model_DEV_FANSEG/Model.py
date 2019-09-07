@@ -48,7 +48,7 @@ class Model(ModelBase):
             self.set_training_data_generators ([    
                     SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size, 
                             sample_process_options=SampleProcessor.Options(random_flip=True), 
-                            output_sample_types=[ { 'types': (t.IMG_WARPED_TRANSFORMED, face_type, t.MODE_BGR_SHUFFLE), 'resolution' : self.resolution, 'motion_blur':(25, 1) },
+                            output_sample_types=[ { 'types': (t.IMG_WARPED_TRANSFORMED, face_type, t.MODE_BGR_SHUFFLE), 'resolution' : self.resolution, 'motion_blur':(25, 5), 'border_replicate':False },
                                                   { 'types': (t.IMG_WARPED_TRANSFORMED, face_type, t.MODE_M), 'resolution': self.resolution },
                                                 ]),
                                                 
@@ -66,7 +66,7 @@ class Model(ModelBase):
     def onTrainOneIter(self, generators_samples, generators_list):
         target_src, target_src_mask = generators_samples[0]
 
-        loss = self.fan_seg.train_on_batch( [target_src], [target_src_mask] )
+        loss = self.fan_seg.train( target_src, target_src_mask )
 
         return ( ('loss', loss), )
         

@@ -22,7 +22,7 @@ class SampleType(IntEnum):
     QTY = 5
 
 class Sample(object):
-    def __init__(self, sample_type=None, filename=None, face_type=None, shape=None, landmarks=None, ie_polys=None, pitch_yaw_roll=None, source_filename=None, mirror=None, close_target_list=None, fanseg_mask_exist=False):
+    def __init__(self, sample_type=None, filename=None, face_type=None, shape=None, landmarks=None, ie_polys=None, pitch_yaw_roll=None, eyebrows_expand_mod=None, source_filename=None, mirror=None, close_target_list=None, fanseg_mask_exist=False):
         self.sample_type = sample_type if sample_type is not None else SampleType.IMAGE
         self.filename = filename
         self.face_type = face_type
@@ -30,12 +30,13 @@ class Sample(object):
         self.landmarks = np.array(landmarks) if landmarks is not None else None
         self.ie_polys = ie_polys
         self.pitch_yaw_roll = pitch_yaw_roll
+        self.eyebrows_expand_mod = eyebrows_expand_mod
         self.source_filename = source_filename
         self.mirror = mirror
         self.close_target_list = close_target_list
         self.fanseg_mask_exist = fanseg_mask_exist
 
-    def copy_and_set(self, sample_type=None, filename=None, face_type=None, shape=None, landmarks=None, ie_polys=None, pitch_yaw_roll=None, source_filename=None, mirror=None, close_target_list=None, fanseg_mask=None, fanseg_mask_exist=None):
+    def copy_and_set(self, sample_type=None, filename=None, face_type=None, shape=None, landmarks=None, ie_polys=None, pitch_yaw_roll=None, eyebrows_expand_mod=None, source_filename=None, mirror=None, close_target_list=None, fanseg_mask=None, fanseg_mask_exist=None):
         return Sample(
             sample_type=sample_type if sample_type is not None else self.sample_type,
             filename=filename if filename is not None else self.filename,
@@ -44,6 +45,7 @@ class Sample(object):
             landmarks=landmarks if landmarks is not None else self.landmarks.copy(),
             ie_polys=ie_polys if ie_polys is not None else self.ie_polys,
             pitch_yaw_roll=pitch_yaw_roll if pitch_yaw_roll is not None else self.pitch_yaw_roll,
+            eyebrows_expand_mod=eyebrows_expand_mod if eyebrows_expand_mod is not None else self.eyebrows_expand_mod,
             source_filename=source_filename if source_filename is not None else self.source_filename,
             mirror=mirror if mirror is not None else self.mirror,
             close_target_list=close_target_list if close_target_list is not None else self.close_target_list,

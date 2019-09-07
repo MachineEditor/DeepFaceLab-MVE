@@ -130,16 +130,7 @@ class Model(ModelBase):
     #override
     def get_ConverterConfig(self):
         import converters
-        return converters.ConverterConfigMasked(predictor_func=self.predictor_func,
-                                                predictor_input_shape=(64,64,3),
-                                                predictor_masked=True,
-                                                face_type=FaceType.HALF,
-                                                default_mode=4,
-                                                base_erode_mask_modifier=100,
-                                                base_blur_mask_modifier=100,
-                                                default_erode_mask_modifier=0,
-                                                default_blur_mask_modifier=0,
-                                               )
+        return self.predictor_func, (64,64,3), converters.ConverterConfigMasked(face_type=FaceType.HALF, default_mode=4)
 
     def Build(self, lighter_ae):
         exec(nnlib.code_import_all, locals(), globals())

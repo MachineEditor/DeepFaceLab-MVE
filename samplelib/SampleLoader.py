@@ -71,9 +71,10 @@ class SampleLoader:
                     
                 landmarks = dflimg.get_landmarks()
                 pitch_yaw_roll = dflimg.get_pitch_yaw_roll()
-                if pitch_yaw_roll is None:
-                    pitch_yaw_roll = LandmarksProcessor.estimate_pitch_yaw_roll(landmarks)
+                eyebrows_expand_mod = dflimg.get_eyebrows_expand_mod()
                 
+                if pitch_yaw_roll is None:
+                    pitch_yaw_roll = LandmarksProcessor.estimate_pitch_yaw_roll(landmarks)                
 
                 sample_list.append( s.copy_and_set(sample_type=SampleType.FACE,
                                                    face_type=FaceType.fromString (dflimg.get_face_type()),
@@ -81,6 +82,7 @@ class SampleLoader:
                                                    landmarks=landmarks,
                                                    ie_polys=dflimg.get_ie_polys(),
                                                    pitch_yaw_roll=pitch_yaw_roll,
+                                                   eyebrows_expand_mod=eyebrows_expand_mod,
                                                    source_filename=dflimg.get_source_filename(),
                                                    fanseg_mask_exist=dflimg.get_fanseg_mask() is not None, ) )
             except:

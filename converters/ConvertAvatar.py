@@ -14,8 +14,8 @@ def process_frame_info(frame_info, inp_sh):
     img = cv2.warpAffine( img, img_mat, inp_sh[0:2], borderMode=cv2.BORDER_REPLICATE, flags=cv2.INTER_CUBIC )
     return img
     
-def ConvertFaceAvatar (cfg, prev_temporal_frame_infos, frame_info, next_temporal_frame_infos):
-    inp_sh = cfg.predictor_input_shape
+def ConvertFaceAvatar (predictor_func, predictor_input_shape, cfg, prev_temporal_frame_infos, frame_info, next_temporal_frame_infos):
+    inp_sh = predictor_input_shape
 
     prev_imgs=[]
     next_imgs=[]
@@ -24,7 +24,7 @@ def ConvertFaceAvatar (cfg, prev_temporal_frame_infos, frame_info, next_temporal
         next_imgs.append( process_frame_info(next_temporal_frame_infos[i], inp_sh) )
     img = process_frame_info(frame_info, inp_sh)
 
-    prd_f = cfg.predictor_func ( prev_imgs, img, next_imgs )
+    prd_f = predictor_func ( prev_imgs, img, next_imgs )
 
     if cfg.super_resolution_mode != 0:
         prd_f = cfg.superres_func(cfg.super_resolution_mode, prd_f)

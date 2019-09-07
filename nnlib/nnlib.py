@@ -685,7 +685,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         def CAInitializerMP( conv_weights_list ):
             #Convolution Aware Initialization https://arxiv.org/abs/1702.06295            
             data = [ (i, K.int_shape(conv_weights)) for i, conv_weights in enumerate(conv_weights_list) ]
-            data = sorted(data, key=lambda data: sum(data[1]) )
+            data = sorted(data, key=lambda data: np.prod(data[1]) )
             result = CAInitializerMPSubprocessor (data, K.floatx(), K.image_data_format() ).run()
             for idx, weights in result:
                 K.set_value ( conv_weights_list[idx], weights )

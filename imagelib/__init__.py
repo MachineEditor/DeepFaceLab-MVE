@@ -11,7 +11,7 @@ from .warp import gen_warp_params, warp_by_params
 
 from .reduce_colors import reduce_colors
 
-from .color_transfer import color_hist_match, reinhard_color_transfer, linear_color_transfer
+from .color_transfer import color_hist_match, reinhard_color_transfer, linear_color_transfer, seamless_clone
 
 from .RankSRGAN import RankSRGAN
 

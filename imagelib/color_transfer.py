@@ -1,6 +1,55 @@
-import numpy as np
 import cv2
+import numpy as np
 
+import scipy.sparse
+from scipy.sparse.linalg import spsolve
+
+def laplacian_matrix(n, m):
+    mat_D = scipy.sparse.lil_matrix((m, m))
+    mat_D.setdiag(-1, -1)
+    mat_D.setdiag(4)
+    mat_D.setdiag(-1, 1)        
+    mat_A = scipy.sparse.block_diag([mat_D] * n).tolil()    
+    mat_A.setdiag(-1, 1*m)
+    mat_A.setdiag(-1, -1*m)    
+    return mat_A
+
+def seamless_clone(source, target, mask):
+    h, w,c = target.shape
+    result = []
+    
+    mat_A = laplacian_matrix(h, w)
+    laplacian = mat_A.tocsc()
+
+    mask[0,:] = 1
+    mask[-1,:] = 1
+    mask[:,0] = 1
+    mask[:,-1] = 1
+    q = np.argwhere(mask==0)
+    
+    k = q[:,1]+q[:,0]*w
+    mat_A[k, k] = 1
+    mat_A[k, k + 1] = 0
+    mat_A[k, k - 1] = 0
+    mat_A[k, k + w] = 0
+    mat_A[k, k - w] = 0
+
+    mat_A = mat_A.tocsc()    
+    mask_flat = mask.flatten()
+    for channel in range(c):
+        
+        source_flat = source[:, :, channel].flatten()
+        target_flat = target[:, :, channel].flatten()        
+
+        mat_b = laplacian.dot(source_flat)*0.75
+        mat_b[mask_flat==0] = target_flat[mask_flat==0]
+        
+        x = spsolve(mat_A, mat_b).reshape((h, w))
+        result.append (x)
+
+        
+    return np.clip( np.dstack(result), 0, 1 )
+    
 def reinhard_color_transfer(target, source, clip=False, preserve_paper=False, source_mask=None, target_mask=None):
 	"""
 	Transfers the color distribution from the source to the target

@@ -73,6 +73,7 @@ class ConvertSubprocessor(Subprocessor):
             self.device_idx  = client_dict['device_idx']
             self.device_name = client_dict['device_name']
             self.predictor_func = client_dict['predictor_func']
+            self.predictor_input_shape = client_dict['predictor_input_shape']
             self.superres_func = client_dict['superres_func']
 
             #transfer and set stdin in order to work code.interact in debug subprocess
@@ -115,15 +116,21 @@ class ConvertSubprocessor(Subprocessor):
                 return fanseg.extract(*args, **kwargs)
 
             self.fanseg_extract_func = fanseg_extract
-
+            
+            import ebsynth
+            def ebs_ct(*args, **kwargs):                    
+                return ebsynth.color_transfer(*args, **kwargs)
+                
+            self.ebs_ct_func = ebs_ct
+            
             return None
 
         #override
         def process_data(self, pf): #pf=ProcessingFrame
             cfg = pf.cfg.copy()
-            cfg.predictor_func = self.predictor_func
             cfg.sharpen_func = self.sharpen_func
             cfg.superres_func = self.superres_func
+            cfg.ebs_ct_func = self.ebs_ct_func
 
             frame_info = pf.frame_info
 
@@ -152,7 +159,7 @@ class ConvertSubprocessor(Subprocessor):
                     cfg.fanseg_extract_func = self.fanseg_extract_func
 
                     try:
-                        final_img = ConvertMasked (cfg, frame_info)
+                        final_img = ConvertMasked (self.predictor_func, self.predictor_input_shape, cfg, frame_info)
                     except Exception as e:
                         e_str = traceback.format_exc()
                         if 'MemoryError' in e_str:
@@ -161,7 +168,8 @@ class ConvertSubprocessor(Subprocessor):
                             raise Exception( 'Error while converting file [%s]: %s' % (filename, e_str) )
 
                 elif cfg.type == ConverterConfig.TYPE_FACE_AVATAR:
-                    final_img = ConvertFaceAvatar (cfg, pf.prev_temporal_frame_infos,
+                    final_img = ConvertFaceAvatar (self.predictor_func, self.predictor_input_shape, 
+                                                   cfg, pf.prev_temporal_frame_infos,
                                                         pf.frame_info,
                                                         pf.next_temporal_frame_infos )
 
@@ -179,21 +187,22 @@ class ConvertSubprocessor(Subprocessor):
             return pf.frame_info.filename
 
     #override
-    def __init__(self, is_interactive, converter_config, frames, output_path, model_iter):
+    def __init__(self, is_interactive, converter_session_filepath, predictor_func, predictor_input_shape, converter_config, frames, output_path, model_iter):
         if len (frames) == 0:
             raise ValueError ("len (frames) == 0")
 
-        super().__init__('Converter', ConvertSubprocessor.Cli, 86400 if CONVERTER_DEBUG else 60, io_loop_sleep_time=0.001, initialize_subprocesses_in_serial=False)# if debug == True else 60)
+        super().__init__('Converter', ConvertSubprocessor.Cli, 86400 if CONVERTER_DEBUG else 60, io_loop_sleep_time=0.001, initialize_subprocesses_in_serial=False)
 
         self.is_interactive = is_interactive
+        self.converter_session_filepath = Path(converter_session_filepath)
         self.converter_config = converter_config
 
         #dummy predict and sleep, tensorflow caching kernels. If remove it, sometime conversion speed can be x2 slower
-        self.converter_config.predictor_func (dummy_predict=True)
+        predictor_func (dummy_predict=True)
         time.sleep(2)
 
-        self.predictor_func_host, self.predictor_func = SubprocessFunctionCaller.make_pair(self.converter_config.predictor_func)
-        self.converter_config.predictor_func = None
+        self.predictor_func_host, self.predictor_func = SubprocessFunctionCaller.make_pair(predictor_func)
+        self.predictor_input_shape = predictor_input_shape
 
         self.dcscn = None
         self.ranksrgan = None
@@ -211,11 +220,9 @@ class ConvertSubprocessor(Subprocessor):
         self.prefetch_frame_count = self.process_count = min(6,multiprocessing.cpu_count())
 
         session_data = None
-        session_dat_path = self.output_path / 'session.dat'
-        if session_dat_path.exists():
-
+        if self.is_interactive and self.converter_session_filepath.exists():
             try:
-                with open( str(session_dat_path), "rb") as f:
+                with open( str(self.converter_session_filepath), "rb") as f:
                     session_data = pickle.loads(f.read())
             except Exception as e:
                 pass
@@ -246,7 +253,7 @@ class ConvertSubprocessor(Subprocessor):
                         break
 
             if frames_equal:
-                io.log_info ("Using saved session.")
+                io.log_info ('Using saved session from ' + '/'.join (self.converter_session_filepath.parts[-2:]) )
                 self.frames = s_frames
                 self.frames_idxs = s_frames_idxs
                 self.frames_done_idxs = s_frames_done_idxs
@@ -292,6 +299,7 @@ class ConvertSubprocessor(Subprocessor):
             yield 'CPU%d' % (i), {}, {'device_idx': i,
                                       'device_name': 'CPU%d' % (i),
                                       'predictor_func': self.predictor_func,
+                                      'predictor_input_shape' : self.predictor_input_shape,
                                       'superres_func': self.superres_func,
                                       'stdin_fd': sys.stdin.fileno() if CONVERTER_DEBUG else None
                                       }
@@ -332,10 +340,9 @@ class ConvertSubprocessor(Subprocessor):
                 'frames_done_idxs': self.frames_done_idxs,
                 'model_iter' : self.model_iter,
             }
-            save_path = self.output_path / 'session.dat'
-            save_path.write_bytes( pickle.dumps(session_data) )
+            self.converter_session_filepath.write_bytes( pickle.dumps(session_data) )
 
-            io.log_info ("Session is saved to " + '/'.join (save_path.parts[-2:]) )
+            io.log_info ("Session is saved to " + '/'.join (self.converter_session_filepath.parts[-2:]) )
 
     cfg_change_keys = ['`','1', '2', '3', '4', '5', '6', '7', '8', '9',
                                  'q', 'a', 'w', 's', 'e', 'd', 'r', 'f', 't', 'g','y','h','u','j',
@@ -550,7 +557,7 @@ class ConvertSubprocessor(Subprocessor):
         for i in range ( min(len(self.frames_idxs), self.prefetch_frame_count) ):
             frame = self.frames[ self.frames_idxs[i] ]
 
-            if not frame.is_done and not frame.is_processing and frame.cfg is not None:
+            if not frame.is_done and not frame.is_processing and frame.cfg is not None:                
                 frame.is_processing = True
                 return ConvertSubprocessor.ProcessingFrame(idx=frame.idx,
                                                            cfg=frame.cfg.copy(),
@@ -592,8 +599,8 @@ def main (args, device_args):
 
         import models
         model = models.import_model( args['model_name'] )(model_path, device_args=device_args)
-
-        cfg = model.get_ConverterConfig()
+        converter_session_filepath = model.get_strpath_storage_for_file('converter_session.dat')        
+        predictor_func, predictor_input_shape, cfg = model.get_ConverterConfig()
 
         if not is_interactive:
             cfg.ask_settings()
@@ -717,7 +724,10 @@ def main (args, device_args):
         else:
             ConvertSubprocessor (
                         is_interactive         = is_interactive,
-                        converter_config       = cfg,
+                        converter_session_filepath = converter_session_filepath,
+                        predictor_func         = predictor_func,
+                        predictor_input_shape  = predictor_input_shape,                      
+                        converter_config       = cfg,                        
                         frames                 = frames,
                         output_path            = output_path,
                         model_iter             = model.get_iter()

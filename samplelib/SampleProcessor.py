@@ -36,7 +36,7 @@ opts:
             'MODE_BGR_SHUFFLE' #BGR shuffle
 
     'resolution' : N
-    'motion_blur' : (chance_int, range) - chance 0..100 to apply to face (not mask), and range [1..3] where 3 is highest power of motion blur
+    'motion_blur' : (chance_int, range) - chance 0..100 to apply to face (not mask), and max_size of motion blur
     'apply_ct' : bool
     'normalize_tanh' : bool
 
@@ -116,6 +116,7 @@ class SampleProcessor(object):
             resolution = opts.get('resolution', 0)
             types = opts.get('types', [] )
 
+            border_replicate = opts.get('border_replicate', True)
             random_sub_res = opts.get('random_sub_res', 0)
             normalize_std_dev = opts.get('normalize_std_dev', False)
             normalize_vgg = opts.get('normalize_vgg', False)
@@ -167,7 +168,7 @@ class SampleProcessor(object):
                     transform = (img_type==SPTF.IMG_WARPED_TRANSFORMED or img_type==SPTF.IMG_TRANSFORMED)
                     flip = img_type != SPTF.IMG_WARPED
 
-                    img = imagelib.warp_by_params (params, img, warp, transform, flip, True)
+                    img = imagelib.warp_by_params (params, img, warp, transform, flip, border_replicate)
                     if mask is not None:
                         mask = imagelib.warp_by_params (params, mask, warp, transform, flip, False)
                         if len(mask.shape) == 2:
@@ -176,38 +177,30 @@ class SampleProcessor(object):
                         img = np.concatenate( (img, mask ), -1 )
                     return img
 
-                img = cached_images.get(img_type, None)
-                if img is None:
+                img = sample_bgr
+                
+                ### Prepare a mask
+                mask = None
+                if is_face_sample:
+                    mask = sample.load_fanseg_mask() #using fanseg_mask if exist
 
-                    img = sample_bgr
-                    mask = None
-                    cur_sample = sample
+                    if mask is None:
+                        if sample.eyebrows_expand_mod is not None:
+                            mask = LandmarksProcessor.get_image_hull_mask (img.shape, sample.landmarks, eyebrows_expand_mod=sample.eyebrows_expand_mod )
+                        else:
+                            mask = LandmarksProcessor.get_image_hull_mask (img.shape, sample.landmarks)
 
-                    if is_face_sample:
-                        if motion_blur is not None:
-                            chance, mb_range = motion_blur
-                            chance = np.clip(chance, 0, 100)
+                    if sample.ie_polys is not None:
+                        sample.ie_polys.overlay_mask(mask)
+                ##################
+                
+                
+                if motion_blur is not None:
+                    chance, mb_max_size = motion_blur
+                    chance = np.clip(chance, 0, 100)
 
-                            if np.random.randint(100) < chance:
-                                mb_range = [3,5,7,9][ : np.clip(mb_range, 0, 3)+1 ]
-                                dim = mb_range[ np.random.randint(len(mb_range) ) ]
-                                img = imagelib.LinearMotionBlur (img, dim, np.random.randint(180) )
-
-                        mask = cur_sample.load_fanseg_mask() #using fanseg_mask if exist
-
-                        if mask is None:
-                            mask = LandmarksProcessor.get_image_hull_mask (img.shape, cur_sample.landmarks)
-
-                        if cur_sample.ie_polys is not None:
-                            cur_sample.ie_polys.overlay_mask(mask)
-
-                    if sample.face_type == FaceType.MARK_ONLY:
-                        if mask is not None:
-                            img = np.concatenate( (img, mask), -1 )
-                    else:
-                        img = do_transform (img, mask)
-
-                    cached_images[img_type] = img
+                    if np.random.randint(100) < chance:
+                        img = imagelib.LinearMotionBlur (img, np.random.randint( mb_max_size )+1, np.random.randint(360) )
 
                 if is_face_sample and target_face_type != SPTF.NONE:
                     target_ft = SampleProcessor.SPTF_FACETYPE_TO_FACETYPE[target_face_type]
@@ -215,16 +208,18 @@ class SampleProcessor(object):
                         raise Exception ('sample %s type %s does not match model requirement %s. Consider extract necessary type of faces.' % (sample.filename, sample.face_type, target_ft) )
 
                     if sample.face_type == FaceType.MARK_ONLY:
-                        img = cv2.warpAffine( img, LandmarksProcessor.get_transform_mat (sample.landmarks, sample.shape[0], target_ft), (sample.shape[0],sample.shape[0]), flags=cv2.INTER_CUBIC )
-
-                        mask = img[...,3:4] if img.shape[2] > 3 else None
-                        img  = img[...,0:3]
+                        #first warp to target facetype
+                        img =  cv2.warpAffine( img, LandmarksProcessor.get_transform_mat (sample.landmarks, sample.shape[0], target_ft), (sample.shape[0],sample.shape[0]), flags=cv2.INTER_CUBIC )
+                        mask = cv2.warpAffine( mask, LandmarksProcessor.get_transform_mat (sample.landmarks, sample.shape[0], target_ft), (sample.shape[0],sample.shape[0]), flags=cv2.INTER_CUBIC )
+                        #then apply transforms
                         img = do_transform (img, mask)
                         img = cv2.resize( img, (resolution,resolution), cv2.INTER_CUBIC )
                     else:
-                        img = cv2.warpAffine( img, LandmarksProcessor.get_transform_mat (sample.landmarks, resolution, target_ft), (resolution,resolution), borderMode=cv2.BORDER_REPLICATE, flags=cv2.INTER_CUBIC )
+                        img = do_transform (img, mask)
+                        img = cv2.warpAffine( img, LandmarksProcessor.get_transform_mat (sample.landmarks, resolution, target_ft), (resolution,resolution), borderMode=(cv2.BORDER_REPLICATE if border_replicate else cv2.BORDER_CONSTANT), flags=cv2.INTER_CUBIC )
 
                 else:
+                    img = do_transform (img, mask)
                     img = cv2.resize( img, (resolution,resolution), cv2.INTER_CUBIC )
 
                 if random_sub_res != 0:

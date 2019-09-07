@@ -14,16 +14,14 @@ class ConverterConfig(object):
     TYPE_IMAGE = 3
     TYPE_IMAGE_WITH_LANDMARKS = 4
 
-    def __init__(self, type=0, predictor_func=None,
-                               predictor_input_shape=None):
+    def __init__(self, type=0):
         self.type = type
-        self.predictor_func = predictor_func
-        self.predictor_input_shape = predictor_input_shape
 
         self.superres_func = None
         self.sharpen_func = None
         self.fanseg_input_size = None
         self.fanseg_extract_func = None
+        self.ebs_ct_func = None
 
         self.super_res_dict = {0:"None", 1:'RankSRGAN'}
         self.sharpen_dict = {0:"None", 1:'box', 2:'gaussian'}
@@ -84,40 +82,46 @@ class ConverterConfig(object):
         r += f"super_resolution_mode : {self.super_res_dict[self.super_resolution_mode]}\n"
         return r
 
+mode_dict = {0:'original',
+             1:'overlay',
+             2:'hist-match',
+             3:'seamless2',
+             4:'seamless',
+             5:'seamless-hist-match',             
+             6:'raw-rgb',
+             7:'raw-rgb-mask',
+             8:'raw-mask-only',
+             9:'raw-predicted-only'}
+
+full_face_mask_mode_dict = {1:'learned',
+                                    2:'dst',
+                                    3:'FAN-prd',
+                                    4:'FAN-dst',
+                                    5:'FAN-prd*FAN-dst',
+                                    6:'learned*FAN-prd*FAN-dst'}
+
+half_face_mask_mode_dict = {1:'learned',
+                                    2:'dst',
+                                    4:'FAN-dst',
+                                    7:'learned*FAN-dst'}
+
+ctm_dict = { 0: "None", 1:"rct", 2:"lct", 3:"ebs" }
+ctm_str_dict = {None:0, "rct":1, "lct": 2, "ebs":3 }
+
 class ConverterConfigMasked(ConverterConfig):
 
-    def __init__(self, predictor_func=None,
-                       predictor_input_shape=None,
-                       predictor_masked=True,
-                       face_type=FaceType.FULL,
+    def __init__(self, face_type=FaceType.FULL,
                        default_mode = 4,
-                       base_erode_mask_modifier = 0,
-                       base_blur_mask_modifier = 0,
-                       default_erode_mask_modifier = 0,
-                       default_blur_mask_modifier = 0,
                        clip_hborder_mask_per = 0,
                        ):
 
-        super().__init__(type=ConverterConfig.TYPE_MASKED,
-                         predictor_func=predictor_func,
-                         predictor_input_shape=predictor_input_shape,
-                         )
-        if len(predictor_input_shape) != 3:
-            raise ValueError("ConverterConfigMasked: predictor_input_shape must be rank 3.")
-
-        if predictor_input_shape[0] != predictor_input_shape[1]:
-            raise ValueError("ConverterConfigMasked: predictor_input_shape must be a square.")
-
-        self.predictor_masked = predictor_masked
+        super().__init__(type=ConverterConfig.TYPE_MASKED)
+        
         self.face_type = face_type
         if self.face_type not in [FaceType.FULL, FaceType.HALF]:
             raise ValueError("ConverterConfigMasked supports only full or half face masks.")
 
         self.default_mode = default_mode
-        self.base_erode_mask_modifier = base_erode_mask_modifier
-        self.base_blur_mask_modifier = base_blur_mask_modifier
-        self.default_erode_mask_modifier = default_erode_mask_modifier
-        self.default_blur_mask_modifier = default_blur_mask_modifier
         self.clip_hborder_mask_per = clip_hborder_mask_per
 
         #default changeable params
@@ -133,37 +137,11 @@ class ConverterConfigMasked(ConverterConfig):
         self.color_degrade_power = 0
         self.export_mask_alpha = False
 
-        self.mode_dict = {0:'original',
-                          1:'overlay',
-                          2:'hist-match',
-                          3:'hist-match-bw',
-                          4:'seamless',
-                          5:'seamless-hist-match',
-                          6:'raw-rgb',
-                          7:'raw-rgb-mask',
-                          8:'raw-mask-only',
-                          9:'raw-predicted-only'}
-
-        self.full_face_mask_mode_dict = {1:'learned',
-                                         2:'dst',
-                                         3:'FAN-prd',
-                                         4:'FAN-dst',
-                                         5:'FAN-prd*FAN-dst',
-                                         6:'learned*FAN-prd*FAN-dst'}
-
-        self.half_face_mask_mode_dict = {1:'learned',
-                                         2:'dst',
-                                         4:'FAN-dst',
-                                         7:'learned*FAN-dst'}
-
-        self.ctm_dict = { 0: "None", 1:"rct", 2:"lct" }
-        self.ctm_str_dict = {None:0, "rct":1, "lct": 2 }
-
     def copy(self):
         return copy.copy(self)
 
     def set_mode (self, mode):
-        self.mode = self.mode_dict.get (mode, self.mode_dict[self.default_mode] )
+        self.mode = mode_dict.get (mode, mode_dict[self.default_mode] )
 
     def toggle_masked_hist_match(self):
         if self.mode == 'hist-match' or self.mode == 'hist-match-bw':
@@ -175,16 +153,16 @@ class ConverterConfigMasked(ConverterConfig):
 
     def toggle_mask_mode(self):
         if self.face_type == FaceType.FULL:
-            a = list( self.full_face_mask_mode_dict.keys() )
+            a = list( full_face_mask_mode_dict.keys() )
         else:
-            a = list( self.half_face_mask_mode_dict.keys() )
+            a = list( half_face_mask_mode_dict.keys() )
         self.mask_mode = a[ (a.index(self.mask_mode)+1) % len(a) ]
 
     def add_erode_mask_modifier(self, diff):
-        self.erode_mask_modifier = np.clip ( self.erode_mask_modifier+diff , -200, 200)
+        self.erode_mask_modifier = np.clip ( self.erode_mask_modifier+diff , -400, 400)
 
     def add_blur_mask_modifier(self, diff):
-        self.blur_mask_modifier = np.clip ( self.blur_mask_modifier+diff , -200, 200)
+        self.blur_mask_modifier = np.clip ( self.blur_mask_modifier+diff , -400, 400)
 
     def add_motion_blur_power(self, diff):
         self.motion_blur_power = np.clip ( self.motion_blur_power+diff, 0, 100)
@@ -193,7 +171,7 @@ class ConverterConfigMasked(ConverterConfig):
         self.output_face_scale = np.clip ( self.output_face_scale+diff , -50, 50)
 
     def toggle_color_transfer_mode(self):
-        self.color_transfer_mode = (self.color_transfer_mode+1) % 3
+        self.color_transfer_mode = (self.color_transfer_mode+1) % ( max(ctm_dict.keys())+1 )
 
     def add_color_degrade_power(self, diff):
         self.color_degrade_power = np.clip ( self.color_degrade_power+diff , 0, 100)
@@ -204,13 +182,13 @@ class ConverterConfigMasked(ConverterConfig):
     def ask_settings(self):
 
         s = """Choose mode: \n"""
-        for key in self.mode_dict.keys():
-            s += f"""({key}) {self.mode_dict[key]}\n"""
+        for key in mode_dict.keys():
+            s += f"""({key}) {mode_dict[key]}\n"""
         s += f"""Default: {self.default_mode} : """
 
         mode = io.input_int (s, self.default_mode)
 
-        self.mode = self.mode_dict.get (mode, self.mode_dict[self.default_mode] )
+        self.mode = mode_dict.get (mode, mode_dict[self.default_mode] )
 
         if 'raw' not in self.mode:
             if self.mode == 'hist-match' or self.mode == 'hist-match-bw':
@@ -221,28 +199,28 @@ class ConverterConfigMasked(ConverterConfig):
 
         if self.face_type == FaceType.FULL:
             s = """Choose mask mode: \n"""
-            for key in self.full_face_mask_mode_dict.keys():
-                s += f"""({key}) {self.full_face_mask_mode_dict[key]}\n"""
+            for key in full_face_mask_mode_dict.keys():
+                s += f"""({key}) {full_face_mask_mode_dict[key]}\n"""
             s += f"""?:help Default: 1 : """
 
-            self.mask_mode = io.input_int (s, 1, valid_list=self.full_face_mask_mode_dict.keys(), help_message="If you learned the mask, then option 1 should be choosed. 'dst' mask is raw shaky mask from dst aligned images. 'FAN-prd' - using super smooth mask by pretrained FAN-model from predicted face. 'FAN-dst' - using super smooth mask by pretrained FAN-model from dst face. 'FAN-prd*FAN-dst' or 'learned*FAN-prd*FAN-dst' - using multiplied masks.")
+            self.mask_mode = io.input_int (s, 1, valid_list=full_face_mask_mode_dict.keys(), help_message="If you learned the mask, then option 1 should be choosed. 'dst' mask is raw shaky mask from dst aligned images. 'FAN-prd' - using super smooth mask by pretrained FAN-model from predicted face. 'FAN-dst' - using super smooth mask by pretrained FAN-model from dst face. 'FAN-prd*FAN-dst' or 'learned*FAN-prd*FAN-dst' - using multiplied masks.")
         else:
             s = """Choose mask mode: \n"""
-            for key in self.half_face_mask_mode_dict.keys():
-                s += f"""({key}) {self.half_face_mask_mode_dict[key]}\n"""
+            for key in half_face_mask_mode_dict.keys():
+                s += f"""({key}) {half_face_mask_mode_dict[key]}\n"""
             s += f"""?:help , Default: 1 : """
-            self.mask_mode = io.input_int (s, 1, valid_list=self.half_face_mask_mode_dict.keys(), help_message="If you learned the mask, then option 1 should be choosed. 'dst' mask is raw shaky mask from dst aligned images.")
+            self.mask_mode = io.input_int (s, 1, valid_list=half_face_mask_mode_dict.keys(), help_message="If you learned the mask, then option 1 should be choosed. 'dst' mask is raw shaky mask from dst aligned images.")
 
         if 'raw' not in self.mode:
-            self.erode_mask_modifier = self.base_erode_mask_modifier + np.clip ( io.input_int ("Choose erode mask modifier [-200..200] (skip:%d) : " % (self.default_erode_mask_modifier), self.default_erode_mask_modifier), -200, 200)
-            self.blur_mask_modifier = self.base_blur_mask_modifier + np.clip ( io.input_int ("Choose blur mask modifier [-200..200] (skip:%d) : " % (self.default_blur_mask_modifier), self.default_blur_mask_modifier), -200, 200)
+            self.erode_mask_modifier = np.clip ( io.input_int ("Choose erode mask modifier [-400..400] (skip:%d) : " % 0, 0), -400, 400)
+            self.blur_mask_modifier =  np.clip ( io.input_int ("Choose blur mask modifier [-400..400] (skip:%d) : " % 0, 0), -400, 400)
             self.motion_blur_power = np.clip ( io.input_int ("Choose motion blur power [0..100] (skip:%d) : " % (0), 0), 0, 100)
 
         self.output_face_scale = np.clip (io.input_int ("Choose output face scale modifier [-50..50] (skip:0) : ", 0), -50, 50)
 
         if 'raw' not in self.mode:
-            self.color_transfer_mode = io.input_str ("Apply color transfer to predicted face? Choose mode ( rct/lct skip:None ) : ", None, ['rct','lct'])
-            self.color_transfer_mode = self.ctm_str_dict[self.color_transfer_mode]
+            self.color_transfer_mode = io.input_str ("Apply color transfer to predicted face? Choose mode ( rct/lct/ebs skip:None ) : ", None, ctm_str_dict.keys() )
+            self.color_transfer_mode = ctm_str_dict[self.color_transfer_mode]
 
         super().ask_settings()
 
@@ -284,9 +262,9 @@ class ConverterConfigMasked(ConverterConfig):
             r += f"""hist_match_threshold: {self.hist_match_threshold}\n"""
 
         if self.face_type == FaceType.FULL:
-            r += f"""mask_mode: { self.full_face_mask_mode_dict[self.mask_mode] }\n"""
+            r += f"""mask_mode: { full_face_mask_mode_dict[self.mask_mode] }\n"""
         else:
-            r += f"""mask_mode: { self.half_face_mask_mode_dict[self.mask_mode] }\n"""
+            r += f"""mask_mode: { half_face_mask_mode_dict[self.mask_mode] }\n"""
 
         if 'raw' not in self.mode:
             r += (f"""erode_mask_modifier: {self.erode_mask_modifier}\n"""
@@ -296,7 +274,7 @@ class ConverterConfigMasked(ConverterConfig):
         r += f"""output_face_scale: {self.output_face_scale}\n"""
 
         if 'raw' not in self.mode:
-            r += f"""color_transfer_mode: { self.ctm_dict[self.color_transfer_mode]}\n"""
+            r += f"""color_transfer_mode: { ctm_dict[self.color_transfer_mode]}\n"""
 
         r += super().__str__()
 
@@ -311,14 +289,8 @@ class ConverterConfigMasked(ConverterConfig):
 
 class ConverterConfigFaceAvatar(ConverterConfig):
 
-    def __init__(self, predictor_func=None,
-                       predictor_input_shape=None,
-                       temporal_face_count=0
-                       ):
-        super().__init__(type=ConverterConfig.TYPE_FACE_AVATAR,
-                         predictor_func=predictor_func,
-                         predictor_input_shape=predictor_input_shape
-                         )
+    def __init__(self, temporal_face_count=0):
+        super().__init__(type=ConverterConfig.TYPE_FACE_AVATAR)
         self.temporal_face_count = temporal_face_count
 
         #changeable params

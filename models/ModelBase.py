@@ -117,9 +117,9 @@ class ModelBase(object):
 
         if ask_batch_size and (self.iter == 0 or ask_override):
             default_batch_size = 0 if self.iter == 0 else self.options.get('batch_size',0)
-            self.options['batch_size'] = max(0, io.input_int("Batch_size (?:help skip:%d) : " % (default_batch_size), default_batch_size, help_message="Larger batch size is better for NN's generalization, but it can cause Out of Memory error. Tune this value for your videocard manually."))
+            self.batch_size = max(0, io.input_int("Batch_size (?:help skip:%d) : " % (default_batch_size), default_batch_size, help_message="Larger batch size is better for NN's generalization, but it can cause Out of Memory error. Tune this value for your videocard manually."))
         else:
-            self.options['batch_size'] = self.options.get('batch_size', 0)
+            self.batch_size = self.options.get('batch_size', 0)
 
         if ask_sort_by_yaw:
             if (self.iter == 0 or ask_override):
@@ -152,7 +152,7 @@ class ModelBase(object):
         if self.target_iter == 0 and 'target_iter' in self.options:
             self.options.pop('target_iter')
 
-        self.batch_size = self.options.get('batch_size',0)
+        #self.batch_size = self.options.get('batch_size',0)
         self.sort_by_yaw = self.options.get('sort_by_yaw',False)
         self.random_flip = self.options.get('random_flip',True)
 
@@ -325,13 +325,8 @@ class ModelBase(object):
 
     #overridable
     def get_ConverterConfig(self):
-        #return ConverterConfig() for the model
+        #return predictor_func, predictor_input_shape, ConverterConfig() for the model
         raise NotImplementedError
-
-    #overridable
-    def get_converter(self):
-        raise NotImplementedError
-        #return existing or your own converter which derived from base
 
     def get_target_iter(self):
         return self.target_iter

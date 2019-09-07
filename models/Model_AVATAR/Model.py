@@ -353,10 +353,7 @@ class AVATARModel(ModelBase):
     #override
     def get_ConverterConfig(self):
         import converters
-        return converters.ConverterConfigFaceAvatar(predictor_func=self.predictor_func,
-                                                    predictor_input_shape=(self.df_res, self.df_res, 3),
-                                                    temporal_face_count=1
-                                                    )
+        return self.predictor_func, (self.df_res, self.df_res, 3), converters.ConverterConfigFaceAvatar(temporal_face_count=1)
 
     @staticmethod
     def NLayerDiscriminator(ndf=64, n_layers=3):
