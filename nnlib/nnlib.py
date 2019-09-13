@@ -56,11 +56,14 @@ Conv2DTranspose = nnlib.Conv2DTranspose
 EqualConv2D = nnlib.EqualConv2D
 SeparableConv2D = KL.SeparableConv2D
 MaxPooling2D = KL.MaxPooling2D
+AveragePooling2D = KL.AveragePooling2D
+GlobalAveragePooling2D = KL.GlobalAveragePooling2D
 UpSampling2D = KL.UpSampling2D
 BatchNormalization = KL.BatchNormalization
 PixelNormalization = nnlib.PixelNormalization
 
 LeakyReLU = KL.LeakyReLU
+ELU = KL.ELU
 ReLU = KL.ReLU
 PReLU = KL.PReLU
 tanh = KL.Activation('tanh')
@@ -70,6 +73,7 @@ Softmax = KL.Softmax
 
 Lambda = KL.Lambda
 Add = KL.Add
+Multiply = KL.Multiply
 Concatenate = KL.Concatenate
 
 

@@ -74,14 +74,14 @@ class ConverterConfig(object):
         return False
 
     #overridable
-    def __str__(self):
+    def to_string(self, filename):
         r = ""
         r += f"sharpen_mode : {self.sharpen_dict[self.sharpen_mode]}\n"
         if self.sharpen_mode != 0:
             r += f"sharpen_amount : {self.sharpen_amount}\n"        
         r += f"super_resolution_mode : {self.super_res_dict[self.super_resolution_mode]}\n"
         return r
-
+        
 mode_dict = {0:'original',
              1:'overlay',
              2:'hist-match',
@@ -249,9 +249,9 @@ class ConverterConfigMasked(ConverterConfig):
 
         return False
 
-    def __str__(self):
+    def to_string(self, filename):
         r = (
-            """ConverterConfig:\n"""
+            f"""ConverterConfig {filename}:\n"""
             f"""Mode: {self.mode}\n"""
             )
 
@@ -276,7 +276,7 @@ class ConverterConfigMasked(ConverterConfig):
         if 'raw' not in self.mode:
             r += f"""color_transfer_mode: { ctm_dict[self.color_transfer_mode]}\n"""
 
-        r += super().__str__()
+        r += super().to_string(filename)
 
         if 'raw' not in self.mode:
             r += (f"""color_degrade_power: {self.color_degrade_power}\n"""
@@ -318,8 +318,8 @@ class ConverterConfigFaceAvatar(ConverterConfig):
         return False
 
     #override
-    def __str__(self):
-        return ("ConverterConfig: \n"
+    def to_string(self, filename):
+        return (f"ConverterConfig {filename}:\n"
                 f"add_source_image : {self.add_source_image}\n") + \
-                super().__str__() + "================"
+                super().to_string(filename) + "================"
 

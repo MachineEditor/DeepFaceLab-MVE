@@ -369,7 +369,7 @@ class ConvertSubprocessor(Subprocessor):
                     if not cur_frame.is_shown:
                         if cur_frame.is_done:
                             cur_frame.is_shown = True
-                            io.log_info (cur_frame.cfg)
+                            io.log_info (cur_frame.cfg.to_string( cur_frame.frame_info.filename_short) )
 
                             if cur_frame.image is None:
                                 cur_frame.image = cv2_imread ( cur_frame.output_filename)
@@ -464,7 +464,7 @@ class ConvertSubprocessor(Subprocessor):
                                     cfg.toggle_sharpen_mode()
 
                             if prev_cfg != cfg:
-                                io.log_info (cfg)
+                                io.log_info ( cfg.to_string(cur_frame.frame_info.filename_short) )
                                 cur_frame.is_done = False
                                 cur_frame.is_shown = False
                     else:

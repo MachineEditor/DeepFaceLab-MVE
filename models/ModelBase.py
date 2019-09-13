@@ -204,6 +204,7 @@ class ModelBase(object):
 
             if self.sample_for_preview is None or choose_preview_history:
                 if choose_preview_history and io.is_support_windows():
+                    io.log_info ("Choose image for the preview history. [p] - next. [enter] - confirm.")
                     wnd_name = "[p] - next. [enter] - confirm."
                     io.named_window(wnd_name)
                     io.capture_keys(wnd_name)
@@ -411,11 +412,17 @@ class ModelBase(object):
                             cv2_imwrite (filepath, img )
 
     def load_weights_safe(self, model_filename_list, optimizer_filename_list=[]):
-        for model, filename in model_filename_list:
+        loaded = []
+        not_loaded = []
+        for mf in model_filename_list:
+            model, filename = mf
             filename = self.get_strpath_storage_for_file(filename)
             if Path(filename).exists():
+                loaded += [ mf ]
                 model.load_weights(filename)
-
+            else:
+                not_loaded += [ mf ]
+                
         if len(optimizer_filename_list) != 0:
             opt_filename = self.get_strpath_storage_for_file('opt.h5')
             if Path(opt_filename).exists():
@@ -432,7 +439,8 @@ class ModelBase(object):
                                 print("set ok")
                 except Exception as e:
                     print ("Unable to load ", opt_filename)
-
+                    
+        return loaded, not_loaded
 
     def save_weights_safe(self, model_filename_list):
         for model, filename in model_filename_list:
