@@ -38,7 +38,7 @@ class TrueFaceModel(ModelBase):
         self.set_vram_batch_requirements({2:1,3:1,4:4,5:8,6:16})
 
         resolution = self.options['resolution']
-        face_type = FaceType.FULL if self.options['face_type'] == 'f' else FaceType.HALF
+        face_type = self.face_type = FaceType.FULL if self.options['face_type'] == 'f' else FaceType.HALF
 
         self.model = FUNIT( face_type_str=FaceType.toString(face_type),
                             batch_size=self.batch_size,
@@ -169,12 +169,11 @@ class TrueFaceModel(ModelBase):
 
     #override
     def get_ConverterConfig(self):
-        face_type = FaceType.FULL
 
         import converters
-        return self.predictor_func, (self.options['resolution'], self.options['resolution'], 3), converters.ConverterConfigMasked(face_type=face_type,
+        return self.predictor_func, (self.options['resolution'], self.options['resolution'], 3), converters.ConverterConfigMasked(face_type=self.face_type,
                                      default_mode = 1,
-                                     clip_hborder_mask_per=0.0625 if (face_type == FaceType.FULL) else 0,
+                                     clip_hborder_mask_per=0.0625 if (self.face_type == FaceType.FULL) else 0,
                                     )
 
 Model = TrueFaceModel
