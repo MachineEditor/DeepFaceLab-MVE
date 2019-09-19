@@ -183,6 +183,55 @@ landmarks_68_3D = np.array( [
 [0.205322    , 31.408738    , -21.903670  ],
 [-7.198266   , 30.844876    , -20.328022  ] ], dtype=np.float32)
 
+def convert_98_to_68(lmrks):
+    #jaw
+    result = [ lmrks[0] ]
+    for i in range(2,16,2):
+        result += [ ( lmrks[i] + (lmrks[i-1]+lmrks[i+1])/2 ) / 2  ]
+    result += [ lmrks[16] ]
+    for i in range(18,32,2):
+        result += [ ( lmrks[i] + (lmrks[i-1]+lmrks[i+1])/2 ) / 2  ]
+    result += [ lmrks[32] ]
+
+    #eyebrows averaging
+    result += [ lmrks[33],
+                (lmrks[34]+lmrks[41])/2,
+                (lmrks[35]+lmrks[40])/2,
+                (lmrks[36]+lmrks[39])/2,
+                (lmrks[37]+lmrks[38])/2,
+              ]
+
+    result += [ (lmrks[42]+lmrks[50])/2,
+                (lmrks[43]+lmrks[49])/2,
+                (lmrks[44]+lmrks[48])/2,
+                (lmrks[45]+lmrks[47])/2,
+                lmrks[46]
+              ]
+
+    #nose
+    result += list ( lmrks[51:60] )
+
+    #left eye (from our view)
+    result += [ lmrks[60],
+                lmrks[61],
+                lmrks[63],
+                lmrks[64],
+                lmrks[65],
+                lmrks[67] ]
+
+    #right eye
+    result += [ lmrks[68],
+                lmrks[69],
+                lmrks[71],
+                lmrks[72],
+                lmrks[73],
+                lmrks[75] ]
+
+    #mouth
+    result += list ( lmrks[76:96] )
+
+    return np.concatenate (result).reshape ( (68,2) )
+
 def transform_points(points, mat, invert=False):
     if invert:
         mat = cv2.invertAffineTransform (mat)
@@ -310,8 +359,8 @@ def alpha_to_color (img_alpha, color):
     result[:,:] = color
 
     return result * img_alpha
-    
-    
+
+
 
 def get_cmask (image_shape, lmrks, eyebrows_expand_mod=1.0):
     h,w,c = image_shape
@@ -361,7 +410,7 @@ def get_cmask (image_shape, lmrks, eyebrows_expand_mod=1.0):
             s,e = d[name]
             result = dists[...,s:e]
             if thickness != 0:
-                result = np.abs(result)-thickness 
+                result = np.abs(result)-thickness
             return np.min (result, axis=-1)
 
         return get_dists
@@ -371,7 +420,7 @@ def get_cmask (image_shape, lmrks, eyebrows_expand_mod=1.0):
     l_brow = lmrks[22:27]
     r_brow = lmrks[17:22]
     mouth = lmrks[48:60]
-    
+
     up_nose = np.concatenate( (lmrks[27:31], lmrks[33:34]) )
     down_nose = lmrks[31:36]
     nose = np.concatenate ( (up_nose, down_nose) )
@@ -400,7 +449,7 @@ def get_cmask (image_shape, lmrks, eyebrows_expand_mod=1.0):
 
     mouth_fall_dist = w // 32
     mouth_thickness = max( w // 64, 1 )
-    
+
     eyes_mask = gdf('eyes',eyes_thickness)
     eyes_mask = 1-np.clip( eyes_mask/ eyes_fall_dist, 0, 1)
     #eyes_mask = np.clip ( 1- ( np.sqrt( np.maximum(eyes_mask,0) ) / eyes_fall_dist ), 0, 1)
@@ -409,15 +458,15 @@ def get_cmask (image_shape, lmrks, eyebrows_expand_mod=1.0):
     brows_mask = gdf('brows', brows_thickness)
     brows_mask = 1-np.clip( brows_mask / brows_fall_dist, 0, 1)
     #brows_mask = np.clip ( 1- ( np.sqrt( np.maximum(brows_mask,0) ) / brows_fall_dist ), 0, 1)
-    
+
     mouth_mask = gdf('mouth', mouth_thickness)
     mouth_mask = 1-np.clip( mouth_mask / mouth_fall_dist, 0, 1)
     #mouth_mask = np.clip ( 1- ( np.sqrt( np.maximum(mouth_mask,0) ) / mouth_fall_dist ), 0, 1)
-    
+
     def blend(a,b,k):
         x = np.clip ( 0.5+0.5*(b-a)/k, 0.0, 1.0 )
         return (a-b)*x+b - k*x*(1.0-x)
-    
+
 
     #nose_mask = (a-b)*x+b - k*x*(1.0-x)
 
@@ -426,7 +475,7 @@ def get_cmask (image_shape, lmrks, eyebrows_expand_mod=1.0):
 
     nose_mask = blend ( gdf('up_nose', nose_thickness), gdf('down_nose', nose_thickness), nose_thickness*3 )
     nose_mask = 1-np.clip( nose_mask / nose_fall_dist, 0, 1)
-    
+
     up_nose_mask = gdf('up_nose', nose_thickness)
     up_nose_mask = 1-np.clip( up_nose_mask / nose_fall_dist, 0, 1)
     #up_nose_mask = np.clip ( 1- ( np.cbrt( np.maximum(up_nose_mask,0) ) / nose_fall_dist ), 0, 1)
@@ -441,17 +490,17 @@ def get_cmask (image_shape, lmrks, eyebrows_expand_mod=1.0):
     #nose_mask = down_nose_mask
 
     #nose_mask = np.zeros_like(nose_mask)
-    
+
     eyes_mask = eyes_mask * (1-mouth_mask)
     nose_mask = nose_mask * (1-eyes_mask)
-    
+
     hull_mask = hull[...,0].copy()
     hull_mask = hull_mask * (1-eyes_mask) * (1-brows_mask) * (1-nose_mask) * (1-mouth_mask)
 
     #eyes_mask = eyes_mask * (1-nose_mask)
-    
+
     mouth_mask= mouth_mask * (1-nose_mask)
-    
+
     brows_mask = brows_mask * (1-nose_mask)* (1-eyes_mask )
 
     hull_mask = alpha_to_color(hull_mask, (0,1,0) )
@@ -613,5 +662,5 @@ def estimate_pitch_yaw_roll(aligned_256px_landmarks):
     pitch, yaw, roll = mathlib.rotationMatrixToEulerAngles( cv2.Rodrigues(rotation_vector)[0] )
     pitch = np.clip ( pitch/1.30, -1.0, 1.0 )
     yaw = np.clip ( yaw / 1.11, -1.0, 1.0 )
-    roll = np.clip ( roll/3.15, -1.0, 1.0 )
+    roll = np.clip ( roll/3.15, -1.0, 1.0 ) #todo radians
     return -pitch, yaw, roll

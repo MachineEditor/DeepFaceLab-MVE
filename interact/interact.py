@@ -154,7 +154,7 @@ class InteractBase(object):
             self.pg_bar = None
         else: print("progress_bar not set.")
 
-    def progress_bar_generator(self, data, desc, leave=True, initial=0):
+    def progress_bar_generator(self, data, desc=None, leave=True, initial=0):
         self.pg_bar = tqdm( data, desc=desc, leave=leave, ascii=True, initial=initial )
         for x in self.pg_bar:
             yield x

@@ -45,6 +45,7 @@ def trainerThread (s2c, c2s, e, args, device_args):
                         training_data_src_path=training_data_src_path,
                         training_data_dst_path=training_data_dst_path,
                         pretraining_data_path=pretraining_data_path,
+                        is_training=True,
                         debug=debug,
                         device_args=device_args)
 

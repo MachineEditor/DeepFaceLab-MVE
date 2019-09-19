@@ -19,7 +19,11 @@ class SampleLoader:
     cache = dict()
 
     @staticmethod
-    def load(sample_type, samples_path, target_samples_path=None):
+    def get_person_id_max_count(samples_path):
+        return len ( Path_utils.get_all_dir_names(samples_path) )
+
+    @staticmethod
+    def load(sample_type, samples_path, target_samples_path=None, person_id_mode=False):
         cache = SampleLoader.cache
 
         if str(samples_path) not in cache.keys():
@@ -30,10 +34,16 @@ class SampleLoader:
         if            sample_type == SampleType.IMAGE:
             if  datas[sample_type] is None:
                 datas[sample_type] = [ Sample(filename=filename) for filename in io.progress_bar_generator( Path_utils.get_image_paths(samples_path), "Loading") ]
-
         elif          sample_type == SampleType.FACE:
             if  datas[sample_type] is None:
-                datas[sample_type] = SampleLoader.upgradeToFaceSamples( [ Sample(filename=filename) for filename in Path_utils.get_image_paths(samples_path) ] )
+                if person_id_mode:
+                    dir_names = Path_utils.get_all_dir_names(samples_path)
+                    all_samples = []
+                    for i, dir_name in io.progress_bar_generator( [*enumerate(dir_names)] , "Loading"):
+                        all_samples += SampleLoader.upgradeToFaceSamples( [ Sample(filename=filename, person_id=i) for filename in Path_utils.get_image_paths( samples_path / dir_name  ) ], silent=True )
+                    datas[sample_type] = all_samples
+                else:
+                    datas[sample_type] = SampleLoader.upgradeToFaceSamples( [ Sample(filename=filename) for filename in Path_utils.get_image_paths(samples_path) ] )
 
         elif          sample_type == SampleType.FACE_TEMPORAL_SORTED:
             if  datas[sample_type] is None:
@@ -52,10 +62,10 @@ class SampleLoader:
         return datas[sample_type]
 
     @staticmethod
-    def upgradeToFaceSamples ( samples ):
+    def upgradeToFaceSamples ( samples, silent=False ):
         sample_list = []
 
-        for s in io.progress_bar_generator(samples, "Loading"):
+        for s in (samples if silent else io.progress_bar_generator(samples, "Loading")):
             s_filename_path = Path(s.filename)
             try:
                 if s_filename_path.suffix == '.png':
@@ -68,13 +78,13 @@ class SampleLoader:
                 if dflimg is None:
                     print ("%s is not a dfl image file required for training" % (s_filename_path.name) )
                     continue
-                    
+
                 landmarks = dflimg.get_landmarks()
                 pitch_yaw_roll = dflimg.get_pitch_yaw_roll()
                 eyebrows_expand_mod = dflimg.get_eyebrows_expand_mod()
-                
+
                 if pitch_yaw_roll is None:
-                    pitch_yaw_roll = LandmarksProcessor.estimate_pitch_yaw_roll(landmarks)                
+                    pitch_yaw_roll = LandmarksProcessor.estimate_pitch_yaw_roll(landmarks)
 
                 sample_list.append( s.copy_and_set(sample_type=SampleType.FACE,
                                                    face_type=FaceType.fromString (dflimg.get_face_type()),

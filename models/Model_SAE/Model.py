@@ -51,7 +51,7 @@ class SAEModel(ModelBase):
         default_e_ch_dims = 42
         default_d_ch_dims = default_e_ch_dims // 2
         def_ca_weights = False
-        
+
         if is_first_run:
             self.options['ae_dims'] = np.clip ( io.input_int("AutoEncoder dims (32-1024 ?:help skip:%d) : " % (default_ae_dims) , default_ae_dims, help_message="All face information will packed to AE dims. If amount of AE dims are not enough, then for example closed eyes will not be recognized. More dims are better, but require more VRAM. You can fine-tune model size to fit your GPU." ), 32, 1024 )
             self.options['e_ch_dims'] = np.clip ( io.input_int("Encoder dims per channel (21-85 ?:help skip:%d) : " % (default_e_ch_dims) , default_e_ch_dims, help_message="More encoder dims help to recognize more facial features, but require more VRAM. You can fine-tune model size to fit your GPU." ), 21, 85 )
@@ -133,15 +133,15 @@ class SAEModel(ModelBase):
 
                 def upscale (dim):
                     def func(x):
-                        return SubpixelUpscaler()(LeakyReLU(0.1)(Conv2D(dim * 4, kernel_size=3, strides=1, padding='same')(x)))
+                        return SubpixelUpscaler()(LeakyReLU(0.1)(Conv2D(dim * 4, kernel_size=3, strides=1, padding='valid')(ZeroPadding2D(1)(x))))
                     return func
 
                 def enc_flow(e_dims, ae_dims, lowest_dense_res):
                     def func(x):
-                        x = LeakyReLU(0.1)(Conv2D(e_dims,   kernel_size=5, strides=2, padding='same')(x))
-                        x = LeakyReLU(0.1)(Conv2D(e_dims*2, kernel_size=5, strides=2, padding='same')(x))
-                        x = LeakyReLU(0.1)(Conv2D(e_dims*4, kernel_size=5, strides=2, padding='same')(x))
-                        x = LeakyReLU(0.1)(Conv2D(e_dims*8, kernel_size=5, strides=2, padding='same')(x))
+                        x = LeakyReLU(0.1)(Conv2D(e_dims,   kernel_size=5, strides=2, padding='valid')(ZeroPadding2D(2)(x)))
+                        x = LeakyReLU(0.1)(Conv2D(e_dims*2, kernel_size=5, strides=2, padding='valid')(ZeroPadding2D(2)(x)))
+                        x = LeakyReLU(0.1)(Conv2D(e_dims*4, kernel_size=5, strides=2, padding='valid')(ZeroPadding2D(2)(x)))
+                        x = LeakyReLU(0.1)(Conv2D(e_dims*8, kernel_size=5, strides=2, padding='valid')(ZeroPadding2D(2)(x)))
 
                         x = Dense(ae_dims)(Flatten()(x))
                         x = Dense(lowest_dense_res * lowest_dense_res * ae_dims)(x)
@@ -151,37 +151,37 @@ class SAEModel(ModelBase):
                     return func
 
                 def dec_flow(output_nc, d_ch_dims, add_residual_blocks=True):
+                    dims = output_nc * d_ch_dims
                     def ResidualBlock(dim):
                         def func(inp):
-                            x = Conv2D(dim, kernel_size=3, padding='same')(inp)
+                            x = Conv2D(dim, kernel_size=3, padding='valid')(ZeroPadding2D(1)(inp))
                             x = LeakyReLU(0.2)(x)
-                            x = Conv2D(dim, kernel_size=3, padding='same')(x)
+                            x = Conv2D(dim, kernel_size=3, padding='valid')(ZeroPadding2D(1)(x))
                             x = Add()([x, inp])
                             x = LeakyReLU(0.2)(x)
                             return x
                         return func
 
                     def func(x):
-                        dims = output_nc * d_ch_dims
                         x = upscale(dims*8)(x)
-                        
+
                         if add_residual_blocks:
                             x = ResidualBlock(dims*8)(x)
                             x = ResidualBlock(dims*8)(x)
 
                         x = upscale(dims*4)(x)
-                        
+
                         if add_residual_blocks:
                             x = ResidualBlock(dims*4)(x)
                             x = ResidualBlock(dims*4)(x)
 
                         x = upscale(dims*2)(x)
-                        
+
                         if add_residual_blocks:
                             x = ResidualBlock(dims*2)(x)
                             x = ResidualBlock(dims*2)(x)
 
-                        return Conv2D(output_nc, kernel_size=5, padding='same', activation='sigmoid')(x)
+                        return Conv2D(output_nc, kernel_size=5, padding='valid', activation='sigmoid')(ZeroPadding2D(2)(x))
                     return func
 
                 self.encoder = modelify(enc_flow(e_dims, ae_dims, lowest_dense_res)) ( Input(bgr_shape) )
@@ -232,20 +232,20 @@ class SAEModel(ModelBase):
                 mask_shape = (resolution, resolution, 1)
 
                 e_dims = output_nc*e_ch_dims
-                d_dims = output_nc*d_ch_dims
+
                 lowest_dense_res = resolution // 16
 
                 def upscale (dim):
                     def func(x):
-                        return SubpixelUpscaler()(LeakyReLU(0.1)(Conv2D(dim * 4, kernel_size=3, strides=1, padding='same')(x)))
+                        return SubpixelUpscaler()(LeakyReLU(0.1)(Conv2D(dim * 4, kernel_size=3, strides=1, padding='valid')(ZeroPadding2D(1)(x))))
                     return func
 
                 def enc_flow(e_dims):
                     def func(x):
-                        x = LeakyReLU(0.1)(Conv2D(e_dims,   kernel_size=5, strides=2, padding='same')(x))
-                        x = LeakyReLU(0.1)(Conv2D(e_dims*2, kernel_size=5, strides=2, padding='same')(x))
-                        x = LeakyReLU(0.1)(Conv2D(e_dims*4, kernel_size=5, strides=2, padding='same')(x))
-                        x = LeakyReLU(0.1)(Conv2D(e_dims*8, kernel_size=5, strides=2, padding='same')(x))
+                        x = LeakyReLU(0.1)(Conv2D(e_dims,   kernel_size=5, strides=2, padding='valid')(ZeroPadding2D(2)(x)))
+                        x = LeakyReLU(0.1)(Conv2D(e_dims*2, kernel_size=5, strides=2, padding='valid')(ZeroPadding2D(2)(x)))
+                        x = LeakyReLU(0.1)(Conv2D(e_dims*4, kernel_size=5, strides=2, padding='valid')(ZeroPadding2D(2)(x)))
+                        x = LeakyReLU(0.1)(Conv2D(e_dims*8, kernel_size=5, strides=2, padding='valid')(ZeroPadding2D(2)(x)))
                         x = Flatten()(x)
                         return x
                     return func
@@ -259,12 +259,13 @@ class SAEModel(ModelBase):
                         return x
                     return func
 
-                def dec_flow(output_nc, d_dims):
+                def dec_flow(output_nc, d_ch_dims, add_residual_blocks=True):
+                    d_dims = output_nc*d_ch_dims
                     def ResidualBlock(dim):
                         def func(inp):
-                            x = Conv2D(dim, kernel_size=3, padding='same')(inp)
+                            x = Conv2D(dim, kernel_size=3, padding='valid')(ZeroPadding2D(1)(inp))
                             x = LeakyReLU(0.2)(x)
-                            x = Conv2D(dim, kernel_size=3, padding='same')(x)
+                            x = Conv2D(dim, kernel_size=3, padding='valid')(ZeroPadding2D(1)(inp))
                             x = Add()([x, inp])
                             x = LeakyReLU(0.2)(x)
                             return x
@@ -272,18 +273,24 @@ class SAEModel(ModelBase):
 
                     def func(x):
                         x = upscale(d_dims*8)(x)
-                        x = ResidualBlock(d_dims*8)(x)
-                        x = ResidualBlock(d_dims*8)(x)
+
+                        if add_residual_blocks:
+                            x = ResidualBlock(d_dims*8)(x)
+                            x = ResidualBlock(d_dims*8)(x)
 
                         x = upscale(d_dims*4)(x)
-                        x = ResidualBlock(d_dims*4)(x)
-                        x = ResidualBlock(d_dims*4)(x)
+
+                        if add_residual_blocks:
+                            x = ResidualBlock(d_dims*4)(x)
+                            x = ResidualBlock(d_dims*4)(x)
 
                         x = upscale(d_dims*2)(x)
-                        x = ResidualBlock(d_dims*2)(x)
-                        x = ResidualBlock(d_dims*2)(x)
 
-                        return Conv2D(output_nc, kernel_size=5, padding='same', activation='sigmoid')(x)
+                        if add_residual_blocks:
+                            x = ResidualBlock(d_dims*2)(x)
+                            x = ResidualBlock(d_dims*2)(x)
+
+                        return Conv2D(output_nc, kernel_size=5, padding='valid', activation='sigmoid')(ZeroPadding2D(2)(x))
                     return func
 
                 self.encoder = modelify(enc_flow(e_dims)) ( Input(bgr_shape) )
@@ -293,10 +300,10 @@ class SAEModel(ModelBase):
                 self.inter_AB = modelify(inter_flow(lowest_dense_res, ae_dims)) ( Input(sh) )
 
                 sh = np.array(K.int_shape( self.inter_B.outputs[0] )[1:])*(1,1,2)
-                self.decoder = modelify(dec_flow(output_nc, d_dims)) ( Input(sh) )
+                self.decoder = modelify(dec_flow(output_nc, d_ch_dims)) ( Input(sh) )
 
                 if learn_mask:
-                    self.decoderm = modelify(dec_flow(1, d_dims)) ( Input(sh) )
+                    self.decoderm = modelify(dec_flow(1, d_ch_dims, add_residual_blocks=False)) ( Input(sh) )
 
                 self.src_dst_trainable_weights = self.encoder.trainable_weights + self.inter_B.trainable_weights + self.inter_AB.trainable_weights + self.decoder.trainable_weights
 
@@ -349,17 +356,17 @@ class SAEModel(ModelBase):
             loaded, not_loaded = self.load_weights_safe(not_loaded)
 
         CA_models = []
-        if self.options.get('ca_weights', False):            
+        if self.options.get('ca_weights', False):
             CA_models += [ model for model, _ in not_loaded ]
-            
+
         CA_conv_weights_list = []
         for model in CA_models:
             for layer in model.layers:
                 if type(layer) == keras.layers.Conv2D:
                     CA_conv_weights_list += [layer.weights[0]] #- is Conv2D kernel_weights
-                        
+
         if len(CA_conv_weights_list) != 0:
-            CAInitializerMP ( CA_conv_weights_list )                
+            CAInitializerMP ( CA_conv_weights_list )
 
         warped_src = self.model.warped_src
         target_src = Input ( (resolution, resolution, 3) )
@@ -501,7 +508,7 @@ class SAEModel(ModelBase):
         if self.options['learn_mask']:
             feed = [ warped_src, warped_dst, target_srcm, target_dstm ]
             src_mask_loss, dst_mask_loss, = self.src_dst_mask_train (feed)
-            
+
         return ( ('src_loss', src_loss), ('dst_loss', dst_loss), )
 
     #override

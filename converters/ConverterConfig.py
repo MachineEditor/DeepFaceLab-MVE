@@ -18,7 +18,7 @@ class ConverterConfig(object):
         self.type = type
 
         self.superres_func = None
-        self.sharpen_func = None
+        self.blursharpen_func = None
         self.fanseg_input_size = None
         self.fanseg_extract_func = None
         self.ebs_ct_func = None
@@ -29,7 +29,7 @@ class ConverterConfig(object):
         #default changeable params
         self.super_resolution_mode = 0
         self.sharpen_mode = 0
-        self.sharpen_amount = 0
+        self.blursharpen_amount = 0
 
     def copy(self):
         return copy.copy(self)
@@ -43,7 +43,7 @@ class ConverterConfig(object):
         self.sharpen_mode = io.input_int (s, 0, valid_list=self.sharpen_dict.keys(), help_message="Enhance details by applying sharpen filter.")
 
         if self.sharpen_mode != 0:
-            self.sharpen_amount = np.clip ( io.input_int ("Choose sharpen amount [0..100] (skip:%d) : " % 10, 10), 0, 100 )
+            self.blursharpen_amount = np.clip ( io.input_int ("Choose blur/sharpen amount [-100..100] (skip:0) : ", 0), -100, 100 )
 
         s = """Choose super resolution mode: \n"""
         for key in self.super_res_dict.keys():
@@ -55,8 +55,8 @@ class ConverterConfig(object):
         a = list( self.sharpen_dict.keys() )
         self.sharpen_mode = a[ (a.index(self.sharpen_mode)+1) % len(a) ]
 
-    def add_sharpen_amount(self, diff):
-        self.sharpen_amount = np.clip ( self.sharpen_amount+diff, 0, 100)
+    def add_blursharpen_amount(self, diff):
+        self.blursharpen_amount = np.clip ( self.blursharpen_amount+diff, -100, 100)
 
     def toggle_super_resolution_mode(self):
         a = list( self.super_res_dict.keys() )
@@ -68,7 +68,7 @@ class ConverterConfig(object):
 
         if isinstance(other, ConverterConfig):
             return self.sharpen_mode == other.sharpen_mode and \
-                   (self.sharpen_mode == 0 or ((self.sharpen_mode == other.sharpen_mode) and (self.sharpen_amount == other.sharpen_amount) )) and \
+                   self.blursharpen_amount == other.blursharpen_amount and \
                    self.super_resolution_mode == other.super_resolution_mode
 
         return False
@@ -77,8 +77,7 @@ class ConverterConfig(object):
     def to_string(self, filename):
         r = ""
         r += f"sharpen_mode : {self.sharpen_dict[self.sharpen_mode]}\n"
-        if self.sharpen_mode != 0:
-            r += f"sharpen_amount : {self.sharpen_amount}\n"        
+        r += f"blursharpen_amount : {self.blursharpen_amount}\n"        
         r += f"super_resolution_mode : {self.super_res_dict[self.super_resolution_mode]}\n"
         return r
         

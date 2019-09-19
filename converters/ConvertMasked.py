@@ -302,8 +302,8 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
                         k_size *= 2
                     out_face_bgr = imagelib.LinearMotionBlur (out_face_bgr, k_size , frame_info.motion_deg)
 
-            if cfg.sharpen_mode != 0 and cfg.sharpen_amount != 0:
-                out_face_bgr = cfg.sharpen_func ( out_face_bgr, cfg.sharpen_mode, 3, cfg.sharpen_amount)
+            if cfg.blursharpen_amount != 0:
+                out_face_bgr = cfg.blursharpen_func ( out_face_bgr, cfg.sharpen_mode, 3, cfg.blursharpen_amount)
 
             new_out = cv2.warpAffine( out_face_bgr, face_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT )
             out_img =  np.clip( img_bgr*(1-img_face_mask_aaa) + (new_out*img_face_mask_aaa) , 0, 1.0 )

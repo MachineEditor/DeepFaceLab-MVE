@@ -49,7 +49,21 @@ if __name__ == "__main__":
     p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Extract on CPU. Forces to use MT extractor.")
     p.set_defaults (func=process_extract)
 
+    def process_dev_extract_vggface2_dataset(arguments):
+        os_utils.set_process_lowest_prio()
+        from mainscripts import dev_misc
+        dev_misc.extract_vggface2_dataset( arguments.input_dir,
+                                            device_args={'cpu_only'  : arguments.cpu_only,
+                                                        'multi_gpu' : arguments.multi_gpu,
+                                                        }
+                                            )
 
+    p = subparsers.add_parser( "dev_extract_vggface2_dataset", help="")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
+    p.add_argument('--multi-gpu', action="store_true", dest="multi_gpu", default=False, help="Enables multi GPU.")
+    p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Extract on CPU.")
+    p.set_defaults (func=process_dev_extract_vggface2_dataset)
+    
     def process_dev_extract_umd_csv(arguments):
         os_utils.set_process_lowest_prio()
         from mainscripts import Extractor
@@ -152,7 +166,8 @@ if __name__ == "__main__":
 
     def process_convert(arguments):
         os_utils.set_process_lowest_prio()
-        args = {'input_dir'   : arguments.input_dir,
+        args = {'training_data_src_dir' : arguments.training_data_src_dir,
+                'input_dir'   : arguments.input_dir,
                 'output_dir'  : arguments.output_dir,
                 'aligned_dir' : arguments.aligned_dir,
                 'model_dir'   : arguments.model_dir,
@@ -165,6 +180,7 @@ if __name__ == "__main__":
         Converter.main (args, device_args)
 
     p = subparsers.add_parser( "convert", help="Converter")
+    p.add_argument('--training-data-src-dir', action=fixPathAction, dest="training_data_src_dir", help="(optional, may be required by some models) Dir of extracted SRC faceset.")    
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
     p.add_argument('--output-dir', required=True, action=fixPathAction, dest="output_dir", help="Output directory. This is where the converted files will be stored.")
     p.add_argument('--aligned-dir', action=fixPathAction, dest="aligned_dir", help="Aligned directory. This is where the extracted of dst faces stored.")

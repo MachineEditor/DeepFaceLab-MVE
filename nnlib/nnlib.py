@@ -51,10 +51,11 @@ KL = keras.layers
 Input = KL.Input
 
 Dense = KL.Dense
-Conv2D = nnlib.Conv2D
-Conv2DTranspose = nnlib.Conv2DTranspose
+Conv2D = KL.Conv2D
+Conv2DTranspose = KL.Conv2DTranspose
 EqualConv2D = nnlib.EqualConv2D
 SeparableConv2D = KL.SeparableConv2D
+DepthwiseConv2D = KL.DepthwiseConv2D
 MaxPooling2D = KL.MaxPooling2D
 AveragePooling2D = KL.AveragePooling2D
 GlobalAveragePooling2D = KL.GlobalAveragePooling2D
@@ -86,6 +87,7 @@ RandomNormal = keras.initializers.RandomNormal
 Model = keras.models.Model
 
 Adam = nnlib.Adam
+RMSprop = nnlib.RMSprop
 
 modelify = nnlib.modelify
 gaussian_blur = nnlib.gaussian_blur
@@ -96,6 +98,7 @@ PixelShuffler = nnlib.PixelShuffler
 SubpixelUpscaler = nnlib.SubpixelUpscaler
 Scale = nnlib.Scale
 BlurPool = nnlib.BlurPool
+FUNITAdain = nnlib.FUNITAdain
 SelfAttention = nnlib.SelfAttention
 
 CAInitializerMP = nnlib.CAInitializerMP
@@ -512,6 +515,82 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
 
         nnlib.BlurPool = BlurPool
 
+        class FUNITAdain(KL.Layer):
+            """
+            differents from NVLabs/FUNIT:
+            I moved two dense blocks inside this layer,
+                so we don't need to slice outter MLP block and assign weights every call, just pass MLP inside.
+                also size of dense blocks is calculated automatically
+            """
+            def __init__(self, axis=-1, epsilon=1e-5, momentum=0.99, **kwargs):
+                self.axis = axis
+                self.epsilon = epsilon
+                self.momentum = momentum
+                super(FUNITAdain, self).__init__(**kwargs)
+
+            def build(self, input_shape):
+                self.input_spec = None
+                x, mlp = input_shape
+                units = x[self.axis]
+
+                self.kernel1 = self.add_weight(shape=(units, units), initializer='he_normal', name='kernel1')
+                self.bias1 = self.add_weight(shape=(units,), initializer='zeros', name='bias1')
+                self.kernel2 = self.add_weight(shape=(units, units), initializer='he_normal', name='kernel2')
+                self.bias2 = self.add_weight(shape=(units,), initializer='zeros', name='bias2')
+
+                self.built = True
+
+            def call(self, inputs, training=None):
+                x, mlp = inputs
+
+                gamma = K.dot(mlp, self.kernel1)
+                gamma = K.bias_add(gamma, self.bias1, data_format='channels_last')
+
+                beta = K.dot(mlp, self.kernel2)
+                beta = K.bias_add(beta, self.bias2, data_format='channels_last')
+
+                input_shape = K.int_shape(x)
+
+                reduction_axes = list(range(len(input_shape)))
+                del reduction_axes[self.axis]
+
+                #broadcast_shape = [1] * len(input_shape)
+                #broadcast_shape[self.axis] = input_shape[self.axis]
+                #normed = x# (x - K.reshape(self.moving_mean,broadcast_shape) ) / ( K.sqrt( K.reshape(self.moving_variance,broadcast_shape)) +self.epsilon)
+                #normed *= K.reshape(gamma,[-1]+broadcast_shape[1:] )
+                #normed += K.reshape(beta, [-1]+broadcast_shape[1:] )
+                #mean = K.mean(x, axis=reduction_axes)
+                #self.moving_mean = self.add_weight(shape=(units,), name='moving_mean', initializer='zeros',trainable=False)
+                #self.moving_variance = self.add_weight(shape=(units,), name='moving_variance',initializer='ones', trainable=False)
+
+                #variance = K.var(x, axis=reduction_axes)
+                #sample_size = K.prod([ K.shape(x)[axis] for axis in reduction_axes ])
+                #sample_size = K.cast(sample_size, dtype=K.dtype(x))
+                #variance *= sample_size / (sample_size - (1.0 + self.epsilon))
+
+                #self.add_update([K.moving_average_update(self.moving_mean, mean, self.momentum),
+                #                 K.moving_average_update(self.moving_variance, variance, self.momentum)], None)
+                #return normed
+
+                del reduction_axes[0]
+                broadcast_shape = [1] * len(input_shape)
+                broadcast_shape[self.axis] = input_shape[self.axis]
+                mean = K.mean(x, reduction_axes, keepdims=True)
+                stddev = K.std(x, reduction_axes, keepdims=True) + self.epsilon
+                normed = (x - mean) / stddev
+                normed *= K.reshape(gamma,[-1]+broadcast_shape[1:] )
+                normed += K.reshape(beta, [-1]+broadcast_shape[1:] )
+                return normed
+
+            def get_config(self):
+                config = {'axis': self.axis, 'epsilon': self.epsilon }
+
+                base_config = super(FUNITAdain, self).get_config()
+                return dict(list(base_config.items()) + list(config.items()))
+
+            def compute_output_shape(self, input_shape):
+                return input_shape
+        nnlib.FUNITAdain = FUNITAdain
 
         class Scale(KL.Layer):
             """
@@ -580,6 +659,92 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 out = Add()([o, inp])
                 return out
         nnlib.SelfAttention = SelfAttention
+
+        class RMSprop(keras.optimizers.Optimizer):
+            """RMSProp optimizer.
+            It is recommended to leave the parameters of this optimizer
+            at their default values
+            (except the learning rate, which can be freely tuned).
+            # Arguments
+                learning_rate: float >= 0. Learning rate.
+                rho: float >= 0.
+            # References
+                - [rmsprop: Divide the gradient by a running average of its recent magnitude
+                ](http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf)
+
+                tf_cpu_mode: only for tensorflow backend
+                              0 - default, no changes.
+                              1 - allows to train x2 bigger network on same VRAM consuming RAM
+                              2 - allows to train x3 bigger network on same VRAM consuming RAM*2 and CPU power.
+            """
+
+            def __init__(self, learning_rate=0.001, rho=0.9, tf_cpu_mode=0, **kwargs):
+                self.initial_decay = kwargs.pop('decay', 0.0)
+                self.epsilon = kwargs.pop('epsilon', K.epsilon())
+                self.tf_cpu_mode = tf_cpu_mode
+
+                learning_rate = kwargs.pop('lr', learning_rate)
+                super(RMSprop, self).__init__(**kwargs)
+                with K.name_scope(self.__class__.__name__):
+                    self.learning_rate = K.variable(learning_rate, name='learning_rate')
+                    self.rho = K.variable(rho, name='rho')
+                    self.decay = K.variable(self.initial_decay, name='decay')
+                    self.iterations = K.variable(0, dtype='int64', name='iterations')
+
+            def get_updates(self, loss, params):
+                grads = self.get_gradients(loss, params)
+
+
+                e = K.tf.device("/cpu:0") if self.tf_cpu_mode > 0 else None
+                if e: e.__enter__()
+                accumulators = [K.zeros(K.int_shape(p),
+                                dtype=K.dtype(p),
+                                name='accumulator_' + str(i))
+                                for (i, p) in enumerate(params)]
+                if e: e.__exit__(None, None, None)
+
+                self.weights = [self.iterations] + accumulators
+                self.updates = [K.update_add(self.iterations, 1)]
+
+                lr = self.learning_rate
+                if self.initial_decay > 0:
+                    lr = lr * (1. / (1. + self.decay * K.cast(self.iterations,
+                                                            K.dtype(self.decay))))
+
+                for p, g, a in zip(params, grads, accumulators):
+                    # update accumulator
+                    e = K.tf.device("/cpu:0") if self.tf_cpu_mode == 2 else None
+                    if e: e.__enter__()
+                    new_a = self.rho * a + (1. - self.rho) * K.square(g)
+                    new_p = p - lr * g / (K.sqrt(new_a) + self.epsilon)
+                    if e: e.__exit__(None, None, None)
+
+                    self.updates.append(K.update(a, new_a))
+
+                    # Apply constraints.
+                    if getattr(p, 'constraint', None) is not None:
+                        new_p = p.constraint(new_p)
+
+                    self.updates.append(K.update(p, new_p))
+                return self.updates
+
+            def set_weights(self, weights):
+                params = self.weights
+                # Override set_weights for backward compatibility of Keras 2.2.4 optimizer
+                # since it does not include iteration at head of the weight list. Set
+                # iteration to 0.
+                if len(params) == len(weights) + 1:
+                    weights = [np.array(0)] + weights
+                super(RMSprop, self).set_weights(weights)
+
+            def get_config(self):
+                config = {'learning_rate': float(K.get_value(self.learning_rate)),
+                        'rho': float(K.get_value(self.rho)),
+                        'decay': float(K.get_value(self.decay)),
+                        'epsilon': self.epsilon}
+                base_config = super(RMSprop, self).get_config()
+                return dict(list(base_config.items()) + list(config.items()))
+        nnlib.RMSprop = RMSprop
 
         class Adam(keras.optimizers.Optimizer):
             """Adam optimizer.
@@ -687,7 +852,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         nnlib.Adam = Adam
 
         def CAInitializerMP( conv_weights_list ):
-            #Convolution Aware Initialization https://arxiv.org/abs/1702.06295            
+            #Convolution Aware Initialization https://arxiv.org/abs/1702.06295
             data = [ (i, K.int_shape(conv_weights)) for i, conv_weights in enumerate(conv_weights_list) ]
             data = sorted(data, key=lambda data: np.prod(data[1]) )
             result = CAInitializerMPSubprocessor (data, K.floatx(), K.image_data_format() ).run()
@@ -814,8 +979,8 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                     x = ReflectionPadding2D( self.pad ) (x)
                 return self.func(x)
         nnlib.Conv2DTranspose = Conv2DTranspose
-        
-        class EqualConv2D(KL.Conv2D):            
+
+        class EqualConv2D(KL.Conv2D):
             def __init__(self, filters,
                         kernel_size,
                         strides=(1, 1),
@@ -844,16 +1009,16 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                     bias_constraint=None,
                     **kwargs)
                 self.gain = gain
-                
+
             def build(self, input_shape):
                 super().build(input_shape)
-                
+
                 self.wscale = self.gain / np.sqrt( np.prod( K.int_shape(self.kernel)[:-1]) )
                 self.wscale_t = K.constant (self.wscale, dtype=K.floatx() )
-       
+
             def call(self, inputs):
                 k = self.kernel * self.wscale_t
-                
+
                 outputs = K.conv2d(
                         inputs,
                         k,
@@ -872,12 +1037,12 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                     return self.activation(outputs)
                 return outputs
         nnlib.EqualConv2D = EqualConv2D
-        
+
         class PixelNormalization(KL.Layer):
             # initialize the layer
             def __init__(self, **kwargs):
                 super(PixelNormalization, self).__init__(**kwargs)
-        
+
             # perform the operation
             def call(self, inputs):
                 # calculate square pixel values
@@ -891,12 +1056,12 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 # normalize values by the l2 norm
                 normalized = inputs / l2
                 return normalized
-        
+
             # define the output shape of the layer
             def compute_output_shape(self, input_shape):
-                return input_shape                
+                return input_shape
         nnlib.PixelNormalization = PixelNormalization
-        
+
     @staticmethod
     def import_keras_contrib(device_config):
         if nnlib.keras_contrib is not None:

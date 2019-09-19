@@ -22,9 +22,10 @@ class SampleType(IntEnum):
     QTY = 5
 
 class Sample(object):
-    def __init__(self, sample_type=None, filename=None, face_type=None, shape=None, landmarks=None, ie_polys=None, pitch_yaw_roll=None, eyebrows_expand_mod=None, source_filename=None, mirror=None, close_target_list=None, fanseg_mask_exist=False):
+    def __init__(self, sample_type=None, filename=None, person_id=None, face_type=None, shape=None, landmarks=None, ie_polys=None, pitch_yaw_roll=None, eyebrows_expand_mod=None, source_filename=None, mirror=None, close_target_list=None, fanseg_mask_exist=False):
         self.sample_type = sample_type if sample_type is not None else SampleType.IMAGE
         self.filename = filename
+        self.person_id = person_id
         self.face_type = face_type
         self.shape = shape
         self.landmarks = np.array(landmarks) if landmarks is not None else None
@@ -36,10 +37,11 @@ class Sample(object):
         self.close_target_list = close_target_list
         self.fanseg_mask_exist = fanseg_mask_exist
 
-    def copy_and_set(self, sample_type=None, filename=None, face_type=None, shape=None, landmarks=None, ie_polys=None, pitch_yaw_roll=None, eyebrows_expand_mod=None, source_filename=None, mirror=None, close_target_list=None, fanseg_mask=None, fanseg_mask_exist=None):
+    def copy_and_set(self, sample_type=None, filename=None, person_id=None, face_type=None, shape=None, landmarks=None, ie_polys=None, pitch_yaw_roll=None, eyebrows_expand_mod=None, source_filename=None, mirror=None, close_target_list=None, fanseg_mask=None, fanseg_mask_exist=None):
         return Sample(
             sample_type=sample_type if sample_type is not None else self.sample_type,
             filename=filename if filename is not None else self.filename,
+            person_id=person_id if person_id is not None else self.person_id,
             face_type=face_type if face_type is not None else self.face_type,
             shape=shape if shape is not None else self.shape,
             landmarks=landmarks if landmarks is not None else self.landmarks.copy(),
