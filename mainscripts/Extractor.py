@@ -85,7 +85,7 @@ class ExtractSubprocessor(Subprocessor):
 
             elif self.type == 'landmarks':
                 nnlib.import_all (device_config)
-                self.e = facelib.LandmarksExtractor(nnlib.keras)
+                self.e = facelib.FANExtractor()
                 self.e.__enter__()
                 if self.device_vram >= 2:
                     self.second_pass_e = facelib.S3FDExtractor()
