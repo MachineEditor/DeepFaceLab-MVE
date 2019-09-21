@@ -43,7 +43,6 @@ class AVATARModel(ModelBase):
     def onInitialize(self, batch_size=-1, **in_options):
         exec(nnlib.code_import_all, locals(), globals())
         self.set_vram_batch_requirements({6:4})
-        AVATARModel.initialize_nn_functions()
 
         resolution = self.resolution = 224
         avatar_type = self.options['avatar_type']
@@ -59,8 +58,7 @@ class AVATARModel(ModelBase):
         self.decA64 = modelify(AVATARModel.DecFlow()) ( [ Input(K.int_shape(self.enc.outputs[0])[1:]) ] )
         self.decB64 = modelify(AVATARModel.DecFlow()) ( [ Input(K.int_shape(self.enc.outputs[0])[1:]) ] )
         self.D = modelify(AVATARModel.Discriminator() ) (Input(df_bgr_shape))
-        self.C = modelify(AVATARModel.ResNet (9, use_batch_norm=False, n_blocks=6, ngf=128, use_dropout=False))( Input(res_bgr_t_shape))
-        #self.CD = modelify(AVATARModel.CDiscriminator() ) (Input(res_bgr_t_shape))
+        self.C = modelify(AVATARModel.ResNet (9, n_blocks=6, ngf=128, use_dropout=False))( Input(res_bgr_t_shape))
 
         if self.is_first_run():
             conv_weights_list = []
@@ -356,155 +354,35 @@ class AVATARModel(ModelBase):
         return self.predictor_func, (self.df_res, self.df_res, 3), converters.ConverterConfigFaceAvatar(temporal_face_count=1)
 
     @staticmethod
-    def NLayerDiscriminator(ndf=64, n_layers=3):
-        exec (nnlib.import_all(), locals(), globals())
-
-        #use_bias = True
-        #def XNormalization(x):
-        #    return InstanceNormalization (axis=-1)(x)
-        use_bias = False
-        def XNormalization(x):
-            return BatchNormalization (axis=-1)(x)
-
-        XConv2D = partial(Conv2D, use_bias=use_bias)
-
-        def func(x):
-            f = ndf
-
-            x = XConv2D( f, 4, strides=2, padding='same', use_bias=True)(x)
-            f = min( ndf*8, f*2 )
-            x = LeakyReLU(0.2)(x)
-
-            for i in range(n_layers):
-                x = XConv2D( f, 4, strides=2, padding='same')(x)
-                x = XNormalization(x)
-                x = LeakyReLU(0.2)(x)
-                f = min( ndf*8, f*2 )
-
-            x = XConv2D( f, 4, strides=1, padding='same')(x)
-            x = XNormalization(x)
-            x = LeakyReLU(0.2)(x)
-
-            return XConv2D( 1, 4, strides=1, padding='same', use_bias=True, activation='sigmoid')(x)#
-        return func
-
-    """
-    @staticmethod
     def Discriminator(ndf=128):
         exec (nnlib.import_all(), locals(), globals())
 
-        #use_bias = True
-        #def XNormalization(x):
-        #    return InstanceNormalization (axis=-1)(x)
-        use_bias = False
-        def XNormalization(x):
-            return BatchNormalization (axis=-1)(x)
-
-        XConv2D = partial(Conv2D, use_bias=use_bias)
-
         def func(input):
             b,h,w,c = K.int_shape(input)
 
             x = input
 
-            x = XConv2D( ndf, 4, strides=2, padding='same', use_bias=True)(x)
+            x = Conv2D( ndf, 4, strides=2, padding='valid')( ZeroPadding2D(1)(x) )
             x = LeakyReLU(0.2)(x)
 
-            x = XConv2D( ndf*2, 4, strides=2, padding='same')(x)
-            x = XNormalization(x)
+            x = Conv2D( ndf*2, 4, strides=2, padding='valid')( ZeroPadding2D(1)(x) )
+            x = InstanceNormalization (axis=-1)(x)
             x = LeakyReLU(0.2)(x)
 
-            x = XConv2D( ndf*4, 4, strides=2, padding='same')(x)
-            x = XNormalization(x)
+            x = Conv2D( ndf*4, 4, strides=2, padding='valid')( ZeroPadding2D(1)(x) )
+            x = InstanceNormalization (axis=-1)(x)
             x = LeakyReLU(0.2)(x)
 
-            x = XConv2D( ndf*8, 4, strides=2, padding='same')(x)
-            x = XNormalization(x)
+            x = Conv2D( ndf*8, 4, strides=2, padding='valid')( ZeroPadding2D(1)(x) )
+            x = InstanceNormalization (axis=-1)(x)
             x = LeakyReLU(0.2)(x)
 
-            return XConv2D( 1, 4, strides=1, padding='same', use_bias=True, activation='sigmoid')(x)#
-        return func
-    """
-    @staticmethod
-    def Discriminator(ndf=128):
-        exec (nnlib.import_all(), locals(), globals())
-
-        use_bias = True
-        def XNormalization(x):
-            return InstanceNormalization (axis=-1)(x)
-        #use_bias = False
-        #def XNormalization(x):
-        #    return BatchNormalization (axis=-1)(x)
-
-        XConv2D = partial(Conv2D, use_bias=use_bias)
-
-        def func(input):
-            b,h,w,c = K.int_shape(input)
-
-            x = input
-
-            x = XConv2D( ndf, 4, strides=2, padding='same', use_bias=True)(x)
-            x = LeakyReLU(0.2)(x)
-
-            x = XConv2D( ndf*2, 4, strides=2, padding='same')(x)
-            x = XNormalization(x)
-            x = LeakyReLU(0.2)(x)
-
-            x = XConv2D( ndf*4, 4, strides=2, padding='same')(x)
-            x = XNormalization(x)
-            x = LeakyReLU(0.2)(x)
-
-            x = XConv2D( ndf*8, 4, strides=2, padding='same')(x)
-            x = XNormalization(x)
-            x = LeakyReLU(0.2)(x)
-
-            return XConv2D( 1, 4, strides=1, padding='same', use_bias=True, activation='sigmoid')(x)#
+            return Conv2D( 1, 4, strides=1, padding='valid', activation='sigmoid')( ZeroPadding2D(3)(x) )
         return func
 
     @staticmethod
-    def CDiscriminator(ndf=256):
+    def EncFlow():
         exec (nnlib.import_all(), locals(), globals())
-
-        use_bias = True
-        def XNormalization(x):
-            return InstanceNormalization (axis=-1)(x)
-        #use_bias = False
-        #def XNormalization(x):
-        #    return BatchNormalization (axis=-1)(x)
-
-        XConv2D = partial(Conv2D, use_bias=use_bias)
-
-        def func(input):
-            b,h,w,c = K.int_shape(input)
-
-            x = input
-
-            x = XConv2D( ndf, 4, strides=2, padding='same', use_bias=True)(x)
-            x = LeakyReLU(0.2)(x)
-
-            x = XConv2D( ndf*2, 4, strides=2, padding='same')(x)
-            x = XNormalization(x)
-            x = LeakyReLU(0.2)(x)
-
-            x = XConv2D( ndf*4, 4, strides=2, padding='same')(x)
-            x = XNormalization(x)
-            x = LeakyReLU(0.2)(x)
-
-            #x = XConv2D( ndf*8, 4, strides=2, padding='same')(x)
-            #x = XNormalization(x)
-            #x = LeakyReLU(0.2)(x)
-
-            return XConv2D( 1, 4, strides=1, padding='same', use_bias=True, activation='sigmoid')(x)#
-        return func
-
-    @staticmethod
-    def EncFlow(padding='zero', **kwargs):
-        exec (nnlib.import_all(), locals(), globals())
-
-        use_bias = False
-        def XNorm(x):
-            return BatchNormalization (axis=-1)(x)
-        XConv2D = partial(Conv2D, padding=padding, use_bias=use_bias)
 
         def downscale (dim):
             def func(x):
@@ -540,10 +418,16 @@ class AVATARModel(ModelBase):
     def DecFlow(output_nc=3, **kwargs):
         exec (nnlib.import_all(), locals(), globals())
 
-        ResidualBlock = AVATARModel.ResidualBlock
-        upscale = AVATARModel.upscale
-        to_bgr = AVATARModel.to_bgr
-
+        def upscale (dim):
+            def func(x):
+                return SubpixelUpscaler()(LeakyReLU(0.1)(Conv2D(dim * 4, 3, strides=1, padding='same')(x)))
+            return func
+        
+        def to_bgr (output_nc, **kwargs):
+            def func(x):
+                return Conv2D(output_nc, kernel_size=5, strides=1, padding='same', activation='sigmoid')(x)
+            return func
+            
         def func(input):
             x = input[0]
 
@@ -553,182 +437,50 @@ class AVATARModel(ModelBase):
             return to_bgr(output_nc) (x)
 
         return func
-    """
+   
     @staticmethod
-    def CNet(output_nc, use_batch_norm, ngf=64, n_blocks=6, use_dropout=False):
+    def ResNet(output_nc, ngf=64, n_blocks=6, use_dropout=False):
         exec (nnlib.import_all(), locals(), globals())
 
-        if not use_batch_norm:
-            use_bias = True
-            def XNormalization(x):
-                return InstanceNormalization (axis=-1)(x)
-        else:
-            use_bias = False
-            def XNormalization(x):
-                return BatchNormalization (axis=-1)(x)
-
-        XConv2D = partial(Conv2D, padding='same', use_bias=use_bias)
-        XConv2DTranspose = partial(Conv2DTranspose, padding='same', use_bias=use_bias)
-
-        def ResnetBlock(dim, use_dropout=False):
-            def func(input):
-                x = input
-
-                x = XConv2D(dim, 3, strides=1)(x)
-                x = XNormalization(x)
-                x = ReLU()(x)
-
-                if use_dropout:
-                    x = Dropout(0.5)(x)
-
-                x = XConv2D(dim, 3, strides=1)(x)
-                x = XNormalization(x)
-                x = ReLU()(x)
-                return Add()([x,input])
-            return func
-
-        def preprocess(target_res):
-            def func(input):
-                inp_shape = K.int_shape (input[0])
-                t_len = len(input)
-                total_ch = 0
-                for i in range(t_len):
-                    total_ch += K.int_shape (input[i])[-1]
-
-                K.concatenate ( input, axis=-1) )
-                import code
-                c ode.interact(local=dict(globals(), **locals()))
-
-                x_shape = K.int_shape(x)[1:]
-
-                pad = (target_res - x_shape[0]) // 2
-
-                a = np.ones((target_res,target_res,3))*0.5
-                a[pad:-pad:,pad:-pad:,:] = 0
-                return K.spatial_2d_padding(x, padding=((pad, pad), (pad, pad)) ) + K.constant(a, dtype=K.floatx() )
-            return func
-
         def func(input):
-            inp_shape = K.int_shape (input[0])
-            t_len = len(input)
-            total_ch = 0
-            for i in range(t_len):
-                total_ch += K.int_shape (input[i])[-1]
-
-            x = Lambda ( preprocess(128) , output_shape=(inp_shape[1], inp_shape[2], total_ch)  ) (input)
-
-            x = ReLU()(XNormalization(XConv2D(ngf, 7, strides=1)(x)))
-
-            x = ReLU()(XNormalization(XConv2D(ngf*2, 3, strides=2)(x)))
-            x = ReLU()(XNormalization(XConv2D(ngf*4, 3, strides=2)(x)))
-
-            for i in range(n_blocks):
-                x = ResnetBlock(ngf*4, use_dropout=use_dropout)(x)
-
-            x = ReLU()(XNormalization(XConv2DTranspose(ngf*2, 3, strides=2)(x)))
-            x = ReLU()(XNormalization(XConv2DTranspose(ngf  , 3, strides=2)(x)))
-
-            x = XConv2D(output_nc, 7, strides=1, activation='sigmoid', use_bias=True)(x)
-
-            return x
-
-        return func
-    """
-    @staticmethod
-    def ResNet(output_nc, use_batch_norm, ngf=64, n_blocks=6, use_dropout=False):
-        exec (nnlib.import_all(), locals(), globals())
-
-        if not use_batch_norm:
-            use_bias = True
-            def XNormalization(x):
-                return InstanceNormalization (axis=-1)(x)
-        else:
-            use_bias = False
-            def XNormalization(x):
-                return BatchNormalization (axis=-1)(x)
-
-        XConv2D = partial(Conv2D, padding='same', use_bias=use_bias)
-        XConv2DTranspose = partial(Conv2DTranspose, padding='same', use_bias=use_bias)
-
-        def func(input):
-
-
             def ResnetBlock(dim, use_dropout=False):
                 def func(input):
                     x = input
 
-                    x = XConv2D(dim, 3, strides=1)(x)
-                    x = XNormalization(x)
+                    x = Conv2D(dim, 3, strides=1, padding='same')(x)
+                    x = InstanceNormalization (axis=-1)(x)
                     x = ReLU()(x)
 
                     if use_dropout:
                         x = Dropout(0.5)(x)
 
-                    x = XConv2D(dim, 3, strides=1)(x)
-                    x = XNormalization(x)
+                    x = Conv2D(dim, 3, strides=1, padding='same')(x)
+                    x = InstanceNormalization (axis=-1)(x)
                     x = ReLU()(x)
                     return Add()([x,input])
                 return func
 
             x = input
 
-            x = ReLU()(XNormalization(XConv2D(ngf, 7, strides=1)(x)))
+            x = ReLU()(InstanceNormalization (axis=-1)(Conv2D(ngf, 7, strides=1, padding='same')(x)))
 
-            x = ReLU()(XNormalization(XConv2D(ngf*2, 3, strides=2)(x)))
-            x = ReLU()(XNormalization(XConv2D(ngf*4, 3, strides=2)(x)))
+            x = ReLU()(InstanceNormalization (axis=-1)(Conv2D(ngf*2, 3, strides=2, padding='same')(x)))
+            x = ReLU()(InstanceNormalization (axis=-1)(Conv2D(ngf*4, 3, strides=2, padding='same')(x)))
 
-            x = ReLU()(XNormalization(XConv2D(ngf*4, 3, strides=2)(x)))
+            x = ReLU()(InstanceNormalization (axis=-1)(Conv2D(ngf*4, 3, strides=2, padding='same')(x)))
 
             for i in range(n_blocks):
                 x = ResnetBlock(ngf*4, use_dropout=use_dropout)(x)
 
-            x = ReLU()(XNormalization(XConv2DTranspose(ngf*4, 3, strides=2)(x)))
+            x = ReLU()(InstanceNormalization (axis=-1)(Conv2DTranspose(ngf*4, 3, strides=2, padding='same')(x)))
 
-            x = ReLU()(XNormalization(XConv2DTranspose(ngf*2, 3, strides=2)(x)))
-            x = ReLU()(XNormalization(XConv2DTranspose(ngf  , 3, strides=2)(x)))
+            x = ReLU()(InstanceNormalization (axis=-1)(Conv2DTranspose(ngf*2, 3, strides=2, padding='same')(x)))
+            x = ReLU()(InstanceNormalization (axis=-1)(Conv2DTranspose(ngf  , 3, strides=2, padding='same')(x)))
 
-            x = XConv2D(output_nc, 7, strides=1, activation='sigmoid', use_bias=True)(x)
+            x = Conv2D(output_nc, 7, strides=1, activation='sigmoid', padding='same')(x)
 
             return x
 
         return func
-
-    @staticmethod
-    def initialize_nn_functions():
-        exec (nnlib.import_all(), locals(), globals())
-
-        class ResidualBlock(object):
-            def __init__(self, filters, kernel_size=3, padding='zero', **kwargs):
-                self.filters = filters
-                self.kernel_size = kernel_size
-                self.padding = padding
-
-            def __call__(self, inp):
-                x = inp
-                x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding)(x)
-                x = LeakyReLU(0.2)(x)
-                x = Conv2D(self.filters, kernel_size=self.kernel_size, padding=self.padding)(x)
-                x = Add()([x, inp])
-                x = LeakyReLU(0.2)(x)
-                return x
-        AVATARModel.ResidualBlock = ResidualBlock
-
-        def downscale (dim, padding='zero', act='', **kwargs):
-            def func(x):
-                return LeakyReLU(0.2) (Conv2D(dim, kernel_size=5, strides=2, padding=padding)(x))
-            return func
-        AVATARModel.downscale = downscale
-
-        def upscale (dim, padding='zero', norm='', act='', **kwargs):
-            def func(x):
-                return SubpixelUpscaler()( LeakyReLU(0.2)(Conv2D(dim * 4, kernel_size=3, strides=1, padding=padding)(x)))
-            return func
-        AVATARModel.upscale = upscale
-
-        def to_bgr (output_nc, padding='zero', **kwargs):
-            def func(x):
-                return Conv2D(output_nc, kernel_size=5, padding=padding, activation='sigmoid')(x)
-            return func
-        AVATARModel.to_bgr = to_bgr
 
 Model = AVATARModel
