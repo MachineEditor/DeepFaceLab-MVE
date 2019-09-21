@@ -4,8 +4,6 @@ Windows builds with all dependencies included are released regularly. Only the N
 
 [Google drive](https://drive.google.com/open?id=1BCFK_L7lPNwMbEQ_kFPqPpDdFEOd_Dci)
 
-[Mega](https://mega.nz/#F!b9MzCK4B!zEAG9txu7uaRUjXz9PtBqg) 
-
 Available builds:
 
 * DeepFaceLabCUDA9.2SSE - for NVIDIA cards up to GTX1080 and any 64-bit CPU
