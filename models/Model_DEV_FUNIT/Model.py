@@ -33,6 +33,12 @@ class FUNITModel(ModelBase):
         else:
             self.options['face_type'] = self.options.get('face_type', default_face_type)
             
+        if (is_first_run or ask_override) and 'tensorflow' in self.device_config.backend:
+            def_optimizer_mode = self.options.get('optimizer_mode', 1)
+            self.options['optimizer_mode'] = io.input_int ("Optimizer mode? ( 1,2,3 ?:help skip:%d) : " % (def_optimizer_mode), def_optimizer_mode, help_message="1 - no changes. 2 - allows you to train x2 bigger network consuming RAM. 3 - allows you to train x3 bigger network consuming huge amount of RAM and slower, depends on CPU power.")
+        else:
+            self.options['optimizer_mode'] = self.options.get('optimizer_mode', 1)
+            
     #override
     def onInitialize(self, batch_size=-1, **in_options):
         exec(nnlib.code_import_all, locals(), globals())
@@ -58,7 +64,8 @@ class FUNITModel(ModelBase):
                             num_classes=person_id_max_count,
                             subpixel_decoder=True,
                             initialize_weights=self.is_first_run(),     
-                            is_training=self.is_training_mode                       
+                            is_training=self.is_training_mode,
+                            tf_cpu_mode=self.options['optimizer_mode']-1
                            )
                              
         if not self.is_first_run():
