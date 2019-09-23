@@ -33,7 +33,7 @@ class TrueFaceModel(ModelBase):
             self.options['face_type'] = self.options.get('face_type', default_face_type)
             
         if (is_first_run or ask_override) and 'tensorflow' in self.device_config.backend:
-            def_optimizer_mode = self.options.get('optimizer_mode', 1)
+            def_optimizer_mode = self.options.get('optimizer_mode', 3)
             self.options['optimizer_mode'] = io.input_int ("Optimizer mode? ( 1,2,3 ?:help skip:%d) : " % (def_optimizer_mode), def_optimizer_mode, help_message="1 - no changes. 2 - allows you to train x2 bigger network consuming RAM. 3 - allows you to train x3 bigger network consuming huge amount of RAM and slower, depends on CPU power.")
         else:
             self.options['optimizer_mode'] = self.options.get('optimizer_mode', 1)
