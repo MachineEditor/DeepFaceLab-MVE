@@ -522,10 +522,11 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 so we don't need to slice outter MLP block and assign weights every call, just pass MLP inside.
                 also size of dense blocks is calculated automatically
             """
-            def __init__(self, axis=-1, epsilon=1e-5, momentum=0.99, **kwargs):
+            def __init__(self, axis=-1, epsilon=1e-5, momentum=0.99, kernel_initializer='glorot_uniform', **kwargs):
                 self.axis = axis
                 self.epsilon = epsilon
                 self.momentum = momentum
+                self.kernel_initializer = kernel_initializer
                 super(FUNITAdain, self).__init__(**kwargs)
 
             def build(self, input_shape):
@@ -533,9 +534,9 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 x, mlp = input_shape
                 units = x[self.axis]
 
-                self.kernel1 = self.add_weight(shape=(units, units), initializer='he_normal', name='kernel1')
+                self.kernel1 = self.add_weight(shape=(units, units), initializer=self.kernel_initializer, name='kernel1')
                 self.bias1 = self.add_weight(shape=(units,), initializer='zeros', name='bias1')
-                self.kernel2 = self.add_weight(shape=(units, units), initializer='he_normal', name='kernel2')
+                self.kernel2 = self.add_weight(shape=(units, units), initializer=self.kernel_initializer, name='kernel2')
                 self.bias2 = self.add_weight(shape=(units,), initializer='zeros', name='bias2')
 
                 self.built = True

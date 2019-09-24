@@ -258,10 +258,10 @@ class FUNIT(object):
                 inp, mlp = input
                 x = inp
                 x = Conv2D(dim, 3, strides=1, padding='valid')(ZeroPadding2D(1)(x))
-                x = FUNITAdain()([x,mlp])
+                x = FUNITAdain(kernel_initializer='he_normal')([x,mlp])
                 x = ReLU()(x)
                 x = Conv2D(dim, 3, strides=1, padding='valid')(ZeroPadding2D(1)(x))
-                x = FUNITAdain()([x,mlp])
+                x = FUNITAdain(kernel_initializer='he_normal')([x,mlp])
                 return Add()([x,inp])
             return func
 
