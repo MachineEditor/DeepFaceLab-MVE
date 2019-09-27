@@ -148,13 +148,13 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
 
         import tensorflow as tf
         nnlib.tf = tf
-
+        
         if device_config.cpu_only:
             config = tf.ConfigProto(device_count={'GPU': 0})
         else:
             config = tf.ConfigProto()
 
-            if device_config.backend != "tensorflow-generic":
+            if device_config.force_gpu_idx != -1 and device_config.backend != "tensorflow-generic":
                 #tensorflow-generic is system with NVIDIA card, but w/o NVSMI
                 #so dont hide devices and let tensorflow to choose best card
                 visible_device_list = ''
