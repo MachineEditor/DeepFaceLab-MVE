@@ -57,7 +57,6 @@ class FUNITModel(ModelBase):
                             class_downs=4,
                             class_nf=64,
                             class_latent=64,
-                            mlp_nf=256,
                             mlp_blks=2,
                             dis_nf=64,
                             dis_res_blks=10,
