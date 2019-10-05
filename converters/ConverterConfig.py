@@ -117,8 +117,8 @@ class ConverterConfigMasked(ConverterConfig):
         super().__init__(type=ConverterConfig.TYPE_MASKED)
         
         self.face_type = face_type
-        if self.face_type not in [FaceType.FULL, FaceType.HALF]:
-            raise ValueError("ConverterConfigMasked supports only full or half face masks.")
+        if self.face_type not in [FaceType.HALF, FaceType.MID_FULL, FaceType.FULL ]:
+            raise ValueError("ConverterConfigMasked does not support this type of face.")
 
         self.default_mode = default_mode
         self.clip_hborder_mask_per = clip_hborder_mask_per

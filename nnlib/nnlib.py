@@ -96,6 +96,7 @@ dssim = nnlib.dssim
 
 PixelShuffler = nnlib.PixelShuffler
 SubpixelUpscaler = nnlib.SubpixelUpscaler
+SubpixelDownscaler = nnlib.SubpixelDownscaler
 Scale = nnlib.Scale
 BlurPool = nnlib.BlurPool
 FUNITAdain = nnlib.FUNITAdain
@@ -156,13 +157,13 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         else:
             config = tf.ConfigProto()
 
-            if device_config.force_gpu_idx != -1 and device_config.backend != "tensorflow-generic":
-                #tensorflow-generic is system with NVIDIA card, but w/o NVSMI
-                #so dont hide devices and let tensorflow to choose best card
-                visible_device_list = ''
-                for idx in device_config.gpu_idxs:
-                    visible_device_list += str(idx) + ','
-                config.gpu_options.visible_device_list=visible_device_list[:-1]
+            #if device_config.force_gpu_idx != -1 and device_config.backend != "tensorflow-generic":
+            #    #tensorflow-generic is system with NVIDIA card, but w/o NVSMI
+            #    #so dont hide devices and let tensorflow to choose best card
+            #    visible_device_list = ''
+            #    for idx in device_config.gpu_idxs:
+            #        visible_device_list += str(idx) + ','
+            #    config.gpu_options.visible_device_list=visible_device_list[:-1]
 
         config.gpu_options.force_gpu_compatible = True
         config.gpu_options.allow_growth = device_config.allow_growth
@@ -472,7 +473,50 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
 
         nnlib.PixelShuffler = PixelShuffler
         nnlib.SubpixelUpscaler = PixelShuffler
+        
+        class SubpixelDownscaler(KL.Layer):
+            def __init__(self, size=(2, 2), data_format='channels_last', **kwargs):
+                super(SubpixelDownscaler, self).__init__(**kwargs)
+                self.data_format = data_format
+                self.size = size
 
+            def call(self, inputs):
+
+                input_shape = K.shape(inputs)
+                if K.int_shape(input_shape)[0] != 4:
+                    raise ValueError('Inputs should have rank 4; Received input shape:', str(K.int_shape(inputs)))
+
+                batch_size, h, w, c = input_shape[0], input_shape[1], input_shape[2], K.int_shape(inputs)[-1]
+                rh, rw = self.size
+                oh, ow = h // rh, w // rw
+                oc = c * (rh * rw)
+
+                out = K.reshape(inputs, (batch_size, oh, rh, ow, rw, c))
+                out = K.permute_dimensions(out, (0, 1, 3, 2, 4, 5))
+                out = K.reshape(out, (batch_size, oh, ow, oc))
+                return out
+
+            def compute_output_shape(self, input_shape):
+                if len(input_shape) != 4:
+                    raise ValueError('Inputs should have rank ' +
+                                    str(4) +
+                                    '; Received input shape:', str(input_shape))
+
+                height = input_shape[1] // self.size[0] if input_shape[1] is not None else None
+                width = input_shape[2] // self.size[1] if input_shape[2] is not None else None
+                channels = input_shape[3] * self.size[0] * self.size[1]
+
+                return (input_shape[0], height, width, channels)
+
+            def get_config(self):
+                config = {'size': self.size,
+                        'data_format': self.data_format}
+                base_config = super(SubpixelDownscaler, self).get_config()
+
+                return dict(list(base_config.items()) + list(config.items()))
+                
+        nnlib.SubpixelDownscaler = SubpixelDownscaler
+        
         class BlurPool(KL.Layer):
             """
             https://arxiv.org/abs/1904.11486 https://github.com/adobe/antialiased-cnns

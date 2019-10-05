@@ -1,7 +1,8 @@
+import sys
+import ctypes
 import os
 import json
 import numpy as np
-from .pynvml import *
 
 #you can set DFL_TF_MIN_REQ_CAP manually for your build
 #the reason why we cannot check tensorflow.version is it requires import tensorflow
@@ -88,13 +89,8 @@ class device:
             for i in range(plaidML_devices_count):
                 yield i
         elif device.backend == "tensorflow":
-            for gpu_idx in range(nvmlDeviceGetCount()):
-                cap = device.getDeviceComputeCapability (gpu_idx)
-                if cap >= tf_min_req_cap:
-                    yield gpu_idx
-        elif device.backend == "tensorflow-generic":
-            yield 0
-
+            for dev in cuda_devices:
+                yield dev['index']
 
     @staticmethod
     def getValidDevicesWithAtLeastTotalMemoryGB(totalmemsize_gb):
@@ -104,35 +100,20 @@ class device:
                 if plaidML_devices[i]['globalMemSize'] >= totalmemsize_gb*1024*1024*1024:
                      result.append (i)
         elif device.backend == "tensorflow":
-            for i in device.getValidDeviceIdxsEnumerator():
-                handle = nvmlDeviceGetHandleByIndex(i)
-                memInfo = nvmlDeviceGetMemoryInfo( handle )
-                if (memInfo.total) >= totalmemsize_gb*1024*1024*1024:
+            for dev in cuda_devices:
+                if dev['total_mem'] >= totalmemsize_gb*1024*1024*1024:
                     result.append (i)
-        elif device.backend == "tensorflow-generic":
-            return [0]
 
         return result
-
-    @staticmethod
-    def getAllDevicesIdxsList():
-        if device.backend == "plaidML":
-            return [ *range(plaidML_devices_count) ]
-        elif device.backend == "tensorflow":
-            return [ *range(nvmlDeviceGetCount() ) ]
-        elif device.backend == "tensorflow-generic":
-            return [0]
 
     @staticmethod
     def getValidDevicesIdxsWithNamesList():
         if device.backend == "plaidML":
             return [ (i, plaidML_devices[i]['description'] ) for i in device.getValidDeviceIdxsEnumerator() ]
         elif device.backend == "tensorflow":
-            return [ (i, nvmlDeviceGetName(nvmlDeviceGetHandleByIndex(i)).decode() ) for i in device.getValidDeviceIdxsEnumerator() ]
+            return [ ( dev['index'], dev['name'] ) for dev in cuda_devices ]
         elif device.backend == "tensorflow-cpu":
             return [ (0, 'CPU') ]
-        elif device.backend == "tensorflow-generic":
-            return [ (0, device.getDeviceName(0) ) ]
 
     @staticmethod
     def getDeviceVRAMTotalGb (idx):
@@ -140,13 +121,10 @@ class device:
             if idx < plaidML_devices_count:
                 return plaidML_devices[idx]['globalMemSize'] / (1024*1024*1024)
         elif device.backend == "tensorflow":
-            if idx < nvmlDeviceGetCount():
-                memInfo = nvmlDeviceGetMemoryInfo(  nvmlDeviceGetHandleByIndex(idx) )
-                return round ( memInfo.total / (1024*1024*1024) )
-
+            for dev in cuda_devices:
+                if idx == dev['index']:
+                    return round ( dev['total_mem'] / (1024*1024*1024) )
             return 0
-        elif device.backend == "tensorflow-generic":
-            return 2
 
     @staticmethod
     def getBestValidDeviceIdx():
@@ -163,15 +141,12 @@ class device:
         elif device.backend == "tensorflow":
             idx = -1
             idx_mem = 0
-            for i in device.getValidDeviceIdxsEnumerator():
-                memInfo = nvmlDeviceGetMemoryInfo( nvmlDeviceGetHandleByIndex(i) )
-                if memInfo.total > idx_mem:
-                    idx = i
-                    idx_mem = memInfo.total
+            for dev in cuda_devices:
+                if dev['total_mem'] > idx_mem:
+                    idx = dev['index']
+                    idx_mem = dev['total_mem']
 
             return idx
-        elif device.backend == "tensorflow-generic":
-            return 0
 
     @staticmethod
     def getWorstValidDeviceIdx():
@@ -188,24 +163,22 @@ class device:
         elif device.backend == "tensorflow":
             idx = -1
             idx_mem = sys.maxsize
-            for i in device.getValidDeviceIdxsEnumerator():
-                memInfo = nvmlDeviceGetMemoryInfo( nvmlDeviceGetHandleByIndex(i) )
-                if memInfo.total < idx_mem:
-                    idx = i
-                    idx_mem = memInfo.total
+            for dev in cuda_devices:
+                if dev['total_mem'] < idx_mem:
+                    idx = dev['index']
+                    idx_mem = dev['total_mem']
 
             return idx
-        elif device.backend == "tensorflow-generic":
-            return 0
 
     @staticmethod
     def isValidDeviceIdx(idx):
         if device.backend == "plaidML":
             return idx in [*device.getValidDeviceIdxsEnumerator()]
         elif device.backend == "tensorflow":
-            return idx in [*device.getValidDeviceIdxsEnumerator()]
-        elif device.backend == "tensorflow-generic":
-            return (idx == 0)
+            for dev in cuda_devices:
+                if idx == dev['index']:
+                    return True
+        return False
 
     @staticmethod
     def getDeviceIdxsEqualModel(idx):
@@ -219,14 +192,13 @@ class device:
             return result
         elif device.backend == "tensorflow":
             result = []
-            idx_name = nvmlDeviceGetName(nvmlDeviceGetHandleByIndex(idx)).decode()
-            for i in device.getValidDeviceIdxsEnumerator():
-                if nvmlDeviceGetName(nvmlDeviceGetHandleByIndex(i)).decode() == idx_name:
-                    result.append (i)
+            idx_name = device.getDeviceName(idx)
+            for dev in cuda_devices:
+                if dev['name'] == idx_name:
+                    result.append ( dev['index'] )
+                    
 
             return result
-        elif device.backend == "tensorflow-generic":
-            return [0] if idx == 0 else []
 
     @staticmethod
     def getDeviceName (idx):
@@ -234,11 +206,9 @@ class device:
             if idx < plaidML_devices_count:
                 return plaidML_devices[idx]['description']
         elif device.backend == "tensorflow":
-            if idx < nvmlDeviceGetCount():
-                return nvmlDeviceGetName(nvmlDeviceGetHandleByIndex(idx)).decode()
-        elif device.backend == "tensorflow-generic":
-            if idx == 0:
-                return "Generic GeForce GPU"
+            for dev in cuda_devices:
+                if dev['index'] == idx:
+                    return dev['name']
 
         return None
 
@@ -252,35 +222,22 @@ class device:
 
     @staticmethod
     def getDeviceComputeCapability(idx):
-        result = 0
         if device.backend == "plaidML":
             return 99
         elif device.backend == "tensorflow":
-            if idx < nvmlDeviceGetCount():
-                result = nvmlDeviceGetCudaComputeCapability(nvmlDeviceGetHandleByIndex(idx))
-        elif device.backend == "tensorflow-generic":
-            return 99 if idx == 0 else 0
+            for dev in cuda_devices:
+                if dev['index'] == idx:
+                    return dev['cc']
+        return 0
 
-        return result[0] * 10 + result[1]
-
-
-force_plaidML = os.environ.get("DFL_FORCE_PLAIDML", "0") == "1" #for OpenCL build , forcing using plaidML even if NVIDIA found
-force_tf_cpu = os.environ.get("DFL_FORCE_TF_CPU", "0") == "1"   #for OpenCL build , forcing using tf-cpu if plaidML failed
-has_nvml = False
-has_nvml_cap = False
-
-#use DFL_FORCE_HAS_NVIDIA_DEVICE=1 if
-#- your NVIDIA cannot be seen by OpenCL
-#- CUDA build of DFL
-has_nvidia_device = os.environ.get("DFL_FORCE_HAS_NVIDIA_DEVICE", "0") == "1"
-
+plaidML_build = os.environ.get("DFL_PLAIDML_BUILD", "0") == "1"
 plaidML_devices = None
-def get_plaidML_devices():
-    global plaidML_devices
-    global has_nvidia_device
+cuda_devices = None
+
+if plaidML_build:
     if plaidML_devices is None:
         plaidML_devices = []
-        # Using plaidML OpenCL backend to determine system devices and has_nvidia_device
+        # Using plaidML OpenCL backend to determine system devices
         try:
             os.environ['PLAIDML_EXPERIMENTAL'] = 'false' #this enables work plaidML without run 'plaidml-setup'
             import plaidml
@@ -289,8 +246,6 @@ def get_plaidML_devices():
                 details = json.loads(d.details)
                 if details['type'] == 'CPU': #skipping opencl-CPU
                     continue
-                if 'nvidia' in details['vendor'].lower():
-                    has_nvidia_device = True
                 plaidML_devices += [ {'id':d.id,
                                     'globalMemSize' : int(details['globalMemSize']),
                                     'description' : d.description.decode()
@@ -298,60 +253,58 @@ def get_plaidML_devices():
             ctx.shutdown()
         except:
             pass
-    return plaidML_devices
-
-if not has_nvidia_device:
-    get_plaidML_devices()
-
-#choosing backend
-
-if device.backend is None and not force_tf_cpu:
-    #first trying to load NVSMI and detect CUDA devices for tensorflow backend,
-    #even force_plaidML is choosed, because if plaidML will fail, we can choose tensorflow
-    try:
-        nvmlInit()
-        has_nvml = True
-        device.backend = "tensorflow"   #set tensorflow backend in order to use device.*device() functions
-
-        gpu_idxs = device.getAllDevicesIdxsList()
-        gpu_caps = np.array ( [ device.getDeviceComputeCapability(gpu_idx) for gpu_idx in gpu_idxs ] )
-
-        if len ( np.ndarray.flatten ( np.argwhere (gpu_caps >= tf_min_req_cap) ) ) == 0:
-            if not force_plaidML:
-                print ("No CUDA devices found with minimum required compute capability: %d.%d. Falling back to OpenCL mode." % (tf_min_req_cap // 10, tf_min_req_cap % 10) )
-            device.backend = None
-            nvmlShutdown()
-        else:
-            has_nvml_cap = True
-    except:
-        #if no NVSMI installed exception will occur
-        device.backend = None
-        has_nvml = False
-
-if force_plaidML or (device.backend is None and not has_nvidia_device):
-    #tensorflow backend was failed without has_nvidia_device , or forcing plaidML, trying to use plaidML backend
-    if len(get_plaidML_devices()) == 0:
-        #print ("plaidML: No capable OpenCL devices found. Falling back to tensorflow backend.")
-        device.backend = None
-    else:
+    
+    if len(plaidML_devices) != 0:
         device.backend = "plaidML"
-        plaidML_devices_count = len(get_plaidML_devices())
+else:      
+    if cuda_devices is None:
+        cuda_devices = []
+        libnames = ('libcuda.so', 'libcuda.dylib', 'nvcuda.dll')
+        cuda = None
+        for libname in libnames:
+            try:
+                cuda = ctypes.CDLL(libname)
+            except:
+                continue
+            else:
+                break
+        
+        if cuda is not None:
+            nGpus = ctypes.c_int()
+            name = b' ' * 200
+            cc_major = ctypes.c_int()
+            cc_minor = ctypes.c_int()
+            freeMem = ctypes.c_size_t()
+            totalMem = ctypes.c_size_t()
+
+            result = ctypes.c_int()
+            device_t = ctypes.c_int()
+            context = ctypes.c_void_p()
+            error_str = ctypes.c_char_p()
+
+            if cuda.cuInit(0) == 0 and \
+                cuda.cuDeviceGetCount(ctypes.byref(nGpus)) == 0:
+                for i in range(nGpus.value):
+                    if cuda.cuDeviceGet(ctypes.byref(device_t), i) != 0 or \
+                        cuda.cuDeviceGetName(ctypes.c_char_p(name), len(name), device_t) != 0 or \
+                        cuda.cuDeviceComputeCapability(ctypes.byref(cc_major), ctypes.byref(cc_minor), device_t) != 0:
+                        continue
+
+                    if cuda.cuCtxCreate_v2(ctypes.byref(context), 0, device_t) == 0:
+                        if cuda.cuMemGetInfo_v2(ctypes.byref(freeMem), ctypes.byref(totalMem)) == 0:
+                            cc = cc_major.value * 10 + cc_minor.value
+                            if cc >= tf_min_req_cap:
+                                cuda_devices.append ( {'index':i,
+                                                       'name':name.split(b'\0', 1)[0].decode(),                                               
+                                                       'total_mem':totalMem.value,
+                                                       'free_mem':freeMem.value,
+                                                       'cc':cc
+                                                      }
+                                                    )
+                        cuda.cuCtxDetach(context)    
+        
+    if len(cuda_devices) != 0:
+        device.backend = "tensorflow"
 
 if device.backend is None:
-    if force_tf_cpu:
-        device.backend = "tensorflow-cpu"
-    elif not has_nvml:
-        if has_nvidia_device:
-            #some notebook systems have NVIDIA card without NVSMI in official drivers
-            #in that case considering we have system with one capable GPU and let tensorflow to choose best GPU
-            device.backend = "tensorflow-generic"
-        else:
-            #no NVSMI and no NVIDIA cards, also plaidML was failed, then CPU only
-            device.backend = "tensorflow-cpu"
-    else:
-        if has_nvml_cap:
-            #has NVSMI and capable CUDA-devices, but force_plaidML was failed, then we choosing tensorflow
-            device.backend = "tensorflow"
-        else:
-            #has NVSMI, no capable CUDA-devices, also plaidML was failed, then CPU only
-            device.backend = "tensorflow-cpu"
+    device.backend = "tensorflow-cpu"

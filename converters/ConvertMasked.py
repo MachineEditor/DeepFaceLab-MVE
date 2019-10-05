@@ -71,17 +71,17 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
 
             if cfg.face_type == FaceType.FULL:
                 FAN_dst_face_mask_a_0 = cv2.resize (dst_face_fanseg_mask, (output_size,output_size), cv2.INTER_CUBIC)
-            elif cfg.face_type == FaceType.HALF:
-                half_face_fanseg_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, cfg.fanseg_input_size, face_type=FaceType.HALF)
+            else:
+                face_fanseg_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, cfg.fanseg_input_size, face_type=cfg.face_type)
 
                 fanseg_rect_corner_pts = np.array ( [ [0,0], [cfg.fanseg_input_size-1,0], [0,cfg.fanseg_input_size-1] ], dtype=np.float32 )
-                a = LandmarksProcessor.transform_points (fanseg_rect_corner_pts, half_face_fanseg_mat, invert=True )
+                a = LandmarksProcessor.transform_points (fanseg_rect_corner_pts, face_fanseg_mat, invert=True )
                 b = LandmarksProcessor.transform_points (a, full_face_fanseg_mat )
                 m = cv2.getAffineTransform(b, fanseg_rect_corner_pts)
                 FAN_dst_face_mask_a_0 = cv2.warpAffine(dst_face_fanseg_mask, m, (cfg.fanseg_input_size,)*2, flags=cv2.INTER_CUBIC )
                 FAN_dst_face_mask_a_0 = cv2.resize (FAN_dst_face_mask_a_0, (output_size,output_size), cv2.INTER_CUBIC)
-            else:
-                raise ValueError ("cfg.face_type unsupported")
+            #else:
+            #    raise ValueError ("cfg.face_type unsupported")
 
         if cfg.mask_mode == 3:   #FAN-prd
             prd_face_mask_a_0 = FAN_prd_face_mask_a_0
