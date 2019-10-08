@@ -232,6 +232,7 @@ class device:
 
 plaidML_build = os.environ.get("DFL_PLAIDML_BUILD", "0") == "1"
 plaidML_devices = None
+plaidML_devices_count = 0
 cuda_devices = None
 
 if plaidML_build:
@@ -253,8 +254,8 @@ if plaidML_build:
             ctx.shutdown()
         except:
             pass
-    
-    if len(plaidML_devices) != 0:
+    plaidML_devices_count = len(plaidML_devices)
+    if plaidML_devices_count != 0:
         device.backend = "plaidML"
 else:      
     if cuda_devices is None:
