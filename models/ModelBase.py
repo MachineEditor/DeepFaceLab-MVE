@@ -508,6 +508,10 @@ class ModelBase(object):
     def generate_next_sample(self):
         return [ generator.generate_next() for generator in self.generator_list]
 
+    #overridable
+    def on_success_train_one_iter(self):
+        pass
+        
     def train_one_iter(self):
         sample = self.generate_next_sample()
         iter_time = time.time()
@@ -534,7 +538,8 @@ class ModelBase(object):
                 img = (np.concatenate ( [preview_lh, preview], axis=0 ) * 255).astype(np.uint8)
                 cv2_imwrite (filepath, img )
 
-
+        self.on_success_train_one_iter()
+                
         self.iter += 1
 
         return self.iter, iter_time
