@@ -8,4 +8,4 @@ Faces sets for the following have been pre-extracted,
 - Elon Musk
 - Harrison Ford
 
-[Download from Mega](https://mega.nz/#F!y1ERHDaL!PPwg01PQZk0FhWLVo5_MaQ)
+[Download from Google drive](https://drive.google.com/open?id=1LwMdfTxdOaNAHt_sGV76aQVn7XPseXJB)
