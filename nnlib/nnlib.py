@@ -157,13 +157,10 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         else:
             config = tf.ConfigProto()
 
-            #if device_config.force_gpu_idx != -1 and device_config.backend != "tensorflow-generic":
-            #    #tensorflow-generic is system with NVIDIA card, but w/o NVSMI
-            #    #so dont hide devices and let tensorflow to choose best card
-            #    visible_device_list = ''
-            #    for idx in device_config.gpu_idxs:
-            #        visible_device_list += str(idx) + ','
-            #    config.gpu_options.visible_device_list=visible_device_list[:-1]
+            visible_device_list = ''
+            for idx in device_config.gpu_idxs:
+                visible_device_list += str(idx) + ','
+            config.gpu_options.visible_device_list=visible_device_list[:-1]
 
         config.gpu_options.force_gpu_compatible = True
         config.gpu_options.allow_growth = device_config.allow_growth
