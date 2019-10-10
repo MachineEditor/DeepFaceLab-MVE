@@ -260,7 +260,7 @@ class SampleProcessor(object):
                 elif mode_type == SPTF.MODE_G:
                     img = np.concatenate ( (np.expand_dims(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY),-1),img_mask) , -1 )
                 elif mode_type == SPTF.MODE_GGG:
-                    img = np.concatenate ( ( np.repeat ( np.expand_dims(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY),-1), (3,), -1), img_mask), -1)
+                    img = np.repeat ( np.expand_dims(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY),-1), (3,), -1)
                 elif mode_type == SPTF.MODE_M and is_face_sample:
                     img = img_mask
 

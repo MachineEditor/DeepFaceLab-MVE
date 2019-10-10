@@ -102,7 +102,7 @@ class device:
         elif device.backend == "tensorflow":
             for dev in cuda_devices:
                 if dev['total_mem'] >= totalmemsize_gb*1024*1024*1024:
-                    result.append (i)
+                    result.append ( dev['index'] )
 
         return result
 
