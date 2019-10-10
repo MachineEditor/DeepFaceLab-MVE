@@ -617,12 +617,20 @@ class ExtractSubprocessor(Subprocessor):
                 for idx in devices:
                     dev_name = nnlib.device.getDeviceName(idx)
                     dev_vram = nnlib.device.getDeviceVRAMTotalGb(idx)
-
-                    if not manual and (type == 'rects-dlib' or type == 'rects-mt' ):
-                        for i in range ( int (max (1, dev_vram / 2) ) ):
-                            result += [ (idx, 'GPU', '%s #%d' % (dev_name,i) , dev_vram) ]
-                    else:
+                    
+                    count = 1
+                    
+                    if not manual:
+                        if (type == 'rects-dlib' or type == 'rects-mt' ):
+                            count = int (max (1, dev_vram / 2) )
+                        if type == 'rects-s3fd':
+                            count = int (max (1, dev_vram / 5) )
+                            
+                    if count == 1:
                         result += [ (idx, 'GPU', dev_name, dev_vram) ]
+                    else:
+                        for i in range (count):
+                            result += [ (idx, 'GPU', '%s #%d' % (dev_name,i) , dev_vram) ]
 
                 return result
 
