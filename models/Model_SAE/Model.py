@@ -20,7 +20,7 @@ class SAEModel(ModelBase):
         default_resolution = 128
         default_archi = 'df'
         default_face_type = 'f'
-        default_learn_mask = True
+        
 
         if is_first_run:
             resolution = io.input_int("Resolution ( 64-256 ?:help skip:128) : ", default_resolution, help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 16.")
@@ -30,10 +30,14 @@ class SAEModel(ModelBase):
             self.options['resolution'] = resolution
 
             self.options['face_type'] = io.input_str ("Half or Full face? (h/f, ?:help skip:f) : ", default_face_type, ['h','f'], help_message="Half face has better resolution, but covers less area of cheeks.").lower()
-            self.options['learn_mask'] = io.input_bool ( f"Learn mask? (y/n, ?:help skip:{yn_str[default_learn_mask]} ) : " , default_learn_mask, help_message="Learning mask can help model to recognize face directions. Learn without mask can reduce model size, in this case converter forced to use 'not predicted mask' that is not smooth as predicted. Model with style values can be learned without mask and produce same quality result.")
         else:
             self.options['resolution'] = self.options.get('resolution', default_resolution)
             self.options['face_type'] = self.options.get('face_type', default_face_type)
+            
+        default_learn_mask = self.options.get('learn_mask', True)
+        if is_first_run or ask_override:
+            self.options['learn_mask'] = io.input_bool ( f"Learn mask? (y/n, ?:help skip:{yn_str[default_learn_mask]} ) : " , default_learn_mask, help_message="Learning mask can help model to recognize face directions. Learn without mask can reduce model size, in this case converter forced to use 'not predicted mask' that is not smooth as predicted. Model with style values can be learned without mask and produce same quality result.")
+        else:
             self.options['learn_mask'] = self.options.get('learn_mask', default_learn_mask)
 
         if (is_first_run or ask_override) and 'tensorflow' in self.device_config.backend:

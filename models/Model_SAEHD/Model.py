@@ -20,7 +20,7 @@ class SAEv2Model(ModelBase):
         default_resolution = 128
         default_archi = 'df'
         default_face_type = 'f'
-        default_learn_mask = True
+        
 
         if is_first_run:
             resolution = io.input_int("Resolution ( 64-256 ?:help skip:128) : ", default_resolution, help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 16.")
@@ -28,14 +28,17 @@ class SAEv2Model(ModelBase):
             while np.modf(resolution / 16)[0] != 0.0:
                 resolution -= 1
             self.options['resolution'] = resolution
-
             self.options['face_type'] = io.input_str ("Half, mid full, or full face? (h/mf/f, ?:help skip:f) : ", default_face_type, ['h','mf','f'], help_message="Half face has better resolution, but covers less area of cheeks. Mid face is 30% wider than half face.").lower()
-            self.options['learn_mask'] = io.input_bool ( f"Learn mask? (y/n, ?:help skip:{yn_str[default_learn_mask]} ) : " , default_learn_mask, help_message="Learning mask can help model to recognize face directions. Learn without mask can reduce model size, in this case converter forced to use 'not predicted mask' that is not smooth as predicted.")
         else:
             self.options['resolution'] = self.options.get('resolution', default_resolution)
             self.options['face_type'] = self.options.get('face_type', default_face_type)
-            self.options['learn_mask'] = self.options.get('learn_mask', default_learn_mask)
 
+        default_learn_mask = self.options.get('learn_mask', True)
+        if is_first_run or ask_override:
+            self.options['learn_mask'] = io.input_bool ( f"Learn mask? (y/n, ?:help skip:{yn_str[default_learn_mask]} ) : " , default_learn_mask, help_message="Learning mask can help model to recognize face directions. Learn without mask can reduce model size, in this case converter forced to use 'not predicted mask' that is not smooth as predicted.")
+        else:
+            self.options['learn_mask'] = self.options.get('learn_mask', default_learn_mask)
+        
         if (is_first_run or ask_override) and 'tensorflow' in self.device_config.backend:
             def_optimizer_mode = self.options.get('optimizer_mode', 1)
             self.options['optimizer_mode'] = io.input_int ("Optimizer mode? ( 1,2,3 ?:help skip:%d) : " % (def_optimizer_mode), def_optimizer_mode, help_message="1 - no changes. 2 - allows you to train x2 bigger network consuming RAM. 3 - allows you to train x3 bigger network consuming huge amount of RAM and slower, depends on CPU power.")
