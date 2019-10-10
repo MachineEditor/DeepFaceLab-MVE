@@ -632,7 +632,7 @@ class SAEv2Model(ModelBase):
         import converters
         return self.predictor_func, (self.options['resolution'], self.options['resolution'], 3), converters.ConverterConfigMasked(face_type=face_type,
                                      default_mode = 1 if self.options['apply_random_ct'] or self.options['face_style_power'] or self.options['bg_style_power'] else 4,
-                                     clip_hborder_mask_per=0.0625 if (face_type == FaceType.FULL) else 0,
+                                     clip_hborder_mask_per=0.0625 if (face_type != FaceType.HALF) else 0,
                                     )
 
 Model = SAEv2Model
