@@ -226,8 +226,14 @@ class ModelBase(object):
                     io.destroy_window(wnd_name)
                 else:
                     self.sample_for_preview = self.generate_next_sample()
-                self.last_sample = self.sample_for_preview
-
+                    
+            try:
+                self.get_static_preview()
+            except:
+                self.sample_for_preview = self.generate_next_sample()
+                
+            self.last_sample = self.sample_for_preview
+            
         ###Generate text summary of model hyperparameters
         #Find the longest key name and value string. Used as column widths.
         width_name = max([len(k) for k in self.options.keys()] + [17]) + 1 # Single space buffer to left edge. Minimum of 17, the length of the longest static string used "Current iteration"

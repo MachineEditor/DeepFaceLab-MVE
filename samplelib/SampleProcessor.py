@@ -72,6 +72,7 @@ class SampleProcessor(object):
         MODE_GGG                   = 42  #3xGrayscale
         MODE_M                     = 43  #mask only
         MODE_BGR_SHUFFLE           = 44  #BGR shuffle
+        MODE_BGR_RANDOM_HUE_SHIFT  = 45
         MODE_END = 50
 
     class Options(object):
@@ -180,7 +181,7 @@ class SampleProcessor(object):
                     return img
 
                 img = sample_bgr
-                
+
                 ### Prepare a mask
                 mask = None
                 if is_face_sample:
@@ -195,8 +196,8 @@ class SampleProcessor(object):
                     if sample.ie_polys is not None:
                         sample.ie_polys.overlay_mask(mask)
                 ##################
-                
-                
+
+
                 if motion_blur is not None:
                     chance, mb_max_size = motion_blur
                     chance = np.clip(chance, 0, 100)
@@ -257,6 +258,15 @@ class SampleProcessor(object):
                 elif mode_type == SPTF.MODE_BGR_SHUFFLE:
                     rnd_state = np.random.RandomState (sample_rnd_seed)
                     img = np.take (img_bgr, rnd_state.permutation(img_bgr.shape[-1]), axis=-1)
+                elif mode_type == SPTF.MODE_BGR_RANDOM_HUE_SHIFT:
+                    rnd_state = np.random.RandomState (sample_rnd_seed)
+                    hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+                    h, s, v = cv2.split(hsv)
+                    
+                    h = (h + rnd_state.randint(360) ) % 360
+                    hsv = cv2.merge([h, s, v])
+                    
+                    img = np.clip( cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR) , 0, 1 )
                 elif mode_type == SPTF.MODE_G:
                     img = np.concatenate ( (np.expand_dims(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY),-1),img_mask) , -1 )
                 elif mode_type == SPTF.MODE_GGG:

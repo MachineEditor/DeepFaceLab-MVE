@@ -631,26 +631,8 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
 
                 reduction_axes = list(range(len(input_shape)))
                 del reduction_axes[self.axis]
-
-                #broadcast_shape = [1] * len(input_shape)
-                #broadcast_shape[self.axis] = input_shape[self.axis]
-                #normed = x# (x - K.reshape(self.moving_mean,broadcast_shape) ) / ( K.sqrt( K.reshape(self.moving_variance,broadcast_shape)) +self.epsilon)
-                #normed *= K.reshape(gamma,[-1]+broadcast_shape[1:] )
-                #normed += K.reshape(beta, [-1]+broadcast_shape[1:] )
-                #mean = K.mean(x, axis=reduction_axes)
-                #self.moving_mean = self.add_weight(shape=(units,), name='moving_mean', initializer='zeros',trainable=False)
-                #self.moving_variance = self.add_weight(shape=(units,), name='moving_variance',initializer='ones', trainable=False)
-
-                #variance = K.var(x, axis=reduction_axes)
-                #sample_size = K.prod([ K.shape(x)[axis] for axis in reduction_axes ])
-                #sample_size = K.cast(sample_size, dtype=K.dtype(x))
-                #variance *= sample_size / (sample_size - (1.0 + self.epsilon))
-
-                #self.add_update([K.moving_average_update(self.moving_mean, mean, self.momentum),
-                #                 K.moving_average_update(self.moving_variance, variance, self.momentum)], None)
-                #return normed
-
                 del reduction_axes[0]
+                
                 broadcast_shape = [1] * len(input_shape)
                 broadcast_shape[self.axis] = input_shape[self.axis]
                 mean = K.mean(x, reduction_axes, keepdims=True)
