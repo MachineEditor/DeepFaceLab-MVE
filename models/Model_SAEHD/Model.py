@@ -11,7 +11,7 @@ from samplelib import *
 
 
 #SAE - Styled AutoEncoder
-class SAEv2Model(ModelBase):
+class SAEHDModel(ModelBase):
 
     #override
     def onInitializeOptions(self, is_first_run, ask_override):
@@ -644,4 +644,4 @@ class SAEv2Model(ModelBase):
                                      clip_hborder_mask_per=0.0625 if (face_type != FaceType.HALF) else 0,
                                     )
 
-Model = SAEv2Model
+Model = SAEHDModel
