@@ -60,26 +60,25 @@ class SAEv2Model(ModelBase):
             self.options['ae_dims'] = self.options.get('ae_dims', default_ae_dims)
             self.options['ed_ch_dims'] = self.options.get('ed_ch_dims', default_ed_ch_dims)
 
-        default_face_style_power = 0.0
-        default_bg_style_power = 0.0
+        default_true_face_training = self.options.get('true_face_training', False)
+        default_face_style_power = self.options.get('face_style_power', 0.0)
+        default_bg_style_power = self.options.get('bg_style_power', 0.0)
+        
         if is_first_run or ask_override:
             default_random_warp = self.options.get('random_warp', True)
             self.options['random_warp'] = io.input_str (f"Enable random warp of samples? ( y/n, ?:help skip:{yn_str[default_random_warp]}) : ", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness for less amount of iterations.")
 
-            default_face_style_power = default_face_style_power if is_first_run else self.options.get('face_style_power', default_face_style_power)
+            self.options['true_face_training'] = io.input_bool (f"Enable 'true face' training? (y/n, ?:help skip:{yn_str[default_true_face_training]}) : ", default_true_face_training, help_message="The result face will be more like src and will get extra sharpness. Enable it for last 10-20k iterations before conversion.")
+
             self.options['face_style_power'] = np.clip ( io.input_number("Face style power ( 0.0 .. 100.0 ?:help skip:%.2f) : " % (default_face_style_power), default_face_style_power,
                                                                                help_message="Learn to transfer face style details such as light and color conditions. Warning: Enable it only after 10k iters, when predicted face is clear enough to start learn style. Start from 0.1 value and check history changes. Enabling this option increases the chance of model collapse."), 0.0, 100.0 )
 
-            default_bg_style_power = default_bg_style_power if is_first_run else self.options.get('bg_style_power', default_bg_style_power)
             self.options['bg_style_power'] = np.clip ( io.input_number("Background style power ( 0.0 .. 100.0 ?:help skip:%.2f) : " % (default_bg_style_power), default_bg_style_power,
                                                                                help_message="Learn to transfer image around face. This can make face more like dst. Enabling this option increases the chance of model collapse."), 0.0, 100.0 )
 
             default_apply_random_ct = False if is_first_run else self.options.get('apply_random_ct', False)
             self.options['apply_random_ct'] = io.input_bool (f"Apply random color transfer to src faceset? (y/n, ?:help skip:{yn_str[default_apply_random_ct]}) : ", default_apply_random_ct, help_message="Increase variativity of src samples by apply LCT color transfer from random dst samples. It is like 'face_style' learning, but more precise color transfer and without risk of model collapse, also it does not require additional GPU resources, but the training time may be longer, due to the src faceset is becoming more diverse.")
-
-            default_true_face_training = False if is_first_run else self.options.get('true_face_training', False)
-            self.options['true_face_training'] = io.input_bool (f"Enable 'true face' training? (y/n, ?:help skip:{yn_str[default_true_face_training]}) : ", default_true_face_training, help_message="The result face will be more like src and will get extra sharpness. Enable it for last 10-20k iterations before conversion.")
-
+            
             if nnlib.device.backend != 'plaidML': # todo https://github.com/plaidml/plaidml/issues/301
                 default_clipgrad = False if is_first_run else self.options.get('clipgrad', False)
                 self.options['clipgrad'] = io.input_bool (f"Enable gradient clipping? (y/n, ?:help skip:{yn_str[default_clipgrad]}) : ", default_clipgrad, help_message="Gradient clipping reduces chance of model collapse, sacrificing speed of training.")
@@ -88,6 +87,7 @@ class SAEv2Model(ModelBase):
 
         else:
             self.options['random_warp'] = self.options.get('random_warp', True)
+            self.options['true_face_training'] = self.options.get('true_face_training', default_true_face_training)
             self.options['face_style_power'] = self.options.get('face_style_power', default_face_style_power)
             self.options['bg_style_power'] = self.options.get('bg_style_power', default_bg_style_power)
             self.options['apply_random_ct'] = self.options.get('apply_random_ct', False)
