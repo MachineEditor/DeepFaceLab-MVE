@@ -153,15 +153,11 @@ class ExtractSubprocessor(Subprocessor):
                         elif rot == 270:
                             rotated_image = image.swapaxes( 0,1 )[::-1,:,:]
 
-                        rects = data.rects = self.e.extract (rotated_image, is_bgr=True)
+                        rects = data.rects = self.e.extract (rotated_image, is_bgr=True, is_remove_intersects=True)
                         if len(rects) != 0:
                             break
                         
                     if self.max_faces_from_image != 0 and len(data.rects) > 1:
-                        #sort by largest area first
-                        x = [ [(l,t,r,b), (r-l)*(b-t) ]  for (l,t,r,b) in data.rects]
-                        x = sorted(x, key=operator.itemgetter(1), reverse=True )
-                        x = [ a[0] for a in x]
                         data.rects = x[0:self.max_faces_from_image]
 
                 return data
@@ -893,3 +889,4 @@ def extract_umd_csv(input_file_csv,
     io.log_info ('Images found:        %d' % (images_found) )
     io.log_info ('Faces detected:      %d' % (faces_detected) )
     io.log_info ('-------------------------')
+

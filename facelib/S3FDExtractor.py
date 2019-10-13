@@ -1,6 +1,9 @@
-import numpy as np
+import operator
 from pathlib import Path
+
 import cv2
+import numpy as np
+
 from nnlib import nnlib
 
 class S3FDExtractor(object):
@@ -19,7 +22,7 @@ class S3FDExtractor(object):
     def __exit__(self, exc_type=None, exc_value=None, traceback=None):
         return False #pass exception between __enter__ and __exit__ to outter level
 
-    def extract (self, input_image, is_bgr=True):
+    def extract (self, input_image, is_bgr=True, is_remove_intersects=False):
 
         if is_bgr:
             input_image = input_image[:,:,::-1]
@@ -45,6 +48,21 @@ class S3FDExtractor(object):
             b += bt*0.1 #enlarging bottom line a bit for 2DFAN-4, because default is not enough covering a chin
             detected_faces.append ( [int(x) for x in (l,t,r,b) ] )
 
+        #sort by largest area first
+        detected_faces = [ [(l,t,r,b), (r-l)*(b-t) ]  for (l,t,r,b) in detected_faces ]
+        detected_faces = sorted(detected_faces, key=operator.itemgetter(1), reverse=True )
+        detected_faces = [ x[0] for x in detected_faces]
+                          
+        if is_remove_intersects:
+            for i in range( len(detected_faces)-1, 0, -1):
+                l1,t1,r1,b1 = detected_faces[i]
+                l0,t0,r0,b0 = detected_faces[i-1]
+
+                dx = min(r0, r1) - max(l0, l1)
+                dy = min(b0, b1) - max(t0, t1)
+                if (dx>=0) and (dy>=0):
+                    detected_faces.pop(i)     
+                 
         return detected_faces
 
     def refine(self, olist):
