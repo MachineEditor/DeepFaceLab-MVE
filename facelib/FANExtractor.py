@@ -30,7 +30,7 @@ class FANExtractor(object):
         del self.model
         return False #pass exception between __enter__ and __exit__ to outter level
 
-    def extract (self, input_image, rects, second_pass_extractor=None, is_bgr=True):
+    def extract (self, input_image, rects, second_pass_extractor=None, is_bgr=True, multi_sample=False):
         if len(rects) == 0:
             return []
 
@@ -38,20 +38,39 @@ class FANExtractor(object):
             input_image = input_image[:,:,::-1]
             is_bgr = False
 
+
         (h, w, ch) = input_image.shape
 
         landmarks = []
         for (left, top, right, bottom) in rects:
+            scale = (right - left + bottom - top) / 195.0
+
+            center = np.array( [ (left + right) / 2.0, (top + bottom) / 2.0] )
+            centers = [ center ]
+
+            if multi_sample:
+                centers += [ center + [-1,-1],
+                             center + [1,-1],
+                             center + [1,1],
+                             center + [-1,1],
+                           ]
+
+            images = []
+            ptss = []
+
             try:
-                center = np.array( [ (left + right) / 2.0, (top + bottom) / 2.0] )
-                scale = (right - left + bottom - top) / 195.0
+                for c in centers:
+                    images += [ self.crop(input_image, c, scale)  ]
 
-                image = self.crop(input_image, center, scale).astype(np.float32)
-                image = np.expand_dims(image, 0)
+                images = np.stack (images)
 
-                predicted = self.model.predict (image / 255.0).transpose (0,3,1,2)
+                predicted = self.model.predict (images.astype(np.float32) / 255.0).transpose (0,3,1,2)
 
-                pts_img = self.get_pts_from_predict ( predicted[-1], center, scale)
+                for i, pred in enumerate(predicted):
+                    ptss += [ self.get_pts_from_predict ( pred, centers[i], scale) ]
+
+                pts_img = np.mean ( np.array(ptss), 0 )
+
                 landmarks.append (pts_img)
             except:
                 landmarks.append (None)
@@ -70,7 +89,7 @@ class FANExtractor(object):
                     if len(rects2) != 1: #dont do second pass if faces != 1 detected in cropped image
                         continue
 
-                    lmrks2 = self.extract (face_image, [ rects2[0] ], is_bgr=is_bgr)[0]
+                    lmrks2 = self.extract (face_image, [ rects2[0] ], is_bgr=is_bgr, multi_sample=True)[0]
                     source_lmrks2 = LandmarksProcessor.transform_points (lmrks2, image_to_face_mat, True)
                     landmarks[i] = source_lmrks2
                 except:
@@ -111,19 +130,22 @@ class FANExtractor(object):
         return newImg
 
     def get_pts_from_predict(self, a, center, scale):
-        b = a.reshape ( (a.shape[0], a.shape[1]*a.shape[2]) )
-        c = b.argmax(1).reshape ( (a.shape[0], 1) ).repeat(2, axis=1).astype(np.float)
-        c[:,0] %= a.shape[2]
-        c[:,1] = np.apply_along_axis ( lambda x: np.floor(x / a.shape[2]), 0, c[:,1] )
+        a_ch, a_h, a_w = a.shape
 
-        for i in range(a.shape[0]):
+        b = a.reshape ( (a_ch, a_h*a_w) )
+        c = b.argmax(1).reshape ( (a_ch, 1) ).repeat(2, axis=1).astype(np.float)
+        c[:,0] %= a_w
+        c[:,1] = np.apply_along_axis ( lambda x: np.floor(x / a_w), 0, c[:,1] )
+
+        for i in range(a_ch):
             pX, pY = int(c[i,0]), int(c[i,1])
             if pX > 0 and pX < 63 and pY > 0 and pY < 63:
                 diff = np.array ( [a[i,pY,pX+1]-a[i,pY,pX-1], a[i,pY+1,pX]-a[i,pY-1,pX]] )
                 c[i] += np.sign(diff)*0.25
 
         c += 0.5
-        return np.array( [ self.transform (c[i], center, scale, a.shape[2]) for i in range(a.shape[0]) ] )
+
+        return np.array( [ self.transform (c[i], center, scale, a_w) for i in range(a_ch) ] )
 
     @staticmethod
     def BuildModel():

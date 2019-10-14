@@ -217,6 +217,7 @@ class ExtractSubprocessor(Subprocessor):
                 else:
                     face_idx = 0
                     for rect, image_landmarks in zip( rects, landmarks ):
+                        
                         if src_dflimg is not None and face_idx > 1:
                             #cannot extract more than 1 face from dflimg
                             break
