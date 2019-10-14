@@ -319,7 +319,14 @@ class MaskEditor:
 
     def get_ie_polys(self):
         return self.ie_polys
-
+    
+    def set_ie_polys(self, saved_ie_polys):
+        self.state = self.STATE_NONE
+        self.ie_polys = saved_ie_polys
+        self.redo_to_end_point()
+        self.mask_finish()
+        
+        
 def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None, no_default_mask=False):
     input_path = Path(input_dir)
 
@@ -485,6 +492,7 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None, no_default
                         break
                     elif filepath is not None:
                         if chr_key == 'e':
+                            saved_ie_polys = ed.ie_polys
                             do_save_move_count = 1 if not shift_pressed else 10
                         elif chr_key == 'c':
                             saved_ie_polys = ed.ie_polys
@@ -494,10 +502,7 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None, no_default
                         elif chr_key == 'x':
                             do_skip_count = 1 if not shift_pressed else 10
                         elif chr_key == 'r' and saved_ie_polys != None:
-                            ed.state = 0
-                            ed.ie_polys = saved_ie_polys
-                            ed.redo_to_end_point()
-                            ed.mask_finish()
+                            ed.set_ie_polys(saved_ie_polys)
 
             if do_prev_count > 0:
                 do_prev_count -= 1
