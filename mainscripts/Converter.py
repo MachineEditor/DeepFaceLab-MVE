@@ -16,7 +16,9 @@ import numpy.linalg as npla
 import imagelib
 from converters import (ConverterConfig, ConvertFaceAvatar, ConvertMasked,
                         FrameInfo)
-from facelib import FaceType, FANSegmentator, LandmarksProcessor
+from facelib import FaceType, LandmarksProcessor
+from nnlib import TernausNet
+
 from interact import interact as io
 from joblib import SubprocessFunctionCaller, Subprocessor
 from utils import Path_utils
@@ -114,12 +116,24 @@ class ConvertSubprocessor(Subprocessor):
             def fanseg_extract(face_type, *args, **kwargs):
                 fanseg = self.fanseg_by_face_type.get(face_type, None)
                 if self.fanseg_by_face_type.get(face_type, None) is None:
-                    fanseg = FANSegmentator( self.fanseg_input_size , FaceType.toString( face_type ) )
+                    fanseg = TernausNet("FANSeg", self.fanseg_input_size , FaceType.toString( face_type ) )
                     self.fanseg_by_face_type[face_type] = fanseg
 
                 return fanseg.extract(*args, **kwargs)
 
             self.fanseg_extract_func = fanseg_extract
+            
+            self.fanchq_by_face_type = {}
+            self.fanchq_input_size = 256
+            def fanchq_extract(face_type, *args, **kwargs):
+                fanchq = self.fanchq_by_face_type.get(face_type, None)
+                if self.fanchq_by_face_type.get(face_type, None) is None:
+                    fanchq = TernausNet("FANCHQ", self.fanchq_input_size , FaceType.toString( face_type ) )
+                    self.fanchq_by_face_type[face_type] = fanchq
+
+                return fanchq.extract(*args, **kwargs)
+
+            self.fanchq_extract_func = fanchq_extract
             
             import ebsynth
             def ebs_ct(*args, **kwargs):                    
@@ -161,6 +175,8 @@ class ConvertSubprocessor(Subprocessor):
                 if cfg.type == ConverterConfig.TYPE_MASKED:
                     cfg.fanseg_input_size = self.fanseg_input_size
                     cfg.fanseg_extract_func = self.fanseg_extract_func
+                    cfg.fanchq_input_size = self.fanchq_input_size
+                    cfg.fanchq_extract_func = self.fanchq_extract_func
 
                     try:
                         final_img = ConvertMasked (self.predictor_func, self.predictor_input_shape, cfg, frame_info)

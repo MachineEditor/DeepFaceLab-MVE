@@ -10,8 +10,6 @@ from interact import interact as io
 from nnlib import nnlib
 
 """
-FANSegmentator is designed to exclude obstructions from faces such as hair, fingers, etc.
-
 Dataset used to train located in official DFL mega.nz folder
 https://mega.nz/#F!b9MzCK4B!zEAG9txu7uaRUjXz9PtBqg
 
@@ -19,19 +17,19 @@ using https://github.com/ternaus/TernausNet
 TernausNet: U-Net with VGG11 Encoder Pre-Trained on ImageNet for Image Segmentation
 """
 
-class FANSegmentator(object):
+class TernausNet(object):
     VERSION = 1
-    def __init__ (self, resolution, face_type_str, load_weights=True, weights_file_root=None, training=False):
+    def __init__ (self, name, resolution, face_type_str, load_weights=True, weights_file_root=None, training=False):
         exec( nnlib.import_all(), locals(), globals() )
 
-        self.model = FANSegmentator.BuildModel(resolution, ngf=64)
+        self.model = TernausNet.BuildModel(resolution, ngf=64)
 
         if weights_file_root is not None:
             weights_file_root = Path(weights_file_root)
         else:
             weights_file_root = Path(__file__).parent
 
-        self.weights_path = weights_file_root / ('FANSeg_%d_%s.h5' % (resolution, face_type_str) )
+        self.weights_path = weights_file_root / ('%s_%d_%s.h5' % (name, resolution, face_type_str) )
 
         if load_weights:
             self.model.load_weights (str(self.weights_path))
@@ -59,7 +57,6 @@ class FANSegmentator(object):
             real_t = Input ( (resolution, resolution, 1) )
             out_t = self.model(inp_t)
 
-            #loss = K.mean(10*K.square(out_t-real_t))
             loss = K.mean(10*K.binary_crossentropy(real_t,out_t) )
 
             out_t_diff1 = out_t[:, 1:, :, :] - out_t[:, :-1, :, :]
@@ -69,7 +66,7 @@ class FANSegmentator(object):
 
             opt = Adam(lr=0.0001, beta_1=0.5, beta_2=0.999, tf_cpu_mode=2)
 
-            self.train_func = K.function  ( [inp_t, real_t], [K.mean(loss)], opt.get_updates( [loss,total_var_loss], self.model.trainable_weights) )
+            self.train_func = K.function  ( [inp_t, real_t], [K.mean(loss)], opt.get_updates( [loss], self.model.trainable_weights) )
 
 
     def __enter__(self):
@@ -103,7 +100,7 @@ class FANSegmentator(object):
         exec( nnlib.import_all(), locals(), globals() )
         inp = Input ( (resolution,resolution,3) )
         x = inp
-        x = FANSegmentator.Flow(ngf=ngf)(x)
+        x = TernausNet.Flow(ngf=ngf)(x)
         model = Model(inp,x)
         return model
 
@@ -115,7 +112,7 @@ class FANSegmentator(object):
             x = input
 
             x0 = x = Conv2D(ngf, kernel_size=3, strides=1, padding='same', activation='relu', name='features.0')(x)
-            x = BlurPool(filt_size=3)(x) #x = MaxPooling2D()(x)
+            x = BlurPool(filt_size=3)(x)
 
             x1 = x = Conv2D(ngf*2, kernel_size=3, strides=1, padding='same', activation='relu', name='features.3')(x)
             x = BlurPool(filt_size=3)(x)

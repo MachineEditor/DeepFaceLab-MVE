@@ -72,7 +72,7 @@ class SampleProcessor(object):
         MODE_GGG                   = 42  #3xGrayscale
         MODE_M                     = 43  #mask only
         MODE_BGR_SHUFFLE           = 44  #BGR shuffle
-        MODE_BGR_RANDOM_HUE_SHIFT  = 45
+        MODE_BGR_RANDOM_HSV_SHIFT  = 45
         MODE_END = 50
 
     class Options(object):
@@ -111,8 +111,6 @@ class SampleProcessor(object):
 
         sample_rnd_seed = np.random.randint(0x80000000)
 
-
-
         outputs = []
         for opts in output_sample_types:
 
@@ -124,6 +122,9 @@ class SampleProcessor(object):
             normalize_std_dev = opts.get('normalize_std_dev', False)
             normalize_vgg = opts.get('normalize_vgg', False)
             motion_blur = opts.get('motion_blur', None)
+            gaussian_blur = opts.get('gaussian_blur', None)
+            
+            random_hsv_shift = opts.get('random_hsv_shift', None)
             apply_ct = opts.get('apply_ct', False)
             normalize_tanh = opts.get('normalize_tanh', False)
 
@@ -205,6 +206,13 @@ class SampleProcessor(object):
                     if np.random.randint(100) < chance:
                         img = imagelib.LinearMotionBlur (img, np.random.randint( mb_max_size )+1, np.random.randint(360) )
 
+                if gaussian_blur is not None:
+                    chance, kernel_max_size = gaussian_blur
+                    chance = np.clip(chance, 0, 100)
+                    
+                    if np.random.randint(100) < chance:
+                        img = cv2.GaussianBlur(img, ( np.random.randint( kernel_max_size )*2+1 ,) *2 , 0)
+
                 if is_face_sample and target_face_type != SPTF.NONE:
                     target_ft = SampleProcessor.SPTF_FACETYPE_TO_FACETYPE[target_face_type]
                     if target_ft > sample.face_type:
@@ -232,7 +240,7 @@ class SampleProcessor(object):
                     start_y = rnd_state.randint(sub_size+1)
                     img = img[start_y:start_y+sub_size,start_x:start_x+sub_size,:]
 
-                img = np.clip(img, 0, 1)
+                img = np.clip(img, 0, 1).astype(np.float32)
                 img_bgr  = img[...,0:3]
                 img_mask = img[...,3:4]
 
@@ -244,6 +252,18 @@ class SampleProcessor(object):
 
                     img_bgr = imagelib.linear_color_transfer (img_bgr, ct_sample_bgr_resized)
                     img_bgr = np.clip( img_bgr, 0.0, 1.0)
+                    
+                if random_hsv_shift:
+                    rnd_state = np.random.RandomState (sample_rnd_seed)
+                    hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+                    h, s, v = cv2.split(hsv)
+                    
+                    h = (h + rnd_state.randint(360) ) % 360
+                    s = np.clip ( s + rnd_state.random()-0.5, 0, 1 )
+                    v = np.clip ( v + rnd_state.random()-0.5, 0, 1 )
+                    hsv = cv2.merge([h, s, v])
+                    
+                    img_bgr = np.clip( cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR) , 0, 1 )
 
                 if normalize_std_dev:
                     img_bgr = (img_bgr - img_bgr.mean( (0,1)) ) / img_bgr.std( (0,1) )
@@ -252,21 +272,12 @@ class SampleProcessor(object):
                     img_bgr[:,:,0] -= 103.939
                     img_bgr[:,:,1] -= 116.779
                     img_bgr[:,:,2] -= 123.68
-
+                    
                 if mode_type == SPTF.MODE_BGR:
                     img = img_bgr
                 elif mode_type == SPTF.MODE_BGR_SHUFFLE:
                     rnd_state = np.random.RandomState (sample_rnd_seed)
                     img = np.take (img_bgr, rnd_state.permutation(img_bgr.shape[-1]), axis=-1)
-                elif mode_type == SPTF.MODE_BGR_RANDOM_HUE_SHIFT:
-                    rnd_state = np.random.RandomState (sample_rnd_seed)
-                    hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
-                    h, s, v = cv2.split(hsv)
-                    
-                    h = (h + rnd_state.randint(360) ) % 360
-                    hsv = cv2.merge([h, s, v])
-                    
-                    img = np.clip( cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR) , 0, 1 )
                 elif mode_type == SPTF.MODE_G:
                     img = np.concatenate ( (np.expand_dims(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY),-1),img_mask) , -1 )
                 elif mode_type == SPTF.MODE_GGG:

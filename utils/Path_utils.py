@@ -3,12 +3,26 @@ from os import scandir
 
 image_extensions = [".jpg", ".jpeg", ".png", ".tif", ".tiff"]
 
-def get_image_paths(dir_path, image_extensions=image_extensions):
+def scantree(path):
+    """Recursively yield DirEntry objects for given directory."""
+    for entry in scandir(path):
+        if entry.is_dir(follow_symlinks=False):
+            yield from scantree(entry.path)  # see below for Python 2.x
+        else:
+            yield entry
+            
+def get_image_paths(dir_path, image_extensions=image_extensions, subdirs=False):
     dir_path = Path (dir_path)
 
     result = []
     if dir_path.exists():
-        for x in list(scandir(str(dir_path))):
+        
+        if subdirs:
+            gen = scantree(str(dir_path))
+        else:
+            gen = scandir(str(dir_path))
+        
+        for x in list(gen):
             if any([x.name.lower().endswith(ext) for ext in image_extensions]):
                 result.append(x.path)
     return sorted(result)

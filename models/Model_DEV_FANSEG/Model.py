@@ -1,9 +1,8 @@
 import numpy as np
 
-from nnlib import nnlib
+from nnlib import nnlib, TernausNet
 from models import ModelBase
 from facelib import FaceType
-from facelib import FANSegmentator
 from samplelib import *
 from interact import interact as io
 
@@ -29,17 +28,18 @@ class Model(ModelBase):
     #override
     def onInitialize(self):
         exec(nnlib.import_all(), locals(), globals())
-        self.set_vram_batch_requirements( {1.5:4} )
+        self.set_vram_batch_requirements( {1.5:4, 11:48} )
 
         self.resolution = 256
         self.face_type = FaceType.FULL if self.options['face_type'] == 'f' else FaceType.HALF
 
-        
-        self.fan_seg = FANSegmentator(self.resolution, 
-                                      FaceType.toString(self.face_type), 
-                                      load_weights=not self.is_first_run(),
-                                      weights_file_root=self.get_model_root_path(),
-                                      training=True)
+        model_name = 'FANSeg'
+        model_name = 'FANCHQ'
+        self.fan_seg = TernausNet(model_name, self.resolution, 
+                                            FaceType.toString(self.face_type), 
+                                            load_weights=not self.is_first_run(),
+                                            weights_file_root=self.get_model_root_path(),
+                                            training=True)
 
         if self.is_training_mode:
             t = SampleProcessor.Types
@@ -48,13 +48,13 @@ class Model(ModelBase):
             self.set_training_data_generators ([    
                     SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size, 
                             sample_process_options=SampleProcessor.Options(random_flip=True), 
-                            output_sample_types=[ { 'types': (t.IMG_WARPED_TRANSFORMED, face_type, t.MODE_BGR_SHUFFLE), 'resolution' : self.resolution, 'motion_blur':(25, 5), 'border_replicate':False },
+                            output_sample_types=[ { 'types': (t.IMG_WARPED_TRANSFORMED, face_type, t.MODE_BGR), 'resolution' : self.resolution, 'motion_blur':(25, 5),  'gaussian_blur':(25,5), 'border_replicate':False, 'random_hsv_shift' : True },
                                                   { 'types': (t.IMG_WARPED_TRANSFORMED, face_type, t.MODE_M), 'resolution': self.resolution },
                                                 ]),
                                                 
                     SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size, 
                             sample_process_options=SampleProcessor.Options(random_flip=True ), 
-                            output_sample_types=[ { 'types': (t.IMG_TRANSFORMED , face_type, t.MODE_BGR_SHUFFLE), 'resolution' : self.resolution},
+                            output_sample_types=[ { 'types': (t.IMG_TRANSFORMED , face_type, t.MODE_BGR), 'resolution' : self.resolution, 'random_hsv_shift' : True},
                                                 ])
                                                ])
                 
@@ -73,11 +73,14 @@ class Model(ModelBase):
     #override
     def onGetPreview(self, sample):
         test_A      = sample[0][0][0:4] #first 4 samples
+        test_Am     = sample[0][1][0:4] #first 4 samples
         test_B      = sample[1][0][0:4] #first 4 samples
+        
         
         mAA = self.fan_seg.extract(test_A)
         mBB = self.fan_seg.extract(test_B)
 
+        test_Am = np.repeat ( test_Am, (3,), -1)
         mAA = np.repeat ( mAA, (3,), -1)
         mBB = np.repeat ( mBB, (3,), -1)
         
@@ -85,6 +88,7 @@ class Model(ModelBase):
         for i in range(0, len(test_A)):
             st.append ( np.concatenate ( (
                 test_A[i,:,:,0:3],
+                test_Am[i],
                 mAA[i],
                 test_A[i,:,:,0:3]*mAA[i],
                 ), axis=1) )
@@ -92,7 +96,7 @@ class Model(ModelBase):
         st2 = []
         for i in range(0, len(test_B)):
             st2.append ( np.concatenate ( (
-                test_B[i,:,:,0:3],
+                test_B[i,:,:,0:3],                
                 mBB[i],
                 test_B[i,:,:,0:3]*mBB[i],
                 ), axis=1) )

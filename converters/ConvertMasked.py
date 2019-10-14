@@ -56,14 +56,14 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
 
     if cfg.mask_mode == 2: #dst
         prd_face_mask_a_0 = cv2.resize (dst_face_mask_a_0, (output_size,output_size), cv2.INTER_CUBIC)
-    elif cfg.mask_mode >= 3 and cfg.mask_mode <= 7:
+    elif cfg.mask_mode >= 3 and cfg.mask_mode <= 8:
 
         if cfg.mask_mode == 3 or cfg.mask_mode == 5 or cfg.mask_mode == 6:
             prd_face_fanseg_bgr = cv2.resize (prd_face_bgr, (cfg.fanseg_input_size,)*2 )
             prd_face_fanseg_mask = cfg.fanseg_extract_func(FaceType.FULL, prd_face_fanseg_bgr)
             FAN_prd_face_mask_a_0 = cv2.resize ( prd_face_fanseg_mask, (output_size, output_size), cv2.INTER_CUBIC)
 
-        if cfg.mask_mode >= 4 or cfg.mask_mode <= 7:
+        if cfg.mask_mode >= 4 and cfg.mask_mode <= 7:
 
             full_face_fanseg_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, cfg.fanseg_input_size, face_type=FaceType.FULL)
             dst_face_fanseg_bgr = cv2.warpAffine(img_bgr, full_face_fanseg_mat, (cfg.fanseg_input_size,)*2, flags=cv2.INTER_CUBIC )
@@ -80,9 +80,24 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
                 m = cv2.getAffineTransform(b, fanseg_rect_corner_pts)
                 FAN_dst_face_mask_a_0 = cv2.warpAffine(dst_face_fanseg_mask, m, (cfg.fanseg_input_size,)*2, flags=cv2.INTER_CUBIC )
                 FAN_dst_face_mask_a_0 = cv2.resize (FAN_dst_face_mask_a_0, (output_size,output_size), cv2.INTER_CUBIC)
-            #else:
-            #    raise ValueError ("cfg.face_type unsupported")
+        """
+        if cfg.mask_mode == 8: #FANCHQ-dst
+            full_face_fanchq_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, cfg.fanchq_input_size, face_type=FaceType.FULL)
+            dst_face_fanchq_bgr = cv2.warpAffine(img_bgr, full_face_fanchq_mat, (cfg.fanchq_input_size,)*2, flags=cv2.INTER_CUBIC )
+            dst_face_fanchq_mask = cfg.fanchq_extract_func( FaceType.FULL, dst_face_fanchq_bgr )
+            
+            if cfg.face_type == FaceType.FULL:
+                FANCHQ_dst_face_mask_a_0 = cv2.resize (dst_face_fanchq_mask, (output_size,output_size), cv2.INTER_CUBIC)
+            else:
+                face_fanchq_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, cfg.fanchq_input_size, face_type=cfg.face_type)
 
+                fanchq_rect_corner_pts = np.array ( [ [0,0], [cfg.fanchq_input_size-1,0], [0,cfg.fanchq_input_size-1] ], dtype=np.float32 )
+                a = LandmarksProcessor.transform_points (fanchq_rect_corner_pts, face_fanchq_mat, invert=True )
+                b = LandmarksProcessor.transform_points (a, full_face_fanchq_mat )
+                m = cv2.getAffineTransform(b, fanchq_rect_corner_pts)
+                FAN_dst_face_mask_a_0 = cv2.warpAffine(dst_face_fanchq_mask, m, (cfg.fanchq_input_size,)*2, flags=cv2.INTER_CUBIC )
+                FAN_dst_face_mask_a_0 = cv2.resize (FAN_dst_face_mask_a_0, (output_size,output_size), cv2.INTER_CUBIC)
+        """
         if cfg.mask_mode == 3:   #FAN-prd
             prd_face_mask_a_0 = FAN_prd_face_mask_a_0
         elif cfg.mask_mode == 4: #FAN-dst
@@ -93,7 +108,9 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
             prd_face_mask_a_0 = prd_face_mask_a_0 * FAN_prd_face_mask_a_0 * FAN_dst_face_mask_a_0
         elif cfg.mask_mode == 7:
             prd_face_mask_a_0 = prd_face_mask_a_0 * FAN_dst_face_mask_a_0
-
+        #elif cfg.mask_mode == 8: #FANCHQ-dst
+        #    prd_face_mask_a_0 = FANCHQ_dst_face_mask_a_0
+            
     prd_face_mask_a_0[ prd_face_mask_a_0 < 0.001 ] = 0.0
 
     prd_face_mask_a   = prd_face_mask_a_0[...,np.newaxis]

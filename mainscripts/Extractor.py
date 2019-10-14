@@ -14,10 +14,10 @@ import numpy as np
 import facelib
 import imagelib
 import mathlib
-from facelib import FaceType, FANSegmentator, LandmarksProcessor
+from facelib import FaceType, LandmarksProcessor
 from interact import interact as io
 from joblib import Subprocessor
-from nnlib import nnlib
+from nnlib import TernausNet, nnlib
 from utils import Path_utils
 from utils.cv2_utils import *
 from utils.DFLJPG import DFLJPG
@@ -95,7 +95,7 @@ class ExtractSubprocessor(Subprocessor):
                     
             elif self.type == 'fanseg':
                 nnlib.import_all (device_config)
-                self.e = facelib.FANSegmentator(256, FaceType.toString(FaceType.FULL) )
+                self.e = TernausNet(256, FaceType.toString(FaceType.FULL) )
                 self.e.__enter__()
                     
             elif self.type == 'final':
@@ -279,7 +279,6 @@ class ExtractSubprocessor(Subprocessor):
                     fanseg_mask = self.e.extract( image / 255.0 )
                     src_dflimg.embed_and_set( filename_path_str, 
                                               fanseg_mask=fanseg_mask,
-                                              #fanseg_mask_ver=FANSegmentator.VERSION,
                                               )
         
         #overridable
@@ -889,4 +888,3 @@ def extract_umd_csv(input_file_csv,
     io.log_info ('Images found:        %d' % (images_found) )
     io.log_info ('Faces detected:      %d' % (faces_detected) )
     io.log_info ('-------------------------')
-

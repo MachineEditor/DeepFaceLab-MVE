@@ -78,6 +78,16 @@ if __name__ == "__main__":
     p.add_argument('--multi-gpu', action="store_true", dest="multi_gpu", default=False, help="Enables multi GPU.")
     p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Extract on CPU.")
     p.set_defaults (func=process_dev_extract_umd_csv)
+    
+    
+    def process_dev_apply_celebamaskhq(arguments):
+        os_utils.set_process_lowest_prio()
+        from mainscripts import dev_misc
+        dev_misc.apply_celebamaskhq( arguments.input_dir )
+
+    p = subparsers.add_parser( "dev_apply_celebamaskhq", help="")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
+    p.set_defaults (func=process_dev_apply_celebamaskhq)
     """
     def process_extract_fanseg(arguments):
         os_utils.set_process_lowest_prio()

@@ -21,6 +21,9 @@ class ConverterConfig(object):
         self.blursharpen_func = None
         self.fanseg_input_size = None
         self.fanseg_extract_func = None
+        
+        self.fanchq_input_size = None
+        self.fanchq_extract_func = None
         self.ebs_ct_func = None
 
         self.super_res_dict = {0:"None", 1:'RankSRGAN'}
