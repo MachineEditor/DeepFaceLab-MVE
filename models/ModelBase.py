@@ -125,7 +125,7 @@ class ModelBase(object):
         if ask_random_flip:
             default_random_flip = self.options.get('random_flip', True)
             if (self.iter == 0 or ask_override):
-                self.options['random_flip'] = io.input_bool(f"Flip faces randomly? (y/n ?:help skip:{yn_str[default_random_flip]}) : ", True, help_message="Predicted face will look more naturally without this option, but src faceset should cover all face directions as dst faceset.")
+                self.options['random_flip'] = io.input_bool(f"Flip faces randomly? (y/n ?:help skip:{yn_str[default_random_flip]}) : ", default_random_flip, help_message="Predicted face will look more naturally without this option, but src faceset should cover all face directions as dst faceset.")
             else:
                 self.options['random_flip'] = self.options.get('random_flip', default_random_flip)
 
