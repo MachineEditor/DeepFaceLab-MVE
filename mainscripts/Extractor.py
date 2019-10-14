@@ -153,7 +153,7 @@ class ExtractSubprocessor(Subprocessor):
                         elif rot == 270:
                             rotated_image = image.swapaxes( 0,1 )[::-1,:,:]
 
-                        rects = data.rects = self.e.extract (rotated_image, is_bgr=True, is_remove_intersects=True)
+                        rects = data.rects = self.e.extract (rotated_image, is_bgr=True)
                         if len(rects) != 0:
                             break
                         
