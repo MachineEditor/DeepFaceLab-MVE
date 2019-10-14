@@ -39,7 +39,6 @@ class FANExtractor(object):
             input_image = input_image[:,:,::-1]
             is_bgr = False
 
-
         (h, w, ch) = input_image.shape
 
         landmarks = []
@@ -64,12 +63,10 @@ class FANExtractor(object):
                     images += [ self.crop(input_image, c, scale)  ]
 
                 images = np.stack (images)
-
                 predicted = self.model.predict (images.astype(np.float32) / 255.0).transpose (0,3,1,2)
 
                 for i, pred in enumerate(predicted):
                     ptss += [ self.get_pts_from_predict ( pred, centers[i], scale) ]
-
                 pts_img = np.mean ( np.array(ptss), 0 )
 
                 landmarks.append (pts_img)
@@ -77,10 +74,7 @@ class FANExtractor(object):
                 landmarks.append (None)
 
         if second_pass_extractor is not None:
-            new_landmarks = []
-            
-            for lmrks in landmarks:
-                new_landmarks += [None]
+            for i, lmrks in enumerate(landmarks):
                 try:
                     if lmrks is not None:
                         image_to_face_mat = LandmarksProcessor.get_transform_mat (lmrks, 256, FaceType.FULL)
@@ -89,25 +83,9 @@ class FANExtractor(object):
                         rects2 = second_pass_extractor.extract(face_image, is_bgr=is_bgr)
                         if len(rects2) == 1: #dont do second pass if faces != 1 detected in cropped image
                             lmrks2 = self.extract (face_image, [ rects2[0] ], is_bgr=is_bgr, multi_sample=True)[0]
-                            new_landmarks[-1] = LandmarksProcessor.transform_points (lmrks2, image_to_face_mat, True)
+                            landmarks[i] = LandmarksProcessor.transform_points (lmrks2, image_to_face_mat, True)
                 except:
                     pass
-                
-            for i, new_lmrks in enumerate(new_landmarks):
-                mat = LandmarksProcessor.get_transform_mat (new_lmrks, 256, FaceType.FULL)
-                center, p1,p2 = LandmarksProcessor.transform_points ([ [127,127], [0,0], [0,255] ], mat, True)
-                p_dist = npla.norm(p2-p1)
-                
-                for j, other_lmrks in enumerate(landmarks):
-                    if i != j:
-                        other_mat = LandmarksProcessor.get_transform_mat (new_lmrks, 256, FaceType.FULL)
-                        other_center = LandmarksProcessor.transform_points ([ [127,127] ], other_mat, True)         
-                    
-                        dist = npla.norm (other_center - center)
-                        if dist < p_dist*0.25:
-                            break
-                else:
-                    landmarks[i] = new_lmrks
 
         return landmarks
 
