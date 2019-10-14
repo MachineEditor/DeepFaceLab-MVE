@@ -4,6 +4,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+from numpy import linalg as npla
 
 from facelib import FaceType, LandmarksProcessor
 from nnlib import nnlib
@@ -76,24 +77,37 @@ class FANExtractor(object):
                 landmarks.append (None)
 
         if second_pass_extractor is not None:
-            for i in range(len(landmarks)):
+            new_landmarks = []
+            
+            for lmrks in landmarks:
+                new_landmarks += [None]
                 try:
-                    lmrks = landmarks[i]
-                    if lmrks is None:
-                        continue
+                    if lmrks is not None:
+                        image_to_face_mat = LandmarksProcessor.get_transform_mat (lmrks, 256, FaceType.FULL)
+                        face_image = cv2.warpAffine(input_image, image_to_face_mat, (256, 256), cv2.INTER_CUBIC )
 
-                    image_to_face_mat = LandmarksProcessor.get_transform_mat (lmrks, 256, FaceType.FULL)
-                    face_image = cv2.warpAffine(input_image, image_to_face_mat, (256, 256), cv2.INTER_CUBIC )
-
-                    rects2 = second_pass_extractor.extract(face_image, is_bgr=is_bgr)
-                    if len(rects2) != 1: #dont do second pass if faces != 1 detected in cropped image
-                        continue
-
-                    lmrks2 = self.extract (face_image, [ rects2[0] ], is_bgr=is_bgr, multi_sample=True)[0]
-                    source_lmrks2 = LandmarksProcessor.transform_points (lmrks2, image_to_face_mat, True)
-                    landmarks[i] = source_lmrks2
+                        rects2 = second_pass_extractor.extract(face_image, is_bgr=is_bgr)
+                        if len(rects2) == 1: #dont do second pass if faces != 1 detected in cropped image
+                            lmrks2 = self.extract (face_image, [ rects2[0] ], is_bgr=is_bgr, multi_sample=True)[0]
+                            new_landmarks[-1] = LandmarksProcessor.transform_points (lmrks2, image_to_face_mat, True)
                 except:
-                    continue
+                    pass
+                
+            for i, new_lmrks in enumerate(new_landmarks):
+                mat = LandmarksProcessor.get_transform_mat (new_lmrks, 256, FaceType.FULL)
+                center, p1,p2 = LandmarksProcessor.transform_points ([ [127,127], [0,0], [0,255] ], mat, True)
+                p_dist = npla.norm(p2-p1)
+                
+                for j, other_lmrks in enumerate(landmarks):
+                    if i != j:
+                        other_mat = LandmarksProcessor.get_transform_mat (new_lmrks, 256, FaceType.FULL)
+                        other_center = LandmarksProcessor.transform_points ([ [127,127] ], other_mat, True)         
+                    
+                        dist = npla.norm (other_center - center)
+                        if dist < p_dist*0.25:
+                            break
+                else:
+                    landmarks[i] = new_lmrks
 
         return landmarks
 
