@@ -76,7 +76,7 @@ class SAEHDModel(ModelBase):
             self.options['bg_style_power'] = np.clip ( io.input_number("Background style power ( 0.0 .. 100.0 ?:help skip:%.2f) : " % (default_bg_style_power), default_bg_style_power,
                                                                                help_message="Learn to transfer image around face. This can make face more like dst. Enabling this option increases the chance of model collapse."), 0.0, 100.0 )
 
-            default_ct_mode = False if is_first_run else self.options.get('ct_mode', 'none')
+            default_ct_mode = self.options.get('ct_mode', 'none')
             self.options['ct_mode'] = io.input_str (f"Color transfer mode apply to src faceset. ( none/rct/lct/mkl/idt, ?:help skip:{default_ct_mode}) : ", default_ct_mode, ['none','rct','lct','mkl','idt'], help_message="Change color distribution of src samples close to dst samples. Try all modes to find the best.")
             
             if nnlib.device.backend != 'plaidML': # todo https://github.com/plaidml/plaidml/issues/301
