@@ -37,7 +37,7 @@ opts:
 
     'resolution' : N
     'motion_blur' : (chance_int, range) - chance 0..100 to apply to face (not mask), and max_size of motion blur
-    'apply_ct' : bool
+    'ct_mode' : 
     'normalize_tanh' : bool
 
 """
@@ -125,7 +125,7 @@ class SampleProcessor(object):
             gaussian_blur = opts.get('gaussian_blur', None)
             
             random_hsv_shift = opts.get('random_hsv_shift', None)
-            apply_ct = opts.get('apply_ct', False)
+            ct_mode = opts.get('ct_mode', 'None')
             normalize_tanh = opts.get('normalize_tanh', False)
 
             img_type = SPTF.NONE
@@ -244,14 +244,23 @@ class SampleProcessor(object):
                 img_bgr  = img[...,0:3]
                 img_mask = img[...,3:4]
 
-                if apply_ct and ct_sample is not None:
+                if ct_mode is not None and ct_sample is not None:
                     if ct_sample_bgr is None:
                         ct_sample_bgr = ct_sample.load_bgr()
 
                     ct_sample_bgr_resized = cv2.resize( ct_sample_bgr, (resolution,resolution), cv2.INTER_LINEAR )
 
-                    img_bgr = imagelib.linear_color_transfer (img_bgr, ct_sample_bgr_resized)
-                    img_bgr = np.clip( img_bgr, 0.0, 1.0)
+                    if ct_mode == 'lct':
+                        img_bgr = imagelib.linear_color_transfer (img_bgr, ct_sample_bgr_resized)
+                        img_bgr = np.clip( img_bgr, 0.0, 1.0)
+                    elif ct_mode == 'rct':
+                        img_bgr = imagelib.reinhard_color_transfer ( np.clip( (img_bgr*255).astype(np.uint8), 0, 255),
+                                                                     np.clip( (ct_sample_bgr_resized*255).astype(np.uint8), 0, 255) )
+                        img_bgr = np.clip( img_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
+                    elif ct_mode == 'mkl':                    
+                        img_bgr = imagelib.color_transfer_mkl (img_bgr, ct_sample_bgr_resized)
+                    elif ct_mode == 'idt':
+                        img_bgr = imagelib.color_transfer_idt (img_bgr, ct_sample_bgr_resized)
                     
                 if random_hsv_shift:
                     rnd_state = np.random.RandomState (sample_rnd_seed)
