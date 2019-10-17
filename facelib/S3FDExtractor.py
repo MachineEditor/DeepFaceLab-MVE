@@ -15,6 +15,8 @@ class S3FDExtractor(object):
             return None
 
         self.model = nnlib.keras.models.load_model ( str(model_path) )
+        
+        self.extract ( np.zeros( (1080,1920,3), dtype=np.uint8) )
 
     def __enter__(self):
         return self
