@@ -158,7 +158,7 @@ class ExtractSubprocessor(Subprocessor):
                             break
                         
                     if self.max_faces_from_image != 0 and len(data.rects) > 1:
-                        data.rects = x[0:self.max_faces_from_image]
+                        data.rects = data.rects[0:self.max_faces_from_image]
 
                 return data
 
