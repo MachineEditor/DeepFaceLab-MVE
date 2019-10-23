@@ -112,7 +112,7 @@ if __name__ == "__main__":
 
     p = subparsers.add_parser( "sort", help="Sort faces in a directory.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
-    p.add_argument('--by', required=True, dest="sort_by_method", choices=("blur", "face", "face-dissim", "face-yaw", "face-pitch", "hist", "hist-dissim", "brightness", "hue", "black", "origname", "oneface", "final", "final-no-blur", "test"), help="Method of sorting. 'origname' sort by original filename to recover original sequence." )
+    p.add_argument('--by', required=True, dest="sort_by_method", choices=("blur", "face", "face-dissim", "face-yaw", "face-pitch", "hist", "hist-dissim", "brightness", "hue", "black", "origname", "oneface", "final", "final-no-blur", "vggface", "test"), help="Method of sorting. 'origname' sort by original filename to recover original sequence." )
     p.set_defaults (func=process_sort)
 
     def process_util(arguments):

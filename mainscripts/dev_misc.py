@@ -37,6 +37,10 @@ def extract_vggface2_dataset(input_dir, device_args={} ):
         
         cur_input_path = input_path / dir_name
         cur_output_path = output_path / dir_name
+        
+        l = len(Path_utils.get_image_paths(cur_input_path))
+        if l < 250 or l > 350:
+            continue
 
         io.log_info (f"Processing: {str(cur_input_path)} ")
         

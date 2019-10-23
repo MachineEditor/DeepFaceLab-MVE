@@ -42,7 +42,7 @@ class FUNITModel(ModelBase):
     #override
     def onInitialize(self, batch_size=-1, **in_options):
         exec(nnlib.code_import_all, locals(), globals())
-        self.set_vram_batch_requirements({4:16})
+        self.set_vram_batch_requirements({4:16,11:24})
 
         resolution = self.options['resolution']
         face_type = FaceType.FULL if self.options['face_type'] == 'f' else FaceType.HALF
@@ -75,7 +75,8 @@ class FUNITModel(ModelBase):
             face_type = t.FACE_TYPE_FULL if self.options['face_type'] == 'f' else t.FACE_TYPE_HALF
             
             output_sample_types=[ {'types': (t.IMG_TRANSFORMED, face_type, t.MODE_BGR), 'resolution':128, 'normalize_tanh':True} ]
-
+            output_sample_types1=[ {'types': (t.IMG_SOURCE, face_type, t.MODE_BGR), 'resolution':128, 'normalize_tanh':True} ]
+            
             self.set_training_data_generators ([
                         SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size,
                             sample_process_options=SampleProcessor.Options(random_flip=True),
@@ -87,11 +88,11 @@ class FUNITModel(ModelBase):
 
                         SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size,
                             sample_process_options=SampleProcessor.Options(random_flip=True),
-                            output_sample_types=output_sample_types, person_id_mode=True ),
+                            output_sample_types=output_sample_types1, person_id_mode=True ),
 
                         SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size,
                             sample_process_options=SampleProcessor.Options(random_flip=True),
-                            output_sample_types=output_sample_types, person_id_mode=True ),
+                            output_sample_types=output_sample_types1, person_id_mode=True ),
                     ])
 
     #override

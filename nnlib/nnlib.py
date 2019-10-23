@@ -63,6 +63,7 @@ UpSampling2D = KL.UpSampling2D
 BatchNormalization = KL.BatchNormalization
 PixelNormalization = nnlib.PixelNormalization
 
+Activation = KL.Activation
 LeakyReLU = KL.LeakyReLU
 ELU = KL.ELU
 ReLU = KL.ReLU
