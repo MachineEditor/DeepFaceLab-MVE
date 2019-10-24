@@ -627,6 +627,9 @@ def draw_rect_landmarks (image, rect, image_landmarks, face_size, face_type, tra
     image_to_face_mat = get_transform_mat (image_landmarks, face_size, face_type)
     points = transform_points ( [ (0,0), (0,face_size-1), (face_size-1, face_size-1), (face_size-1,0) ], image_to_face_mat, True)
     imagelib.draw_polygon (image, points, (0,0,255), 2)
+    
+    points = transform_points ( [ ( int(face_size*0.05), 0), ( int(face_size*0.1), int(face_size*0.1) ), ( 0, int(face_size*0.1) ) ], image_to_face_mat, True)
+    imagelib.draw_polygon (image, points, (0,0,255), 2)
 
 def calc_face_pitch(landmarks):
     if not isinstance(landmarks, np.ndarray):
