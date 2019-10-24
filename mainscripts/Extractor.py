@@ -76,7 +76,7 @@ class ExtractSubprocessor(Subprocessor):
                     self.e = facelib.DLIBExtractor(nnlib.dlib)
                 elif self.type == 'rects-s3fd':
                     nnlib.import_all (device_config)
-                    self.e = facelib.S3FDExtractor()
+                    self.e = facelib.S3FDExtractor(do_dummy_predict=True)
                 else:
                     raise ValueError ("Wrong type.")
 
@@ -88,7 +88,7 @@ class ExtractSubprocessor(Subprocessor):
                 self.e = facelib.FANExtractor()
                 self.e.__enter__()
                 if self.device_vram >= 2:
-                    self.second_pass_e = facelib.S3FDExtractor()
+                    self.second_pass_e = facelib.S3FDExtractor(do_dummy_predict=False)
                     self.second_pass_e.__enter__()
                 else:
                     self.second_pass_e = None

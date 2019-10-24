@@ -7,7 +7,7 @@ import numpy as np
 from nnlib import nnlib
 
 class S3FDExtractor(object):
-    def __init__(self):
+    def __init__(self, do_dummy_predict=False):
         exec( nnlib.import_all(), locals(), globals() )
 
         model_path = Path(__file__).parent / "S3FD.h5"
@@ -16,7 +16,8 @@ class S3FDExtractor(object):
 
         self.model = nnlib.keras.models.load_model ( str(model_path) )
         
-        self.extract ( np.zeros( (1080,1920,3), dtype=np.uint8) )
+        if do_dummy_predict:
+            self.extract ( np.zeros( (640,640,3), dtype=np.uint8) )
 
     def __enter__(self):
         return self
