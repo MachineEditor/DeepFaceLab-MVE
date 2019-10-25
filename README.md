@@ -38,6 +38,8 @@ bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr
 
 - ### Communication groups:
 
+[mrdeepfakes (English)](https://mrdeepfakes.com/forums/) - the biggest SFW and NSFW community
+
 (Chinese) QQ group 951138799 for ML/AI experts
 
 [deepfakes (Chinese)](https://deepfakescn.com)
