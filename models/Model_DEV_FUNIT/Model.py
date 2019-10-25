@@ -22,14 +22,16 @@ class FUNITModel(ModelBase):
 
     #override
     def onInitializeOptions(self, is_first_run, ask_override):
-        default_face_type = 'f'
+        
+        default_resolution = 96
         if is_first_run:
-            self.options['resolution'] = io.input_int("Resolution ( 128,224 ?:help skip:128) : ", 128, [128,224])
+            self.options['resolution'] = io.input_int(f"Resolution ( 96,128,224 ?:help skip:{default_resolution}) : ", default_resolution, [128,224])
         else:
-            self.options['resolution'] = self.options.get('resolution', 128)
+            self.options['resolution'] = self.options.get('resolution', default_resolution)
 
+        default_face_type = 'mf'
         if is_first_run:
-            self.options['face_type'] = io.input_str ("Half or Full face? (h/f, ?:help skip:f) : ", default_face_type, ['h','f'], help_message="").lower()
+            self.options['face_type'] = io.input_str (f"Half or Full face? (h/mf/f, ?:help skip:{default_face_type}) : ", default_face_type, ['h','mf','f'], help_message="").lower()
         else:
             self.options['face_type'] = self.options.get('face_type', default_face_type)
             
@@ -59,7 +61,7 @@ class FUNITModel(ModelBase):
                             class_latent=64,
                             mlp_blks=2,
                             dis_nf=64,
-                            dis_res_blks=10,
+                            dis_res_blks=8,#10
                             num_classes=person_id_max_count,
                             subpixel_decoder=True,
                             initialize_weights=self.is_first_run(),     
@@ -72,26 +74,31 @@ class FUNITModel(ModelBase):
             
         if self.is_training_mode:
             t = SampleProcessor.Types
-            face_type = t.FACE_TYPE_FULL if self.options['face_type'] == 'f' else t.FACE_TYPE_HALF
+            if self.options['face_type'] == 'h':
+                face_type = t.FACE_TYPE_HALF
+            elif self.options['face_type'] == 'mf':
+                face_type = t.FACE_TYPE_MID_FULL
+            elif self.options['face_type'] == 'f':
+                face_type = t.FACE_TYPE_FULL
             
-            output_sample_types=[ {'types': (t.IMG_TRANSFORMED, face_type, t.MODE_BGR), 'resolution':128, 'normalize_tanh':True} ]
-            output_sample_types1=[ {'types': (t.IMG_SOURCE, face_type, t.MODE_BGR), 'resolution':128, 'normalize_tanh':True} ]
+            output_sample_types=[ {'types': (t.IMG_TRANSFORMED, face_type, t.MODE_BGR), 'resolution':resolution, 'normalize_tanh':True} ]
+            output_sample_types1=[ {'types': (t.IMG_SOURCE, face_type, t.MODE_BGR), 'resolution':resolution, 'normalize_tanh':True} ]
             
             self.set_training_data_generators ([
                         SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size,
-                            sample_process_options=SampleProcessor.Options(random_flip=True),
+                            sample_process_options=SampleProcessor.Options(random_flip=True, rotation_range=[0,0] ),
                             output_sample_types=output_sample_types, person_id_mode=True ),
 
                         SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size,
-                            sample_process_options=SampleProcessor.Options(random_flip=True),
+                            sample_process_options=SampleProcessor.Options(random_flip=True, rotation_range=[0,0] ),
                             output_sample_types=output_sample_types, person_id_mode=True ),
 
                         SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size,
-                            sample_process_options=SampleProcessor.Options(random_flip=True),
+                            sample_process_options=SampleProcessor.Options(random_flip=True, rotation_range=[0,0]),
                             output_sample_types=output_sample_types1, person_id_mode=True ),
 
                         SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size,
-                            sample_process_options=SampleProcessor.Options(random_flip=True),
+                            sample_process_options=SampleProcessor.Options(random_flip=True, rotation_range=[0,0]),
                             output_sample_types=output_sample_types1, person_id_mode=True ),
                     ])
 
