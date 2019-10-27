@@ -542,7 +542,8 @@ class ExtractSubprocessor(Subprocessor):
     def on_result (self, host_dict, data, result):
         if self.manual == True:
             filename, landmarks = result.filename, result.landmarks
-            if len(landmarks) != 0:
+            
+            if len(landmarks) != 0 and landmarks[0] is not None:
                 self.landmarks = landmarks[0]
 
             (h,w,c) = self.image.shape
