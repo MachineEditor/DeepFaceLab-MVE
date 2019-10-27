@@ -63,7 +63,13 @@ class FANExtractor(object):
                     images += [ self.crop(input_image, c, scale)  ]
 
                 images = np.stack (images)
-                predicted = self.model.predict (images.astype(np.float32) / 255.0).transpose (0,3,1,2)
+                images = images.astype(np.float32) / 255.0                
+
+                predicted = []
+                for i in range( len(images) ):
+                    predicted += [ self.model.predict ( images[i][None,...] ).transpose (0,3,1,2)[0] ]
+
+                predicted = np.stack(predicted)                    
 
                 for i, pred in enumerate(predicted):
                     ptss += [ self.get_pts_from_predict ( pred, centers[i], scale) ]
