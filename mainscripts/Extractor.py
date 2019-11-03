@@ -618,10 +618,8 @@ class ExtractSubprocessor(Subprocessor):
                     count = 1
                     
                     if not manual:
-                        if (type == 'rects-dlib' or type == 'rects-mt' ):
+                        if (type == 'rects-mt' ):
                             count = int (max (1, dev_vram / 2) )
-                        if type == 'rects-s3fd':
-                            count = int (max (1, dev_vram / 5) )
                             
                     if count == 1:
                         result += [ (idx, 'GPU', dev_name, dev_vram) ]
