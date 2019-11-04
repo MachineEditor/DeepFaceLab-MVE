@@ -107,8 +107,8 @@ half_face_mask_mode_dict = {1:'learned',
                                     4:'FAN-dst',
                                     7:'learned*FAN-dst'}
 
-ctm_dict = { 0: "None", 1:"rct", 2:"lct", 3:"mkl", 4:"mkl-m", 5:"idt", 6:"idt-m", 7:"ebs" }
-ctm_str_dict = {None:0, "rct":1, "lct":2, "mkl":3, "mkl-m":4, "idt":5, "idt-m":6, "ebs":7 }
+ctm_dict = { 0: "None", 1:"rct", 2:"lct", 3:"mkl", 4:"mkl-m", 5:"idt", 6:"idt-m" }
+ctm_str_dict = {None:0, "rct":1, "lct":2, "mkl":3, "mkl-m":4, "idt":5, "idt-m":6 }
 
 class ConverterConfigMasked(ConverterConfig):
 
@@ -221,7 +221,7 @@ class ConverterConfigMasked(ConverterConfig):
         self.output_face_scale = np.clip (io.input_int ("Choose output face scale modifier [-50..50] (skip:0) : ", 0), -50, 50)
 
         if 'raw' not in self.mode:
-            self.color_transfer_mode = io.input_str ("Apply color transfer to predicted face? Choose mode ( rct/lct/ebs skip:None ) : ", None, ctm_str_dict.keys() )
+            self.color_transfer_mode = io.input_str ( f"Apply color transfer to predicted face? Choose mode ( {' / '.join ([str(x) for x in list(ctm_str_dict.keys())])} skip:None ) : ", None, ctm_str_dict.keys() )
             self.color_transfer_mode = ctm_str_dict[self.color_transfer_mode]
 
         super().ask_settings()

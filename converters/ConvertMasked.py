@@ -208,7 +208,7 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
                 elif cfg.color_transfer_mode == 6: #idt-m
                     prd_face_bgr = imagelib.color_transfer_idt (prd_face_bgr*prd_face_mask_a, dst_face_bgr*prd_face_mask_a)
 
-                elif cfg.color_transfer_mode == 7: #ebs
+                elif cfg.color_transfer_mode == 7: #ebs, currently unused
                     prd_face_bgr = cfg.ebs_ct_func ( np.clip( (dst_face_bgr*255), 0, 255).astype(np.uint8),
                                                      np.clip( (prd_face_bgr*255), 0, 255).astype(np.uint8),  )#prd_face_mask_a
                     prd_face_bgr = np.clip( prd_face_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
