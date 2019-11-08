@@ -98,10 +98,14 @@ def denoise_image_sequence( input_dir, ext=None, factor=None ):
     if factor is None:
         factor = np.clip ( io.input_int ("Denoise factor? (1-20 default:5) : ", 5), 1, 20 )
 
+    kwargs = {}
+    if ext == 'jpg':
+        kwargs.update ({'q:v':'2'})
+        
     job = ( ffmpeg
             .input(str ( input_path / ('%5d.'+ext) ) )
             .filter("hqdn3d", factor, factor, 5,5)
-            .output(str ( input_path / ('%5d.'+ext) ) )
+            .output(str ( input_path / ('%5d.'+ext) ), **kwargs )
            )
 
     try:
