@@ -8,10 +8,8 @@ from facelib import FaceType, LandmarksProcessor
 from interact import interact as io
 from utils.cv2_utils import *
 
-
 def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img_bgr_uint8, img_bgr, img_face_landmarks):
     img_size = img_bgr.shape[1], img_bgr.shape[0]
-
     img_face_mask_a = LandmarksProcessor.get_image_hull_mask (img_bgr.shape, img_face_landmarks)
 
     if cfg.mode == 'original':
@@ -85,7 +83,7 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
             full_face_fanchq_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, cfg.fanchq_input_size, face_type=FaceType.FULL)
             dst_face_fanchq_bgr = cv2.warpAffine(img_bgr, full_face_fanchq_mat, (cfg.fanchq_input_size,)*2, flags=cv2.INTER_CUBIC )
             dst_face_fanchq_mask = cfg.fanchq_extract_func( FaceType.FULL, dst_face_fanchq_bgr )
-            
+
             if cfg.face_type == FaceType.FULL:
                 FANCHQ_dst_face_mask_a_0 = cv2.resize (dst_face_fanchq_mask, (output_size,output_size), cv2.INTER_CUBIC)
             else:
@@ -110,7 +108,7 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
             prd_face_mask_a_0 = prd_face_mask_a_0 * FAN_dst_face_mask_a_0
         #elif cfg.mask_mode == 8: #FANCHQ-dst
         #    prd_face_mask_a_0 = FANCHQ_dst_face_mask_a_0
-            
+
     prd_face_mask_a_0[ prd_face_mask_a_0 < 0.001 ] = 0.0
 
     prd_face_mask_a   = prd_face_mask_a_0[...,np.newaxis]
@@ -231,7 +229,7 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
                 hist_match_2 = dst_face_bgr*hist_mask_a + white
                 hist_match_2[ hist_match_1 > 1.0 ] = 1.0
 
-                prd_face_bgr = imagelib.color_hist_match(hist_match_1, hist_match_2, cfg.hist_match_threshold )
+                prd_face_bgr = imagelib.color_hist_match(hist_match_1, hist_match_2, cfg.hist_match_threshold ).astype(dtype=np.float32)
 
             if cfg.mode == 'hist-match-bw':
                 prd_face_bgr = prd_face_bgr.astype(dtype=np.float32)
@@ -254,13 +252,11 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
                     break
 
             if cfg.mode == 'seamless2':
-
                 face_seamless = imagelib.seamless_clone ( prd_face_bgr, dst_face_bgr, img_face_seamless_mask_a )
-
                 out_img = cv2.warpAffine( face_seamless, face_output_mat, img_size, out_img, cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT )
             else:
                 out_img = cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, out_img, cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT )
-
+            
             out_img = np.clip(out_img, 0.0, 1.0)
 
             if 'seamless' in cfg.mode and cfg.mode != 'seamless2':
@@ -278,7 +274,8 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
                         raise Exception("Seamless fail: " + e_str) #reraise MemoryError in order to reprocess this data by other processes
                     else:
                         print ("Seamless fail: " + e_str)
-
+            
+    
             out_img = img_bgr*(1-img_face_mask_aaa) + (out_img*img_face_mask_aaa)
 
             out_face_bgr = cv2.warpAffine( out_img, face_mat, (output_size, output_size) )
@@ -321,6 +318,23 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
 
             if cfg.blursharpen_amount != 0:
                 out_face_bgr = cfg.blursharpen_func ( out_face_bgr, cfg.sharpen_mode, 3, cfg.blursharpen_amount)
+
+
+            if cfg.image_denoise_power != 0:
+                n = cfg.image_denoise_power
+                while n > 0:
+                    img_bgr_denoised = cv2.medianBlur(img_bgr, 5)
+                    if int(n / 100) != 0:
+                        img_bgr = img_bgr_denoised
+                    else:
+                        pass_power = (n % 100) / 100.0
+                        img_bgr = img_bgr*(1.0-pass_power)+img_bgr_denoised*pass_power
+                    n = max(n-10,0)
+
+            if cfg.bicubic_degrade_power != 0:
+                p = 1.0 - cfg.bicubic_degrade_power / 101.0
+                img_bgr_downscaled = cv2.resize (img_bgr, ( int(img_size[0]*p), int(img_size[1]*p ) ), cv2.INTER_CUBIC)
+                img_bgr = cv2.resize (img_bgr_downscaled, img_size, cv2.INTER_CUBIC)
 
             new_out = cv2.warpAffine( out_face_bgr, face_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT )
             out_img =  np.clip( img_bgr*(1-img_face_mask_aaa) + (new_out*img_face_mask_aaa) , 0, 1.0 )

@@ -14,14 +14,20 @@ class ConverterConfig(object):
     TYPE_IMAGE = 3
     TYPE_IMAGE_WITH_LANDMARKS = 4
 
-    def __init__(self, type=0):
+    def __init__(self, type=0,
+
+                       super_resolution_mode=0,
+                       sharpen_mode=0,
+                       blursharpen_amount=0,
+                       **kwargs
+                       ):
         self.type = type
 
         self.superres_func = None
         self.blursharpen_func = None
         self.fanseg_input_size = None
         self.fanseg_extract_func = None
-        
+
         self.fanchq_input_size = None
         self.fanchq_extract_func = None
         self.ebs_ct_func = None
@@ -30,9 +36,9 @@ class ConverterConfig(object):
         self.sharpen_dict = {0:"None", 1:'box', 2:'gaussian'}
 
         #default changeable params
-        self.super_resolution_mode = 0
-        self.sharpen_mode = 0
-        self.blursharpen_amount = 0
+        self.super_resolution_mode = super_resolution_mode
+        self.sharpen_mode = sharpen_mode
+        self.blursharpen_amount = blursharpen_amount
 
     def copy(self):
         return copy.copy(self)
@@ -66,6 +72,16 @@ class ConverterConfig(object):
         self.super_resolution_mode = a[ (a.index(self.super_resolution_mode)+1) % len(a) ]
 
     #overridable
+    def get_config(self):
+        d = self.__dict__.copy()
+        d.pop('type')
+        return d
+        return {'sharpen_mode':self.sharpen_mode,
+                'blursharpen_amount':self.blursharpen_amount,
+                'super_resolution_mode':self.super_resolution_mode
+                }
+
+    #overridable
     def __eq__(self, other):
         #check equality of changeable params
 
@@ -80,16 +96,16 @@ class ConverterConfig(object):
     def to_string(self, filename):
         r = ""
         r += f"sharpen_mode : {self.sharpen_dict[self.sharpen_mode]}\n"
-        r += f"blursharpen_amount : {self.blursharpen_amount}\n"        
+        r += f"blursharpen_amount : {self.blursharpen_amount}\n"
         r += f"super_resolution_mode : {self.super_res_dict[self.super_resolution_mode]}\n"
         return r
-        
+
 mode_dict = {0:'original',
              1:'overlay',
              2:'hist-match',
              3:'seamless2',
              4:'seamless',
-             5:'seamless-hist-match',             
+             5:'seamless-hist-match',
              6:'raw-rgb',
              7:'raw-rgb-mask',
              8:'raw-mask-only',
@@ -115,10 +131,25 @@ class ConverterConfigMasked(ConverterConfig):
     def __init__(self, face_type=FaceType.FULL,
                        default_mode = 4,
                        clip_hborder_mask_per = 0,
+
+                       mode='overlay',
+                       masked_hist_match=True,
+                       hist_match_threshold = 238,
+                       mask_mode = 1,
+                       erode_mask_modifier = 0,
+                       blur_mask_modifier = 0,
+                       motion_blur_power = 0,
+                       output_face_scale = 0,
+                       color_transfer_mode = 0,
+                       image_denoise_power = 0,
+                       bicubic_degrade_power = 0,
+                       color_degrade_power = 0,
+                       export_mask_alpha = False,
+                       **kwargs
                        ):
 
-        super().__init__(type=ConverterConfig.TYPE_MASKED)
-        
+        super().__init__(type=ConverterConfig.TYPE_MASKED, **kwargs)
+
         self.face_type = face_type
         if self.face_type not in [FaceType.HALF, FaceType.MID_FULL, FaceType.FULL ]:
             raise ValueError("ConverterConfigMasked does not support this type of face.")
@@ -127,17 +158,19 @@ class ConverterConfigMasked(ConverterConfig):
         self.clip_hborder_mask_per = clip_hborder_mask_per
 
         #default changeable params
-        self.mode = 'overlay'
-        self.masked_hist_match = True
-        self.hist_match_threshold = 238
-        self.mask_mode = 1
-        self.erode_mask_modifier = 0
-        self.blur_mask_modifier = 0
-        self.motion_blur_power = 0
-        self.output_face_scale = 0
-        self.color_transfer_mode = 0
-        self.color_degrade_power = 0
-        self.export_mask_alpha = False
+        self.mode = mode
+        self.masked_hist_match = masked_hist_match
+        self.hist_match_threshold = hist_match_threshold
+        self.mask_mode = mask_mode
+        self.erode_mask_modifier = erode_mask_modifier
+        self.blur_mask_modifier = blur_mask_modifier
+        self.motion_blur_power = motion_blur_power
+        self.output_face_scale = output_face_scale
+        self.color_transfer_mode = color_transfer_mode
+        self.image_denoise_power = image_denoise_power
+        self.bicubic_degrade_power = bicubic_degrade_power
+        self.color_degrade_power = color_degrade_power
+        self.export_mask_alpha = export_mask_alpha
 
     def copy(self):
         return copy.copy(self)
@@ -177,6 +210,12 @@ class ConverterConfigMasked(ConverterConfig):
 
     def add_color_degrade_power(self, diff):
         self.color_degrade_power = np.clip ( self.color_degrade_power+diff , 0, 100)
+
+    def add_image_denoise_power(self, diff):
+        self.image_denoise_power = np.clip ( self.image_denoise_power+diff, 0, 500)
+
+    def add_bicubic_degrade_power(self, diff):
+        self.bicubic_degrade_power = np.clip ( self.bicubic_degrade_power+diff, 0, 100)
 
     def toggle_export_mask_alpha(self):
         self.export_mask_alpha = not self.export_mask_alpha
@@ -227,6 +266,8 @@ class ConverterConfigMasked(ConverterConfig):
         super().ask_settings()
 
         if 'raw' not in self.mode:
+            self.image_denoise_power = np.clip ( io.input_int ("Choose image degrade by denoise power [0..500] (skip:%d) : " % (0), 0), 0, 500)
+            self.bicubic_degrade_power = np.clip ( io.input_int ("Choose image degrade by bicubic rescale power [0..100] (skip:%d) : " % (0), 0), 0, 100)
             self.color_degrade_power = np.clip (  io.input_int ("Degrade color power of final image [0..100] (skip:0) : ", 0), 0, 100)
             self.export_mask_alpha = io.input_bool("Export png with alpha channel of the mask? (y/n skip:n) : ", False)
 
@@ -246,6 +287,8 @@ class ConverterConfigMasked(ConverterConfig):
                    self.motion_blur_power == other.motion_blur_power and \
                    self.output_face_scale == other.output_face_scale and \
                    self.color_transfer_mode == other.color_transfer_mode and \
+                   self.image_denoise_power == other.image_denoise_power and \
+                   self.bicubic_degrade_power == other.bicubic_degrade_power and \
                    self.color_degrade_power == other.color_degrade_power and \
                    self.export_mask_alpha == other.export_mask_alpha
 
@@ -281,7 +324,9 @@ class ConverterConfigMasked(ConverterConfig):
         r += super().to_string(filename)
 
         if 'raw' not in self.mode:
-            r += (f"""color_degrade_power: {self.color_degrade_power}\n"""
+            r += (f"""image_denoise_power: {self.image_denoise_power}\n"""
+                  f"""bicubic_degrade_power: {self.bicubic_degrade_power}\n"""
+                  f"""color_degrade_power: {self.color_degrade_power}\n"""
                   f"""export_mask_alpha: {self.export_mask_alpha}\n""")
 
         r += "================"
@@ -291,12 +336,13 @@ class ConverterConfigMasked(ConverterConfig):
 
 class ConverterConfigFaceAvatar(ConverterConfig):
 
-    def __init__(self, temporal_face_count=0):
+    def __init__(self, temporal_face_count=0,
+                       add_source_image=False):
         super().__init__(type=ConverterConfig.TYPE_FACE_AVATAR)
         self.temporal_face_count = temporal_face_count
 
         #changeable params
-        self.add_source_image = False
+        self.add_source_image = add_source_image
 
     def copy(self):
         return copy.copy(self)

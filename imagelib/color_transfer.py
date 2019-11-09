@@ -33,7 +33,7 @@ def color_transfer_mkl(x0, x1):
     mx1 = np.mean(x1, axis=0)
 
     result = np.dot(x0-mx0, t) + mx1
-    return np.clip ( result.reshape ( (h,w,c) ), 0, 1)
+    return np.clip ( result.reshape ( (h,w,c) ).astype(x0.dtype), 0, 1)
     
 def color_transfer_idt(i0, i1, bins=256, n_rot=20):
     relaxation = 1 / n_rot
@@ -76,7 +76,7 @@ def color_transfer_idt(i0, i1, bins=256, n_rot=20):
         
         d0 = relaxation * np.linalg.solve(r, (d_r - d0r)) + d0
 
-    return np.clip ( d0.T.reshape ( (h,w,c) ), 0, 1)
+    return np.clip ( d0.T.reshape ( (h,w,c) ).astype(i0.dtype) , 0, 1)
 
 def laplacian_matrix(n, m):
     mat_D = scipy.sparse.lil_matrix((m, m))

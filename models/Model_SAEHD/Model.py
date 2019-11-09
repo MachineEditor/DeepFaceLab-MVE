@@ -50,7 +50,7 @@ class SAEHDModel(ModelBase):
         else:
             self.options['archi'] = self.options.get('archi', default_archi)
 
-        default_ae_dims = 256 if 'liae' in self.options['archi'] else 512
+        default_ae_dims = 256
         default_ed_ch_dims = 21
 
         if is_first_run:
