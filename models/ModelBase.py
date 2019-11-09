@@ -80,7 +80,7 @@ class ModelBase(object):
         yn_str = {True:'y',False:'n'}
 
         if self.iter == 0:
-            io.log_info ("\nModel first run. Enter model options as default for each run.")
+            io.log_info ("\nModel first run.")
 
         if ask_enable_autobackup and (self.iter == 0 or ask_override):
             default_autobackup = False if self.iter == 0 else self.options.get('autobackup',False)
