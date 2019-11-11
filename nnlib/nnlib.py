@@ -144,6 +144,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
         if 'CUDA_VISIBLE_DEVICES' in os.environ.keys():
             os.environ.pop('CUDA_VISIBLE_DEVICES')
 
+        io.log_info ("Using PyTorch backend.")
         import torch
         nnlib.torch = torch
 
