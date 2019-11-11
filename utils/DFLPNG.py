@@ -286,6 +286,7 @@ class DFLPNG(object):
                              fanseg_mask=None,
                              pitch_yaw_roll=None,
                              eyebrows_expand_mod=None,
+                             relighted=None,
                              **kwargs
                    ):
 
@@ -312,6 +313,7 @@ class DFLPNG(object):
                                 'fanseg_mask' : fanseg_mask,
                                 'pitch_yaw_roll' : pitch_yaw_roll,
                                 'eyebrows_expand_mod' : eyebrows_expand_mod,
+                                'relighted' : relighted
                              })
 
         try:
@@ -330,6 +332,7 @@ class DFLPNG(object):
                                         fanseg_mask=None,
                                         pitch_yaw_roll=None,
                                         eyebrows_expand_mod=None,
+                                        relighted=None,
                                         **kwargs
                         ):
         if face_type is None: face_type = self.get_face_type()
@@ -342,7 +345,8 @@ class DFLPNG(object):
         if fanseg_mask is None: fanseg_mask = self.get_fanseg_mask()
         if pitch_yaw_roll is None: pitch_yaw_roll = self.get_pitch_yaw_roll()
         if eyebrows_expand_mod is None: eyebrows_expand_mod = self.get_eyebrows_expand_mod()
-
+        if relighted is None: relighted = self.get_relighted()
+        
         DFLPNG.embed_data (filename, face_type=face_type,
                                      landmarks=landmarks,
                                      ie_polys=ie_polys,
@@ -352,7 +356,8 @@ class DFLPNG(object):
                                      image_to_face_mat=image_to_face_mat,
                                      fanseg_mask=fanseg_mask,
                                      pitch_yaw_roll=pitch_yaw_roll,
-                                     eyebrows_expand_mod=eyebrows_expand_mod)
+                                     eyebrows_expand_mod=eyebrows_expand_mod,
+                                     relighted=relighted)
 
     def remove_ie_polys(self):
         self.dfl_dict['ie_polys'] = None
@@ -417,6 +422,9 @@ class DFLPNG(object):
         return self.dfl_dict.get ('pitch_yaw_roll', None)
     def get_eyebrows_expand_mod(self):
         return self.dfl_dict.get ('eyebrows_expand_mod', None)
+    def get_relighted(self):
+        return self.dfl_dict.get ('relighted', False)
+
 
     def __str__(self):
         return "<PNG length={length} chunks={}>".format(len(self.chunks), **self.__dict__)

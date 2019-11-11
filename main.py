@@ -63,7 +63,7 @@ if __name__ == "__main__":
     p.add_argument('--multi-gpu', action="store_true", dest="multi_gpu", default=False, help="Enables multi GPU.")
     p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Extract on CPU.")
     p.set_defaults (func=process_dev_extract_vggface2_dataset)
-    
+
     def process_dev_extract_umd_csv(arguments):
         os_utils.set_process_lowest_prio()
         from mainscripts import Extractor
@@ -78,8 +78,8 @@ if __name__ == "__main__":
     p.add_argument('--multi-gpu', action="store_true", dest="multi_gpu", default=False, help="Enables multi GPU.")
     p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Extract on CPU.")
     p.set_defaults (func=process_dev_extract_umd_csv)
-    
-    
+
+
     def process_dev_apply_celebamaskhq(arguments):
         os_utils.set_process_lowest_prio()
         from mainscripts import dev_misc
@@ -130,10 +130,10 @@ if __name__ == "__main__":
 
         #if arguments.remove_fanseg:
         #    Util.remove_fanseg_folder (input_path=arguments.input_dir)
-        
+
         if arguments.remove_ie_polys:
             Util.remove_ie_polys_folder (input_path=arguments.input_dir)
-        
+
     p = subparsers.add_parser( "util", help="Utilities.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
     p.add_argument('--convert-png-to-jpg', action="store_true", dest="convert_png_to_jpg", default=False, help="Convert DeepFaceLAB PNG files to JPEG.")
@@ -190,7 +190,7 @@ if __name__ == "__main__":
         Converter.main (args, device_args)
 
     p = subparsers.add_parser( "convert", help="Converter")
-    p.add_argument('--training-data-src-dir', action=fixPathAction, dest="training_data_src_dir", help="(optional, may be required by some models) Dir of extracted SRC faceset.")    
+    p.add_argument('--training-data-src-dir', action=fixPathAction, dest="training_data_src_dir", help="(optional, may be required by some models) Dir of extracted SRC faceset.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
     p.add_argument('--output-dir', required=True, action=fixPathAction, dest="output_dir", help="Output directory. This is where the converted files will be stored.")
     p.add_argument('--aligned-dir', action=fixPathAction, dest="aligned_dir", help="Aligned directory. This is where the extracted of dst faces stored.")
@@ -270,8 +270,28 @@ if __name__ == "__main__":
     p.add_argument('--confirmed-dir', required=True, action=fixPathAction, dest="confirmed_dir", help="This is where the labeled faces will be stored.")
     p.add_argument('--skipped-dir', required=True, action=fixPathAction, dest="skipped_dir", help="This is where the labeled faces will be stored.")
     p.add_argument('--no-default-mask', action="store_true", dest="no_default_mask", default=False, help="Don't use default mask.")
-    
+
     p.set_defaults(func=process_labelingtool_edit_mask)
+
+    def process_relight_faceset(arguments):
+        from mainscripts import FacesetRelighter
+        FacesetRelighter.relight (arguments.input_dir, arguments.lighten, arguments.random_one)
+
+    def process_delete_relighted(arguments):
+        from mainscripts import FacesetRelighter
+        FacesetRelighter.delete_relighted (arguments.input_dir)
+
+    facesettool_parser = subparsers.add_parser( "facesettool", help="Faceset tools.").add_subparsers()
+
+    p = facesettool_parser.add_parser ("relight", help="Synthesize new faces from existing ones by relighting them. With the relighted faces neural network will better reproduce face shadows.")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory of aligned faces.")
+    p.add_argument('--lighten', action="store_true", dest="lighten", default=None, help="Lighten the faces.")
+    p.add_argument('--random-one', action="store_true", dest="random_one", default=None, help="Relight the faces only with one random direction, otherwise relight with all directions.")
+    p.set_defaults(func=process_relight_faceset)
+
+    p = facesettool_parser.add_parser ("delete_relighted", help="Delete relighted faces.")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory of aligned faces.")
+    p.set_defaults(func=process_delete_relighted)
 
     def bad_args(arguments):
         parser.print_help()

@@ -20,6 +20,9 @@ class nnlib(object):
 
     dlib = None
 
+    torch = None
+    torch_device = None
+
     keras = None
     keras_contrib = None
 
@@ -128,7 +131,27 @@ UNet = nnlib.UNet
 UNetTemporalPredictor = nnlib.UNetTemporalPredictor
 NLayerDiscriminator = nnlib.NLayerDiscriminator
 """
+    @staticmethod
+    def import_torch(device_config=None):
+        if nnlib.torch is not None:
+            return
 
+        if device_config is None:
+            device_config = nnlib.active_DeviceConfig
+        else:
+            nnlib.active_DeviceConfig = device_config
+
+        if 'CUDA_VISIBLE_DEVICES' in os.environ.keys():
+            os.environ.pop('CUDA_VISIBLE_DEVICES')
+
+        import torch
+        nnlib.torch = torch
+
+        if device_config.cpu_only or device_config.backend == 'plaidML':
+            nnlib.torch_device = torch.device(type='cpu')
+        else:
+            nnlib.torch_device = torch.device(type='cuda', index=device_config.gpu_idxs[0] )
+            torch.cuda.set_device(nnlib.torch_device)
 
     @staticmethod
     def _import_tf(device_config):
@@ -634,7 +657,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 reduction_axes = list(range(len(input_shape)))
                 del reduction_axes[self.axis]
                 del reduction_axes[0]
-                
+
                 broadcast_shape = [1] * len(input_shape)
                 broadcast_shape[self.axis] = input_shape[self.axis]
                 mean = K.mean(x, reduction_axes, keepdims=True)
@@ -912,7 +935,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 base_config = super(Adam, self).get_config()
                 return dict(list(base_config.items()) + list(config.items()))
         nnlib.Adam = Adam
-        
+
         class DenseMaxout(keras.layers.Layer):
             """A dense maxout layer.
             A `MaxoutDense` layer takes the element-wise maximum of
@@ -1039,7 +1062,7 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 base_config = super(DenseMaxout, self).get_config()
                 return dict(list(base_config.items()) + list(config.items()))
         nnlib.DenseMaxout = DenseMaxout
-        
+
         def CAInitializerMP( conv_weights_list ):
             #Convolution Aware Initialization https://arxiv.org/abs/1702.06295
             data = [ (i, K.int_shape(conv_weights)) for i, conv_weights in enumerate(conv_weights_list) ]
