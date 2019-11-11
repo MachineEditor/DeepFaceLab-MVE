@@ -49,6 +49,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
         self.generators_random_seed = generators_random_seed
         
         samples = SampleLoader.load (self.sample_type, self.samples_path, sort_by_yaw_target_samples_path, person_id_mode=person_id_mode)
+        np.random.shuffle(samples)
         self.samples_len = len(samples)
         
         if self.samples_len == 0:
