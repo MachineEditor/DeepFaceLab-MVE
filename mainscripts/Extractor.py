@@ -255,7 +255,7 @@ class ExtractSubprocessor(Subprocessor):
                                 shutil.copy ( str(filename_path), str(output_file) )
                         else:
                             output_file = '{}_{}{}'.format(str(self.final_output_path / filename_path.stem), str(face_idx), '.jpg')
-                            cv2_imwrite(output_file, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 85] )
+                            cv2_imwrite(output_file, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 100] )
 
                         DFLJPG.embed_data(output_file, face_type=FaceType.toString(self.face_type),
                                                        landmarks=face_image_landmarks.tolist(),
