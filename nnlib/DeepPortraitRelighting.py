@@ -45,11 +45,12 @@ class DeepPortraitRelighting(object):
         return sh_basis
         
     #n = [0..8]
-    def relight(self, img, alt, azi, lighten=False):
+    def relight(self, img, alt, azi, intensity=1.0, lighten=False):
         torch = self.torch
     
         sh = self.SH_basis (alt, azi)   
-        sh = (sh.reshape( (1,9,1,1) ) ).astype(np.float32)        
+        sh = (sh.reshape( (1,9,1,1) ) ).astype(np.float32)      
+        #sh *= 0.1  
         sh = torch.autograd.Variable(torch.from_numpy(sh).to(self.torch_device))
         
         row, col, _ = img.shape
@@ -67,9 +68,10 @@ class DeepPortraitRelighting(object):
         outputImg = cv2.blur(outputImg, (3,3) ) 
 
         if not lighten:
-            outputImg = inputL* outputImg        
+            outputImg = inputL*(1.0-intensity) + (inputL*outputImg)*intensity
         else:
-            outputImg = outputImg*255.0
+            outputImg = inputL*(1.0-intensity) + (outputImg*255.0)*intensity
+            
         outputImg = np.clip(outputImg, 0,255).astype(np.uint8)   
 
         Lab[:,:,0] = outputImg

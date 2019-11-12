@@ -20,7 +20,7 @@ class RelightEditor:
         self.current_img_shape = None
         self.pick_new_face()
 
-        self.alt_azi_ar = [ [0,0] ]
+        self.alt_azi_ar = [ [0,0,1.0] ]
         self.alt_azi_cur = 0
 
         self.mouse_x = self.mouse_y = 9999
@@ -43,21 +43,22 @@ class RelightEditor:
         return result
 
     def make_screen(self):
-        alt,azi=self.alt_azi_ar[self.alt_azi_cur]
+        alt,azi,inten=self.alt_azi_ar[self.alt_azi_cur]
 
-        img = self.dpr.relight (self.current_img, alt, azi, self.lighten)
+        img = self.dpr.relight (self.current_img, alt, azi, inten, self.lighten)
 
         h,w,c = img.shape
 
         lines = ['Pick light directions for whole faceset.',
                  '[q]-new test face',
                  '[w][e]-navigate',
+                 '[a][s]-intensity',
                  '[r]-new [t]-delete [enter]-process',
                  '']
 
-        for i, (alt,azi) in enumerate(self.alt_azi_ar):
+        for i, (alt,azi,inten) in enumerate(self.alt_azi_ar):
             s = '>:' if self.alt_azi_cur == i else ' :'
-            s += f'alt=[{ int(alt):03}] azi=[{ int(azi):03}]'
+            s += f'alt=[{ int(alt):03}] azi=[{ int(azi):03}] int=[{inten:01.1f}]'
             lines += [ s ]
 
         lines_count = len(lines)
@@ -109,10 +110,12 @@ class RelightEditor:
 
                 if is_angle_editing:
                     h,w,c = self.current_img_shape
-
-                    self.alt_azi_ar[self.alt_azi_cur] = \
-                        [np.clip ( ( 0.5-y/w )*2.0, -1, 1)*90,    \
-                         np.clip ( (x / h - 0.5)*2.0, -1, 1)*90 ]
+                    
+                    alt,azi,inten = self.alt_azi_ar[self.alt_azi_cur]
+                    alt = np.clip ( ( 0.5-y/w )*2.0,   -1, 1)*90
+                    azi = np.clip ( (x / h - 0.5)*2.0, -1, 1)*90
+                    self.alt_azi_ar[self.alt_azi_cur] = (alt,azi,inten)
+                        
 
                     self.set_screen_changed()
 
@@ -130,7 +133,7 @@ class RelightEditor:
                     self.set_screen_changed()
                 elif chr_key == 'r':
                     #add direction
-                    self.alt_azi_ar += [ [0,0] ]
+                    self.alt_azi_ar += [ [0,0,1.0] ]
                     self.alt_azi_cur +=1
                     self.set_screen_changed()
                 elif chr_key == 't':
@@ -138,6 +141,16 @@ class RelightEditor:
                         self.alt_azi_ar.pop(self.alt_azi_cur)
                         self.alt_azi_cur = np.clip (self.alt_azi_cur, 0, len(self.alt_azi_ar)-1)
                         self.set_screen_changed()
+                elif chr_key == 'a':
+                    alt,azi,inten = self.alt_azi_ar[self.alt_azi_cur]
+                    inten = np.clip ( inten-0.1, 0.0, 1.0)
+                    self.alt_azi_ar[self.alt_azi_cur] = (alt,azi,inten)
+                    self.set_screen_changed()
+                elif chr_key == 's':
+                    alt,azi,inten = self.alt_azi_ar[self.alt_azi_cur]
+                    inten = np.clip ( inten+0.1, 0.0, 1.0)
+                    self.alt_azi_ar[self.alt_azi_cur] = (alt,azi,inten)
+                    self.set_screen_changed()
                 elif key == 27 or chr_key == '\r' or chr_key == '\n': #esc
                     is_exit = True
 
@@ -164,7 +177,7 @@ def relight(input_dir, lighten=None, random_one=None):
 
     if not manual:
         if random_one is None:
-            random_one = io.input_bool ("Relight the faces only with one random direction? ( y/n default:y ?:help) : ", True, help_message="Otherwise faceset will be relighted with predefined 7 light directions.")
+            random_one = io.input_bool ("Relight the faces only with one random direction and random intensity? ( y/n default:y ?:help) : ", True, help_message="Otherwise faceset will be relighted with predefined 7 light directions but with random intensity.")
 
     image_paths = [Path(x) for x in Path_utils.get_image_paths(input_dir)]
     filtered_image_paths = []
@@ -194,10 +207,7 @@ def relight(input_dir, lighten=None, random_one=None):
 
     if manual:
         alt_azi_ar = RelightEditor(image_paths, dpr, lighten).run()
-    else:
-        if not random_one:
-            alt_azi_ar = [(60,0), (60,60), (0,60), (-60,60), (-60,0), (-60,-60), (0,-60), (60,-60)]
-
+        
     for filepath in io.progress_bar_generator(image_paths, "Relighting"):
         try:
             if filepath.suffix == '.png':
@@ -218,9 +228,14 @@ def relight(input_dir, lighten=None, random_one=None):
                 if random_one:
                     alt = np.random.randint(-90,91)
                     azi = np.random.randint(-90,91)
-                    relighted_imgs = [dpr.relight(img,alt=alt,azi=azi,lighten=lighten)]
+                    inten = np.random.random()*0.3+0.3
+                    relighted_imgs = [dpr.relight(img,alt=alt,azi=azi,intensity=inten,lighten=lighten)]
                 else:
-                    relighted_imgs = [dpr.relight(img,alt=alt,azi=azi,lighten=lighten) for (alt,azi) in alt_azi_ar ]
+                    if not manual and not random_one:
+                        inten = np.random.random()*0.3+0.3
+                        alt_azi_ar = [(60,0,inten), (60,60,inten), (0,60,inten), (-60,60,inten), (-60,0,inten), (-60,-60,inten), (0,-60,inten), (60,-60,inten)]
+                    
+                    relighted_imgs = [dpr.relight(img,alt=alt,azi=azi,intensity=inten,lighten=lighten) for (alt,azi,inten) in alt_azi_ar ]
 
                 i = 0
                 for i,relighted_img in enumerate(relighted_imgs):
