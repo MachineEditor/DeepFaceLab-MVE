@@ -110,6 +110,13 @@ mode_dict = {0:'original',
              7:'raw-mask-only',
              8:'raw-predicted-only'}
 
+mode_str_dict = {}
+
+for key in mode_dict.keys():
+    mode_str_dict[ mode_dict[key] ] = key
+    
+print(mode_str_dict)
+
 full_face_mask_mode_dict = {1:'learned',
                                     2:'dst',
                                     3:'FAN-prd',
@@ -220,15 +227,14 @@ class ConverterConfigMasked(ConverterConfig):
         self.export_mask_alpha = not self.export_mask_alpha
 
     def ask_settings(self):
-
         s = """Choose mode: \n"""
         for key in mode_dict.keys():
             s += f"""({key}) {mode_dict[key]}\n"""
-        s += f"""Default: {self.default_mode} : """
+        s += f"""Default: { mode_str_dict.get(self.default_mode, 1)  } : """
 
-        mode = io.input_int (s, self.default_mode)
+        mode = io.input_int (s, mode_str_dict.get(self.default_mode, 1) )
 
-        self.mode = mode_dict.get (mode, mode_dict[self.default_mode] )
+        self.mode = mode_dict.get (mode, self.default_mode )
 
         if 'raw' not in self.mode:
             if self.mode == 'hist-match' or self.mode == 'hist-match-bw':
