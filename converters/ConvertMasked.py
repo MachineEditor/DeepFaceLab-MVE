@@ -189,8 +189,8 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
 
             if 'seamless' not in cfg.mode and cfg.color_transfer_mode != 0:
                 if cfg.color_transfer_mode == 1: #rct
-                    prd_face_bgr = imagelib.reinhard_color_transfer ( np.clip( (prd_face_bgr*255).astype(np.uint8), 0, 255),
-                                                                      np.clip( (dst_face_bgr*255).astype(np.uint8), 0, 255),
+                    prd_face_bgr = imagelib.reinhard_color_transfer ( (prd_face_bgr*255).astype(np.uint8),
+                                                                      (dst_face_bgr*255).astype(np.uint8),
                                                                       source_mask=prd_face_mask_a, target_mask=prd_face_mask_a)
                     prd_face_bgr = np.clip( prd_face_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
 
@@ -205,12 +205,10 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
                     prd_face_bgr = imagelib.color_transfer_idt (prd_face_bgr, dst_face_bgr)
                 elif cfg.color_transfer_mode == 6: #idt-m
                     prd_face_bgr = imagelib.color_transfer_idt (prd_face_bgr*prd_face_mask_a, dst_face_bgr*prd_face_mask_a)
-
-                elif cfg.color_transfer_mode == 7: #ebs, currently unused
-                    prd_face_bgr = cfg.ebs_ct_func ( np.clip( (dst_face_bgr*255), 0, 255).astype(np.uint8),
-                                                     np.clip( (prd_face_bgr*255), 0, 255).astype(np.uint8),  )#prd_face_mask_a
-                    prd_face_bgr = np.clip( prd_face_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
-
+                elif cfg.color_transfer_mode == 7: #sot-m                    
+                    prd_face_bgr = imagelib.color_transfer_sot (prd_face_bgr*prd_face_mask_a, dst_face_bgr*prd_face_mask_a)
+                    prd_face_bgr = np.clip (prd_face_bgr, 0.0, 1.0)
+                    
             if cfg.mode == 'hist-match-bw':
                 prd_face_bgr = cv2.cvtColor(prd_face_bgr, cv2.COLOR_BGR2GRAY)
                 prd_face_bgr = np.repeat( np.expand_dims (prd_face_bgr, -1), (3,), -1 )
@@ -238,9 +236,6 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
                 #mask used for cv2.seamlessClone
                 img_face_mask_a = img_face_mask_aaa[...,0:1]
 
-                if cfg.mode == 'seamless2':
-                    img_face_mask_a = cv2.warpAffine( img_face_mask_a, face_output_mat, (output_size, output_size), flags=cv2.INTER_CUBIC )
-
                 img_face_seamless_mask_a = None
                 for i in range(1,10):
                     a = img_face_mask_a > i / 10.0
@@ -251,15 +246,11 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
                     img_face_seamless_mask_a[img_face_seamless_mask_a <= i / 10.0] = 0.0
                     break
 
-            if cfg.mode == 'seamless2':
-                face_seamless = imagelib.seamless_clone ( prd_face_bgr, dst_face_bgr, img_face_seamless_mask_a )
-                out_img = cv2.warpAffine( face_seamless, face_output_mat, img_size, out_img, cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT )
-            else:
-                out_img = cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, out_img, cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT )
+            out_img = cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, out_img, cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC, cv2.BORDER_TRANSPARENT )
             
             out_img = np.clip(out_img, 0.0, 1.0)
 
-            if 'seamless' in cfg.mode and cfg.mode != 'seamless2':
+            if 'seamless' in cfg.mode:
                 try:
                     #calc same bounding rect and center point as in cv2.seamlessClone to prevent jittering (not flickering)
                     l,t,w,h = cv2.boundingRect( (img_face_seamless_mask_a*255).astype(np.uint8) )
@@ -284,8 +275,8 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
                 if cfg.color_transfer_mode == 1:
                     face_mask_aaa = cv2.warpAffine( img_face_mask_aaa, face_mat, (output_size, output_size) )
 
-                    out_face_bgr = imagelib.reinhard_color_transfer ( np.clip( (out_face_bgr*255), 0, 255).astype(np.uint8),
-                                                                      np.clip( (dst_face_bgr*255), 0, 255).astype(np.uint8),
+                    out_face_bgr = imagelib.reinhard_color_transfer ( (out_face_bgr*255).astype(np.uint8),
+                                                                      (dst_face_bgr*255).astype(np.uint8),
                                                                             source_mask=face_mask_aaa, target_mask=face_mask_aaa)
                     out_face_bgr = np.clip( out_face_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
                 elif cfg.color_transfer_mode == 2: #lct
@@ -299,10 +290,9 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
                     out_face_bgr = imagelib.color_transfer_idt (out_face_bgr, dst_face_bgr)
                 elif cfg.color_transfer_mode == 6: #idt-m
                     out_face_bgr = imagelib.color_transfer_idt (out_face_bgr*prd_face_mask_a, dst_face_bgr*prd_face_mask_a)
-                elif cfg.color_transfer_mode == 7: #ebs
-                    out_face_bgr = cfg.ebs_ct_func ( np.clip( (dst_face_bgr*255), 0, 255).astype(np.uint8),
-                                                     np.clip( (out_face_bgr*255), 0, 255).astype(np.uint8),  )
-                    out_face_bgr = np.clip( out_face_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
+                elif cfg.color_transfer_mode == 7: #sot-m                    
+                    out_face_bgr = imagelib.color_transfer_sot (out_face_bgr*prd_face_mask_a, dst_face_bgr*prd_face_mask_a)
+                    out_face_bgr = np.clip (out_face_bgr, 0.0, 1.0)
 
             if cfg.mode == 'seamless-hist-match':
                 out_face_bgr = imagelib.color_hist_match(out_face_bgr, dst_face_bgr, cfg.hist_match_threshold)

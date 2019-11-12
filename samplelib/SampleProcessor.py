@@ -261,6 +261,9 @@ class SampleProcessor(object):
                         img_bgr = imagelib.color_transfer_mkl (img_bgr, ct_sample_bgr_resized)
                     elif ct_mode == 'idt':
                         img_bgr = imagelib.color_transfer_idt (img_bgr, ct_sample_bgr_resized)
+                    elif ct_mode == 'sot':
+                        img_bgr = imagelib.color_transfer_sot (img_bgr, ct_sample_bgr_resized)
+                        img_bgr = np.clip( img_bgr, 0.0, 1.0)
                     
                 if random_hsv_shift:
                     rnd_state = np.random.RandomState (sample_rnd_seed)

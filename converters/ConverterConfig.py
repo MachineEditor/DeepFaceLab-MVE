@@ -103,13 +103,12 @@ class ConverterConfig(object):
 mode_dict = {0:'original',
              1:'overlay',
              2:'hist-match',
-             3:'seamless2',
-             4:'seamless',
-             5:'seamless-hist-match',
-             6:'raw-rgb',
-             7:'raw-rgb-mask',
-             8:'raw-mask-only',
-             9:'raw-predicted-only'}
+             3:'seamless',
+             4:'seamless-hist-match',
+             5:'raw-rgb',
+             6:'raw-rgb-mask',
+             7:'raw-mask-only',
+             8:'raw-predicted-only'}
 
 full_face_mask_mode_dict = {1:'learned',
                                     2:'dst',
@@ -123,24 +122,24 @@ half_face_mask_mode_dict = {1:'learned',
                                     4:'FAN-dst',
                                     7:'learned*FAN-dst'}
 
-ctm_dict = { 0: "None", 1:"rct", 2:"lct", 3:"mkl", 4:"mkl-m", 5:"idt", 6:"idt-m" }
-ctm_str_dict = {None:0, "rct":1, "lct":2, "mkl":3, "mkl-m":4, "idt":5, "idt-m":6 }
+ctm_dict = { 0: "None", 1:"rct", 2:"lct", 3:"mkl", 4:"mkl-m", 5:"idt", 6:"idt-m", 7:"sot-m" }
+ctm_str_dict = {None:0, "rct":1, "lct":2, "mkl":3, "mkl-m":4, "idt":5, "idt-m":6, "sot-m":7 }
 
 class ConverterConfigMasked(ConverterConfig):
 
     def __init__(self, face_type=FaceType.FULL,
-                       default_mode = 4,
+                       default_mode = 'overlay',
                        clip_hborder_mask_per = 0,
 
                        mode='overlay',
                        masked_hist_match=True,
                        hist_match_threshold = 238,
                        mask_mode = 1,
-                       erode_mask_modifier = 0,
-                       blur_mask_modifier = 0,
+                       erode_mask_modifier = 50,
+                       blur_mask_modifier = 50,
                        motion_blur_power = 0,
                        output_face_scale = 0,
-                       color_transfer_mode = 0,
+                       color_transfer_mode = ctm_str_dict['rct'],
                        image_denoise_power = 0,
                        bicubic_degrade_power = 0,
                        color_degrade_power = 0,
@@ -176,7 +175,7 @@ class ConverterConfigMasked(ConverterConfig):
         return copy.copy(self)
 
     def set_mode (self, mode):
-        self.mode = mode_dict.get (mode, mode_dict[self.default_mode] )
+        self.mode = mode_dict.get (mode, self.default_mode)
 
     def toggle_masked_hist_match(self):
         if self.mode == 'hist-match' or self.mode == 'hist-match-bw':

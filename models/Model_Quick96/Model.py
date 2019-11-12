@@ -257,6 +257,6 @@ class Quick96Model(ModelBase):
     def get_ConverterConfig(self):
         import converters
         return self.predictor_func, (self.resolution, self.resolution, 3), converters.ConverterConfigMasked(face_type=FaceType.FULL,
-                                     default_mode = 1, clip_hborder_mask_per=0.0625)
+                                     default_mode='seamless', clip_hborder_mask_per=0.0625)
 
 Model = Quick96Model

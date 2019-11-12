@@ -129,7 +129,7 @@ class Model(ModelBase):
     #override
     def get_ConverterConfig(self):
         import converters
-        return self.predictor_func, (128,128,3), converters.ConverterConfigMasked(face_type=FaceType.HALF, default_mode=4)
+        return self.predictor_func, (128,128,3), converters.ConverterConfigMasked(face_type=FaceType.HALF, default_mode='seamless')
 
     def Build(self, lighter_ae):
         exec(nnlib.code_import_all, locals(), globals())

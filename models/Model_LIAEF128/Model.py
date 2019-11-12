@@ -127,7 +127,7 @@ class Model(ModelBase):
     #override
     def get_ConverterConfig(self):
         import converters
-        return self.predictor_func, (128,128,3), converters.ConverterConfigMasked(face_type=FaceType.FULL, default_mode=4)
+        return self.predictor_func, (128,128,3), converters.ConverterConfigMasked(face_type=FaceType.FULL, default_mode='seamless')
 
     def Build(self, input_layer):
         exec(nnlib.code_import_all, locals(), globals())
