@@ -384,7 +384,7 @@ class ConvertSubprocessor(Subprocessor):
 
             io.log_info ("Session is saved to " + '/'.join (self.converter_session_filepath.parts[-2:]) )
 
-    cfg_change_keys = ['`','1', '2', '3', '4', '5', '6', '7', '8', '9',
+    cfg_change_keys = ['`','1', '2', '3', '4', '5', '6', '7', '8', 
                                  'q', 'a', 'w', 's', 'e', 'd', 'r', 'f', 'y','h','u','j','i','k','o','l','p', ';',':',#'t', 'g',
                                  'z', 'x', 'c', 'v', 'b','n'   ]
     #override
@@ -447,7 +447,7 @@ class ConvertSubprocessor(Subprocessor):
                             if cfg.type == ConverterConfig.TYPE_MASKED:
                                 if chr_key == '`':
                                     cfg.set_mode(0)
-                                elif key >= ord('1') and key <= ord('9'):
+                                elif key >= ord('1') and key <= ord('8'):
                                     cfg.set_mode( key - ord('0') )
                                 elif chr_key == 'q':
                                     cfg.add_hist_match_threshold(1 if not shift_pressed else 5)
