@@ -246,6 +246,9 @@ class DFLJPG(object):
 
     def remove_fanseg_mask(self):
         self.dfl_dict['fanseg_mask'] = None
+        
+    def remove_source_filename(self):
+        self.dfl_dict['source_filename'] = None
 
     def dump(self):
         data = b""

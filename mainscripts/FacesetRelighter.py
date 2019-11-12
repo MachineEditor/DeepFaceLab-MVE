@@ -235,7 +235,9 @@ def relight(input_dir, lighten=None, random_one=None):
                         i += 1
 
                     cv2_imwrite (relighted_filepath, relighted_img )
-                    dflimg.embed_and_set (relighted_filepath, source_filename="_", relighted=True )
+                    
+                    dflimg.remove_source_filename()
+                    dflimg.embed_and_set (relighted_filepath, relighted=True )
         except:
             io.log_err (f"Exception occured while processing file {filepath.name}. Error: {traceback.format_exc()}")
 
