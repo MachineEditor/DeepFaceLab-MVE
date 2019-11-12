@@ -114,8 +114,6 @@ mode_str_dict = {}
 
 for key in mode_dict.keys():
     mode_str_dict[ mode_dict[key] ] = key
-    
-print(mode_str_dict)
 
 full_face_mask_mode_dict = {1:'learned',
                                     2:'dst',
