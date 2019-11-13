@@ -34,7 +34,6 @@ class Model(ModelBase):
         self.face_type = FaceType.FULL if self.options['face_type'] == 'f' else FaceType.HALF
 
         model_name = 'FANSeg'
-        model_name = 'FANCHQ'
         self.fan_seg = TernausNet(model_name, self.resolution, 
                                             FaceType.toString(self.face_type), 
                                             load_weights=not self.is_first_run(),
