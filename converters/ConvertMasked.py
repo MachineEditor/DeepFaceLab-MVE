@@ -208,6 +208,8 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
                 elif cfg.color_transfer_mode == 7: #sot-m                    
                     prd_face_bgr = imagelib.color_transfer_sot (prd_face_bgr*prd_face_mask_a, dst_face_bgr*prd_face_mask_a)
                     prd_face_bgr = np.clip (prd_face_bgr, 0.0, 1.0)
+                elif cfg.color_transfer_mode == 8: #mix-m
+                    prd_face_bgr = imagelib.color_transfer_mix (prd_face_bgr*prd_face_mask_a, dst_face_bgr*prd_face_mask_a)
                     
             if cfg.mode == 'hist-match-bw':
                 prd_face_bgr = cv2.cvtColor(prd_face_bgr, cv2.COLOR_BGR2GRAY)
@@ -293,7 +295,9 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
                 elif cfg.color_transfer_mode == 7: #sot-m                    
                     out_face_bgr = imagelib.color_transfer_sot (out_face_bgr*prd_face_mask_a, dst_face_bgr*prd_face_mask_a)
                     out_face_bgr = np.clip (out_face_bgr, 0.0, 1.0)
-
+                elif cfg.color_transfer_mode == 8: #mix-m
+                    out_face_bgr = imagelib.color_transfer_mix (out_face_bgr*prd_face_mask_a, dst_face_bgr*prd_face_mask_a)
+                    
             if cfg.mode == 'seamless-hist-match':
                 out_face_bgr = imagelib.color_hist_match(out_face_bgr, dst_face_bgr, cfg.hist_match_threshold)
 

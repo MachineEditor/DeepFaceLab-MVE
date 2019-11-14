@@ -54,7 +54,10 @@ def color_transfer_sot(src,trg, steps=10, batch_size=5, reg_sigmaXY=16.0, reg_si
 
     if reg_sigmaXY != 0.0:
         src_diff = new_src-src
-        new_src = src + cv2.bilateralFilter (src_diff, 0, reg_sigmaV, reg_sigmaXY )
+        src_diff_filt = cv2.bilateralFilter (src_diff, 0, reg_sigmaV, reg_sigmaXY )
+        if len(src_diff_filt.shape) == 2:
+            src_diff_filt = src_diff_filt[...,None]
+        new_src = src + src_diff_filt
     return new_src
         
 def color_transfer_mkl(x0, x1):
@@ -269,11 +272,11 @@ def linear_color_transfer(target_img, source_img, mode='pca', eps=1e-5):
     '''
     mu_t = target_img.mean(0).mean(0)
     t = target_img - mu_t
-    t = t.transpose(2,0,1).reshape(3,-1)
+    t = t.transpose(2,0,1).reshape( t.shape[-1],-1)
     Ct = t.dot(t.T) / t.shape[1] + eps * np.eye(t.shape[0])
     mu_s = source_img.mean(0).mean(0)
     s = source_img - mu_s
-    s = s.transpose(2,0,1).reshape(3,-1)
+    s = s.transpose(2,0,1).reshape( s.shape[-1],-1)
     Cs = s.dot(s.T) / s.shape[1] + eps * np.eye(s.shape[0])
     if mode == 'chol':
         chol_t = np.linalg.cholesky(Ct)
@@ -364,3 +367,30 @@ def color_hist_match(src_im, tar_im, hist_match_threshold=255):
 
     matched = np.stack(to_stack, axis=-1).astype(src_im.dtype)
     return matched
+
+def color_transfer_mix(img_src,img_trg):
+    img_src = (img_src*255.0).astype(np.uint8)
+    img_trg = (img_trg*255.0).astype(np.uint8)
+    
+    img_src_lab = cv2.cvtColor(img_src, cv2.COLOR_BGR2LAB)
+    img_trg_lab = cv2.cvtColor(img_trg, cv2.COLOR_BGR2LAB)
+    
+    rct_light = np.clip ( linear_color_transfer(img_src_lab[...,0:1].astype(np.float32)/255.0, 
+                                                img_trg_lab[...,0:1].astype(np.float32)/255.0 )[...,0]*255.0,
+                          0, 255).astype(np.uint8)     
+
+    img_src_lab[...,0] = (np.ones_like (rct_light)*100).astype(np.uint8)
+    img_src_lab = cv2.cvtColor(img_src_lab, cv2.COLOR_LAB2BGR)    
+
+    img_trg_lab[...,0] = (np.ones_like (rct_light)*100).astype(np.uint8)
+    img_trg_lab = cv2.cvtColor(img_trg_lab, cv2.COLOR_LAB2BGR)
+    
+    img_rct = color_transfer_sot( img_src_lab.astype(np.float32), img_trg_lab.astype(np.float32) )
+    img_rct = np.clip(img_rct, 0, 255).astype(np.uint8)
+    
+    img_rct = cv2.cvtColor(img_rct, cv2.COLOR_BGR2LAB)    
+    img_rct[...,0] = rct_light
+    img_rct = cv2.cvtColor(img_rct, cv2.COLOR_LAB2BGR)
+    
+    
+    return (img_rct / 255.0).astype(np.float32)
