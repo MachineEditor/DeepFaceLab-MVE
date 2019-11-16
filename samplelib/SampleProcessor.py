@@ -291,7 +291,7 @@ class SampleProcessor(object):
                     rnd_state = np.random.RandomState (sample_rnd_seed)
                     img = np.take (img_bgr, rnd_state.permutation(img_bgr.shape[-1]), axis=-1)
                 elif mode_type == SPTF.MODE_G:
-                    img = np.concatenate ( (np.expand_dims(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY),-1),img_mask) , -1 )
+                    img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)[...,None]
                 elif mode_type == SPTF.MODE_GGG:
                     img = np.repeat ( np.expand_dims(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY),-1), (3,), -1)
                 elif mode_type == SPTF.MODE_M and is_face_sample:
