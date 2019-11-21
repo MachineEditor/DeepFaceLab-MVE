@@ -5,7 +5,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from facelib import LandmarksProcessor
+from facelib import FaceType, LandmarksProcessor
 from interact import interact as io
 from joblib import Subprocessor
 from utils import Path_utils
@@ -14,7 +14,158 @@ from utils.DFLJPG import DFLJPG
 from utils.DFLPNG import DFLPNG
 
 from . import Extractor, Sorter
+from .Extractor import ExtractSubprocessor
 
+
+def extract_vggface2_dataset(input_dir, device_args={} ):
+    multi_gpu = device_args.get('multi_gpu', False)
+    cpu_only = device_args.get('cpu_only', False)
+
+    input_path = Path(input_dir)
+    if not input_path.exists():
+        raise ValueError('Input directory not found. Please ensure it exists.')
+    
+    bb_csv = input_path / 'loose_bb_train.csv'
+    if not bb_csv.exists():
+        raise ValueError('loose_bb_train.csv found. Please ensure it exists.')
+    
+    bb_lines = bb_csv.read_text().split('\n')
+    bb_lines.pop(0)
+    
+    bb_dict = {}
+    for line in bb_lines:
+        name, l, t, w, h = line.split(',')
+        name = name[1:-1]
+        l, t, w, h = [ int(x) for x in (l, t, w, h) ]        
+        bb_dict[name] = (l,t,w, h)
+    
+
+    output_path = input_path.parent / (input_path.name + '_out')
+    
+    dir_names = Path_utils.get_all_dir_names(input_path)
+    
+    if not output_path.exists():
+        output_path.mkdir(parents=True, exist_ok=True)
+
+    data = []
+    for dir_name in io.progress_bar_generator(dir_names, "Collecting"):
+        cur_input_path = input_path / dir_name
+        cur_output_path = output_path / dir_name
+        
+        if not cur_output_path.exists():
+            cur_output_path.mkdir(parents=True, exist_ok=True)
+            
+        input_path_image_paths = Path_utils.get_image_paths(cur_input_path)
+
+        for filename in input_path_image_paths:
+            filename_path = Path(filename)
+            
+            name = filename_path.parent.name + '/' + filename_path.stem
+            if name not in bb_dict:
+                continue
+
+            l,t,w,h = bb_dict[name]
+            if min(w,h) < 128:
+                continue
+            
+            data += [ ExtractSubprocessor.Data(filename=filename,rects=[ (l,t,l+w,t+h) ], landmarks_accurate=False, force_output_path=cur_output_path ) ]
+            
+    face_type = FaceType.fromString('full_face')
+    
+    io.log_info ('Performing 2nd pass...')
+    data = ExtractSubprocessor (data, 'landmarks', 256, face_type, debug_dir=None, multi_gpu=multi_gpu, cpu_only=cpu_only, manual=False).run()
+       
+    io.log_info ('Performing 3rd pass...')
+    ExtractSubprocessor (data, 'final', 256, face_type, debug_dir=None, multi_gpu=multi_gpu, cpu_only=cpu_only, manual=False, final_output_path=None).run()
+    
+    
+"""
+    import code
+    code.interact(local=dict(globals(), **locals()))
+    
+    data_len = len(data) 
+    i = 0
+    while i < data_len-1:
+        i_name = Path(data[i].filename).parent.name
+        
+        sub_data = []
+        
+        for j in range (i, data_len):
+            j_name = Path(data[j].filename).parent.name
+            if i_name == j_name:
+                sub_data += [ data[j] ]
+            else:
+                break
+        i = j
+        
+        cur_output_path = output_path / i_name        
+        
+        io.log_info (f"Processing: {str(cur_output_path)}, {i}/{data_len} ")
+        
+        if not cur_output_path.exists():
+            cur_output_path.mkdir(parents=True, exist_ok=True)
+            
+            
+        
+
+
+
+    
+    
+    for dir_name in dir_names:
+        
+        cur_input_path = input_path / dir_name
+        cur_output_path = output_path / dir_name
+        
+        input_path_image_paths = Path_utils.get_image_paths(cur_input_path)
+        l = len(input_path_image_paths)
+        #if l < 250 or l > 350:
+        #    continue
+
+        io.log_info (f"Processing: {str(cur_input_path)} ")
+        
+        if not cur_output_path.exists():
+            cur_output_path.mkdir(parents=True, exist_ok=True)
+
+
+        data = []
+        for filename in input_path_image_paths:
+            filename_path = Path(filename)
+            
+            name = filename_path.parent.name + '/' + filename_path.stem
+            if name not in bb_dict:
+                continue
+            
+            bb = bb_dict[name]
+            l,t,w,h = bb
+            if min(w,h) < 128:
+                continue
+            
+            data += [ ExtractSubprocessor.Data(filename=filename,rects=[ (l,t,l+w,t+h) ], landmarks_accurate=False ) ]
+                
+    
+              
+        io.log_info ('Performing 2nd pass...')
+        data = ExtractSubprocessor (data, 'landmarks', 256, face_type, debug_dir=None, multi_gpu=False, cpu_only=False, manual=False).run()
+
+        io.log_info ('Performing 3rd pass...')
+        data = ExtractSubprocessor (data, 'final', 256, face_type, debug_dir=None, multi_gpu=False, cpu_only=False, manual=False, final_output_path=cur_output_path).run()
+        
+        
+        io.log_info (f"Sorting: {str(cur_output_path)} ")
+        Sorter.main (input_path=str(cur_output_path), sort_by_method='hist')
+        
+        import code
+        code.interact(local=dict(globals(), **locals()))
+        
+        #try:
+        #    io.log_info (f"Removing: {str(cur_input_path)} ")
+        #    shutil.rmtree(cur_input_path)
+        #except:
+        #    io.log_info (f"unable to remove: {str(cur_input_path)} ")
+            
+            
+            
 
 def extract_vggface2_dataset(input_dir, device_args={} ):
     multi_gpu = device_args.get('multi_gpu', False)
@@ -64,7 +215,7 @@ def extract_vggface2_dataset(input_dir, device_args={} ):
         except:
             io.log_info (f"unable to remove: {str(cur_input_path)} ")
             
-            
+"""            
 
 class CelebAMASKHQSubprocessor(Subprocessor):
     class Cli(Subprocessor.Cli):
