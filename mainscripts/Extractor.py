@@ -307,9 +307,14 @@ class ExtractSubprocessor(Subprocessor):
         self.result = []
 
         self.devices = ExtractSubprocessor.get_devices_for_config(self.manual, self.type, multi_gpu, cpu_only)
-
-        no_response_time_sec = 60 if not self.manual and not DEBUG else 999999
         
+        if self.manual or DEBUG:
+            no_response_time_sec = 999999 
+        elif nnlib.device.backend == 'plaidML':
+            no_response_time_sec = 600
+        else:
+            no_response_time_sec = 60
+            
         super().__init__('Extractor', ExtractSubprocessor.Cli, no_response_time_sec, initialize_subprocesses_in_serial=(type != 'final'))
 
     #override
