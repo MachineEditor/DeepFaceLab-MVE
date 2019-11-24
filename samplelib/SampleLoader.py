@@ -1,4 +1,5 @@
 import operator
+import pickle
 import traceback
 from enum import IntEnum
 from pathlib import Path
@@ -23,7 +24,7 @@ class SampleLoader:
         return len ( Path_utils.get_all_dir_names(samples_path) )
 
     @staticmethod
-    def load(sample_type, samples_path, target_samples_path=None, person_id_mode=False):
+    def load(sample_type, samples_path, target_samples_path=None, person_id_mode=True, use_caching=False):
         cache = SampleLoader.cache
 
         if str(samples_path) not in cache.keys():
@@ -36,15 +37,54 @@ class SampleLoader:
                 datas[sample_type] = [ Sample(filename=filename) for filename in io.progress_bar_generator( Path_utils.get_image_paths(samples_path), "Loading") ]
         elif          sample_type == SampleType.FACE:
             if  datas[sample_type] is None:
-                if person_id_mode:
-                    dir_names = Path_utils.get_all_dir_names(samples_path)
-                    all_samples = []
-                    for i, dir_name in io.progress_bar_generator( [*enumerate(dir_names)] , "Loading"):
-                        all_samples += SampleLoader.upgradeToFaceSamples( [ Sample(filename=filename, person_id=i) for filename in Path_utils.get_image_paths( samples_path / dir_name  ) ], silent=True )
-                    datas[sample_type] = all_samples
-                else:
+                
+                if not use_caching:
                     datas[sample_type] = SampleLoader.upgradeToFaceSamples( [ Sample(filename=filename) for filename in Path_utils.get_image_paths(samples_path) ] )
+                else:
+                    samples_dat = samples_path / 'samples.dat'
+                    if samples_dat.exists():
+                        io.log_info (f"Using saved samples info from '{samples_dat}' ")
+                        
+                        all_samples = pickle.loads(samples_dat.read_bytes())
+                    
+                        if person_id_mode:
+                            for samples in all_samples:
+                                for sample in samples:
+                                    sample.filename = str( samples_path / Path(sample.filename) )
+                        else:
+                            for sample in all_samples:
+                                sample.filename = str( samples_path / Path(sample.filename) )
+                            
+                        datas[sample_type] = all_samples
+                        
+                    else:  
+                        if person_id_mode:
+                            dir_names = Path_utils.get_all_dir_names(samples_path)
+                            all_samples = []
+                            for i, dir_name in io.progress_bar_generator( [*enumerate(dir_names)] , "Loading"):
+                                all_samples += [ SampleLoader.upgradeToFaceSamples( [ Sample(filename=filename, person_id=i) for filename in Path_utils.get_image_paths( samples_path / dir_name  ) ], silent=True ) ]
+                            datas[sample_type] = all_samples
+                        else:
+                            datas[sample_type] = all_samples = SampleLoader.upgradeToFaceSamples( [ Sample(filename=filename) for filename in Path_utils.get_image_paths(samples_path) ] )
 
+                        if person_id_mode:
+                            for samples in all_samples:
+                                for sample in samples:
+                                    sample.filename = str(Path(sample.filename).relative_to(samples_path))
+                        else:
+                            for sample in all_samples:
+                                sample.filename = str(Path(sample.filename).relative_to(samples_path))
+                                
+                        samples_dat.write_bytes (pickle.dumps(all_samples))
+                        
+                        if person_id_mode:
+                            for samples in all_samples:
+                                for sample in samples:
+                                    sample.filename = str( samples_path / Path(sample.filename) )
+                        else:
+                            for sample in all_samples:
+                                sample.filename = str( samples_path / Path(sample.filename) )
+                            
         elif          sample_type == SampleType.FACE_TEMPORAL_SORTED:
             if  datas[sample_type] is None:
                 datas[sample_type] = SampleLoader.upgradeToFaceTemporalSortedSamples( SampleLoader.load(SampleType.FACE, samples_path) )

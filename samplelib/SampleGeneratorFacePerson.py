@@ -22,8 +22,9 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
                         sample_process_options=SampleProcessor.Options(), 
                         output_sample_types=[], 
                         person_id_mode=1,
+                        use_caching=False,
                         generators_count=2, 
-                        generators_random_seed=None, 
+                        generators_random_seed=None,
                         **kwargs):
                         
         super().__init__(samples_path, debug, batch_size)
@@ -35,14 +36,27 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
             raise ValueError("len(generators_random_seed) != generators_count")
         self.generators_random_seed = generators_random_seed
         
-        samples = SampleLoader.load (SampleType.FACE, self.samples_path, person_id_mode=True)
+        samples = SampleLoader.load (SampleType.FACE, self.samples_path, person_id_mode=True, use_caching=use_caching)
          
         if person_id_mode==1:
-            new_samples = []
-            for s in samples:    
-                new_samples += s
-            samples = new_samples
             np.random.shuffle(samples)
+            
+            new_samples = []
+            while len(samples) > 0:
+                for i in range( len(samples)-1, -1, -1):
+                    sample = samples[i]
+                    
+                    if len(sample) > 0:
+                        new_samples.append(sample.pop(0))
+                        
+                    if len(sample) == 0:
+                        samples.pop(i)
+            samples = new_samples
+            #new_samples = []
+            #for s in samples:    
+            #    new_samples += s
+            #samples = new_samples
+            #np.random.shuffle(samples)
             
         self.samples_len = len(samples)
         
@@ -116,7 +130,7 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
                 if self.person_id_mode==1:
                     if len(shuffle_idxs) == 0:
                         shuffle_idxs = samples_idxs.copy()
-                        np.random.shuffle(shuffle_idxs)
+                        #np.random.shuffle(shuffle_idxs)
 
                     idx = shuffle_idxs.pop()
                     sample = samples[ idx ]
