@@ -24,7 +24,7 @@ class SampleLoader:
         return len ( Path_utils.get_all_dir_names(samples_path) )
 
     @staticmethod
-    def load(sample_type, samples_path, target_samples_path=None, person_id_mode=True, use_caching=False):
+    def load(sample_type, samples_path, target_samples_path=None, person_id_mode=False, use_caching=False):
         cache = SampleLoader.cache
 
         if str(samples_path) not in cache.keys():
