@@ -28,7 +28,10 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
     face_output_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, output_size, face_type=cfg.face_type, scale= 1.0 + 0.01*cfg.output_face_scale   )
 
     dst_face_bgr      = cv2.warpAffine( img_bgr        , face_mat, (output_size, output_size), flags=cv2.INTER_CUBIC )
+    dst_face_bgr      = np.clip(dst_face_bgr, 0, 1)
+    
     dst_face_mask_a_0 = cv2.warpAffine( img_face_mask_a, face_mat, (output_size, output_size), flags=cv2.INTER_CUBIC )
+    dst_face_mask_a_0 = np.clip(dst_face_mask_a_0, 0, 1)
 
     predictor_input_bgr      = cv2.resize (dst_face_bgr, predictor_input_shape[0:2] )
 
@@ -46,7 +49,8 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
 
     if cfg.super_resolution_mode:
         prd_face_bgr = cfg.superres_func(cfg.super_resolution_mode, prd_face_bgr)
-
+        prd_face_bgr = np.clip(prd_face_bgr, 0, 1)
+        
         if predictor_masked:
             prd_face_mask_a_0 = cv2.resize (prd_face_mask_a_0,  (output_size, output_size), cv2.INTER_CUBIC)
         else:
