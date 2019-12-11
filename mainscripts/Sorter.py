@@ -801,7 +801,7 @@ def sort_final(input_path, include_by_blur=True):
 
 def sort_by_vggface(input_path):
     io.log_info ("Sorting by face similarity using VGGFace model...")
-    
+
     model = VGGFace()
 
     final_img_list = []
@@ -812,7 +812,7 @@ def sort_by_vggface(input_path):
     img_list_len = len(img_list)
     img_list_range = [*range(img_list_len)]
 
-    feats = [None]*img_list_len    
+    feats = [None]*img_list_len
     for i in io.progress_bar_generator(img_list_range, "Loading"):
         img = cv2_imread( img_list[i][0] ).astype(np.float32)
         img = imagelib.normalize_channels (img, 3)
@@ -824,88 +824,88 @@ def sort_by_vggface(input_path):
         feats[i] = model.predict( img[None,...] )[0]
 
     tmp = np.zeros( (img_list_len,) )
-    float_inf = float("inf")    
-    for i in io.progress_bar_generator ( range(img_list_len-1), "Sorting" ):  
+    float_inf = float("inf")
+    for i in io.progress_bar_generator ( range(img_list_len-1), "Sorting" ):
         i_feat = feats[i]
-        
+
         for j in img_list_range:
             tmp[j] = npla.norm(i_feat-feats[j]) if j >= i+1 else float_inf
-            
+
         idx = np.argmin(tmp)
-        
+
         img_list[i+1], img_list[idx] = img_list[idx], img_list[i+1]
         feats[i+1], feats[idx] = feats[idx], feats[i+1]
 
     return img_list, trash_img_list
-    
+
 def sort_by_absdiff(input_path):
     io.log_info ("Sorting by absolute difference...")
-    
+
     is_sim = io.input_bool ("Sort by similar? ( y/n ?:help skip:y ) : ", True, help_message="Otherwise sort by dissimilar.")
-    
+
     from nnlib import nnlib
     exec( nnlib.import_all( device_config=nnlib.device.Config() ), locals(), globals() )
-    
+
     image_paths = Path_utils.get_image_paths(input_path)
-    image_paths_len = len(image_paths)    
-    
+    image_paths_len = len(image_paths)
+
     batch_size = 1024
     batch_size_remain = image_paths_len % batch_size
-    
+
     i_t = Input ( (256,256,3) )
     j_t = Input ( (256,256,3) )
-    
+
     outputs = []
     for i in range(batch_size):
         outputs += [ K.sum( K.abs(i_t-j_t[i]), axis=[1,2,3] ) ]
-       
+
     func_bs_full = K.function ( [i_t,j_t], outputs)
-    
+
     outputs = []
     for i in range(batch_size_remain):
         outputs += [ K.sum( K.abs(i_t-j_t[i]), axis=[1,2,3] ) ]
-       
+
     func_bs_remain = K.function ( [i_t,j_t], outputs)
-    
+
     import h5py
     db_file_path = Path(tempfile.gettempdir()) / 'sort_cache.hdf5'
     db_file = h5py.File( str(db_file_path), "w")
     db = db_file.create_dataset("results", (image_paths_len,image_paths_len), compression="gzip")
-   
-   
+
+
     pg_len = image_paths_len // batch_size
     if batch_size_remain != 0:
         pg_len += 1
-        
+
     pg_len = int( (  pg_len*pg_len - pg_len ) / 2 + pg_len )
-    
+
     io.progress_bar ("Computing", pg_len)
     j=0
     while j < image_paths_len:
         j_images = [ cv2_imread(x) for x in image_paths[j:j+batch_size] ]
         j_images_len = len(j_images)
-        
+
         func = func_bs_remain if image_paths_len-j < batch_size else func_bs_full
 
         i=0
-        while i < image_paths_len: 
+        while i < image_paths_len:
             if i >= j:
                 i_images = [ cv2_imread(x) for x in image_paths[i:i+batch_size] ]
-                i_images_len = len(i_images)                
-                result = func ([i_images,j_images])                
+                i_images_len = len(i_images)
+                result = func ([i_images,j_images])
                 db[j:j+j_images_len,i:i+i_images_len] = np.array(result)
                 io.progress_bar_inc(1)
-                
+
             i += batch_size
-        db_file.flush() 
+        db_file.flush()
         j += batch_size
-        
+
     io.progress_bar_close()
-        
+
     next_id = 0
     sorted = [next_id]
     for i in io.progress_bar_generator ( range(image_paths_len-1), "Sorting" ):
-        id_ar = np.concatenate ( [ db[:next_id,next_id], db[next_id,next_id:] ] )         
+        id_ar = np.concatenate ( [ db[:next_id,next_id], db[next_id,next_id:] ] )
         id_ar = np.argsort(id_ar)
 
 
@@ -913,41 +913,9 @@ def sort_by_absdiff(input_path):
         sorted += [next_id]
     db_file.close()
     db_file_path.unlink()
-    
+
     img_list = [ (image_paths[x],) for x in sorted]
     return img_list, []
-"""
-    img_list_len = len(img_list)
-    
-    for i in io.progress_bar_generator ( range(img_list_len-1), "Sorting" ):        
-        a = []
-        i_1 = img_list[i][1]
-        
-        
-        for j in range(i+1, img_list_len):
-            a.append ( [ j, np.linalg.norm(i_1-img_list[j][1]) ] )
-        
-        x = sorted(a, key=operator.itemgetter(1) )[0][0]
-        saved = img_list[i+1]
-        img_list[i+1] = img_list[x]
-        img_list[x] = saved
-        
-        
-    q = np.array ( [ x[1] for x in img_list ] )
-    
-    for i in io.progress_bar_generator ( range(img_list_len-1), "Sorting" ):        
-        
-        a = np.linalg.norm( q[i] - q[i+1:], axis=1 )
-        a = i+1+np.argmin(a)        
-        
-        saved = img_list[i+1]
-        img_list[i+1] = img_list[a]
-        img_list[a] = saved
-        
-        saved = q[i+1]
-        q[i+1] = q[a]
-        q[a] = saved
-"""
 
 def final_process(input_path, img_list, trash_img_list):
     if len(trash_img_list) != 0:
@@ -987,8 +955,6 @@ def final_process(input_path, img_list, trash_img_list):
                 src.rename (dst)
             except:
                 io.log_info ('fail to rename %s' % (src.name) )
-
-
 
 def main (input_path, sort_by_method):
     input_path = Path(input_path)
