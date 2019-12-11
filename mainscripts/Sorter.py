@@ -1,7 +1,9 @@
-﻿import os
-import multiprocessing
+﻿import multiprocessing
 import operator
+import os
 import sys
+import tempfile
+from functools import cmp_to_key
 from pathlib import Path
 from shutil import copyfile
 
@@ -11,11 +13,10 @@ from numpy import linalg as npla
 
 import imagelib
 from facelib import LandmarksProcessor
-from functools import cmp_to_key
 from imagelib import estimate_sharpness
 from interact import interact as io
 from joblib import Subprocessor
-from nnlib import VGGFace
+from nnlib import VGGFace, nnlib
 from utils import Path_utils
 from utils.cv2_utils import *
 from utils.DFLJPG import DFLJPG
@@ -837,6 +838,84 @@ def sort_by_vggface(input_path):
 
     return img_list, trash_img_list
     
+def sort_by_absdiff(input_path):
+    io.log_info ("Sorting by absolute difference...")
+    
+    is_sim = io.input_bool ("Sort by similar? ( y/n ?:help skip:y ) : ", True, help_message="Otherwise sort by dissimilar.")
+    
+    from nnlib import nnlib
+    exec( nnlib.import_all( device_config=nnlib.device.Config() ), locals(), globals() )
+    
+    image_paths = Path_utils.get_image_paths(input_path)
+    image_paths_len = len(image_paths)    
+    
+    batch_size = 1024
+    batch_size_remain = image_paths_len % batch_size
+    
+    i_t = Input ( (256,256,3) )
+    j_t = Input ( (256,256,3) )
+    
+    outputs = []
+    for i in range(batch_size):
+        outputs += [ K.sum( K.abs(i_t-j_t[i]), axis=[1,2,3] ) ]
+       
+    func_bs_full = K.function ( [i_t,j_t], outputs)
+    
+    outputs = []
+    for i in range(batch_size_remain):
+        outputs += [ K.sum( K.abs(i_t-j_t[i]), axis=[1,2,3] ) ]
+       
+    func_bs_remain = K.function ( [i_t,j_t], outputs)
+    
+    import h5py
+    db_file_path = Path(tempfile.gettempdir()) / 'sort_cache.hdf5'
+    db_file = h5py.File( str(db_file_path), "w")
+    db = db_file.create_dataset("results", (image_paths_len,image_paths_len), compression="gzip")
+   
+   
+    pg_len = image_paths_len // batch_size
+    if batch_size_remain != 0:
+        pg_len += 1
+        
+    pg_len = int( (  pg_len*pg_len - pg_len ) / 2 + pg_len )
+    
+    io.progress_bar ("Computing", pg_len)
+    j=0
+    while j < image_paths_len:
+        j_images = [ cv2_imread(x) for x in image_paths[j:j+batch_size] ]
+        j_images_len = len(j_images)
+        
+        func = func_bs_remain if image_paths_len-j < batch_size else func_bs_full
+
+        i=0
+        while i < image_paths_len: 
+            if i >= j:
+                i_images = [ cv2_imread(x) for x in image_paths[i:i+batch_size] ]
+                i_images_len = len(i_images)                
+                result = func ([i_images,j_images])                
+                db[j:j+j_images_len,i:i+i_images_len] = np.array(result)
+                io.progress_bar_inc(1)
+                
+            i += batch_size
+        db_file.flush() 
+        j += batch_size
+        
+    io.progress_bar_close()
+        
+    next_id = 0
+    sorted = [next_id]
+    for i in io.progress_bar_generator ( range(image_paths_len-1), "Sorting" ):
+        id_ar = np.concatenate ( [ db[:next_id,next_id], db[next_id,next_id:] ] )         
+        id_ar = np.argsort(id_ar)
+
+
+        next_id = np.setdiff1d(id_ar, sorted, True)[ 0 if is_sim else -1]
+        sorted += [next_id]
+    db_file.close()
+    db_file_path.unlink()
+    
+    img_list = [ (image_paths[x],) for x in sorted]
+    return img_list, []
 """
     img_list_len = len(img_list)
     
@@ -932,6 +1011,7 @@ def main (input_path, sort_by_method):
     elif sort_by_method == 'origname':      img_list, trash_img_list = sort_by_origname (input_path)
     elif sort_by_method == 'oneface':       img_list, trash_img_list = sort_by_oneface_in_image (input_path)
     elif sort_by_method == 'vggface':       img_list, trash_img_list = sort_by_vggface (input_path)
+    elif sort_by_method == 'absdiff':       img_list, trash_img_list = sort_by_absdiff (input_path)
     elif sort_by_method == 'final':         img_list, trash_img_list = sort_final (input_path)
     elif sort_by_method == 'final-no-blur': img_list, trash_img_list = sort_final (input_path, include_by_blur=False)
 
