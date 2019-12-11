@@ -55,7 +55,6 @@ class SampleGeneratorFace(SampleGeneratorBase):
             raise ValueError('No training data provided.')
         
         ct_samples = SampleLoader.load (SampleType.FACE, random_ct_samples_path) if random_ct_samples_path is not None else None
-        self.random_ct_sample_chance = 100
 
         if self.debug:
             self.generators_count = 1
@@ -133,15 +132,11 @@ class SampleGeneratorFace(SampleGeneratorBase):
                         try:
                             ct_sample=None                            
                             if ct_samples is not None:                                
-                                if np.random.randint(100) < self.random_ct_sample_chance:
-                                    ct_sample=ct_samples[np.random.randint(ct_samples_len)]
+                                ct_sample=ct_samples[np.random.randint(ct_samples_len)]
                             
-                            x = SampleProcessor.process (sample, self.sample_process_options, self.output_sample_types, self.debug, ct_sample=ct_sample)
+                            x, = SampleProcessor.process ([sample], self.sample_process_options, self.output_sample_types, self.debug, ct_sample=ct_sample)
                         except:
                             raise Exception ("Exception occured in sample %s. Error: %s" % (sample.filename, traceback.format_exc() ) )
-
-                        if type(x) != tuple and type(x) != list:
-                            raise Exception('SampleProcessor.process returns NOT tuple/list')
 
                         if batches is None:
                             batches = [ [] for _ in range(len(x)) ]

@@ -66,7 +66,7 @@ class SampleGeneratorImageTemporal(SampleGeneratorBase):
                 for i in range( self.temporal_image_count ):
                     sample = samples[ idx+i*mult ]
                     try:
-                        temporal_samples += SampleProcessor.process (sample, self.sample_process_options, self.output_sample_types, self.debug)
+                        temporal_samples += SampleProcessor.process ([sample], self.sample_process_options, self.output_sample_types, self.debug)[0]
                     except:
                         raise Exception ("Exception occured in sample %s. Error: %s" % (sample.filename, traceback.format_exc() ) )
 

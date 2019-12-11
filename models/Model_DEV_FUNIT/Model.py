@@ -23,9 +23,9 @@ class FUNITModel(ModelBase):
     #override
     def onInitializeOptions(self, is_first_run, ask_override):
         
-        default_resolution = 96
+        default_resolution = 64
         if is_first_run:
-            self.options['resolution'] = io.input_int(f"Resolution ( 96,128,224 ?:help skip:{default_resolution}) : ", default_resolution, [128,224])
+            self.options['resolution'] = io.input_int(f"Resolution ( 64,96,128,224 ?:help skip:{default_resolution}) : ", default_resolution, [64,96,128,224])
         else:
             self.options['resolution'] = self.options.get('resolution', default_resolution)
 
@@ -48,7 +48,7 @@ class FUNITModel(ModelBase):
 
         resolution = self.options['resolution']
         face_type = FaceType.FULL if self.options['face_type'] == 'f' else FaceType.HALF
-        person_id_max_count = SampleGeneratorFace.get_person_id_max_count(self.training_data_src_path)
+        person_id_max_count = SampleGeneratorFacePerson.get_person_id_max_count(self.training_data_src_path)
 
         
         self.model = FUNIT( face_type_str=FaceType.toString(face_type), 
@@ -85,21 +85,21 @@ class FUNITModel(ModelBase):
             output_sample_types1=[ {'types': (t.IMG_SOURCE, face_type, t.MODE_BGR), 'resolution':resolution, 'normalize_tanh':True} ]
             
             self.set_training_data_generators ([
-                        SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size,
+                        SampleGeneratorFacePerson(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size,
                             sample_process_options=SampleProcessor.Options(random_flip=True, rotation_range=[0,0] ),
-                            output_sample_types=output_sample_types, person_id_mode=True ),
+                            output_sample_types=output_sample_types, person_id_mode=1, use_caching=True, generators_count=1 ),
 
-                        SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size,
+                        SampleGeneratorFacePerson(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size,
                             sample_process_options=SampleProcessor.Options(random_flip=True, rotation_range=[0,0] ),
-                            output_sample_types=output_sample_types, person_id_mode=True ),
+                            output_sample_types=output_sample_types, person_id_mode=1, use_caching=True, generators_count=1 ),
 
-                        SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size,
+                        SampleGeneratorFacePerson(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size,
                             sample_process_options=SampleProcessor.Options(random_flip=True, rotation_range=[0,0]),
-                            output_sample_types=output_sample_types1, person_id_mode=True ),
+                            output_sample_types=output_sample_types1, person_id_mode=1, use_caching=True, generators_count=1 ),
 
-                        SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size,
+                        SampleGeneratorFacePerson(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size,
                             sample_process_options=SampleProcessor.Options(random_flip=True, rotation_range=[0,0]),
-                            output_sample_types=output_sample_types1, person_id_mode=True ),
+                            output_sample_types=output_sample_types1, person_id_mode=1, use_caching=True, generators_count=1 ),
                     ])
 
     #override
@@ -125,7 +125,7 @@ class FUNITModel(ModelBase):
         xb  = generators_samples[1][0]
         ta  = generators_samples[2][0]
         tb  = generators_samples[3][0]
-
+        
         view_samples = min(4, xa.shape[0])
 
         lines_train = []

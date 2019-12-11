@@ -1,3 +1,4 @@
+import copy
 import multiprocessing
 import traceback
 
@@ -37,7 +38,10 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
         self.generators_random_seed = generators_random_seed
         
         samples = SampleLoader.load (SampleType.FACE, self.samples_path, person_id_mode=True, use_caching=use_caching)
-         
+        samples = copy.copy(samples)
+        for i in range(len(samples)):
+            samples[i] = copy.copy(samples[i])
+        
         if person_id_mode==1:
             np.random.shuffle(samples)
             
@@ -52,6 +56,7 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
                     if len(sample) == 0:
                         samples.pop(i)
             samples = new_samples
+            
             #new_samples = []
             #for s in samples:    
             #    new_samples += s
@@ -114,7 +119,19 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
             for i in range(persons_count):
                 samples_idxs[i] = [*range(len(samples[i]))]
                 shuffle_idxs[i] = []
-
+        elif self.person_id_mode==3:
+            persons_count = len(samples)
+            
+            person_idxs = [ *range(persons_count) ]
+            shuffle_person_idxs = []
+            
+            samples_idxs = [None]*persons_count
+            shuffle_idxs = [None]*persons_count
+            
+            for i in range(persons_count):
+                samples_idxs[i] = [*range(len(samples[i]))]
+                shuffle_idxs[i] = []
+                
         while True:           
             
             if self.person_id_mode==2: 
@@ -122,7 +139,7 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
                     shuffle_person_idxs = person_idxs.copy()
                     np.random.shuffle(shuffle_person_idxs)
                 person_ids = shuffle_person_idxs.pop()
-            
+ 
                         
             batches = None
             for n_batch in range(self.batch_size):
@@ -130,13 +147,13 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
                 if self.person_id_mode==1:
                     if len(shuffle_idxs) == 0:
                         shuffle_idxs = samples_idxs.copy()
-                        #np.random.shuffle(shuffle_idxs)
+                        np.random.shuffle(shuffle_idxs) ###
 
                     idx = shuffle_idxs.pop()
                     sample = samples[ idx ]
     
                     try:
-                        x = SampleProcessor.process (sample, self.sample_process_options, self.output_sample_types, self.debug)
+                        x, = SampleProcessor.process ([sample], self.sample_process_options, self.output_sample_types, self.debug)
                     except:
                         raise Exception ("Exception occured in sample %s. Error: %s" % (sample.filename, traceback.format_exc() ) )
 
@@ -155,7 +172,7 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
                     batches[i_person_id].append ( np.array([sample.person_id]) )
 
                     
-                else:
+                elif self.person_id_mode==2:
                     person_id1, person_id2 = person_ids
                     
                     if len(shuffle_idxs[person_id1]) == 0:
@@ -174,12 +191,12 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
                 
                     if sample1 is not None and sample2 is not None:
                         try:
-                            x1 = SampleProcessor.process (sample1, self.sample_process_options, self.output_sample_types, self.debug)
+                            x1, = SampleProcessor.process ([sample1], self.sample_process_options, self.output_sample_types, self.debug)
                         except:
                             raise Exception ("Exception occured in sample %s. Error: %s" % (sample1.filename, traceback.format_exc() ) )
                         
                         try:
-                            x2 = SampleProcessor.process (sample2, self.sample_process_options, self.output_sample_types, self.debug)
+                            x2, = SampleProcessor.process ([sample2], self.sample_process_options, self.output_sample_types, self.debug)
                         except:
                             raise Exception ("Exception occured in sample %s. Error: %s" % (sample2.filename, traceback.format_exc() ) )
 
@@ -203,7 +220,56 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
 
                         batches[i_person_id2].append ( np.array([sample2.person_id]) )
                         
+                elif self.person_id_mode==3:             
+                    if len(shuffle_person_idxs) == 0:
+                        shuffle_person_idxs = person_idxs.copy()
+                        np.random.shuffle(shuffle_person_idxs)
+                    person_id = shuffle_person_idxs.pop()
+                       
+                    if len(shuffle_idxs[person_id]) == 0:
+                        shuffle_idxs[person_id] = samples_idxs[person_id].copy()
+                        np.random.shuffle(shuffle_idxs[person_id])
+
+                    idx = shuffle_idxs[person_id].pop()
+                    sample1 = samples[person_id][idx]
                     
+                    if len(shuffle_idxs[person_id]) == 0:
+                        shuffle_idxs[person_id] = samples_idxs[person_id].copy()
+                        np.random.shuffle(shuffle_idxs[person_id])
+
+                    idx = shuffle_idxs[person_id].pop()
+                    sample2 = samples[person_id][idx]
+                
+                    if sample1 is not None and sample2 is not None:
+                        try:
+                            x1, = SampleProcessor.process ([sample1], self.sample_process_options, self.output_sample_types, self.debug)
+                        except:
+                            raise Exception ("Exception occured in sample %s. Error: %s" % (sample1.filename, traceback.format_exc() ) )
+                        
+                        try:
+                            x2, = SampleProcessor.process ([sample2], self.sample_process_options, self.output_sample_types, self.debug)
+                        except:
+                            raise Exception ("Exception occured in sample %s. Error: %s" % (sample2.filename, traceback.format_exc() ) )
+
+                        x1_len = len(x1)
+                        if batches is None:
+                            batches = [ [] for _ in range(x1_len) ]                            
+                            batches += [ [] ]
+                            i_person_id1 = len(batches)-1
+                            
+                            batches += [ [] for _ in range(len(x2)) ]                            
+                            batches += [ [] ]
+                            i_person_id2 = len(batches)-1
+
+                        for i in range(x1_len):
+                            batches[i].append ( x1[i] )
+                            
+                        for i in range(len(x2)):
+                            batches[x1_len+1+i].append ( x2[i] )
+
+                        batches[i_person_id1].append ( np.array([sample1.person_id]) )
+
+                        batches[i_person_id2].append ( np.array([sample2.person_id]) )    
 
             yield [ np.array(batch) for batch in batches]
     

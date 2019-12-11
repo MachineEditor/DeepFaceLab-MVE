@@ -22,7 +22,7 @@ class ThisThreadGenerator(object):
         return next(self.generator_func)
 
 class SubprocessGenerator(object):
-    def __init__(self, generator_func, user_param=None, prefetch=2):
+    def __init__(self, generator_func, user_param=None, prefetch=2, start_now=False):
         super().__init__()
         self.prefetch = prefetch
         self.generator_func = generator_func
@@ -30,6 +30,16 @@ class SubprocessGenerator(object):
         self.sc_queue = multiprocessing.Queue()
         self.cs_queue = multiprocessing.Queue()
         self.p = None
+        if start_now:
+            self._start()
+            
+    def _start(self):
+        if self.p == None:
+            user_param = self.user_param
+            self.user_param = None
+            self.p = multiprocessing.Process(target=self.process_func, args=(user_param,) )
+            self.p.daemon = True
+            self.p.start()
 
     def process_func(self, user_param):
         self.generator_func = self.generator_func(user_param)
@@ -54,13 +64,7 @@ class SubprocessGenerator(object):
         return self_dict
 
     def __next__(self):
-        if self.p == None:
-            user_param = self.user_param
-            self.user_param = None
-            self.p = multiprocessing.Process(target=self.process_func, args=(user_param,) )
-            self.p.daemon = True
-            self.p.start()
-
+        self._start()
         gen_data = self.cs_queue.get()
         if gen_data is None:
             self.p.terminate()
