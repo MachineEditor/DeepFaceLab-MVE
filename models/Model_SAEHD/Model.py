@@ -452,9 +452,9 @@ class SAEHDModel(ModelBase):
         psd_target_dst_anti_masked = self.model.pred_src_dst*(1.0 - target_dstm)
 
         if self.is_training_mode:
-            self.src_dst_opt      = RMSprop(lr=5e-5, clipnorm=1.0 if self.options['clipgrad'] else 0.0, tf_cpu_mode=self.options['optimizer_mode']-1)
-            self.src_dst_mask_opt = RMSprop(lr=5e-5, clipnorm=1.0 if self.options['clipgrad'] else 0.0, tf_cpu_mode=self.options['optimizer_mode']-1)
-            self.D_opt            = RMSprop(lr=5e-5, clipnorm=1.0 if self.options['clipgrad'] else 0.0, tf_cpu_mode=self.options['optimizer_mode']-1)
+            self.src_dst_opt      = RMSprop(lr=5e-5, lr_dropout=0.3, clipnorm=1.0 if self.options['clipgrad'] else 0.0, tf_cpu_mode=self.options['optimizer_mode']-1)
+            self.src_dst_mask_opt = RMSprop(lr=5e-5, lr_dropout=0.3, clipnorm=1.0 if self.options['clipgrad'] else 0.0, tf_cpu_mode=self.options['optimizer_mode']-1)
+            self.D_opt            = RMSprop(lr=5e-5, lr_dropout=0.3, clipnorm=1.0 if self.options['clipgrad'] else 0.0, tf_cpu_mode=self.options['optimizer_mode']-1)
         
             src_loss =  K.mean ( 10*dssim(kernel_size=int(resolution/11.6),max_value=1.0)( target_src_masked_opt, pred_src_src_masked_opt) )
             src_loss += K.mean ( 10*K.square( target_src_masked_opt - pred_src_src_masked_opt ) )

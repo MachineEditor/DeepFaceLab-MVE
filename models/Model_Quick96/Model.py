@@ -143,8 +143,8 @@ class Quick96Model(ModelBase):
                     self.CA_conv_weights_list += [layer.weights[0]] #- is Conv2D kernel_weights
 
         if self.is_training_mode:
-            self.src_dst_opt      = RMSprop(lr=2e-4)
-            self.src_dst_mask_opt = RMSprop(lr=2e-4)
+            self.src_dst_opt      = RMSprop(lr=2e-4, lr_dropout=0.3)
+            self.src_dst_mask_opt = RMSprop(lr=2e-4, lr_dropout=0.3)
                 
             target_src_masked = self.model.target_src*self.model.target_srcm
             target_dst_masked = self.model.target_dst*self.model.target_dstm
