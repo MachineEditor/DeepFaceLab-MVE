@@ -43,25 +43,25 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
             samples[i] = copy.copy(samples[i])
         
         if person_id_mode==1:
-            np.random.shuffle(samples)
-            
-            new_samples = []
-            while len(samples) > 0:
-                for i in range( len(samples)-1, -1, -1):
-                    sample = samples[i]
-                    
-                    if len(sample) > 0:
-                        new_samples.append(sample.pop(0))
-                        
-                    if len(sample) == 0:
-                        samples.pop(i)
-            samples = new_samples
-            
-            #new_samples = []
-            #for s in samples:    
-            #    new_samples += s
-            #samples = new_samples
             #np.random.shuffle(samples)
+            #
+            #new_samples = []
+            #while len(samples) > 0:
+            #    for i in range( len(samples)-1, -1, -1):
+            #        sample = samples[i]
+            #        
+            #        if len(sample) > 0:
+            #            new_samples.append(sample.pop(0))
+            #            
+            #        if len(sample) == 0:
+            #            samples.pop(i)
+            #            i -= 1
+            #samples = new_samples            
+            new_samples = []
+            for s in samples:    
+                new_samples += s
+            samples = new_samples
+            np.random.shuffle(samples)
             
         self.samples_len = len(samples)
         
