@@ -315,7 +315,7 @@ class ExtractSubprocessor(Subprocessor):
         else:
             no_response_time_sec = 60
             
-        super().__init__('Extractor', ExtractSubprocessor.Cli, no_response_time_sec, initialize_subprocesses_in_serial=(type != 'final'))
+        super().__init__('Extractor', ExtractSubprocessor.Cli, no_response_time_sec)
 
     #override
     def on_check_run(self):
