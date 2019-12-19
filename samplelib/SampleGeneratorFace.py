@@ -54,7 +54,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
         if self.samples_len == 0:
             raise ValueError('No training data provided.')
         
-        ct_samples = SampleLoader.load (SampleType.FACE, random_ct_samples_path) if random_ct_samples_path is not None else None
+        ct_samples = SampleLoader.load (SampleType.FACE, random_ct_samples_path, use_caching=use_caching) if random_ct_samples_path is not None else None
 
         if self.debug:
             self.generators_count = 1

@@ -183,6 +183,15 @@ landmarks_68_3D = np.array( [
 [0.205322    , 31.408738    , -21.903670  ],
 [-7.198266   , 30.844876    , -20.328022  ] ], dtype=np.float32)
 
+FaceType_to_padding_remove_align = {
+    FaceType.HALF: (0.0, False),
+    FaceType.MID_FULL: (0.0675, False),
+    FaceType.FULL: (0.2109375, False),
+    FaceType.FULL_NO_ALIGN: (0.2109375, True),
+    FaceType.HEAD: (0.369140625, False),
+    FaceType.HEAD_NO_ALIGN: (0.369140625, True),
+}
+
 def convert_98_to_68(lmrks):
     #jaw
     result = [ lmrks[0] ]
@@ -240,65 +249,62 @@ def transform_points(points, mat, invert=False):
     points = np.squeeze(points)
     return points
 
-def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
+def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0, full_face_align_top=True):
     if not isinstance(image_landmarks, np.ndarray):
         image_landmarks = np.array (image_landmarks)
 
-    """
-    if face_type == FaceType.AVATAR:
-        centroid = np.mean (image_landmarks, axis=0)
+    padding, remove_align = FaceType_to_padding_remove_align.get(face_type, 0.0)
 
-        mat = umeyama(image_landmarks[17:], landmarks_2D, True)[0:2]
-        a, c = mat[0,0], mat[1,0]
-        scale = math.sqrt((a * a) + (c * c))
-
-        padding = (output_size / 64) * 32
-
-        mat = np.eye ( 2,3 )
-        mat[0,2] = -centroid[0]
-        mat[1,2] = -centroid[1]
-        mat = mat * scale * (output_size / 3)
-        mat[:,2] += output_size / 2
-    else:
-    """
-    remove_align = False
-    if face_type == FaceType.FULL_NO_ALIGN:
-        face_type = FaceType.FULL
-        remove_align = True
-    elif face_type == FaceType.HEAD_NO_ALIGN:
-        face_type = FaceType.HEAD
-        remove_align = True
-
-    if face_type == FaceType.HALF:
-        padding = 0
-    elif face_type == FaceType.MID_FULL:
-        padding = int(output_size * 0.06)
-    elif face_type == FaceType.FULL:
-        padding = (output_size / 64) * 12
-    elif face_type == FaceType.HEAD:
-        padding = (output_size / 64) * 21
-    else:
-        raise ValueError ('wrong face_type: ', face_type)
-
-    #mat = umeyama(image_landmarks[17:], landmarks_2D, True)[0:2]
     mat = umeyama( np.concatenate ( [ image_landmarks[17:49] , image_landmarks[54:55] ] ) , landmarks_2D_new, True)[0:2]
+    l_p = transform_points (  np.float32([(0,0),(1,0),(1,1),(0,1),(0.5,0.5)]) , mat, True)
+    l_c = l_p[4]
 
-    mat = mat * (output_size - 2 * padding)
-    mat[:,2] += padding
-    mat *= (1 / scale)
-    mat[:,2] += -output_size*( ( (1 / scale) - 1.0 ) / 2 )
+    tb_diag_vec = (l_p[2]-l_p[0]).astype(np.float32)
+    tb_diag_vec /= npla.norm(tb_diag_vec)
+    bt_diag_vec = (l_p[1]-l_p[3]).astype(np.float32)
+    bt_diag_vec /= npla.norm(bt_diag_vec)
+    
+    mod = (1.0 / scale)* ( npla.norm(l_p[0]-l_p[2])*(padding*np.sqrt(2.0) + 0.5) )
+    
+    l_t = np.array( [ np.round( l_c - tb_diag_vec*mod ), 
+                      np.round( l_c + bt_diag_vec*mod ), 
+                      np.round( l_c + tb_diag_vec*mod ) ] )    
 
+    pts2 = np.float32(( (0,0),(output_size,0),(output_size,output_size) ))
+    mat = cv2.getAffineTransform(l_t,pts2)
+    
+    if full_face_align_top and (face_type == FaceType.FULL or face_type == FaceType.FULL_NO_ALIGN):
+        lmrks2 = expand_eyebrows(image_landmarks)    
+        lmrks2_ = transform_points( [ lmrks2[19], lmrks2[24] ], mat, False )     
+        y_diff = np.float32( (0,np.min(lmrks2_[:,1])) )   
+
+        y_diff = transform_points( [ np.float32( (0,0) ), y_diff], mat, True)
+        y_diff = y_diff[1]-y_diff[0]
+        
+        x_diff = np.float32((0,0))
+        
+        lmrks2_ = transform_points( [ lmrks2[0], lmrks2[16] ], mat, False )   
+        if lmrks2_[0,0] < 0:
+            x_diff = lmrks2_[0,0]        
+            x_diff = transform_points( [ np.float32( (0,0) ), np.float32((x_diff,0)) ], mat, True)
+            x_diff = x_diff[1]-x_diff[0]        
+        elif lmrks2_[1,0] >= output_size:
+            x_diff = lmrks2_[1,0]-(output_size-1)
+            x_diff = transform_points( [ np.float32( (0,0) ), np.float32((x_diff,0)) ], mat, True)
+            x_diff = x_diff[1]-x_diff[0]    
+        
+        mat = cv2.getAffineTransform( l_t+y_diff+x_diff ,pts2)
+        
     if remove_align:
-        bbox = transform_points ( [ (0,0), (0,output_size-1), (output_size-1, output_size-1), (output_size-1,0) ], mat, True)
+        bbox = transform_points ( [ (0,0), (0,output_size), (output_size, output_size), (output_size,0) ], mat, True)
         area = mathlib.polygon_area(bbox[:,0], bbox[:,1] )
         side = math.sqrt(area) / 2
         center = transform_points ( [(output_size/2,output_size/2)], mat, True)
-
-        pts1 = np.float32([ center+[-side,-side], center+[side,-side], center+[-side,side] ])
-        pts2 = np.float32([[0,0],[output_size-1,0],[0,output_size-1]])
+        pts1 = np.float32(( center+[-side,-side], center+[side,-side], center+[-side,side] ))
         mat = cv2.getAffineTransform(pts1,pts2)
 
     return mat
+
 
 def expand_eyebrows(lmrks, eyebrows_expand_mod=1.0):
     if len(lmrks) != 68:
@@ -627,7 +633,7 @@ def draw_rect_landmarks (image, rect, image_landmarks, face_size, face_type, tra
     image_to_face_mat = get_transform_mat (image_landmarks, face_size, face_type)
     points = transform_points ( [ (0,0), (0,face_size-1), (face_size-1, face_size-1), (face_size-1,0) ], image_to_face_mat, True)
     imagelib.draw_polygon (image, points, (0,0,255), 2)
-    
+
     points = transform_points ( [ ( int(face_size*0.05), 0), ( int(face_size*0.1), int(face_size*0.1) ), ( 0, int(face_size*0.1) ) ], image_to_face_mat, True)
     imagelib.draw_polygon (image, points, (0,0,255), 2)
 

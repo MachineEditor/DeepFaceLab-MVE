@@ -177,8 +177,8 @@ class SampleProcessor(object):
                             if len(mask.shape) == 2:
                                 mask = mask[...,np.newaxis]
 
-                            img = np.concatenate( (img, mask ), -1 )
-                        return img
+                            
+                        return img, mask
 
                     img = sample_bgr
 
@@ -222,14 +222,20 @@ class SampleProcessor(object):
                             img =  cv2.warpAffine( img, LandmarksProcessor.get_transform_mat (sample.landmarks, sample.shape[0], target_ft), (sample.shape[0],sample.shape[0]), flags=cv2.INTER_CUBIC )
                             mask = cv2.warpAffine( mask, LandmarksProcessor.get_transform_mat (sample.landmarks, sample.shape[0], target_ft), (sample.shape[0],sample.shape[0]), flags=cv2.INTER_CUBIC )
                             #then apply transforms
-                            img = do_transform (img, mask)
+                            img, mask = do_transform (img, mask)
+                            img = np.concatenate( (img, mask ), -1 )
                             img = cv2.resize( img, (resolution,resolution), cv2.INTER_CUBIC )
                         else:
-                            img = do_transform (img, mask)
-                            img = cv2.warpAffine( img, LandmarksProcessor.get_transform_mat (sample.landmarks, resolution, target_ft), (resolution,resolution), borderMode=(cv2.BORDER_REPLICATE if border_replicate else cv2.BORDER_CONSTANT), flags=cv2.INTER_CUBIC )
+                            img, mask = do_transform (img, mask)
+                            
+                            mat = LandmarksProcessor.get_transform_mat (sample.landmarks, resolution, target_ft)
+                            img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=(cv2.BORDER_REPLICATE if border_replicate else cv2.BORDER_CONSTANT), flags=cv2.INTER_CUBIC )
+                            mask = cv2.warpAffine( mask, mat, (resolution,resolution), borderMode=cv2.BORDER_CONSTANT, flags=cv2.INTER_CUBIC )
+                            img = np.concatenate( (img, mask[...,None] ), -1 )
 
                     else:
-                        img = do_transform (img, mask)
+                        img, mask = do_transform (img, mask)
+                        img = np.concatenate( (img, mask ), -1 )
                         img = cv2.resize( img, (resolution,resolution), cv2.INTER_CUBIC )
 
                     if random_sub_res != 0:
