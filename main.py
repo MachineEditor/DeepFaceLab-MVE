@@ -133,7 +133,13 @@ if __name__ == "__main__":
 
         if arguments.remove_ie_polys:
             Util.remove_ie_polys_folder (input_path=arguments.input_dir)
-
+    
+        if arguments.save_faceset_metadata:
+            Util.save_faceset_metadata_folder (input_path=arguments.input_dir)
+            
+        if arguments.restore_faceset_metadata:
+            Util.restore_faceset_metadata_folder (input_path=arguments.input_dir)
+            
     p = subparsers.add_parser( "util", help="Utilities.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
     p.add_argument('--convert-png-to-jpg', action="store_true", dest="convert_png_to_jpg", default=False, help="Convert DeepFaceLAB PNG files to JPEG.")
@@ -141,6 +147,8 @@ if __name__ == "__main__":
     p.add_argument('--recover-original-aligned-filename', action="store_true", dest="recover_original_aligned_filename", default=False, help="Recover original aligned filename.")
     #p.add_argument('--remove-fanseg', action="store_true", dest="remove_fanseg", default=False, help="Remove fanseg mask from aligned faces.")
     p.add_argument('--remove-ie-polys', action="store_true", dest="remove_ie_polys", default=False, help="Remove ie_polys from aligned faces.")
+    p.add_argument('--save-faceset-metadata', action="store_true", dest="save_faceset_metadata", default=False, help="Save faceset metadata to file.")
+    p.add_argument('--restore-faceset-metadata', action="store_true", dest="restore_faceset_metadata", default=False, help="Restore faceset metadata to file. Image filenames must be the same as used with save.")
 
     p.set_defaults (func=process_util)
 

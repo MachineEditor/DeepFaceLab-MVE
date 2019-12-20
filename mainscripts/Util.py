@@ -1,12 +1,84 @@
 ﻿import cv2
+import pickle
 from pathlib import Path
-from utils import Path_utils
-from utils.DFLPNG import DFLPNG
-from utils.DFLJPG import DFLJPG
-from utils.cv2_utils import *
+
 from facelib import LandmarksProcessor
 from interact import interact as io
+from utils import Path_utils
+from utils.cv2_utils import *
+from utils.DFLJPG import DFLJPG
+from utils.DFLPNG import DFLPNG
 
+
+def save_faceset_metadata_folder(input_path):
+    input_path = Path(input_path)
+
+    metadata_filepath = input_path / 'meta.dat'
+    
+    io.log_info (f"Saving metadata to {str(metadata_filepath)}\r\n")
+
+    d = {}
+    for filepath in io.progress_bar_generator( Path_utils.get_image_paths(input_path), "Processing"):
+        filepath = Path(filepath)
+        if filepath.suffix == '.png':
+            dflimg = DFLPNG.load( str(filepath) )
+        elif filepath.suffix == '.jpg':
+            dflimg = DFLJPG.load ( str(filepath) )
+        else:
+            continue
+        
+        dfl_dict = dflimg.getDFLDictData()        
+        d[filepath.name] = ( dflimg.get_shape(), dfl_dict )
+    
+    try:
+        with open(metadata_filepath, "wb") as f:
+            f.write ( pickle.dumps(d) )
+    except:
+        raise Exception( 'cannot save %s' % (filename) )
+    
+    io.log_info("Now you can edit images.")
+    io.log_info("!!! Keep same filenames in the folder.")  
+    io.log_info("You can change size of images, restoring process will downscale back to original size.")  
+    io.log_info("After that, use restore metadata.")
+    
+def restore_faceset_metadata_folder(input_path):
+    input_path = Path(input_path)
+
+    metadata_filepath = input_path / 'meta.dat'
+    io.log_info (f"Restoring metadata from {str(metadata_filepath)}.\r\n")
+    
+    if not metadata_filepath.exists():
+        io.log_err(f"Unable to find {str(metadata_filepath)}.")
+
+    try:
+        with open(metadata_filepath, "rb") as f:
+            d = pickle.loads(f.read())
+    except:
+        raise FileNotFoundError(filename)
+
+    for filepath in io.progress_bar_generator( Path_utils.get_image_paths(input_path), "Processing"):
+        filepath = Path(filepath)
+        
+        shape, dfl_dict = d.get(filepath.name, None)
+        
+        img = cv2_imread (str(filepath))
+        if img.shape != shape:
+            img = cv2.resize (img, (shape[1], shape[0]), cv2.INTER_LANCZOS4 )
+        
+            if filepath.suffix == '.png':
+                cv2_imwrite (str(filepath), img)         
+            elif filepath.suffix == '.jpg':            
+                cv2_imwrite (str(filepath), img, [int(cv2.IMWRITE_JPEG_QUALITY), 100] )
+
+        if filepath.suffix == '.png':
+            DFLPNG.embed_dfldict( str(filepath), dfl_dict )            
+        elif filepath.suffix == '.jpg':            
+            DFLJPG.embed_dfldict( str(filepath), dfl_dict )
+        else:
+            continue
+       
+    metadata_filepath.unlink()
+     
 def remove_ie_polys_file (filepath):
     filepath = Path(filepath)
 
@@ -76,7 +148,7 @@ def convert_png_to_jpg_file (filepath):
 
     img = cv2_imread (str(filepath))
     new_filepath = str(filepath.parent / (filepath.stem + '.jpg'))
-    cv2_imwrite ( new_filepath, img, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+    cv2_imwrite ( new_filepath, img, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
 
     DFLJPG.embed_data( new_filepath,
                        face_type=dfl_dict.get('face_type', None),

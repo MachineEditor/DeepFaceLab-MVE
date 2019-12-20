@@ -160,6 +160,17 @@ class DFLJPG(object):
             return None
 
     @staticmethod
+    def embed_dfldict(filename, dfl_dict):
+        inst = DFLJPG.load_raw (filename)
+        inst.setDFLDictData (dfl_dict)
+
+        try:
+            with open(filename, "wb") as f:
+                f.write ( inst.dump() )
+        except:
+            raise Exception( 'cannot save %s' % (filename) )
+
+    @staticmethod
     def embed_data(filename, face_type=None,
                              landmarks=None,
                              ie_polys=None,
@@ -185,26 +196,18 @@ class DFLJPG(object):
                 io.log_err("Unable to encode fanseg_mask for %s" % (filename) )
                 fanseg_mask = None
 
-        inst = DFLJPG.load_raw (filename)
-        inst.setDFLDictData ({
-                                'face_type': face_type,
-                                'landmarks': landmarks,
-                                'ie_polys' : ie_polys.dump() if ie_polys is not None else None,
-                                'source_filename': source_filename,
-                                'source_rect': source_rect,
-                                'source_landmarks': source_landmarks,
-                                'image_to_face_mat': image_to_face_mat,
-                                'fanseg_mask' : fanseg_mask,
-                                'pitch_yaw_roll' : pitch_yaw_roll,
-                                'eyebrows_expand_mod' : eyebrows_expand_mod,
-                                'relighted' : relighted
-                             })
-
-        try:
-            with open(filename, "wb") as f:
-                f.write ( inst.dump() )
-        except:
-            raise Exception( 'cannot save %s' % (filename) )
+        DFLJPG.embed_dfldict (filename, {'face_type': face_type,
+                                         'landmarks': landmarks,
+                                         'ie_polys' : ie_polys.dump() if ie_polys is not None else None,
+                                         'source_filename': source_filename,
+                                         'source_rect': source_rect,
+                                         'source_landmarks': source_landmarks,
+                                         'image_to_face_mat': image_to_face_mat,
+                                         'fanseg_mask' : fanseg_mask,
+                                         'pitch_yaw_roll' : pitch_yaw_roll,
+                                         'eyebrows_expand_mod' : eyebrows_expand_mod,
+                                         'relighted' : relighted
+                                        })
 
     def embed_and_set(self, filename, face_type=None,
                                 landmarks=None,
@@ -246,7 +249,7 @@ class DFLJPG(object):
 
     def remove_fanseg_mask(self):
         self.dfl_dict['fanseg_mask'] = None
-        
+
     def remove_source_filename(self):
         self.dfl_dict['source_filename'] = None
 
