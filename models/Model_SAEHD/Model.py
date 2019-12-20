@@ -64,7 +64,10 @@ class SAEHDModel(ModelBase):
         default_face_style_power = self.options.get('face_style_power', 0.0)
         default_bg_style_power = self.options.get('bg_style_power', 0.0)
         
-        if is_first_run or ask_override:
+        if is_first_run or ask_override:            
+            default_lr_dropout = self.options.get('lr_dropout', False)
+            self.options['lr_dropout'] = io.input_bool ( f"Use learning rate dropout? (y/n, ?:help skip:{yn_str[default_lr_dropout]} ) : ", default_lr_dropout, help_message="When the face is trained enough, you can enable this option to get extra sharpness for less amount of iterations.")
+    
             default_random_warp = self.options.get('random_warp', True)
             self.options['random_warp'] = io.input_bool (f"Enable random warp of samples? ( y/n, ?:help skip:{yn_str[default_random_warp]}) : ", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness for less amount of iterations.")
 
@@ -84,8 +87,8 @@ class SAEHDModel(ModelBase):
                 self.options['clipgrad'] = io.input_bool (f"Enable gradient clipping? (y/n, ?:help skip:{yn_str[default_clipgrad]}) : ", default_clipgrad, help_message="Gradient clipping reduces chance of model collapse, sacrificing speed of training.")
             else:
                 self.options['clipgrad'] = False
-
         else:
+            self.options['lr_dropout'] = self.options.get('lr_dropout', default_lr_dropout)
             self.options['random_warp'] = self.options.get('random_warp', True)
             self.options['true_face_training'] = self.options.get('true_face_training', default_true_face_training)
             self.options['face_style_power'] = self.options.get('face_style_power', default_face_style_power)
@@ -452,9 +455,10 @@ class SAEHDModel(ModelBase):
         psd_target_dst_anti_masked = self.model.pred_src_dst*(1.0 - target_dstm)
 
         if self.is_training_mode:
-            self.src_dst_opt      = RMSprop(lr=5e-5, lr_dropout=0.3, clipnorm=1.0 if self.options['clipgrad'] else 0.0, tf_cpu_mode=self.options['optimizer_mode']-1)
-            self.src_dst_mask_opt = RMSprop(lr=5e-5, lr_dropout=0.3, clipnorm=1.0 if self.options['clipgrad'] else 0.0, tf_cpu_mode=self.options['optimizer_mode']-1)
-            self.D_opt            = RMSprop(lr=5e-5, lr_dropout=0.3, clipnorm=1.0 if self.options['clipgrad'] else 0.0, tf_cpu_mode=self.options['optimizer_mode']-1)
+            lr_dropout = 0.3 if self.options['lr_dropout'] else 0.0
+            self.src_dst_opt      = RMSprop(lr=5e-5, lr_dropout=lr_dropout, clipnorm=1.0 if self.options['clipgrad'] else 0.0, tf_cpu_mode=self.options['optimizer_mode']-1)
+            self.src_dst_mask_opt = RMSprop(lr=5e-5, lr_dropout=lr_dropout, clipnorm=1.0 if self.options['clipgrad'] else 0.0, tf_cpu_mode=self.options['optimizer_mode']-1)
+            self.D_opt            = RMSprop(lr=5e-5, lr_dropout=lr_dropout, clipnorm=1.0 if self.options['clipgrad'] else 0.0, tf_cpu_mode=self.options['optimizer_mode']-1)
         
             src_loss =  K.mean ( 10*dssim(kernel_size=int(resolution/11.6),max_value=1.0)( target_src_masked_opt, pred_src_src_masked_opt) )
             src_loss += K.mean ( 10*K.square( target_src_masked_opt - pred_src_src_masked_opt ) )
