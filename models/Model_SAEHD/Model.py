@@ -88,7 +88,7 @@ class SAEHDModel(ModelBase):
             else:
                 self.options['clipgrad'] = False
         else:
-            self.options['lr_dropout'] = self.options.get('lr_dropout', default_lr_dropout)
+            self.options['lr_dropout'] = self.options.get('lr_dropout', False)
             self.options['random_warp'] = self.options.get('random_warp', True)
             self.options['true_face_training'] = self.options.get('true_face_training', default_true_face_training)
             self.options['face_style_power'] = self.options.get('face_style_power', default_face_style_power)
@@ -541,14 +541,14 @@ class SAEHDModel(ModelBase):
             self.set_training_data_generators ([
                     SampleGeneratorFace(training_data_src_path, sort_by_yaw_target_samples_path=training_data_dst_path if sort_by_yaw else None,
                                                                 random_ct_samples_path=training_data_dst_path if self.options['ct_mode'] != 'none' else None,
-                                                                debug=self.is_debug(), batch_size=self.batch_size,
+                                                                debug=self.is_debug(), batch_size=self.batch_size, use_caching=False,
                         sample_process_options=SampleProcessor.Options(random_flip=self.random_flip, scale_range=np.array([-0.05, 0.05])+self.src_scale_mod / 100.0 ),
                         output_sample_types = [ {'types' : (t_img_warped, face_type, t_mode_bgr), 'resolution':resolution, 'ct_mode': self.options['ct_mode'] },
                                                 {'types' : (t.IMG_TRANSFORMED, face_type, t_mode_bgr), 'resolution': resolution, 'ct_mode': self.options['ct_mode'] },
                                                 {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_M), 'resolution': resolution } ]
                                               ),
 
-                    SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size,
+                    SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size, use_caching=False,
                         sample_process_options=SampleProcessor.Options(random_flip=self.random_flip, ),
                         output_sample_types = [ {'types' : (t_img_warped, face_type, t_mode_bgr), 'resolution':resolution},
                                                 {'types' : (t.IMG_TRANSFORMED, face_type, t_mode_bgr), 'resolution': resolution},
