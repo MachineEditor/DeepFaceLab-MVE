@@ -225,10 +225,13 @@ class DFLPNG(object):
         self.dfl_dict = None
 
     @staticmethod
-    def load_raw(filename):
+    def load_raw(filename, loader_func=None):
         try:
-            with open(filename, "rb") as f:
-                data = f.read()
+            if loader_func is not None:
+                data = loader_func(filename)
+            else:
+                with open(filename, "rb") as f:
+                    data = f.read()
         except:
             raise FileNotFoundError(filename)
 
@@ -252,9 +255,9 @@ class DFLPNG(object):
         return inst
 
     @staticmethod
-    def load(filename):
+    def load(filename, loader_func=None):
         try:
-            inst = DFLPNG.load_raw (filename)
+            inst = DFLPNG.load_raw (filename, loader_func=loader_func)
             inst.dfl_dict = inst.getDFLDictData()
 
             if inst.dfl_dict is not None:

@@ -4,7 +4,7 @@ import cv2
 
 from utils import iter_utils
 
-from samplelib import SampleType, SampleProcessor, SampleLoader, SampleGeneratorBase
+from samplelib import SampleType, SampleProcessor, SampleHost, SampleGeneratorBase
 
 '''
 output_sample_types = [
@@ -20,7 +20,7 @@ class SampleGeneratorFaceTemporal(SampleGeneratorBase):
         self.sample_process_options = sample_process_options
         self.output_sample_types = output_sample_types
 
-        self.samples = SampleLoader.load (SampleType.FACE_TEMPORAL_SORTED, self.samples_path)
+        self.samples = SampleHost.load (SampleType.FACE_TEMPORAL_SORTED, self.samples_path)
 
         if self.debug:
             self.generators_count = 1

@@ -140,6 +140,14 @@ if __name__ == "__main__":
         if arguments.restore_faceset_metadata:
             Util.restore_faceset_metadata_folder (input_path=arguments.input_dir)
             
+        if arguments.pack_faceset:            
+            from samplelib import PackedFaceset
+            PackedFaceset.pack( Path(arguments.input_dir) )
+
+        if arguments.unpack_faceset:
+            from samplelib import PackedFaceset
+            PackedFaceset.unpack( Path(arguments.input_dir) )
+            
     p = subparsers.add_parser( "util", help="Utilities.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
     p.add_argument('--convert-png-to-jpg', action="store_true", dest="convert_png_to_jpg", default=False, help="Convert DeepFaceLAB PNG files to JPEG.")
@@ -149,6 +157,8 @@ if __name__ == "__main__":
     p.add_argument('--remove-ie-polys', action="store_true", dest="remove_ie_polys", default=False, help="Remove ie_polys from aligned faces.")
     p.add_argument('--save-faceset-metadata', action="store_true", dest="save_faceset_metadata", default=False, help="Save faceset metadata to file.")
     p.add_argument('--restore-faceset-metadata', action="store_true", dest="restore_faceset_metadata", default=False, help="Restore faceset metadata to file. Image filenames must be the same as used with save.")
+    p.add_argument('--pack-faceset', action="store_true", dest="pack_faceset", default=False, help="")
+    p.add_argument('--unpack-faceset', action="store_true", dest="unpack_faceset", default=False, help="")
 
     p.set_defaults (func=process_util)
 

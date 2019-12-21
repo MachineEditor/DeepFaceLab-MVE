@@ -28,12 +28,10 @@ class ModelBase(object):
                  ask_write_preview_history=True,
                  ask_target_iter=True,
                  ask_batch_size=True,
-                 ask_sort_by_yaw=True,
-                 ask_random_flip=True,
-                 ask_src_scale_mod=True):
+                 ask_random_flip=True, **kwargs):
 
         device_args['force_gpu_idx'] = device_args.get('force_gpu_idx',-1)
-        device_args['cpu_only'] = device_args.get('cpu_only',False)
+        device_args['cpu_only'] = True if debug else device_args.get('cpu_only',False)
 
         if device_args['force_gpu_idx'] == -1 and not device_args['cpu_only']:
             idxs_names_list = nnlib.device.getValidDevicesIdxsWithNamesList()
@@ -115,25 +113,12 @@ class ModelBase(object):
         else:
             self.batch_size = self.options.get('batch_size', 0)
 
-        if ask_sort_by_yaw:
-            if (self.iter == 0 or ask_override):
-                default_sort_by_yaw = self.options.get('sort_by_yaw', False)
-                self.options['sort_by_yaw'] = io.input_bool("Feed faces to network sorted by yaw? (y/n ?:help skip:%s) : " % (yn_str[default_sort_by_yaw]), default_sort_by_yaw, help_message="NN will not learn src face directions that don't match dst face directions. Do not use if the dst face has hair that covers the jaw." )
-            else:
-                self.options['sort_by_yaw'] = self.options.get('sort_by_yaw', False)
-
         if ask_random_flip:
             default_random_flip = self.options.get('random_flip', True)
             if (self.iter == 0 or ask_override):
                 self.options['random_flip'] = io.input_bool(f"Flip faces randomly? (y/n ?:help skip:{yn_str[default_random_flip]}) : ", default_random_flip, help_message="Predicted face will look more naturally without this option, but src faceset should cover all face directions as dst faceset.")
             else:
                 self.options['random_flip'] = self.options.get('random_flip', default_random_flip)
-
-        if ask_src_scale_mod:
-            if (self.iter == 0):
-                self.options['src_scale_mod'] = np.clip( io.input_int("Src face scale modifier % ( -30...30, ?:help skip:0) : ", 0, help_message="If src face shape is wider than dst, try to decrease this value to get a better result."), -30, 30)
-            else:
-                self.options['src_scale_mod'] = self.options.get('src_scale_mod', 0)
 
         self.autobackup = self.options.get('autobackup', False)
         if not self.autobackup and 'autobackup' in self.options:
@@ -150,10 +135,6 @@ class ModelBase(object):
         #self.batch_size = self.options.get('batch_size',0)
         self.sort_by_yaw = self.options.get('sort_by_yaw',False)
         self.random_flip = self.options.get('random_flip',True)
-
-        self.src_scale_mod = self.options.get('src_scale_mod',0)
-        if self.src_scale_mod == 0 and 'src_scale_mod' in self.options:
-            self.options.pop('src_scale_mod')
 
         self.onInitializeOptions(self.iter == 0, ask_override)
 
@@ -226,14 +207,14 @@ class ModelBase(object):
                     io.destroy_window(wnd_name)
                 else:
                     self.sample_for_preview = self.generate_next_sample()
-                    
+
             try:
                 self.get_static_preview()
             except:
                 self.sample_for_preview = self.generate_next_sample()
-                
+
             self.last_sample = self.sample_for_preview
-            
+
         ###Generate text summary of model hyperparameters
         #Find the longest key name and value string. Used as column widths.
         width_name = max([len(k) for k in self.options.keys()] + [17]) + 1 # Single space buffer to left edge. Minimum of 17, the length of the longest static string used "Current iteration"
@@ -414,48 +395,48 @@ class ModelBase(object):
 
     def load_weights_safe(self, model_filename_list, optimizer_filename_list=[]):
         exec(nnlib.code_import_all, locals(), globals())
-        
+
         loaded = []
         not_loaded = []
         for mf in model_filename_list:
             model, filename = mf
             filename = self.get_strpath_storage_for_file(filename)
-            
+
             if Path(filename).exists():
                 loaded += [ mf ]
-                
+
                 if issubclass(model.__class__, keras.optimizers.Optimizer):
                     opt = model
-  
+
                     try:
                         with open(filename, "rb") as f:
                             fd = pickle.loads(f.read())
-                        
+
                         weights = fd.get('weights', None)
                         if weights is not None:
                             opt.set_weights(weights)
-                            
+
                     except Exception as e:
                         print ("Unable to load ", filename)
-                        
+
                 else:
                     model.load_weights(filename)
             else:
                 not_loaded += [ mf ]
-                
-                   
+
+
         return loaded, not_loaded
 
     def save_weights_safe(self, model_filename_list):
         exec(nnlib.code_import_all, locals(), globals())
-        
+
         for model, filename in model_filename_list:
             filename = self.get_strpath_storage_for_file(filename) + '.tmp'
 
             if issubclass(model.__class__, keras.optimizers.Optimizer):
                 opt = model
-                
-                try:                    
+
+                try:
                     fd = {}
                     symbolic_weights = getattr(opt, 'weights')
                     if symbolic_weights:
@@ -464,8 +445,8 @@ class ModelBase(object):
                     with open(filename, 'wb') as f:
                         f.write( pickle.dumps(fd) )
                 except Exception as e:
-                    print ("Unable to save ", filename)                
-            else:                
+                    print ("Unable to save ", filename)
+            else:
                 model.save_weights( filename)
 
         rename_list = model_filename_list
@@ -518,7 +499,7 @@ class ModelBase(object):
     #overridable
     def on_success_train_one_iter(self):
         pass
-        
+
     def train_one_iter(self):
         sample = self.generate_next_sample()
         iter_time = time.time()
@@ -546,7 +527,7 @@ class ModelBase(object):
                 cv2_imwrite (filepath, img )
 
         self.on_success_train_one_iter()
-                
+
         self.iter += 1
 
         return self.iter, iter_time

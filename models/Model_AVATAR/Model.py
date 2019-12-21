@@ -16,9 +16,7 @@ class AVATARModel(ModelBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs,
-                            ask_sort_by_yaw=False,
-                            ask_random_flip=False,
-                            ask_src_scale_mod=False)
+                            ask_random_flip=False)
 
     #override
     def onInitializeOptions(self, is_first_run, ask_override):

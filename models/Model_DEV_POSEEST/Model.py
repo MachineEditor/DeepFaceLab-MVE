@@ -15,9 +15,7 @@ class Model(ModelBase):
                             ask_enable_autobackup=False,
                             ask_write_preview_history=False,
                             ask_target_iter=False,
-                            ask_sort_by_yaw=False,
-                            ask_random_flip=False,
-                            ask_src_scale_mod=False)
+                            ask_random_flip=False)
 
     #override
     def onInitializeOptions(self, is_first_run, ask_override):

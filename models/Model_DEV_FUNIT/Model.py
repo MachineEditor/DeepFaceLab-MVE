@@ -16,9 +16,7 @@ class FUNITModel(ModelBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs,
-                            ask_sort_by_yaw=False,
-                            ask_random_flip=False,
-                            ask_src_scale_mod=False)
+                            ask_random_flip=False)
 
     #override
     def onInitializeOptions(self, is_first_run, ask_override):
@@ -87,19 +85,19 @@ class FUNITModel(ModelBase):
             self.set_training_data_generators ([
                         SampleGeneratorFacePerson(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size,
                             sample_process_options=SampleProcessor.Options(random_flip=True, rotation_range=[0,0] ),
-                            output_sample_types=output_sample_types, person_id_mode=1, use_caching=True, generators_count=1 ),
+                            output_sample_types=output_sample_types, person_id_mode=1, ),
 
                         SampleGeneratorFacePerson(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size,
                             sample_process_options=SampleProcessor.Options(random_flip=True, rotation_range=[0,0] ),
-                            output_sample_types=output_sample_types, person_id_mode=1, use_caching=True, generators_count=1 ),
+                            output_sample_types=output_sample_types, person_id_mode=1, ),
 
                         SampleGeneratorFacePerson(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size,
                             sample_process_options=SampleProcessor.Options(random_flip=True, rotation_range=[0,0]),
-                            output_sample_types=output_sample_types1, person_id_mode=1, use_caching=True, generators_count=1 ),
+                            output_sample_types=output_sample_types1, person_id_mode=1, ),
 
                         SampleGeneratorFacePerson(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.batch_size,
                             sample_process_options=SampleProcessor.Options(random_flip=True, rotation_range=[0,0]),
-                            output_sample_types=output_sample_types1, person_id_mode=1, use_caching=True, generators_count=1 ),
+                            output_sample_types=output_sample_types1, person_id_mode=1, ),
                     ])
 
     #override

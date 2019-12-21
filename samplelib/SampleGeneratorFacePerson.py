@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 from facelib import LandmarksProcessor
-from samplelib import (SampleGeneratorBase, SampleLoader, SampleProcessor,
+from samplelib import (SampleGeneratorBase, SampleHost, SampleProcessor,
                        SampleType)
 from utils import iter_utils
 
@@ -37,7 +37,7 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
             raise ValueError("len(generators_random_seed) != generators_count")
         self.generators_random_seed = generators_random_seed
         
-        samples = SampleLoader.load (SampleType.FACE, self.samples_path, person_id_mode=True, use_caching=use_caching)
+        samples = SampleHost.load (SampleType.FACE, self.samples_path, person_id_mode=True, use_caching=use_caching)
         samples = copy.copy(samples)
         for i in range(len(samples)):
             samples[i] = copy.copy(samples[i])
@@ -275,4 +275,4 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
     
     @staticmethod
     def get_person_id_max_count(samples_path):
-        return SampleLoader.get_person_id_max_count(samples_path)
+        return SampleHost.get_person_id_max_count(samples_path)

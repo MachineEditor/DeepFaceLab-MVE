@@ -18,14 +18,12 @@ class Quick96Model(ModelBase):
                             ask_write_preview_history=False,
                             ask_target_iter=False,
                             ask_batch_size=False,
-                            ask_sort_by_yaw=False,
-                            ask_random_flip=False,
-                            ask_src_scale_mod=False)                 
+                            ask_random_flip=False)                 
                  
     #override
     def onInitialize(self):
         exec(nnlib.import_all(), locals(), globals())
-        self.set_vram_batch_requirements({1.5:2,2:4})#,3:4,4:8})
+        self.set_vram_batch_requirements({1.5:2,2:4})
 
         resolution = self.resolution = 96
         
@@ -171,7 +169,7 @@ class Quick96Model(ModelBase):
 
             self.set_training_data_generators ([
                     SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.batch_size,
-                        sample_process_options=SampleProcessor.Options(random_flip=False, scale_range=np.array([-0.05, 0.05])+self.src_scale_mod / 100.0 ),
+                        sample_process_options=SampleProcessor.Options(random_flip=False, scale_range=np.array([-0.05, 0.05]) ),
                         output_sample_types = [ {'types' : (t.IMG_WARPED_TRANSFORMED, t.FACE_TYPE_FULL, t.MODE_BGR), 'resolution': resolution, 'normalize_tanh':True },
                                                 {'types' : (t.IMG_TRANSFORMED, t.FACE_TYPE_FULL, t.MODE_BGR), 'resolution': resolution, 'normalize_tanh':True },
                                                 {'types' : (t.IMG_TRANSFORMED, t.FACE_TYPE_FULL, t.MODE_M), 'resolution': resolution } ]

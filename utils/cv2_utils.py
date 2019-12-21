@@ -3,12 +3,15 @@ import numpy as np
 from pathlib import Path
 
 #allows to open non-english characters path
-def cv2_imread(filename, flags=cv2.IMREAD_UNCHANGED):
+def cv2_imread(filename, flags=cv2.IMREAD_UNCHANGED, loader_func=None):
     try:
-        with open(filename, "rb") as stream:
-            bytes = bytearray(stream.read())
-            numpyarray = np.asarray(bytes, dtype=np.uint8)
-            return cv2.imdecode(numpyarray, flags)
+        if loader_func is not None:
+            bytes = bytearray(loader_func(filename))
+        else:
+            with open(filename, "rb") as stream:
+                bytes = bytearray(stream.read())
+        numpyarray = np.asarray(bytes, dtype=np.uint8)
+        return cv2.imdecode(numpyarray, flags)
     except:
         return None
 
