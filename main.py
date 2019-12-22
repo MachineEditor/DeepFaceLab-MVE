@@ -66,8 +66,8 @@ if __name__ == "__main__":
 
     def process_dev_extract_umd_csv(arguments):
         os_utils.set_process_lowest_prio()
-        from mainscripts import Extractor
-        Extractor.extract_umd_csv( arguments.input_csv_file,
+        from mainscripts import dev_misc
+        dev_misc.extract_umd_csv( arguments.input_csv_file,
                                   device_args={'cpu_only'  : arguments.cpu_only,
                                                'multi_gpu' : arguments.multi_gpu,
                                               }
