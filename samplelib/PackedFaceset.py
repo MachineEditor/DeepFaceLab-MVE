@@ -73,7 +73,10 @@ class PackedFaceset():
                 offsets.append ( of.tell() - data_start_offset )
                 of.write(b)
             except:
-                raise Exception(f"error while processing sample {sample.filename}")
+                import code
+                code.interact(local=dict(globals(), **locals()))
+
+                raise Exception(f"error while processing sample {sample_path}")
 
         offsets.append ( of.tell() )
 
