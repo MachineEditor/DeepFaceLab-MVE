@@ -8,7 +8,7 @@ from utils import Path_utils
 
 import samplelib.SampleHost
 
-packed_faceset_filename = 'samples.pak'
+packed_faceset_filename = 'faceset.pak'
 
 class PackedFaceset():
     VERSION = 1
