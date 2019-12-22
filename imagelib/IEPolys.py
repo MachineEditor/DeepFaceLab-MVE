@@ -97,7 +97,7 @@ class IEPolys:
     @staticmethod
     def load(ie_polys=None):
         obj = IEPolys()
-        if ie_polys is not None:
+        if ie_polys is not None and isinstance(ie_polys, list):
             for (type, points) in ie_polys:
                 obj.add(type)
                 obj.n_list().set_points(points)

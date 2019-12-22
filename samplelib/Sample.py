@@ -7,6 +7,7 @@ import numpy as np
 from utils.cv2_utils import *
 from DFLIMG import *
 from facelib import LandmarksProcessor
+from imagelib import IEPolys
 
 class SampleType(IntEnum):
     IMAGE = 0 #raw image
@@ -50,11 +51,13 @@ class Sample(object):
         self.face_type = face_type
         self.shape = shape
         self.landmarks = np.array(landmarks) if landmarks is not None else None
-        self.ie_polys = ie_polys
+        self.ie_polys = IEPolys.load(ie_polys)
         self.eyebrows_expand_mod = eyebrows_expand_mod
         self.source_filename = source_filename
         self.person_name = person_name
         self.pitch_yaw_roll = pitch_yaw_roll 
+        
+        self._filename_offset_size = None
  
     def get_pitch_yaw_roll(self):
         if self.pitch_yaw_roll is None:
@@ -84,7 +87,7 @@ class Sample(object):
                 'face_type': self.face_type,
                 'shape': self.shape,
                 'landmarks': self.landmarks.tolist(),
-                'ie_polys': self.ie_polys,
+                'ie_polys': self.ie_polys.dump(),
                 'eyebrows_expand_mod': self.eyebrows_expand_mod,
                 'source_filename': self.source_filename,
                 'person_name': self.person_name

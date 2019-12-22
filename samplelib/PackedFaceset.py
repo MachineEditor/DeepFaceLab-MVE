@@ -1,13 +1,12 @@
 import pickle
+import shutil
 import struct
 from pathlib import Path
 
-from interact import interact as io
-from utils import Path_utils
-
-
 import samplelib.SampleHost
+from interact import interact as io
 from samplelib import Sample
+from utils import Path_utils
 
 packed_faceset_filename = 'faceset.pak'
 
@@ -24,7 +23,18 @@ class PackedFaceset():
 
         of = open(samples_dat_path, "wb")
 
-        image_paths = Path_utils.get_image_paths(samples_path)
+        as_person_faceset = False
+        dir_names = Path_utils.get_all_dir_names(samples_path)
+        if len(dir_names) != 0:
+            as_person_faceset = io.input_bool(f"{len(dir_names)} subdirectories found, process as person faceset? (y/n) skip:y : ", True)
+            
+        if as_person_faceset:
+            image_paths = []
+            
+            for dir_name in dir_names:
+                image_paths += Path_utils.get_image_paths(samples_path / dir_name)
+        else:
+            image_paths = Path_utils.get_image_paths(samples_path)
 
 
         samples = samplelib.SampleHost.load_face_samples(image_paths)
@@ -32,7 +42,11 @@ class PackedFaceset():
 
         samples_configs = []
         for sample in samples:
-            sample.filename = str(Path(sample.filename).relative_to(samples_path))
+            sample_filepath = Path(sample.filename)
+            sample.filename = sample_filepath.name
+            
+            if as_person_faceset:
+                sample.person_name = sample_filepath.parent.name
             samples_configs.append ( sample.get_config() )
         samples_bytes = pickle.dumps(samples_configs, 4)
 
@@ -48,7 +62,12 @@ class PackedFaceset():
 
         for sample in io.progress_bar_generator(samples, "Packing"):
             try:
-                with open( samples_path / sample.filename, "rb") as f:
+                if sample.person_name is not None:
+                    sample_path = samples_path / sample.person_name / sample.filename
+                else:
+                    sample_path = samples_path / sample.filename
+                    
+                with open(sample_path, "rb") as f:
                     b = f.read()
 
                 offsets.append ( of.tell() - data_start_offset )
@@ -67,6 +86,13 @@ class PackedFaceset():
         for filename in io.progress_bar_generator(image_paths,"Deleting"):
             Path(filename).unlink()
 
+        if as_person_faceset:
+            for dir_name in dir_names:
+                dir_path = samples_path / dir_name
+                try:
+                    shutil.rmtree(dir_path)
+                except:
+                    io.log_info (f"unable to remove: {dir_path} ")
 
     @staticmethod
     def unpack(samples_path):
@@ -78,7 +104,16 @@ class PackedFaceset():
         samples = PackedFaceset.load(samples_path)
 
         for sample in io.progress_bar_generator(samples, "Unpacking"):
-            with open(samples_path / sample.filename, "wb") as f:
+            person_name = sample.person_name
+            if person_name is not None:                
+                person_path = samples_path / person_name
+                person_path.mkdir(parents=True, exist_ok=True)
+                
+                target_filepath = person_path / sample.filename
+            else:
+                target_filepath = samples_path / sample.filename
+
+            with open(target_filepath, "wb") as f:
                 f.write( sample.read_raw_file() )
 
         samples_dat_path.unlink()
@@ -110,4 +145,3 @@ class PackedFaceset():
             sample.set_filename_offset_size( str(samples_dat_path), data_start_offset+start_offset, end_offset-start_offset )
 
         return samples
-

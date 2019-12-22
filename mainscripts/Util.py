@@ -1,12 +1,15 @@
-﻿import cv2
-import pickle
+﻿import pickle
 from pathlib import Path
 
+import cv2
+
+from DFLIMG import *
 from facelib import LandmarksProcessor
+from imagelib import IEPolys
 from interact import interact as io
 from utils import Path_utils
 from utils.cv2_utils import *
-from DFLIMG import *
+
 
 def save_faceset_metadata_folder(input_path):
     input_path = Path(input_path)
@@ -167,7 +170,7 @@ def add_landmarks_debug_images(input_path):
 
         if img is not None:
             face_landmarks = dflimg.get_landmarks()
-            LandmarksProcessor.draw_landmarks(img, face_landmarks, transparent_mask=True, ie_polys=dflimg.get_ie_polys() )
+            LandmarksProcessor.draw_landmarks(img, face_landmarks, transparent_mask=True, ie_polys=IEPolys.load(dflimg.get_ie_polys()) )
 
             output_file = '{}{}'.format( str(Path(str(input_path)) / filepath.stem),  '_debug.jpg')
             cv2_imwrite(output_file, img, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )

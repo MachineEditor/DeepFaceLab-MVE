@@ -403,7 +403,7 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None, no_default
                 continue
             else:
                 lmrks = dflimg.get_landmarks()
-                ie_polys = dflimg.get_ie_polys()
+                ie_polys = IEPolys.load(dflimg.get_ie_polys())
                 fanseg_mask = dflimg.get_fanseg_mask()
 
                 if filepath.name in cached_images:
@@ -521,7 +521,7 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None, no_default
                     do_save_move_count -= 1
 
                     ed.mask_finish()
-                    dflimg.embed_and_set (str(filepath), ie_polys=ed.get_ie_polys(), eyebrows_expand_mod=eyebrows_expand_mod )
+                    dflimg.embed_and_set (str(filepath), ie_polys=ed.get_ie_polys().dump(), eyebrows_expand_mod=eyebrows_expand_mod )
 
                     done_paths += [ confirmed_path / filepath.name ]
                     done_images_types[filepath.name] = 2
@@ -532,7 +532,7 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None, no_default
                     do_save_count -= 1
 
                     ed.mask_finish()
-                    dflimg.embed_and_set (str(filepath), ie_polys=ed.get_ie_polys(), eyebrows_expand_mod=eyebrows_expand_mod )
+                    dflimg.embed_and_set (str(filepath), ie_polys=ed.get_ie_polys().dump(), eyebrows_expand_mod=eyebrows_expand_mod )
 
                     done_paths += [ filepath ]
                     done_images_types[filepath.name] = 2

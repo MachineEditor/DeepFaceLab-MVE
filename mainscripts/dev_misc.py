@@ -5,7 +5,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from DFLIMG import DFLIMG
+from DFLIMG import *
 from facelib import FaceType, LandmarksProcessor
 from interact import interact as io
 from joblib import Subprocessor
@@ -475,7 +475,7 @@ def dev_test(input_dir):
     
     dir_names = Path_utils.get_all_dir_names(input_path)
     
-    for dir_name in dir_names:
+    for dir_name in io.progress_bar_generator(dir_names, desc="Processing"):
         
         img_paths = Path_utils.get_image_paths (input_path / dir_name)
         for filename in img_paths:
@@ -485,7 +485,9 @@ def dev_test(input_dir):
             if dflimg is None:
                 raise ValueError
             
-            import code
-            code.interact(local=dict(globals(), **locals()))
+            dflimg.embed_and_set(filename, person_name=dir_name)
+            
+            #import code
+            #code.interact(local=dict(globals(), **locals()))
     
     

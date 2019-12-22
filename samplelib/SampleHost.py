@@ -16,8 +16,19 @@ class SampleHost:
     host_cache = dict()
 
     @staticmethod
-    def get_person_id_max_count(samples_path):
-        return len ( Path_utils.get_all_dir_names(samples_path) )
+    def get_person_id_max_count(samples_path):        
+        samples = None
+        try:
+            samples = samplelib.PackedFaceset.load(samples_path)  
+        except:
+            io.log_err(f"Error occured while loading samplelib.PackedFaceset.load {str(samples_dat_path)}, {traceback.format_exc()}")
+            
+        if samples is None:
+            raise ValueError("packed faceset not found.")        
+        persons_name_idxs = {}        
+        for sample in samples:            
+            persons_name_idxs[sample.person_name] = 0
+        return len(list(persons_name_idxs.keys()))
 
     @staticmethod
     def load(sample_type, samples_path):
@@ -79,21 +90,17 @@ class SampleHost:
                 if dflimg is None:
                     io.log_err ("load_face_samples: %s is not a dfl image file required for training" % (filename_path.name) )
                     continue
-
-                landmarks = dflimg.get_landmarks()
-                pitch_yaw_roll = dflimg.get_pitch_yaw_roll()
-                eyebrows_expand_mod = dflimg.get_eyebrows_expand_mod()
                 
                 sample_list.append( Sample(filename=filename,
                                            sample_type=SampleType.FACE,
                                            face_type=FaceType.fromString (dflimg.get_face_type()),
                                            shape=dflimg.get_shape(),
-                                           landmarks=landmarks,
+                                           landmarks=dflimg.get_landmarks(),
                                            ie_polys=dflimg.get_ie_polys(),
-                                           pitch_yaw_roll=pitch_yaw_roll,
-                                           eyebrows_expand_mod=eyebrows_expand_mod,
-                                           source_filename=dflimg.get_source_filename(),
-                                           fanseg_mask_exist=dflimg.get_fanseg_mask() is not None, ) )
+                                           pitch_yaw_roll=dflimg.get_pitch_yaw_roll(),
+                                           eyebrows_expand_mod=dflimg.get_eyebrows_expand_mod(),
+                                           source_filename=dflimg.get_source_filename(),                                       
+                                        ))
             except:
                 io.log_err ("Unable to load %s , error: %s" % (filename, traceback.format_exc() ) )
 

@@ -5,7 +5,6 @@ import cv2
 import numpy as np
 
 from facelib import FaceType
-from imagelib import IEPolys
 from utils.struct_utils import *
 from interact import interact as io
 
@@ -306,7 +305,7 @@ class DFLJPG(object):
 
     def get_face_type(self): return self.dfl_dict['face_type']
     def get_landmarks(self): return np.array ( self.dfl_dict['landmarks'] )
-    def get_ie_polys(self): return IEPolys.load(self.dfl_dict.get('ie_polys',None))
+    def get_ie_polys(self): return self.dfl_dict.get('ie_polys',None)
     def get_source_filename(self): return self.dfl_dict['source_filename']
     def get_source_rect(self): return self.dfl_dict['source_rect']
     def get_source_landmarks(self): return np.array ( self.dfl_dict['source_landmarks'] )
