@@ -148,11 +148,8 @@ class SampleProcessor(object):
                     l = np.clip(l, 0.0, 1.0)
                     img = l
                 elif img_type == SPTF.IMG_PITCH_YAW_ROLL or img_type == SPTF.IMG_PITCH_YAW_ROLL_SIGMOID:
-                    pitch_yaw_roll = sample.pitch_yaw_roll
-                    if pitch_yaw_roll is not None:
-                        pitch, yaw, roll = pitch_yaw_roll
-                    else:
-                        pitch, yaw, roll = LandmarksProcessor.estimate_pitch_yaw_roll (sample.landmarks)
+                    pitch_yaw_roll = sample.get_pitch_yaw_roll()
+                    
                     if params['flip']:
                         yaw = -yaw
 
@@ -185,13 +182,10 @@ class SampleProcessor(object):
                     ### Prepare a mask
                     mask = None
                     if is_face_sample:
-                        mask = sample.load_fanseg_mask() #using fanseg_mask if exist
-
-                        if mask is None:
-                            if sample.eyebrows_expand_mod is not None:
-                                mask = LandmarksProcessor.get_image_hull_mask (img.shape, sample.landmarks, eyebrows_expand_mod=sample.eyebrows_expand_mod )
-                            else:
-                                mask = LandmarksProcessor.get_image_hull_mask (img.shape, sample.landmarks)
+                        if sample.eyebrows_expand_mod is not None:
+                            mask = LandmarksProcessor.get_image_hull_mask (img.shape, sample.landmarks, eyebrows_expand_mod=sample.eyebrows_expand_mod )
+                        else:
+                            mask = LandmarksProcessor.get_image_hull_mask (img.shape, sample.landmarks)
 
                         if sample.ie_polys is not None:
                             sample.ie_polys.overlay_mask(mask)

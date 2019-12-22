@@ -83,10 +83,7 @@ class SampleHost:
                 landmarks = dflimg.get_landmarks()
                 pitch_yaw_roll = dflimg.get_pitch_yaw_roll()
                 eyebrows_expand_mod = dflimg.get_eyebrows_expand_mod()
-
-                if pitch_yaw_roll is None:
-                    pitch_yaw_roll = LandmarksProcessor.estimate_pitch_yaw_roll(landmarks)
-
+                
                 sample_list.append( Sample(filename=filename,
                                            sample_type=SampleType.FACE,
                                            face_type=FaceType.fromString (dflimg.get_face_type()),

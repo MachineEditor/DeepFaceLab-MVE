@@ -88,23 +88,16 @@ if __name__ == "__main__":
     p = subparsers.add_parser( "dev_apply_celebamaskhq", help="")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
     p.set_defaults (func=process_dev_apply_celebamaskhq)
-    """
-    def process_extract_fanseg(arguments):
+
+    def process_dev_test(arguments):
         os_utils.set_process_lowest_prio()
-        from mainscripts import Extractor
-        Extractor.extract_fanseg( arguments.input_dir,
-                                  device_args={'cpu_only'  : arguments.cpu_only,
-                                               'multi_gpu' : arguments.multi_gpu,
-                                              }
-                                )
+        from mainscripts import dev_misc
+        dev_misc.dev_test( arguments.input_dir )
 
-    p = subparsers.add_parser( "extract_fanseg", help="Extract fanseg mask from faces.")
-    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
-    p.add_argument('--multi-gpu', action="store_true", dest="multi_gpu", default=False, help="Enables multi GPU.")
-    p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Extract on CPU.")
-    p.set_defaults (func=process_extract_fanseg)
-    """
-
+    p = subparsers.add_parser( "dev_test", help="")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
+    p.set_defaults (func=process_dev_test)
+    
     def process_sort(arguments):
         os_utils.set_process_lowest_prio()
         from mainscripts import Sorter

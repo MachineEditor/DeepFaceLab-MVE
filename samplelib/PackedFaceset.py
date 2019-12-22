@@ -7,6 +7,7 @@ from utils import Path_utils
 
 
 import samplelib.SampleHost
+from samplelib import Sample
 
 packed_faceset_filename = 'faceset.pak'
 
@@ -16,23 +17,24 @@ class PackedFaceset():
     @staticmethod
     def pack(samples_path):
         samples_dat_path = samples_path / packed_faceset_filename
-        
+
         if samples_dat_path.exists():
             io.log_info(f"{samples_dat_path} : file already exists !")
             io.input_bool("Press enter to continue and overwrite.", False)
-            
+
         of = open(samples_dat_path, "wb")
 
         image_paths = Path_utils.get_image_paths(samples_path)
 
-        
+
         samples = samplelib.SampleHost.load_face_samples(image_paths)
-        
-        for sample in samples:
-            sample.filename = str(Path(sample.filename).relative_to(samples_path))
         samples_len = len(samples)
 
-        samples_bytes = pickle.dumps(samples, 4)
+        samples_configs = []
+        for sample in samples:
+            sample.filename = str(Path(sample.filename).relative_to(samples_path))
+            samples_configs.append ( sample.get_config() )
+        samples_bytes = pickle.dumps(samples_configs, 4)
 
         of.write ( struct.pack ("Q", PackedFaceset.VERSION ) )
         of.write ( struct.pack ("Q", len(samples_bytes) ) )
@@ -72,7 +74,7 @@ class PackedFaceset():
         if not samples_dat_path.exists():
             io.log_info(f"{samples_dat_path} : file not found.")
             return
-            
+
         samples = PackedFaceset.load(samples_path)
 
         for sample in io.progress_bar_generator(samples, "Unpacking"):
@@ -93,7 +95,12 @@ class PackedFaceset():
             raise NotImplementedError
 
         sizeof_samples_bytes, = struct.unpack("Q", f.read(8) )
-        samples = pickle.loads ( f.read(sizeof_samples_bytes) )
+
+        samples_configs = pickle.loads ( f.read(sizeof_samples_bytes) )
+        samples = []
+        for sample_config in samples_configs:
+            samples.append ( Sample (**sample_config) )        
+        
         offsets = [ struct.unpack("Q", f.read(8) )[0] for _ in range(len(samples)+1) ]
         data_start_offset = f.tell()
         f.close()
@@ -104,4 +111,3 @@ class PackedFaceset():
 
         return samples
 
-    

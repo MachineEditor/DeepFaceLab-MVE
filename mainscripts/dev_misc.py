@@ -469,3 +469,23 @@ def extract_umd_csv(input_file_csv,
     io.log_info ('Images found:        %d' % (images_found) )
     io.log_info ('Faces detected:      %d' % (faces_detected) )
     io.log_info ('-------------------------')
+
+def dev_test(input_dir):
+    input_path = Path(input_dir)
+    
+    dir_names = Path_utils.get_all_dir_names(input_path)
+    
+    for dir_name in dir_names:
+        
+        img_paths = Path_utils.get_image_paths (input_path / dir_name)
+        for filename in img_paths:
+            filepath = Path(filename)
+            
+            dflimg = DFLIMG.load (filepath)
+            if dflimg is None:
+                raise ValueError
+            
+            import code
+            code.interact(local=dict(globals(), **locals()))
+    
+    
