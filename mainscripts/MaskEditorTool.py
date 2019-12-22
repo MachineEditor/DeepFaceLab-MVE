@@ -9,13 +9,13 @@ import numpy as np
 import numpy.linalg as npl
 
 import imagelib
+from DFLIMG import *
 from facelib import LandmarksProcessor
 from imagelib import IEPolys
 from interact import interact as io
 from utils import Path_utils
 from utils.cv2_utils import *
-from utils.DFLJPG import DFLJPG
-from utils.DFLPNG import DFLPNG
+
 
 class MaskEditor:
     STATE_NONE=0
@@ -396,12 +396,7 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None, no_default
                     cached_images[path.name] = cv2_imread(str(path)) / 255.0
 
         if filepath is not None:
-            if filepath.suffix == '.png':
-                dflimg = DFLPNG.load( str(filepath) )
-            elif filepath.suffix == '.jpg':
-                dflimg = DFLJPG.load ( str(filepath) )
-            else:
-                dflimg = None
+            dflimg = DFLIMG.load (filepath)
 
             if dflimg is None:
                 io.log_err ("%s is not a dfl image file" % (filepath.name) )
@@ -573,4 +568,3 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None, no_default
         io.process_messages(0.005)
 
     io.destroy_all_windows()
-

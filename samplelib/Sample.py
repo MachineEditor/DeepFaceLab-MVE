@@ -5,8 +5,7 @@ import cv2
 import numpy as np
 
 from utils.cv2_utils import *
-from utils.DFLJPG import DFLJPG
-from utils.DFLPNG import DFLPNG
+from DFLIMG import *
 
 
 class SampleType(IntEnum):
@@ -87,13 +86,8 @@ class Sample(object):
 
     def load_fanseg_mask(self):
         if self.fanseg_mask_exist:
-            filepath = Path(self.filename)
-            if filepath.suffix == '.png':
-                dflimg = DFLPNG.load ( str(filepath), loader_func=self.read_raw_file )
-            elif filepath.suffix == '.jpg':
-                dflimg = DFLJPG.load ( str(filepath), loader_func=self.read_raw_file )
-            else:
-                dflimg = None
+            filepath = Path(self.filename)            
+            dflimg = DFLIMG.load (filepath)
             return dflimg.get_fanseg_mask()
 
         return None

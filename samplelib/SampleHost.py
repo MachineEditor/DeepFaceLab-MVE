@@ -5,8 +5,7 @@ from pathlib import Path
 from facelib import FaceType, LandmarksProcessor
 from interact import interact as io
 from utils import Path_utils, mp_utils
-from utils.DFLJPG import DFLJPG
-from utils.DFLPNG import DFLPNG
+from DFLIMG import *
 
 from .Sample import Sample, SampleType
 
@@ -41,7 +40,7 @@ class SampleHost:
                     io.log_err(f"Error occured while loading samplelib.PackedFaceset.load {str(samples_dat_path)}, {traceback.format_exc()}")
                     
                 if result is not None:
-                    io.log_info (f"Loaded {len(result)} packed samples from {samples_path}")
+                    io.log_info (f"Loaded {len(result)} packed faces from {samples_path}")
                             
                 if result is None:
                     result = SampleHost.load_face_samples( Path_utils.get_image_paths(samples_path) )
@@ -75,12 +74,7 @@ class SampleHost:
         for filename in (image_paths if silent else io.progress_bar_generator( image_paths, "Loading")):
             filename_path = Path(filename)
             try:
-                if filename_path.suffix == '.png':
-                    dflimg = DFLPNG.load ( str(filename_path) )
-                elif filename_path.suffix == '.jpg':
-                    dflimg = DFLJPG.load ( str(filename_path) )
-                else:
-                    dflimg = None
+                dflimg = DFLIMG.load (filename_path)                    
 
                 if dflimg is None:
                     io.log_err ("load_face_samples: %s is not a dfl image file required for training" % (filename_path.name) )

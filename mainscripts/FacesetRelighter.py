@@ -6,8 +6,7 @@ from interact import interact as io
 from nnlib import DeepPortraitRelighting
 from utils import Path_utils
 from utils.cv2_utils import *
-from utils.DFLJPG import DFLJPG
-from utils.DFLPNG import DFLPNG
+from DFLIMG import *
 
 class RelightEditor:
     def __init__(self, image_paths, dpr, lighten):
@@ -183,12 +182,7 @@ def relight(input_dir, lighten=None, random_one=None):
     filtered_image_paths = []
     for filepath in io.progress_bar_generator(image_paths, "Collecting fileinfo"):
         try:
-            if filepath.suffix == '.png':
-                dflimg = DFLPNG.load( str(filepath) )
-            elif filepath.suffix == '.jpg':
-                dflimg = DFLJPG.load ( str(filepath) )
-            else:
-                dflimg = None
+            dflimg = DFLIMG.load (Path(filepath))
 
             if dflimg is None:
                 io.log_err ("%s is not a dfl image file" % (filepath.name) )
@@ -210,13 +204,7 @@ def relight(input_dir, lighten=None, random_one=None):
         
     for filepath in io.progress_bar_generator(image_paths, "Relighting"):
         try:
-            if filepath.suffix == '.png':
-                dflimg = DFLPNG.load( str(filepath) )
-            elif filepath.suffix == '.jpg':
-                dflimg = DFLJPG.load ( str(filepath) )
-            else:
-                dflimg = None
-
+            dflimg = DFLIMG.load ( Path(filepath) )
             if dflimg is None:
                 io.log_err ("%s is not a dfl image file" % (filepath.name) )
                 continue
@@ -262,12 +250,7 @@ def delete_relighted(input_dir):
 
     files_to_delete = []
     for filepath in io.progress_bar_generator(image_paths, "Loading"):
-        if filepath.suffix == '.png':
-            dflimg = DFLPNG.load( str(filepath) )
-        elif filepath.suffix == '.jpg':
-            dflimg = DFLJPG.load ( str(filepath) )
-        else:
-            dflimg = None
+        dflimg = DFLIMG.load ( Path(filepath) )
 
         if dflimg is None:
             io.log_err ("%s is not a dfl image file" % (filepath.name) )

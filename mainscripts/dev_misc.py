@@ -5,13 +5,12 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from DFLIMG import DFLIMG
 from facelib import FaceType, LandmarksProcessor
 from interact import interact as io
 from joblib import Subprocessor
 from utils import Path_utils
 from utils.cv2_utils import *
-from utils.DFLJPG import DFLJPG
-from utils.DFLPNG import DFLPNG
 
 from . import Extractor, Sorter
 from .Extractor import ExtractSubprocessor
@@ -227,13 +226,8 @@ class CelebAMASKHQSubprocessor(Subprocessor):
         #override
         def process_data(self, data):
             filename = data[0]
-            filepath = Path(filename)
-            if filepath.suffix == '.png':
-                dflimg = DFLPNG.load( str(filepath) )
-            elif filepath.suffix == '.jpg':
-                dflimg = DFLJPG.load ( str(filepath) )
-            else:
-                dflimg = None
+
+            dflimg = DFLIMG.load(Path(filename))
                 
             image_to_face_mat = dflimg.get_image_to_face_mat()    
             src_filename = dflimg.get_source_filename()
@@ -330,12 +324,7 @@ def apply_celebamaskhq(input_dir ):
     paths_to_extract = []
     for filename in io.progress_bar_generator(Path_utils.get_image_paths(img_path), desc="Processing"):
         filepath = Path(filename)
-        if filepath.suffix == '.png':
-            dflimg = DFLPNG.load( str(filepath) )
-        elif filepath.suffix == '.jpg':
-            dflimg = DFLJPG.load ( str(filepath) )
-        else:
-            dflimg = None
+        dflimg = DFLIMG.load(filepath)
 
         if dflimg is not None:
             paths_to_extract.append (filepath)

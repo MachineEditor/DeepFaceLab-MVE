@@ -6,9 +6,7 @@ from facelib import LandmarksProcessor
 from interact import interact as io
 from utils import Path_utils
 from utils.cv2_utils import *
-from utils.DFLJPG import DFLJPG
-from utils.DFLPNG import DFLPNG
-
+from DFLIMG import *
 
 def save_faceset_metadata_folder(input_path):
     input_path = Path(input_path)
@@ -20,12 +18,7 @@ def save_faceset_metadata_folder(input_path):
     d = {}
     for filepath in io.progress_bar_generator( Path_utils.get_image_paths(input_path), "Processing"):
         filepath = Path(filepath)
-        if filepath.suffix == '.png':
-            dflimg = DFLPNG.load( str(filepath) )
-        elif filepath.suffix == '.jpg':
-            dflimg = DFLJPG.load ( str(filepath) )
-        else:
-            continue
+        dflimg = DFLIMG.load (filepath)
         
         dfl_dict = dflimg.getDFLDictData()        
         d[filepath.name] = ( dflimg.get_shape(), dfl_dict )
@@ -82,13 +75,7 @@ def restore_faceset_metadata_folder(input_path):
 def remove_ie_polys_file (filepath):
     filepath = Path(filepath)
 
-    if filepath.suffix == '.png':
-        dflimg = DFLPNG.load( str(filepath) )
-    elif filepath.suffix == '.jpg':
-        dflimg = DFLJPG.load ( str(filepath) )
-    else:
-        return
-
+    dflimg = DFLIMG.load (filepath)
     if dflimg is None:
         io.log_err ("%s is not a dfl image file" % (filepath.name) )
         return
@@ -109,12 +96,7 @@ def remove_ie_polys_folder(input_path):
 def remove_fanseg_file (filepath):
     filepath = Path(filepath)
 
-    if filepath.suffix == '.png':
-        dflimg = DFLPNG.load( str(filepath) )
-    elif filepath.suffix == '.jpg':
-        dflimg = DFLJPG.load ( str(filepath) )
-    else:
-        return
+    dflimg = DFLIMG.load (filepath)
 
     if dflimg is None:
         io.log_err ("%s is not a dfl image file" % (filepath.name) )
@@ -141,7 +123,7 @@ def convert_png_to_jpg_file (filepath):
 
     dflpng = DFLPNG.load (str(filepath) )
     if dflpng is None:
-        io.log_err ("%s is not a dfl image file" % (filepath.name) )
+        io.log_err ("%s is not a dfl png image file" % (filepath.name) )
         return
 
     dfl_dict = dflpng.getDFLDictData()
@@ -177,12 +159,7 @@ def add_landmarks_debug_images(input_path):
 
         img = cv2_imread(str(filepath))
 
-        if filepath.suffix == '.png':
-            dflimg = DFLPNG.load( str(filepath) )
-        elif filepath.suffix == '.jpg':
-            dflimg = DFLJPG.load ( str(filepath) )
-        else:
-            dflimg = None
+        dflimg = DFLIMG.load (filepath)
 
         if dflimg is None:
             io.log_err ("%s is not a dfl image file" % (filepath.name) )
@@ -202,12 +179,7 @@ def recover_original_aligned_filename(input_path):
     for filepath in io.progress_bar_generator( Path_utils.get_image_paths(input_path), "Processing"):
         filepath = Path(filepath)
 
-        if filepath.suffix == '.png':
-            dflimg = DFLPNG.load( str(filepath) )
-        elif filepath.suffix == '.jpg':
-            dflimg = DFLJPG.load ( str(filepath) )
-        else:
-            dflimg = None
+        dflimg = DFLIMG.load (filepath)
 
         if dflimg is None:
             io.log_err ("%s is not a dfl image file" % (filepath.name) )

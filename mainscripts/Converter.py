@@ -14,17 +14,16 @@ import numpy as np
 import numpy.linalg as npla
 
 import imagelib
+import samplelib
 from converters import (ConverterConfig, ConvertFaceAvatar, ConvertMasked,
                         FrameInfo)
 from facelib import FaceType, LandmarksProcessor
-from nnlib import TernausNet
-
 from interact import interact as io
 from joblib import SubprocessFunctionCaller, Subprocessor
+from nnlib import TernausNet
 from utils import Path_utils
 from utils.cv2_utils import *
-from utils.DFLJPG import DFLJPG
-from utils.DFLPNG import DFLPNG
+from DFLIMG import DFLIMG
 
 from .ConverterScreen import Screen, ScreenManager
 
@@ -670,19 +669,29 @@ def main (args, device_args):
                 io.log_err('Aligned directory not found. Please ensure it exists.')
                 return
 
+            packed_samples = None
+            try:
+                packed_samples = samplelib.PackedFaceset.load(aligned_path)  
+            except:
+                io.log_err(f"Error occured while loading samplelib.PackedFaceset.load {str(aligned_path)}, {traceback.format_exc()}")
+
+ 
+            if packed_samples is not None:      
+                io.log_info ("Using packed faceset.")          
+                def generator():
+                    for sample in io.progress_bar_generator( packed_samples, "Collecting alignments"):                      
+                        filepath = Path(sample.filename)                        
+                        yield DFLIMG.load(filepath, loader_func=lambda x: sample.read_raw_file()  )
+            else:
+                def generator():
+                    for filepath in io.progress_bar_generator( Path_utils.get_image_paths(aligned_path), "Collecting alignments"):
+                        filepath = Path(filepath)
+                        yield DFLIMG.load(filepath)
+                            
             alignments = {}
             multiple_faces_detected = False
-            aligned_path_image_paths = Path_utils.get_image_paths(aligned_path)
-            for filepath in io.progress_bar_generator(aligned_path_image_paths, "Collecting alignments"):
-                filepath = Path(filepath)
-
-                if filepath.suffix == '.png':
-                    dflimg = DFLPNG.load( str(filepath) )
-                elif filepath.suffix == '.jpg':
-                    dflimg = DFLJPG.load ( str(filepath) )
-                else:
-                    dflimg = None
-
+            
+            for dflimg in generator():
                 if dflimg is None:
                     io.log_err ("%s is not a dfl image file" % (filepath.name) )
                     continue
@@ -745,14 +754,8 @@ def main (args, device_args):
             filesdata = []
             for filepath in io.progress_bar_generator(input_path_image_paths, "Collecting info"):
                 filepath = Path(filepath)
-
-                if filepath.suffix == '.png':
-                    dflimg = DFLPNG.load( str(filepath) )
-                elif filepath.suffix == '.jpg':
-                    dflimg = DFLJPG.load ( str(filepath) )
-                else:
-                    dflimg = None
-
+                
+                dflimg = DFLIMG.load(filepath)
                 if dflimg is None:
                     io.log_err ("%s is not a dfl image file" % (filepath.name) )
                     continue

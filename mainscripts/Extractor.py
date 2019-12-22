@@ -20,8 +20,7 @@ from joblib import Subprocessor
 from nnlib import TernausNet, nnlib
 from utils import Path_utils
 from utils.cv2_utils import *
-from utils.DFLJPG import DFLJPG
-from utils.DFLPNG import DFLPNG
+from DFLIMG import *
 
 DEBUG = False
 
@@ -136,10 +135,7 @@ class ExtractSubprocessor(Subprocessor):
             h, w, ch = image.shape
             if h == w:
                 #extracting from already extracted jpg image?
-                if filename_path.suffix == '.png':
-                    src_dflimg = DFLPNG.load ( str(filename_path) )
-                if filename_path.suffix == '.jpg':
-                    src_dflimg = DFLJPG.load ( str(filename_path) )
+                src_dflimg = DFLIMG.load (filename_path)
 
             if 'rects' in self.type:
                 if min(w,h) < 128:
@@ -810,13 +806,7 @@ def extract_fanseg(input_dir, device_args={} ):
     paths_to_extract = []
     for filename in Path_utils.get_image_paths(input_path) :
         filepath = Path(filename)
-        if filepath.suffix == '.png':
-            dflimg = DFLPNG.load( str(filepath) )
-        elif filepath.suffix == '.jpg':
-            dflimg = DFLJPG.load ( str(filepath) )
-        else:
-            dflimg = None
-
+        dflimg = DFLIMG.load ( filepath )
         if dflimg is not None:
             paths_to_extract.append (filepath)
     
