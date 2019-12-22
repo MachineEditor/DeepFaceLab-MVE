@@ -26,13 +26,12 @@ DEBUG = False
 
 class ExtractSubprocessor(Subprocessor):
     class Data(object):
-        def __init__(self, filename=None, rects=None, landmarks = None, landmarks_accurate=True, pitch_yaw_roll=None, force_output_path=None, final_output_files = None):
+        def __init__(self, filename=None, rects=None, landmarks = None, landmarks_accurate=True, force_output_path=None, final_output_files = None):
             self.filename = filename
             self.rects = rects or []
             self.rects_rotation = 0
             self.landmarks_accurate = landmarks_accurate
             self.landmarks = landmarks or []
-            self.pitch_yaw_roll = pitch_yaw_roll
             self.force_output_path = force_output_path
             self.final_output_files = final_output_files or []
             self.faces_detected = 0
@@ -266,8 +265,7 @@ class ExtractSubprocessor(Subprocessor):
                                                        source_filename=filename_path.name,
                                                        source_rect=rect,
                                                        source_landmarks=image_landmarks.tolist(),
-                                                       image_to_face_mat=image_to_face_mat,
-                                                       pitch_yaw_roll=data.pitch_yaw_roll
+                                                       image_to_face_mat=image_to_face_mat
                                             )
 
                         data.final_output_files.append (output_file)

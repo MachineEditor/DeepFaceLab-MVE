@@ -187,11 +187,7 @@ def sort_by_face_yaw(input_path):
             trash_img_list.append ( [str(filepath)] )
             continue
 
-        pitch_yaw_roll = dflimg.get_pitch_yaw_roll()
-        if pitch_yaw_roll is not None:
-            pitch, yaw, roll = pitch_yaw_roll
-        else:
-            pitch, yaw, roll = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks() )
+        pitch, yaw, roll = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks() )
 
         img_list.append( [str(filepath), yaw ] )
 
@@ -214,11 +210,7 @@ def sort_by_face_pitch(input_path):
             trash_img_list.append ( [str(filepath)] )
             continue
 
-        pitch_yaw_roll = dflimg.get_pitch_yaw_roll()
-        if pitch_yaw_roll is not None:
-            pitch, yaw, roll = pitch_yaw_roll
-        else:
-            pitch, yaw, roll = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks() )
+        pitch, yaw, roll = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks() )
 
         img_list.append( [str(filepath), pitch ] )
 

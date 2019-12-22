@@ -85,16 +85,23 @@ class SampleHost:
         result = FaceSamplesLoaderSubprocessor(image_paths).run()
         sample_list = []
 
-        for filename,dflimg in io.progress_bar_generator(result, "Processing"):
+        for filename, \
+                ( face_type,
+                  shape,
+                  landmarks,
+                  ie_polys,
+                  eyebrows_expand_mod,
+                  source_filename,
+                    
+                ) in io.progress_bar_generator(result, "Processing"):
             sample_list.append( Sample(filename=filename,
                                         sample_type=SampleType.FACE,
-                                        face_type=FaceType.fromString (dflimg.get_face_type()),
-                                        shape=dflimg.get_shape(),
-                                        landmarks=dflimg.get_landmarks(),
-                                        ie_polys=dflimg.get_ie_polys(),
-                                        pitch_yaw_roll=dflimg.get_pitch_yaw_roll(),
-                                        eyebrows_expand_mod=dflimg.get_eyebrows_expand_mod(),
-                                        source_filename=dflimg.get_source_filename(),                                       
+                                        face_type=FaceType.fromString (face_type),
+                                        shape=shape,
+                                        landmarks=landmarks,
+                                        ie_polys=ie_polys,
+                                        eyebrows_expand_mod=eyebrows_expand_mod,
+                                        source_filename=source_filename,                                       
                                     ))
         return sample_list
         
@@ -114,7 +121,6 @@ class SampleHost:
                                            shape=dflimg.get_shape(),
                                            landmarks=dflimg.get_landmarks(),
                                            ie_polys=dflimg.get_ie_polys(),
-                                           pitch_yaw_roll=dflimg.get_pitch_yaw_roll(),
                                            eyebrows_expand_mod=dflimg.get_eyebrows_expand_mod(),
                                            source_filename=dflimg.get_source_filename(),                                       
                                         ))
@@ -190,8 +196,16 @@ class FaceSamplesLoaderSubprocessor(Subprocessor):
                         
             if dflimg is None:
                 self.log_err (f"FaceSamplesLoader: {filename} is not a dfl image file.")
-                            
-            return idx, dflimg
+                data = None
+            else:
+                data = (dflimg.get_face_type(),
+                        dflimg.get_shape(),
+                        dflimg.get_landmarks(),
+                        dflimg.get_ie_polys(),
+                        dflimg.get_eyebrows_expand_mod(),
+                        dflimg.get_source_filename() )    
+            
+            return idx, data
 
         #override
         def get_data_name (self, data):
