@@ -110,8 +110,11 @@ class ExtractSubprocessor(Subprocessor):
         #override
         def process_data(self, data):
             filename_path = Path( data.filename )
-
             filename_path_str = str(filename_path)
+            
+            if self.type == 'landmarks' and len(data.rects) == 0:
+                return data            
+            
             if self.cached_image[0] == filename_path_str:
                 image = self.cached_image[1] #cached image for manual extractor
             else:
@@ -163,8 +166,7 @@ class ExtractSubprocessor(Subprocessor):
 
                 return data
 
-            elif self.type == 'landmarks':
-
+            elif self.type == 'landmarks':                    
                 if data.rects_rotation == 0:
                     rotated_image = image
                 elif data.rects_rotation == 90:
