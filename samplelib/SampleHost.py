@@ -91,9 +91,8 @@ class SampleHost:
                   landmarks,
                   ie_polys,
                   eyebrows_expand_mod,
-                  source_filename,
-                    
-                ) in io.progress_bar_generator(result, "Processing"):
+                  source_filename,                    
+                ) in result:
             sample_list.append( Sample(filename=filename,
                                         sample_type=SampleType.FACE,
                                         face_type=FaceType.fromString (face_type),
@@ -104,31 +103,6 @@ class SampleHost:
                                         source_filename=source_filename,                                       
                                     ))
         return sample_list
-        
-        """
-        sample_list = []
-
-        for filename in io.progress_bar_generator(image_paths, "Loading"):
-            filename_path = Path(filename)
-            try:
-                dflimg = DFLIMG.load (filename_path)                    
-
-                
-                
-                sample_list.append( Sample(filename=filename,
-                                           sample_type=SampleType.FACE,
-                                           face_type=FaceType.fromString (dflimg.get_face_type()),
-                                           shape=dflimg.get_shape(),
-                                           landmarks=dflimg.get_landmarks(),
-                                           ie_polys=dflimg.get_ie_polys(),
-                                           eyebrows_expand_mod=dflimg.get_eyebrows_expand_mod(),
-                                           source_filename=dflimg.get_source_filename(),                                       
-                                        ))
-            except:
-                io.log_err ("Unable to load %s , error: %s" % (filename, traceback.format_exc() ) )
-
-        return sample_list
-        """
 
     @staticmethod
     def upgradeToFaceTemporalSortedSamples( samples ):

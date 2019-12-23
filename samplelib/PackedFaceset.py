@@ -21,38 +21,39 @@ class PackedFaceset():
             io.log_info(f"{samples_dat_path} : file already exists !")
             io.input_bool("Press enter to continue and overwrite.", False)
 
-        of = open(samples_dat_path, "wb")
-
         as_person_faceset = False
         dir_names = Path_utils.get_all_dir_names(samples_path)
         if len(dir_names) != 0:
             as_person_faceset = io.input_bool(f"{len(dir_names)} subdirectories found, process as person faceset? (y/n) skip:y : ", True)
-            
+
         if as_person_faceset:
             image_paths = []
-            
+
             for dir_name in dir_names:
                 image_paths += Path_utils.get_image_paths(samples_path / dir_name)
         else:
             image_paths = Path_utils.get_image_paths(samples_path)
 
-
         samples = samplelib.SampleHost.load_face_samples(image_paths)
         samples_len = len(samples)
 
         samples_configs = []
-        for sample in samples:
+        for sample in io.progress_bar_generator (samples, "Processing"):
             sample_filepath = Path(sample.filename)
             sample.filename = sample_filepath.name
-            
+
             if as_person_faceset:
                 sample.person_name = sample_filepath.parent.name
             samples_configs.append ( sample.get_config() )
         samples_bytes = pickle.dumps(samples_configs, 4)
 
+        of = open(samples_dat_path, "wb")
         of.write ( struct.pack ("Q", PackedFaceset.VERSION ) )
         of.write ( struct.pack ("Q", len(samples_bytes) ) )
         of.write ( samples_bytes )
+
+        del samples_bytes   #just free mem
+        del samples_configs
 
         sample_data_table_offset = of.tell()
         of.write ( bytes( 8*(samples_len+1) ) ) #sample data offset table
@@ -66,16 +67,14 @@ class PackedFaceset():
                     sample_path = samples_path / sample.person_name / sample.filename
                 else:
                     sample_path = samples_path / sample.filename
-                    
+
+
                 with open(sample_path, "rb") as f:
-                    b = f.read()
+                   b = f.read()
 
                 offsets.append ( of.tell() - data_start_offset )
                 of.write(b)
             except:
-                import code
-                code.interact(local=dict(globals(), **locals()))
-
                 raise Exception(f"error while processing sample {sample_path}")
 
         offsets.append ( of.tell() )
@@ -86,11 +85,11 @@ class PackedFaceset():
         of.seek(0,2)
         of.close()
 
-        for filename in io.progress_bar_generator(image_paths,"Deleting"):
+        for filename in io.progress_bar_generator(image_paths, "Deleting files"):
             Path(filename).unlink()
 
         if as_person_faceset:
-            for dir_name in dir_names:
+            for dir_name in io.progress_bar_generator(dir_names, "Deleting dirs"):
                 dir_path = samples_path / dir_name
                 try:
                     shutil.rmtree(dir_path)
@@ -108,10 +107,10 @@ class PackedFaceset():
 
         for sample in io.progress_bar_generator(samples, "Unpacking"):
             person_name = sample.person_name
-            if person_name is not None:                
+            if person_name is not None:
                 person_path = samples_path / person_name
                 person_path.mkdir(parents=True, exist_ok=True)
-                
+
                 target_filepath = person_path / sample.filename
             else:
                 target_filepath = samples_path / sample.filename
@@ -137,8 +136,8 @@ class PackedFaceset():
         samples_configs = pickle.loads ( f.read(sizeof_samples_bytes) )
         samples = []
         for sample_config in samples_configs:
-            samples.append ( Sample (**sample_config) )        
-        
+            samples.append ( Sample (**sample_config) )
+
         offsets = [ struct.unpack("Q", f.read(8) )[0] for _ in range(len(samples)+1) ]
         data_start_offset = f.tell()
         f.close()

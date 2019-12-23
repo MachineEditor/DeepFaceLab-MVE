@@ -4,7 +4,6 @@ import time
 
 import numpy as np
 
-
 class Index2DHost():  
     """
     Provides random shuffled 2D indexes for multiprocesses

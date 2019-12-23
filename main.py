@@ -6,6 +6,7 @@ import multiprocessing
 from utils import Path_utils
 from utils import os_utils
 from pathlib import Path
+from interact import interact as io
 
 if sys.version_info[0] < 3 or (sys.version_info[0] == 3 and sys.version_info[1] < 6):
     raise Exception("This program requires at least Python 3.6")
@@ -134,10 +135,12 @@ if __name__ == "__main__":
             Util.restore_faceset_metadata_folder (input_path=arguments.input_dir)
             
         if arguments.pack_faceset:            
+            io.log_info ("Performing faceset packing...\r\n")
             from samplelib import PackedFaceset
             PackedFaceset.pack( Path(arguments.input_dir) )
 
         if arguments.unpack_faceset:
+            io.log_info ("Performing faceset unpacking...\r\n")
             from samplelib import PackedFaceset
             PackedFaceset.unpack( Path(arguments.input_dir) )
             
