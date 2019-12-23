@@ -38,7 +38,7 @@ GOAL: next DeepFacelab update.
                     
 bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr
 
-![](doc/example_faceset.jpg.jpg)
+![](doc/example_faceset.jpg)
 
 You can collect faceset of any celebrities that can be used in DeepFaceLab (described in manual) 
 
