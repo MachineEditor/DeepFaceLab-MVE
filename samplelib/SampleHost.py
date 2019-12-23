@@ -161,7 +161,7 @@ class FaceSamplesLoaderSubprocessor(Subprocessor):
     class Cli(Subprocessor.Cli):
         #override
         def on_initialize(self, client_dict):
-            self.log_info ('Running on %s.' % (client_dict['device_name']) )
+            pass
 
         #override
         def process_data(self, data):
