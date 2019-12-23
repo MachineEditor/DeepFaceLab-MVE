@@ -14,7 +14,7 @@
 
 [На русском](doc/manual_ru.pdf)
 
-- ### [Prebuilt windows app](doc/doc_prebuilt_windows_app.md)
+- ### [Windows Desktop App](doc/doc_windows_desktop_app.md)
 
 - ### Forks
 
@@ -38,9 +38,11 @@ GOAL: next DeepFacelab update.
                     
 bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr
 
-ALSO you can collect faceset of any celebrities that can be used in DeepFaceLab (described in manual) 
+![](doc/example_faceset.jpg.jpg)
 
-and post it here [mrdeepfakes celebrity-facesets)](https://mrdeepfakes.com/forums/forum-celebrity-facesets)
+You can collect faceset of any celebrities that can be used in DeepFaceLab (described in manual) 
+
+and share it here [mrdeepfakes celebrity-facesets](https://mrdeepfakes.com/forums/forum-celebrity-facesets)
 
 - ### Communication groups:
 
