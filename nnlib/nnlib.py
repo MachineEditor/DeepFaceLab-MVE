@@ -28,7 +28,8 @@ class nnlib(object):
 
     tf = None
     tf_sess = None
-
+    tf_sess_config = None
+    
     PML = None
     PMLK = None
     PMLTile= None
@@ -105,6 +106,7 @@ PixelShuffler = nnlib.PixelShuffler
 SubpixelUpscaler = nnlib.SubpixelUpscaler
 SubpixelDownscaler = nnlib.SubpixelDownscaler
 Scale = nnlib.Scale
+BilinearInterpolation = nnlib.BilinearInterpolation
 BlurPool = nnlib.BlurPool
 FUNITAdain = nnlib.FUNITAdain
 SelfAttention = nnlib.SelfAttention
@@ -192,7 +194,8 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
 
         config.gpu_options.force_gpu_compatible = True
         config.gpu_options.allow_growth = device_config.allow_growth
-
+        nnlib.tf_sess_config = config
+        
         nnlib.tf_sess = tf.Session(config=config)
 
         if suppressor is not None:
@@ -710,6 +713,141 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 base_config = super(Scale, self).get_config()
                 return dict(list(base_config.items()) + list(config.items()))
         nnlib.Scale = Scale
+        
+ 
+        """
+        unable to work in plaidML, due to unimplemented ops
+        
+        class BilinearInterpolation(KL.Layer):
+            def __init__(self, size=(2,2), **kwargs):
+                self.size = size
+                super(BilinearInterpolation, self).__init__(**kwargs)
+
+            def compute_output_shape(self, input_shape):
+                return (input_shape[0], input_shape[1]*self.size[1], input_shape[2]*self.size[0], input_shape[3])
+
+
+            def call(self, X):
+                _,h,w,_ = K.int_shape(X)
+
+                X = K.concatenate( [ X, X[:,:,-2:-1,:] ],axis=2 )
+                X = K.concatenate( [ X, X[:,:,-2:-1,:] ],axis=2 )
+                X = K.concatenate( [ X, X[:,-2:-1,:,:] ],axis=1 )
+                X = K.concatenate( [ X, X[:,-2:-1,:,:] ],axis=1 )
+
+                X_sh = K.shape(X)
+                batch_size, height, width, num_channels = X_sh[0], X_sh[1], X_sh[2], X_sh[3]
+
+                output_h, output_w = (h*self.size[1]+4, w*self.size[0]+4)
+                
+                x_linspace = np.linspace(-1. , 1. - 2/output_w, output_w)#
+                y_linspace = np.linspace(-1. , 1. - 2/output_h, output_h)#
+            
+                x_coordinates, y_coordinates = np.meshgrid(x_linspace, y_linspace)
+                x_coordinates = K.flatten(K.constant(x_coordinates, dtype=K.floatx() ))
+                y_coordinates = K.flatten(K.constant(y_coordinates, dtype=K.floatx() ))
+
+                grid = K.concatenate([x_coordinates, y_coordinates, K.ones_like(x_coordinates)], 0)
+                grid = K.flatten(grid)
+
+
+                grids = K.tile(grid, ( batch_size, ) )
+                grids = K.reshape(grids, (batch_size, 3, output_h * output_w ))
+
+
+                x = K.cast(K.flatten(grids[:, 0:1, :]), dtype='float32')
+                y = K.cast(K.flatten(grids[:, 1:2, :]), dtype='float32')
+                x = .5 * (x + 1.0) * K.cast(width, dtype='float32')
+                y = .5 * (y + 1.0) * K.cast(height, dtype='float32')
+                x0 = K.cast(x, 'int32')
+                x1 = x0 + 1
+                y0 = K.cast(y, 'int32')
+                y1 = y0 + 1
+                max_x = int(K.int_shape(X)[2] -1)
+                max_y = int(K.int_shape(X)[1] -1)
+
+                x0 = K.clip(x0, 0, max_x)
+                x1 = K.clip(x1, 0, max_x)
+                y0 = K.clip(y0, 0, max_y)
+                y1 = K.clip(y1, 0, max_y)
+
+
+                pixels_batch = K.constant ( np.arange(0, batch_size) * (height * width), dtype=K.floatx() ) 
+                
+                pixels_batch = K.expand_dims(pixels_batch, axis=-1)
+
+                base = K.tile(pixels_batch, (1, output_h * output_w ) )
+                base = K.flatten(base)
+
+                # base_y0 = base + (y0 * width)
+                base_y0 = y0 * width
+                base_y0 = base + base_y0
+                # base_y1 = base + (y1 * width)
+                base_y1 = y1 * width
+                base_y1 = base_y1 + base
+
+                indices_a = base_y0 + x0
+                indices_b = base_y1 + x0
+                indices_c = base_y0 + x1
+                indices_d = base_y1 + x1
+
+                flat_image = K.reshape(X, (-1, num_channels) )
+                flat_image = K.cast(flat_image, dtype='float32')
+                pixel_values_a = K.gather(flat_image, indices_a)
+                pixel_values_b = K.gather(flat_image, indices_b)
+                pixel_values_c = K.gather(flat_image, indices_c)
+                pixel_values_d = K.gather(flat_image, indices_d)
+
+                x0 = K.cast(x0, 'float32')
+                x1 = K.cast(x1, 'float32')
+                y0 = K.cast(y0, 'float32')
+                y1 = K.cast(y1, 'float32')
+
+                area_a = K.expand_dims(((x1 - x) * (y1 - y)), 1)
+                area_b = K.expand_dims(((x1 - x) * (y - y0)), 1)
+                area_c = K.expand_dims(((x - x0) * (y1 - y)), 1)
+                area_d = K.expand_dims(((x - x0) * (y - y0)), 1)
+
+                values_a = area_a * pixel_values_a
+                values_b = area_b * pixel_values_b
+                values_c = area_c * pixel_values_c
+                values_d = area_d * pixel_values_d
+                interpolated_image = values_a + values_b + values_c + values_d
+        
+                new_shape = (batch_size, output_h, output_w, num_channels)
+                interpolated_image = K.reshape(interpolated_image, new_shape)
+
+                interpolated_image = interpolated_image[:,:-4,:-4,:]
+                return interpolated_image
+
+            def get_config(self):
+                config = {"size": self.size}
+                base_config = super(BilinearInterpolation, self).get_config()
+                return dict(list(base_config.items()) + list(config.items()))
+        """      
+        class BilinearInterpolation(KL.Layer):
+            def __init__(self, size=(2,2), **kwargs):
+                self.size = size
+                super(BilinearInterpolation, self).__init__(**kwargs)
+
+            def compute_output_shape(self, input_shape):
+                return (input_shape[0], input_shape[1]*self.size[1], input_shape[2]*self.size[0], input_shape[3])
+                
+            def call(self, X):
+                _,h,w,_ = K.int_shape(X)
+
+                return K.cast( K.tf.image.resize_images(X, (h*self.size[1],w*self.size[0]) ), K.floatx() )
+
+            def get_config(self):
+                config = {"size": self.size}
+                base_config = super(BilinearInterpolation, self).get_config()
+                return dict(list(base_config.items()) + list(config.items()))
+     
+        nnlib.BilinearInterpolation = BilinearInterpolation
+
+        
+        
+        
 
         class SelfAttention(KL.Layer):
             def __init__(self, nc, squeeze_factor=8, **kwargs):
