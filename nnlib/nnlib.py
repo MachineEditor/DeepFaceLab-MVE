@@ -70,6 +70,7 @@ PixelNormalization = nnlib.PixelNormalization
 Activation = KL.Activation
 LeakyReLU = KL.LeakyReLU
 ELU = KL.ELU
+GeLU = nnlib.GeLU
 ReLU = KL.ReLU
 PReLU = KL.PReLU
 tanh = KL.Activation('tanh')
@@ -1299,6 +1300,37 @@ NLayerDiscriminator = nnlib.NLayerDiscriminator
                 base_config = super(DenseMaxout, self).get_config()
                 return dict(list(base_config.items()) + list(config.items()))
         nnlib.DenseMaxout = DenseMaxout
+        
+        class GeLU(KL.Layer):
+            """Gaussian Error Linear Unit.
+            A smoother version of ReLU generally used
+            in the BERT or BERT architecture based models.
+            Original paper: https://arxiv.org/abs/1606.08415
+            Input shape:
+                Arbitrary. Use the keyword argument `input_shape`
+                (tuple of integers, does not include the samples axis)
+                when using this layer as the first layer in a model.
+            Output shape:
+                Same shape as the input.
+            """
+
+            def __init__(self, approximate=True, **kwargs):
+                super(GeLU, self).__init__(**kwargs)
+                self.approximate = approximate
+                self.supports_masking = True
+
+            def call(self, inputs):
+                cdf = 0.5 * (1.0 + K.tanh((np.sqrt(2 / np.pi) * (inputs + 0.044715 * K.pow(inputs, 3)))))
+                return inputs * cdf
+
+            def get_config(self):
+                config = {'approximate': self.approximate}
+                base_config = super(GeLU, self).get_config()
+                return dict(list(base_config.items()) + list(config.items()))
+
+            def compute_output_shape(self, input_shape):
+                return input_shape
+        nnlib.GeLU = GeLU
 
         def CAInitializerMP( conv_weights_list ):
             #Convolution Aware Initialization https://arxiv.org/abs/1702.06295
