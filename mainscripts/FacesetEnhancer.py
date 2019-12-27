@@ -158,8 +158,11 @@ def process_folder ( dirpath, multi_gpu=False, cpu_only=False ):
     if is_merge:
         io.log_info (f"Copying processed files to {dirpath_parts}")
         
-        for (filepath, output_filepath) in result:        
-            shutil.copy (output_filepath, filepath)
+        for (filepath, output_filepath) in result:  
+            try:      
+                shutil.copy (output_filepath, filepath)
+            except:
+                pass
             
         io.log_info (f"Removing {output_dirpath_parts}")
         shutil.rmtree(output_dirpath)
