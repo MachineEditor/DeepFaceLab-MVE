@@ -16,7 +16,7 @@ class Quick96Model(ModelBase):
         super().__init__(*args, **kwargs, 
                             ask_enable_autobackup=False,
                             ask_write_preview_history=False,
-                            ask_target_iter=False,
+                            ask_target_iter=True,
                             ask_batch_size=False,
                             ask_random_flip=False)                 
                  
@@ -92,8 +92,8 @@ class Quick96Model(ModelBase):
                         y = self.upscale(d_dims//2)(y)
                         y = self.upscale(d_dims//4)(y)
                         
-                        return Conv2D(3, kernel_size=5, padding='same', activation='tanh')(x), \
-                               Conv2D(1, kernel_size=5, padding='same', activation='sigmoid')(y)
+                        return Conv2D(3, kernel_size=1, padding='same', activation='tanh')(x), \
+                               Conv2D(1, kernel_size=1, padding='same', activation='sigmoid')(y)
 
                     return func
 
