@@ -143,8 +143,8 @@ def process_folder ( dirpath, multi_gpu=False, cpu_only=False ):
             
     dirpath_parts = '/'.join( dirpath.parts[-2:])
     output_dirpath_parts = '/'.join( output_dirpath.parts[-2:] )
-    io.log_info (f"Enhancing faceset in {dirpath_parts}.")
-    io.log_info ( f"Processing to {output_dirpath_parts}.")
+    io.log_info (f"Enhancing faceset in {dirpath_parts}")
+    io.log_info ( f"Processing to {output_dirpath_parts}")
 
     output_images_paths = Path_utils.get_image_paths(output_dirpath)
     if len(output_images_paths) > 0:
@@ -154,10 +154,12 @@ def process_folder ( dirpath, multi_gpu=False, cpu_only=False ):
     image_paths = [Path(x) for x in Path_utils.get_image_paths( dirpath )]    
     result = FacesetEnhancerSubprocessor ( image_paths, output_dirpath, multi_gpu=multi_gpu, cpu_only=cpu_only).run()
 
-    io.log_info (f"Copying processed files to {dirpath_parts}.")
-    
-    for (filepath, output_filepath) in result:        
-        shutil.copy (output_filepath, filepath)
+    is_merge = io.input_bool (f"\r\nMerge {output_dirpath_parts} to {dirpath_parts} ? (y/n skip:y) : ", True)
+    if is_merge:
+        io.log_info (f"Copying processed files to {dirpath_parts}")
         
-    io.log_info (f"Removing {output_dirpath_parts}.")
-    shutil.rmtree(output_dirpath)
+        for (filepath, output_filepath) in result:        
+            shutil.copy (output_filepath, filepath)
+            
+        io.log_info (f"Removing {output_dirpath_parts}")
+        shutil.rmtree(output_dirpath)
