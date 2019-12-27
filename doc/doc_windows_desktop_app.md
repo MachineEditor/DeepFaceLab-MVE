@@ -10,13 +10,9 @@ if the download qouta is exceeded, add the file to your own google drive and dow
 
 Available builds:
 
-* DeepFaceLabCUDA9.2SSE - for NVIDIA cards and any 64-bit CPU
+* DeepFaceLab_CUDA - for NVIDIA cards 
 
-* DeepFaceLabCUDA10.1AVX - for NVIDIA cards and CPU with AVX instructions support
-
-* DeepFaceLabOpenCLSSE - for AMD/IntelHD cards and any 64-bit CPU
-
-If your card does not work with CUDA 10.1 version, try CUDA 9.2.
+* DeepFaceLab_OpenCL - for NVIDIA/AMD/IntelHD cards
 
 Important: you don't need to install CUDA ! 
 
