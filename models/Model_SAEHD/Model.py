@@ -198,8 +198,6 @@ class SAEHDModel(ModelBase):
                     if dims % 2 != 0:
                         dims += 1
 
-
-
                     def func(x):
 
                         for i in [8,4,2]:
@@ -213,7 +211,7 @@ class SAEHDModel(ModelBase):
                                 x = Add()([x, x0])
                                 x = LeakyReLU(0.2)(x)
 
-                        return Conv2D(output_nc, kernel_size=5, padding='same', activation='sigmoid')(x)
+                        return Conv2D(output_nc, kernel_size=1, padding='same', activation='sigmoid')(x)
 
                     return func
 
@@ -327,7 +325,7 @@ class SAEHDModel(ModelBase):
                                 x = Add()([x, x0])
                                 x = LeakyReLU(0.2)(x)
 
-                        return Conv2D(output_nc, kernel_size=5, padding='same', activation='sigmoid')(x)
+                        return Conv2D(output_nc, kernel_size=1, padding='same', activation='sigmoid')(x)
 
                     return func
 
