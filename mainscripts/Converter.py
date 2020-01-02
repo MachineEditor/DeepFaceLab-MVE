@@ -169,12 +169,22 @@ class ConvertSubprocessor(Subprocessor):
 
             if len(landmarks_list) == 0:
                 self.log_info ( 'no faces found for %s, copying without faces' % (filename_path.name) )
-
-                if filename_path.suffix == '.png':
-                    shutil.copy (filename, output_filename )
-                else:
+                
+                if cfg.export_mask_alpha:
                     img_bgr = cv2_imread(filename)
+                    h,w,c = img_bgr.shape
+                    if c == 1:
+                        img_bgr = np.repeat(img_bgr, 3, -1)                        
+                    if c == 3:
+                        img_bgr = np.concatenate ([img_bgr,  np.zeros((h,w,1), dtype=img_bgr.dtype) ], axis=-1)
+                                            
                     cv2_imwrite (output_filename, img_bgr)
+                else:
+                    if filename_path.suffix == '.png':
+                        shutil.copy (filename, output_filename )
+                    else:
+                        img_bgr = cv2_imread(filename)
+                        cv2_imwrite (output_filename, img_bgr)
 
                 if need_return_image:
                     img_bgr = cv2_imread(filename)

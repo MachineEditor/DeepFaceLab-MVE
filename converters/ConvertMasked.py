@@ -344,12 +344,10 @@ def ConvertMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, i
                 else:
                     alpha = cfg.color_degrade_power / 100.0
                     out_img = (out_img*(1.0-alpha) + out_img_reduced*alpha)
-
-            if cfg.export_mask_alpha:
-                out_img = np.concatenate ( [out_img, img_face_mask_aaa[:,:,0:1]], -1 )
+                    
         out_merging_mask = img_face_mask_aaa
 
-    return out_img, out_merging_mask
+    return out_img, out_merging_mask[...,0:1]
 
 
 def ConvertMasked (predictor_func, predictor_input_shape, cfg, frame_info):
@@ -364,18 +362,18 @@ def ConvertMasked (predictor_func, predictor_input_shape, cfg, frame_info):
 
     #Combining multiple face outputs
     final_img = None
+    final_mask = None
     for img, merging_mask in outs:
         h,w,c = img.shape
 
         if final_img is None:
             final_img = img
+            final_mask = merging_mask
         else:
-            merging_mask = merging_mask[...,0:1]
-            if c == 3:
-                final_img = final_img*(1-merging_mask) + img*merging_mask
-            elif c == 4:
-                final_img_bgr = final_img[...,0:3]*(1-merging_mask) + img[...,0:3]*merging_mask
-                final_img_mask = np.clip ( final_img[...,3:4] + img[...,3:4], 0, 1 )
-                final_img = np.concatenate ( [final_img_bgr, final_img_mask], -1 )
+            final_img = final_img*(1-merging_mask) + img*merging_mask            
+            final_mask = np.clip (final_mask + merging_mask, 0, 1 )
 
+    if cfg.export_mask_alpha:
+        final_img = np.concatenate ( [final_img, final_mask], -1)
+        
     return (final_img*255).astype(np.uint8)
