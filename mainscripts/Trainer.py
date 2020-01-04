@@ -28,6 +28,7 @@ def trainerThread (s2c, c2s, e, args, device_args):
             save_interval_min = 15
             debug = args.get('debug', '')
             execute_programs = args.get('execute_programs', [])
+            no_preview = args.get('no_preview', False)
 
             if not training_data_src_path.exists():
                 io.log_err('Training data src directory does not exist.')
@@ -47,6 +48,7 @@ def trainerThread (s2c, c2s, e, args, device_args):
                         pretraining_data_path=pretraining_data_path,
                         is_training=True,
                         debug=debug,
+                        no_preview=no_preview,
                         device_args=device_args)
 
             is_reached_goal = model.is_reached_iter_goal()
