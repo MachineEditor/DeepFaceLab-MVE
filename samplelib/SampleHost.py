@@ -1,5 +1,7 @@
+import gc
 import multiprocessing
 import operator
+import pickle
 import traceback
 from pathlib import Path
 
@@ -57,6 +59,11 @@ class SampleHost:
                             
                 if result is None:
                     result = SampleHost.load_face_samples( Path_utils.get_image_paths(samples_path) )
+
+                result_dmp = pickle.dumps(result)
+                del result
+                gc.collect()
+                result = pickle.loads(result_dmp)
 
                 samples[sample_type] = result
 
