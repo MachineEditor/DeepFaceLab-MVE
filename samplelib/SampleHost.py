@@ -1,6 +1,5 @@
 import multiprocessing
 import operator
-import pickle
 import traceback
 from pathlib import Path
 
@@ -66,9 +65,6 @@ class SampleHost:
                 if sample_type == SampleType.FACE_TEMPORAL_SORTED:
                     result = SampleHost.upgradeToFaceTemporalSortedSamples(result)
 
-                result_dumped = pickle.dumps(result)
-                del result
-                result = pickle.loads(result_dumped)
                 samples[sample_type] = mp_utils.ListHost(result)
 
             list_host = samples[sample_type]

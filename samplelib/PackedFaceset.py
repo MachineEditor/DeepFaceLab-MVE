@@ -136,6 +136,7 @@ class PackedFaceset():
         samples_configs = pickle.loads ( f.read(sizeof_samples_bytes) )
         samples = []
         for sample_config in samples_configs:
+            sample_config = pickle.loads(pickle.dumps (sample_config))            
             samples.append ( Sample (**sample_config) )
 
         offsets = [ struct.unpack("Q", f.read(8) )[0] for _ in range(len(samples)+1) ]
