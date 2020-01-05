@@ -30,6 +30,7 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
         self.output_sample_types = output_sample_types
         self.person_id_mode = person_id_mode
 
+        raise NotImplementedError("Currently SampleGeneratorFacePerson is not implemented.")
 
         samples_host = SampleHost.mp_host (SampleType.FACE, self.samples_path)
         samples = samples_host.get_list()
