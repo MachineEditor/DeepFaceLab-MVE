@@ -125,7 +125,7 @@ class IndexHost():
                     result.append(shuffle_idxs.pop())
                 self.cqs[cq_id].put (result)
 
-            time.sleep(0.005)
+            time.sleep(0.001)
 
     def create_cli(self):
         cq = multiprocessing.Queue()

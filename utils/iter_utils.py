@@ -22,7 +22,7 @@ class ThisThreadGenerator(object):
         return next(self.generator_func)
 
 class SubprocessGenerator(object):
-    def __init__(self, generator_func, user_param=None, prefetch=3, start_now=False):
+    def __init__(self, generator_func, user_param=None, prefetch=2, start_now=False):
         super().__init__()
         self.prefetch = prefetch
         self.generator_func = generator_func
