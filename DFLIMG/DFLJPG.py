@@ -4,9 +4,10 @@ import struct
 import cv2
 import numpy as np
 
+from core.interact import interact as io
+from core.structex import *
 from facelib import FaceType
-from utils.struct_utils import *
-from interact import interact as io
+
 
 class DFLJPG(object):
     def __init__(self):
@@ -243,6 +244,7 @@ class DFLJPG(object):
                                      source_landmarks=source_landmarks,
                                      image_to_face_mat=image_to_face_mat,
                                      fanseg_mask=fanseg_mask,
+                                     eyebrows_expand_mod=eyebrows_expand_mod,
                                      relighted=relighted)
 
     def remove_ie_polys(self):
@@ -322,4 +324,3 @@ class DFLJPG(object):
         return self.dfl_dict.get ('eyebrows_expand_mod', None)
     def get_relighted(self):
         return self.dfl_dict.get ('relighted', False)
-

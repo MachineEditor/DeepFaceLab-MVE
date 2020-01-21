@@ -4,7 +4,7 @@ from enum import IntEnum
 import cv2
 import numpy as np
 
-import imagelib
+from core import imagelib
 from facelib import FaceType, LandmarksProcessor
 
 
@@ -154,9 +154,9 @@ class SampleProcessor(object):
                         yaw = -yaw
 
                     if img_type == SPTF.IMG_PITCH_YAW_ROLL_SIGMOID:
-                        pitch = (pitch+1.0) / 2.0
-                        yaw = (yaw+1.0) / 2.0
-                        roll = (roll+1.0) / 2.0
+                        pitch = np.clip( (pitch / math.pi) / 2.0 + 1.0, 0, 1)
+                        yaw =  np.clip( (yaw / math.pi) / 2.0 + 1.0, 0, 1)
+                        roll =  np.clip( (roll / math.pi) / 2.0 + 1.0, 0, 1)
 
                     img = (pitch, yaw, roll)
                 else:

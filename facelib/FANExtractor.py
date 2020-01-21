@@ -7,29 +7,159 @@ import numpy as np
 from numpy import linalg as npla
 
 from facelib import FaceType, LandmarksProcessor
-from nnlib import nnlib
+from core.leras import nn
 
 """
 ported from https://github.com/1adrianb/face-alignment
 """
 class FANExtractor(object):
-    def __init__ (self):
-        pass
+    def __init__ (self, place_model_on_cpu=False):
+        model_path = Path(__file__).parent / "FAN.npy"
+        if not model_path.exists():
+            raise Exception("Unable to load FANExtractor model")
 
-    def __enter__(self):
-        keras_model_path = Path(__file__).parent / "2DFAN-4.h5"
-        if not keras_model_path.exists():
-            return None
+        nn.initialize()
+        tf = nn.tf
 
-        exec( nnlib.import_all(), locals(), globals() )
-        self.model = FANExtractor.BuildModel()
-        self.model.load_weights(str(keras_model_path))
+        class ConvBlock(nn.ModelBase):
+            def on_build(self, in_planes, out_planes):
+                self.in_planes = in_planes
+                self.out_planes = out_planes
 
-        return self
+                self.bn1 = nn.BatchNorm2D(in_planes)
+                self.conv1 = nn.Conv2D (in_planes, out_planes/2, kernel_size=3, strides=1, padding='SAME', use_bias=False )
 
-    def __exit__(self, exc_type=None, exc_value=None, traceback=None):
-        del self.model
-        return False #pass exception between __enter__ and __exit__ to outter level
+                self.bn2 = nn.BatchNorm2D(out_planes/2)
+                self.conv2 = nn.Conv2D (out_planes/2, out_planes/4, kernel_size=3, strides=1, padding='SAME', use_bias=False )
+
+                self.bn3 = nn.BatchNorm2D(out_planes/4)
+                self.conv3 = nn.Conv2D (out_planes/4, out_planes/4, kernel_size=3, strides=1, padding='SAME', use_bias=False )
+
+                if self.in_planes != self.out_planes:
+                    self.down_bn1 = nn.BatchNorm2D(in_planes)
+                    self.down_conv1 = nn.Conv2D (in_planes, out_planes, kernel_size=1, strides=1, padding='VALID', use_bias=False )
+                else:
+                    self.down_bn1 = None
+                    self.down_conv1 = None
+
+            def forward(self, input):
+                x = input
+                x = self.bn1(x)
+                x = tf.nn.relu(x)
+                x = out1 = self.conv1(x)
+
+                x = self.bn2(x)
+                x = tf.nn.relu(x)
+                x = out2 = self.conv2(x)
+
+                x = self.bn3(x)
+                x = tf.nn.relu(x)
+                x = out3 = self.conv3(x)
+                x = tf.concat ([out1, out2, out3], axis=-1)
+
+                if self.in_planes != self.out_planes:
+                    downsample = self.down_bn1(input)
+                    downsample = tf.nn.relu (downsample)
+                    downsample = self.down_conv1 (downsample)
+                    x = x + downsample
+                else:
+                    x = x + input
+
+                return x
+
+        class HourGlass (nn.ModelBase):
+            def on_build(self, in_planes, depth):
+                self.b1 = ConvBlock (in_planes, 256)
+                self.b2 = ConvBlock (in_planes, 256)
+
+                if depth > 1:
+                    self.b2_plus = HourGlass(256, depth-1)
+                else:
+                    self.b2_plus = ConvBlock(256, 256)
+
+                self.b3 = ConvBlock(256, 256)
+
+            def forward(self, input):
+                up1 = self.b1(input)
+
+                low1 = tf.nn.avg_pool(input, [1,2,2,1], [1,2,2,1], 'VALID')
+                low1 = self.b2 (low1)
+
+                low2 = self.b2_plus(low1)
+                low3 = self.b3(low2)
+
+                up2 = nn.tf_upsample2d(low3)
+
+                return up1+up2
+
+        class FAN (nn.ModelBase):
+            def __init__(self):
+                super().__init__(name='FAN')
+
+            def on_build(self):
+                self.conv1 = nn.Conv2D (3, 64, kernel_size=7, strides=2, padding='SAME')
+                self.bn1 = nn.BatchNorm2D(64)
+
+                self.conv2 = ConvBlock(64, 128)
+                self.conv3 = ConvBlock(128, 128)
+                self.conv4 = ConvBlock(128, 256)
+
+                self.m = []
+                self.top_m = []
+                self.conv_last = []
+                self.bn_end = []
+                self.l = []
+                self.bl = []
+                self.al = []
+                for i in range(4):
+                    self.m += [ HourGlass(256, 4) ]
+                    self.top_m += [ ConvBlock(256, 256) ]
+
+                    self.conv_last += [ nn.Conv2D (256, 256, kernel_size=1, strides=1, padding='VALID') ]
+                    self.bn_end += [ nn.BatchNorm2D(256) ]
+
+                    self.l += [ nn.Conv2D (256, 68, kernel_size=1, strides=1, padding='VALID') ]
+
+                    if i < 4-1:
+                        self.bl += [ nn.Conv2D (256, 256, kernel_size=1, strides=1, padding='VALID') ]
+                        self.al += [ nn.Conv2D (68, 256, kernel_size=1, strides=1, padding='VALID') ]
+
+            def forward(self, inp) :
+                x, = inp
+                x = self.conv1(x)
+                x = self.bn1(x)
+                x = tf.nn.relu(x)
+
+                x = self.conv2(x)
+                x = tf.nn.avg_pool(x, [1,2,2,1], [1,2,2,1], 'VALID')
+                x = self.conv3(x)
+                x = self.conv4(x)
+
+                outputs = []
+                previous = x
+                for i in range(4):
+                    ll = self.m[i] (previous)
+                    ll = self.top_m[i] (ll)
+                    ll = self.conv_last[i] (ll)
+                    ll = self.bn_end[i] (ll)
+                    ll = tf.nn.relu(ll)
+                    tmp_out = self.l[i](ll)
+                    outputs.append(tmp_out)
+                    if i < 4 - 1:
+                        ll = self.bl[i](ll)
+                        previous = previous + ll + self.al[i](tmp_out)
+                return outputs[-1]
+
+        e = None
+        if place_model_on_cpu:
+            e = tf.device("/CPU:0")
+
+        if e is not None: e.__enter__()
+        self.model = FAN()
+        self.model.load_weights(str(model_path))
+        if e is not None: e.__exit__(None,None,None)
+
+        self.model.build_for_run ([ ( tf.float32, (256,256,3) ) ])
 
     def extract (self, input_image, rects, second_pass_extractor=None, is_bgr=True, multi_sample=False):
         if len(rects) == 0:
@@ -63,13 +193,13 @@ class FANExtractor(object):
                     images += [ self.crop(input_image, c, scale)  ]
 
                 images = np.stack (images)
-                images = images.astype(np.float32) / 255.0                
+                images = images.astype(np.float32) / 255.0
 
                 predicted = []
                 for i in range( len(images) ):
-                    predicted += [ self.model.predict ( images[i][None,...] ).transpose (0,3,1,2)[0] ]
+                    predicted += [ self.model.run ( [ images[i][None,...] ]  ).transpose (0,3,1,2)[0] ]
 
-                predicted = np.stack(predicted)                    
+                predicted = np.stack(predicted)
 
                 for i, pred in enumerate(predicted):
                     ptss += [ self.get_pts_from_predict ( pred, centers[i], scale) ]
@@ -144,81 +274,3 @@ class FANExtractor(object):
         c += 0.5
 
         return np.array( [ self.transform (c[i], center, scale, a_w) for i in range(a_ch) ] )
-
-    @staticmethod
-    def BuildModel():
-        def ConvBlock(out_planes, input):
-            in_planes = K.int_shape(input)[-1]
-            x = input
-            x = BatchNormalization(momentum=0.1, epsilon=1e-05)(x)
-            x = ReLU() (x)
-            x = out1 = Conv2D( int(out_planes/2), kernel_size=3, strides=1, padding='valid', use_bias = False) (ZeroPadding2D(1)(x))
-
-            x = BatchNormalization(momentum=0.1, epsilon=1e-05)(x)
-            x = ReLU() (x)
-            x = out2 = Conv2D( int(out_planes/4), kernel_size=3, strides=1, padding='valid', use_bias = False) (ZeroPadding2D(1)(x))
-
-            x = BatchNormalization(momentum=0.1, epsilon=1e-05)(x)
-            x = ReLU() (x)
-            x = out3 = Conv2D( int(out_planes/4), kernel_size=3, strides=1, padding='valid', use_bias = False) (ZeroPadding2D(1)(x))
-
-            x = Concatenate()([out1, out2, out3])
-
-            if in_planes != out_planes:
-                downsample = BatchNormalization(momentum=0.1, epsilon=1e-05)(input)
-                downsample = ReLU() (downsample)
-                downsample = Conv2D( out_planes, kernel_size=1, strides=1, padding='valid', use_bias = False) (downsample)
-                x = Add ()([x, downsample])
-            else:
-                x = Add ()([x, input])
-
-
-            return x
-
-        def HourGlass (depth, input):
-            up1 = ConvBlock(256, input)
-
-            low1 = AveragePooling2D (pool_size=2, strides=2, padding='valid' )(input)
-            low1 = ConvBlock (256, low1)
-
-            if depth > 1:
-                low2 = HourGlass (depth-1, low1)
-            else:
-                low2 = ConvBlock(256, low1)
-
-            low3 = ConvBlock(256, low2)
-
-            up2 = UpSampling2D(size=2) (low3)
-            return Add() ( [up1, up2] )
-
-        FAN_Input = Input ( (256, 256, 3) )
-
-        x = FAN_Input
-
-        x = Conv2D (64, kernel_size=7, strides=2, padding='valid')(ZeroPadding2D(3)(x))
-        x = BatchNormalization(momentum=0.1, epsilon=1e-05)(x)
-        x = ReLU()(x)
-
-        x = ConvBlock (128, x)
-        x = AveragePooling2D (pool_size=2, strides=2, padding='valid') (x)
-        x = ConvBlock (128, x)
-        x = ConvBlock (256, x)
-
-        outputs = []
-        previous = x
-        for i in range(4):
-            ll = HourGlass (4, previous)
-            ll = ConvBlock (256, ll)
-
-            ll = Conv2D(256, kernel_size=1, strides=1, padding='valid') (ll)
-            ll = BatchNormalization(momentum=0.1, epsilon=1e-05)(ll)
-            ll = ReLU() (ll)
-
-            tmp_out = Conv2D(68, kernel_size=1, strides=1, padding='valid') (ll)
-            outputs.append(tmp_out)
-
-            if i < 4 - 1:
-                ll = Conv2D(256, kernel_size=1, strides=1, padding='valid') (ll)
-                previous = Add() ( [previous, ll, KL.Conv2D(256, kernel_size=1, strides=1, padding='valid') (tmp_out) ] )
-
-        return Model(FAN_Input, outputs[-1] )

@@ -8,13 +8,13 @@ import cv2
 import numpy as np
 import numpy.linalg as npl
 
-import imagelib
+from core import imagelib
 from DFLIMG import *
 from facelib import LandmarksProcessor
-from imagelib import IEPolys
-from interact import interact as io
-from utils import Path_utils
-from utils.cv2_utils import *
+from core.imagelib import IEPolys
+from core.interact import interact as io
+from core import pathex
+from core.cv2ex import *
 
 
 class MaskEditor:
@@ -343,7 +343,7 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None, no_default
         skipped_path.mkdir(parents=True)
         
     if not no_default_mask:
-        eyebrows_expand_mod = np.clip ( io.input_int ("Default eyebrows expand modifier? (0..400, skip:100) : ", 100), 0, 400 ) / 100.0
+        eyebrows_expand_mod = np.clip ( io.input_int ("Default eyebrows expand modifier?", 100, add_info="0..400"), 0, 400 ) / 100.0
     else:
         eyebrows_expand_mod = None
 
@@ -354,7 +354,7 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None, no_default
 
     cached_images = {}
 
-    image_paths = [ Path(x) for x in Path_utils.get_image_paths(input_path)]
+    image_paths = [ Path(x) for x in pathex.get_image_paths(input_path)]
     done_paths = []
     done_images_types = {}
     image_paths_total = len(image_paths)

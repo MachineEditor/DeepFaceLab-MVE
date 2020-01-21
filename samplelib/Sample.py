@@ -4,10 +4,10 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from utils.cv2_utils import *
+from core.cv2ex import *
 from DFLIMG import *
 from facelib import LandmarksProcessor
-from imagelib import IEPolys
+from core.imagelib import IEPolys
 
 class SampleType(IntEnum):
     IMAGE = 0 #raw image

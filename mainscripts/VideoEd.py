@@ -2,8 +2,8 @@ import subprocess
 import numpy as np
 import ffmpeg
 from pathlib import Path
-from utils import Path_utils
-from interact import interact as io
+from core import pathex
+from core.interact import interact as io
 
 def extract_video(input_file, output_dir, output_ext=None, fps=None):
     input_file_path = Path(input_file)
@@ -14,7 +14,7 @@ def extract_video(input_file, output_dir, output_ext=None, fps=None):
 
 
     if input_file_path.suffix == '.*':
-        input_file_path = Path_utils.get_first_file_by_stem (input_file_path.parent, input_file_path.stem)
+        input_file_path = pathex.get_first_file_by_stem (input_file_path.parent, input_file_path.stem)
     else:
         if not input_file_path.exists():
             input_file_path = None
@@ -24,12 +24,12 @@ def extract_video(input_file, output_dir, output_ext=None, fps=None):
         return
 
     if fps is None:
-        fps = io.input_int ("Enter FPS ( ?:help skip:fullfps ) : ", 0, help_message="How many frames of every second of the video will be extracted.")
+        fps = io.input_int ("Enter FPS", 0, help_message="How many frames of every second of the video will be extracted. 0 - full fps")
 
     if output_ext is None:
-        output_ext = io.input_str ("Output image format? ( jpg png ?:help skip:png ) : ", "png", ["png","jpg"], help_message="png is lossless, but extraction is x10 slower for HDD, requires x10 more disk space than jpg.")
+        output_ext = io.input_str ("Output image format", "png", ["png","jpg"], help_message="png is lossless, but extraction is x10 slower for HDD, requires x10 more disk space than jpg.")
 
-    for filename in Path_utils.get_image_paths (output_path, ['.'+output_ext]):
+    for filename in pathex.get_image_paths (output_path, ['.'+output_ext]):
         Path(filename).unlink()
 
     job = ffmpeg.input(str(input_file_path))
@@ -57,16 +57,16 @@ def cut_video ( input_file, from_time=None, to_time=None, audio_track_id=None, b
     output_file_path = input_file_path.parent / (input_file_path.stem + "_cut" + input_file_path.suffix)
 
     if from_time is None:
-        from_time = io.input_str ("From time (skip: 00:00:00.000) : ", "00:00:00.000")
+        from_time = io.input_str ("From time", "00:00:00.000")
 
     if to_time is None:
-        to_time = io.input_str ("To time (skip: 00:00:00.000) : ", "00:00:00.000")
+        to_time = io.input_str ("To time", "00:00:00.000")
 
     if audio_track_id is None:
-        audio_track_id = io.input_int ("Specify audio track id. ( skip:0 ) : ", 0)
+        audio_track_id = io.input_int ("Specify audio track id.", 0)
 
     if bitrate is None:
-        bitrate = max (1, io.input_int ("Bitrate of output file in MB/s ? (default:25) : ", 25) )
+        bitrate = max (1, io.input_int ("Bitrate of output file in MB/s", 25) )
 
     kwargs = {"c:v": "libx264",
               "b:v": "%dM" %(bitrate),
@@ -93,10 +93,10 @@ def denoise_image_sequence( input_dir, ext=None, factor=None ):
         return
 
     if ext is None:
-        ext = io.input_str ("Input image format (extension)? ( default:png ) : ", "png")
+        ext = io.input_str ("Input image format (extension)", "png")
 
     if factor is None:
-        factor = np.clip ( io.input_int ("Denoise factor? (1-20 default:5) : ", 5), 1, 20 )
+        factor = np.clip ( io.input_int ("Denoise factor?", 5, add_info="1-20"), 1, 20 )
 
     kwargs = {}
     if ext == 'jpg':
@@ -129,17 +129,17 @@ def video_from_sequence( input_dir, output_file, reference_file=None, ext=None, 
     out_ext = output_file_path.suffix
 
     if ext is None:
-        ext = io.input_str ("Input image format (extension)? ( default:png ) : ", "png")
+        ext = io.input_str ("Input image format (extension)", "png")
 
     if lossless is None:
-        lossless = io.input_bool ("Use lossless codec ? ( default:no ) : ", False)
+        lossless = io.input_bool ("Use lossless codec", False)
 
     video_id = None
     audio_id = None
     ref_in_a = None
     if reference_file_path is not None:
         if reference_file_path.suffix == '.*':
-            reference_file_path = Path_utils.get_first_file_by_stem (reference_file_path.parent, reference_file_path.stem)
+            reference_file_path = pathex.get_first_file_by_stem (reference_file_path.parent, reference_file_path.stem)
         else:
             if not reference_file_path.exists():
                 reference_file_path = None
@@ -166,12 +166,12 @@ def video_from_sequence( input_dir, output_file, reference_file=None, ext=None, 
 
     if fps is None:
         #if fps not specified and not overwritten by reference-file
-        fps = max (1, io.input_int ("FPS ? (default:25) : ", 25) )
+        fps = max (1, io.input_int ("Enter FPS", 25) )
 
     if not lossless and bitrate is None:
-        bitrate = max (1, io.input_int ("Bitrate of output file in MB/s ? (default:16) : ", 16) )
+        bitrate = max (1, io.input_int ("Bitrate of output file in MB/s", 16) )
 
-    input_image_paths = Path_utils.get_image_paths(input_path)
+    input_image_paths = pathex.get_image_paths(input_path)
 
     i_in = ffmpeg.input('pipe:', format='image2pipe', r=fps)
     

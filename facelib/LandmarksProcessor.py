@@ -6,11 +6,11 @@ import cv2
 import numpy as np
 import numpy.linalg as npla
 
-import imagelib
-import mathlib
+from core import imagelib
+from core import mathlib
 from facelib import FaceType
-from imagelib import IEPolys
-from mathlib.umeyama import umeyama
+from core.imagelib import IEPolys
+from core.mathlib.umeyama import umeyama
 
 landmarks_2D = np.array([
 [ 0.000213256,  0.106454  ], #17
@@ -665,8 +665,10 @@ def calc_face_yaw(landmarks):
     r = ( (landmarks[16][0]-landmarks[27][0]) + (landmarks[15][0]-landmarks[28][0]) + (landmarks[14][0]-landmarks[29][0]) ) / 3.0
     return float(r-l)
 
-#returns pitch,yaw,roll [-1...+1]
 def estimate_pitch_yaw_roll(aligned_256px_landmarks):
+    """
+    returns pitch,yaw,roll [-pi...+pi]
+    """
     shape = (256,256)
     focal_length = shape[1]
     camera_center = (shape[1] / 2, shape[0] / 2)
@@ -682,7 +684,8 @@ def estimate_pitch_yaw_roll(aligned_256px_landmarks):
         np.zeros((4, 1)) )
 
     pitch, yaw, roll = mathlib.rotationMatrixToEulerAngles( cv2.Rodrigues(rotation_vector)[0] )
-    pitch = np.clip ( pitch/1.30, -1.0, 1.0 )
-    yaw = np.clip ( yaw / 1.11, -1.0, 1.0 )
-    roll = np.clip ( roll/3.15, -1.0, 1.0 ) #todo radians
+    pitch = np.clip ( pitch, -math.pi, math.pi )
+    yaw = np.clip ( yaw , -math.pi, math.pi )
+    roll = np.clip ( roll, -math.pi, math.pi )
+    
     return -pitch, yaw, roll
