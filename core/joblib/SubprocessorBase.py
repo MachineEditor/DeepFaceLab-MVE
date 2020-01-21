@@ -12,9 +12,11 @@ class Subprocessor(object):
 
     class Cli(object):
         def __init__ ( self, client_dict ):
-            self.s2c = multiprocessing.Queue()
-            self.c2s = multiprocessing.Queue()
-            self.p = multiprocessing.Process(target=self._subprocess_run, args=(client_dict,) )
+            s2c = multiprocessing.Queue()
+            c2s = multiprocessing.Queue()
+            self.p = multiprocessing.Process(target=self._subprocess_run, args=(client_dict,s2c,c2s) )
+            self.s2c = s2c
+            self.c2s = c2s            
             self.p.daemon = True
             self.p.start()
 
@@ -52,9 +54,8 @@ class Subprocessor(object):
         def log_err(self, msg): self.c2s.put ( {'op': 'log_err' , 'msg':msg } )
         def progress_bar_inc(self, c): self.c2s.put ( {'op': 'progress_bar_inc' , 'c':c } )
 
-        def _subprocess_run(self, client_dict):
+        def _subprocess_run(self, client_dict, s2c, c2s):
             data = None
-            s2c, c2s = self.s2c, self.c2s
             try:
                 self.on_initialize(client_dict)
 
@@ -85,7 +86,13 @@ class Subprocessor(object):
                     print ('Exception: %s' % (traceback.format_exc()) )
 
             c2s.put ( {'op': 'error', 'data' : data} )
-
+        
+        # disable pickling
+        def __getstate__(self):
+            return dict()
+        def __setstate__(self, d):
+            self.__dict__.update(d)
+            
     #overridable
     def __init__(self, name, SubprocessorCli_class, no_response_time_sec = 0, io_loop_sleep_time=0.005, initialize_subprocesses_in_serial=False):
         if not issubclass(SubprocessorCli_class, Subprocessor.Cli):
@@ -179,7 +186,7 @@ class Subprocessor(object):
                             break
                         io.process_messages(0.005)
             except:
-                raise Exception ("Unable to start subprocess %s" % (name))
+                raise Exception (f"Unable to start subprocess {name}. Error: {traceback.format_exc()}")
 
         if len(self.clis) == 0:
             raise Exception ("Unable to start Subprocessor '%s' " % (self.name))

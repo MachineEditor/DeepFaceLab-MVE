@@ -231,7 +231,7 @@ class QModel(ModelBase):
                                           [self.decoder_dst, 'decoder_dst.npy']  ]
 
             if self.is_training:
-                self.src_dst_trainable_weights = self.encoder.get_weights() + self.decoder_src.get_weights() + self.decoder_dst.get_weights()
+                self.src_dst_trainable_weights = self.encoder.get_weights() + self.inter.get_weights() + self.decoder_src.get_weights() + self.decoder_dst.get_weights()
                 
                 # Initialize optimizers
                 self.src_dst_opt = nn.TFRMSpropOptimizer(lr=2e-4, lr_dropout=0.3, name='src_dst_opt')
