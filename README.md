@@ -5,7 +5,6 @@
 # DeepFaceLab  
 ### the leading software for creating deep fakes
 
-
 </td></tr>
 <tr><td align="center" width="9999">
 
