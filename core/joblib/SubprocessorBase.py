@@ -55,6 +55,8 @@ class Subprocessor(object):
         def progress_bar_inc(self, c): self.c2s.put ( {'op': 'progress_bar_inc' , 'c':c } )
 
         def _subprocess_run(self, client_dict, s2c, c2s):
+            self.s2c = s2c
+            self.c2s = c2s
             data = None
             try:
                 self.on_initialize(client_dict)
