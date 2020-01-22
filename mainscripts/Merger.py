@@ -38,7 +38,7 @@ class MergeSubprocessor(Subprocessor):
             self.prev_temporal_frame_infos = prev_temporal_frame_infos
             self.frame_info = frame_info
             self.next_temporal_frame_infos = next_temporal_frame_infos
-            self.output_filename = None
+            self.output_filepath = None
 
             self.idx = None
             self.cfg = None
@@ -53,14 +53,14 @@ class MergeSubprocessor(Subprocessor):
                            prev_temporal_frame_infos=None,
                            frame_info=None,
                            next_temporal_frame_infos=None,
-                           output_filename=None,
+                           output_filepath=None,
                            need_return_image = False):
             self.idx = idx
             self.cfg = cfg
             self.prev_temporal_frame_infos = prev_temporal_frame_infos
             self.frame_info = frame_info
             self.next_temporal_frame_infos = next_temporal_frame_infos
-            self.output_filename = output_filename
+            self.output_filepath = output_filepath
 
             self.need_return_image = need_return_image
             if self.need_return_image:
@@ -124,34 +124,33 @@ class MergeSubprocessor(Subprocessor):
 
             frame_info = pf.frame_info
 
-            filename = frame_info.filename
+            filepath = frame_info.filepath
             landmarks_list = frame_info.landmarks_list
 
-            filename_path = Path(filename)
-            output_filename = pf.output_filename
+            output_filepath = pf.output_filepath
             need_return_image = pf.need_return_image
 
             if len(landmarks_list) == 0:
-                self.log_info ( 'no faces found for %s, copying without faces' % (filename_path.name) )
+                self.log_info ( 'no faces found for %s, copying without faces' % (filepath.name) )
 
                 if cfg.export_mask_alpha:
-                    img_bgr = cv2_imread(filename)
+                    img_bgr = cv2_imread(filepath)
                     h,w,c = img_bgr.shape
                     if c == 1:
                         img_bgr = np.repeat(img_bgr, 3, -1)
                     if c == 3:
                         img_bgr = np.concatenate ([img_bgr,  np.zeros((h,w,1), dtype=img_bgr.dtype) ], axis=-1)
 
-                    cv2_imwrite (output_filename, img_bgr)
+                    cv2_imwrite (output_filepath, img_bgr)
                 else:
-                    if filename_path.suffix == '.png':
-                        shutil.copy (filename, output_filename )
+                    if filepath.suffix == '.png':
+                        shutil.copy ( str(filepath), str(output_filepath) )
                     else:
-                        img_bgr = cv2_imread(filename)
-                        cv2_imwrite (output_filename, img_bgr)
+                        img_bgr = cv2_imread(filepath)
+                        cv2_imwrite (output_filepath, img_bgr)
 
                 if need_return_image:
-                    img_bgr = cv2_imread(filename)
+                    img_bgr = cv2_imread(filepath)
                     pf.image = img_bgr
             else:
                 if cfg.type == MergerConfig.TYPE_MASKED:
@@ -165,7 +164,7 @@ class MergeSubprocessor(Subprocessor):
                         if 'MemoryError' in e_str:
                             raise Subprocessor.SilenceException
                         else:
-                            raise Exception( 'Error while merging file [%s]: %s' % (filename, e_str) )
+                            raise Exception( f'Error while merging file [{filepath}]: {e_str}' )
 
                 elif cfg.type == MergerConfig.TYPE_FACE_AVATAR:
                     final_img = MergeFaceAvatar (self.predictor_func, self.predictor_input_shape,
@@ -173,8 +172,8 @@ class MergeSubprocessor(Subprocessor):
                                                         pf.frame_info,
                                                         pf.next_temporal_frame_infos )
 
-                if output_filename is not None and final_img is not None:
-                    cv2_imwrite (output_filename, final_img )
+                if output_filepath is not None and final_img is not None:
+                    cv2_imwrite (output_filepath, final_img )
 
                 if need_return_image:
                     pf.image = final_img
@@ -184,10 +183,10 @@ class MergeSubprocessor(Subprocessor):
         #overridable
         def get_data_name (self, pf):
             #return string identificator of your data
-            return pf.frame_info.filename
+            return pf.frame_info.filepath
 
     #override
-    def __init__(self, is_interactive, merger_session_filepath, predictor_func, predictor_input_shape, merger_config, frames, output_path, model_iter):
+    def __init__(self, is_interactive, merger_session_filepath, predictor_func, predictor_input_shape, merger_config, frames, frames_root_path, output_path, model_iter):
         if len (frames) == 0:
             raise ValueError ("len (frames) == 0")
 
@@ -225,6 +224,7 @@ class MergeSubprocessor(Subprocessor):
 
         self.fanseg_host, self.fanseg_extract_func = SubprocessFunctionCaller.make_pair(fanseg_extract_func)
 
+        self.frames_root_path = frames_root_path
         self.output_path = output_path
         self.model_iter = model_iter
 
@@ -232,11 +232,12 @@ class MergeSubprocessor(Subprocessor):
 
         session_data = None
         if self.is_interactive and self.merger_session_filepath.exists():
-
+            io.input_skip_pending()
             if io.input_bool ("Use saved session?", True):
                 try:
                     with open( str(self.merger_session_filepath), "rb") as f:
                         session_data = pickle.loads(f.read())
+                    
                 except Exception as e:
                     pass
 
@@ -245,6 +246,7 @@ class MergeSubprocessor(Subprocessor):
         self.frames_done_idxs = []
 
         if self.is_interactive and session_data is not None:
+            # Loaded session data, check it
             s_frames = session_data.get('frames', None)
             s_frames_idxs = session_data.get('frames_idxs', None)
             s_frames_done_idxs = session_data.get('frames_done_idxs', None)
@@ -254,13 +256,14 @@ class MergeSubprocessor(Subprocessor):
                            (s_frames_idxs is not None) and \
                            (s_frames_done_idxs is not None) and \
                            (s_model_iter is not None) and \
-                           (len(frames) == len(s_frames))
+                           (len(frames) == len(s_frames)) # frames count must match
 
             if frames_equal:
                 for i in range(len(frames)):
                     frame = frames[i]
                     s_frame = s_frames[i]
-                    if frame.frame_info.filename != s_frame.frame_info.filename:
+                    # frames filenames must match
+                    if frame.frame_info.filepath.name != s_frame.frame_info.filepath.name:
                         frames_equal = False
                     if not frames_equal:
                         break
@@ -270,25 +273,23 @@ class MergeSubprocessor(Subprocessor):
 
                 for frame in s_frames:
                     if frame.cfg is not None:
-                        #recreate MergerConfig class using constructor with get_config() as dict params
-                        #so if any new param will be added, old merger session will work properly
+                        # recreate MergerConfig class using constructor with get_config() as dict params
+                        # so if any new param will be added, old merger session will work properly
                         frame.cfg = frame.cfg.__class__( **frame.cfg.get_config() )
 
                 self.frames = s_frames
                 self.frames_idxs = s_frames_idxs
                 self.frames_done_idxs = s_frames_done_idxs
 
-
-
-                if self.model_iter != s_model_iter:
-                    #model is more trained, recompute all frames
+                rewind_to_begin = len(self.frames_idxs) == 0 # all frames are done?
+                
+                if self.model_iter != s_model_iter:                    
+                    # model was more trained, recompute all frames
+                    rewind_to_begin = True
                     for frame in self.frames:
                         frame.is_done = False
 
-                if self.model_iter != s_model_iter or \
-                    len(self.frames_idxs) == 0:
-                    #rewind to begin if model is more trained or all frames are done
-
+                if rewind_to_begin:
                     while len(self.frames_done_idxs) > 0:
                         prev_frame = self.frames[self.frames_done_idxs.pop()]
                         self.frames_idxs.insert(0, prev_frame.idx)
@@ -309,9 +310,7 @@ class MergeSubprocessor(Subprocessor):
         for i in range( len(self.frames) ):
             frame = self.frames[i]
             frame.idx = i
-            frame.output_filename = self.output_path / ( Path(frame.frame_info.filename).stem + '.png' )
-
-
+            frame.output_filepath = self.output_path / ( frame.frame_info.filepath.stem + '.png' )
 
     #override
     def process_info_generator(self):
@@ -330,7 +329,7 @@ class MergeSubprocessor(Subprocessor):
 
     #overridable optional
     def on_clients_initialized(self):
-        io.progress_bar ("Merging", len (self.frames_idxs), initial=len(self.frames_done_idxs) )
+        io.progress_bar ("Merging", len(self.frames_idxs)+len(self.frames_done_idxs), initial=len(self.frames_done_idxs) )
 
         self.process_remain_frames = not self.is_interactive
         self.is_interactive_quitting = not self.is_interactive
@@ -393,7 +392,7 @@ class MergeSubprocessor(Subprocessor):
             self.screen_manager.finalize()
 
             for frame in self.frames:
-                frame.output_filename = None
+                frame.output_filepath = None
                 frame.image = None
 
             session_data = {
@@ -433,10 +432,10 @@ class MergeSubprocessor(Subprocessor):
                     if not cur_frame.is_shown:
                         if cur_frame.is_done:
                             cur_frame.is_shown = True
-                            io.log_info (cur_frame.cfg.to_string( cur_frame.frame_info.filename_short) )
+                            io.log_info (cur_frame.cfg.to_string( cur_frame.frame_info.filepath.name) )
 
                             if cur_frame.image is None:
-                                cur_frame.image = cv2_imread ( cur_frame.output_filename)
+                                cur_frame.image = cv2_imread ( cur_frame.output_filepath)
                                 if cur_frame.image is None:
                                     # unable to read? recompute then
                                     cur_frame.is_done = False
@@ -474,7 +473,7 @@ class MergeSubprocessor(Subprocessor):
                                 self.masked_keys_funcs[chr_key](cfg, shift_pressed)
 
                             if prev_cfg != cfg:
-                                io.log_info ( cfg.to_string(cur_frame.frame_info.filename_short) )
+                                io.log_info ( cfg.to_string(cur_frame.frame_info.filepath.name) )
                                 cur_frame.is_done = False
                                 cur_frame.is_shown = False
                     else:
@@ -607,7 +606,7 @@ class MergeSubprocessor(Subprocessor):
                                                            prev_temporal_frame_infos=frame.prev_temporal_frame_infos,
                                                            frame_info=frame.frame_info,
                                                            next_temporal_frame_infos=frame.next_temporal_frame_infos,
-                                                           output_filename=frame.output_filename,
+                                                           output_filepath=frame.output_filepath,
                                                            need_return_image=True )
 
         return None
@@ -705,7 +704,7 @@ def main (model_class_name=None,
             if multiple_faces_detected:
                 io.log_info ("Warning: multiple faces detected. Strongly recommended to process them separately.")
 
-            frames = [ MergeSubprocessor.Frame( frame_info=FrameInfo(filename=p, landmarks_list=alignments.get(Path(p).stem, None))) for p in input_path_image_paths ]
+            frames = [ MergeSubprocessor.Frame( frame_info=FrameInfo(filepath=Path(p), landmarks_list=alignments.get(Path(p).stem, None))) for p in input_path_image_paths ]
 
             if multiple_faces_detected:
                 io.log_info ("Warning: multiple faces detected. Motion blur will not be used.")
@@ -750,9 +749,9 @@ def main (model_class_name=None,
                 if dflimg is None:
                     io.log_err ("%s is not a dfl image file" % (filepath.name) )
                     continue
-                filesdata += [ ( FrameInfo(filename=str(filepath), landmarks_list=[dflimg.get_landmarks()] ), dflimg.get_source_filename() ) ]
+                filesdata += [ ( FrameInfo(filepath=filepath, landmarks_list=[dflimg.get_landmarks()] ), dflimg.get_source_filename() ) ]
 
-            filesdata = sorted(filesdata, key=operator.itemgetter(1)) #sort by filename
+            filesdata = sorted(filesdata, key=operator.itemgetter(1)) #sort by source_filename
             frames = []
             filesdata_len = len(filesdata)
             for i in range(len(filesdata)):
@@ -776,12 +775,13 @@ def main (model_class_name=None,
             io.log_info ("No frames to merge in input_dir.")
         else:
             MergeSubprocessor (
-                        is_interactive         = is_interactive,
+                        is_interactive         = is_interactive,                        
                         merger_session_filepath = merger_session_filepath,
                         predictor_func         = predictor_func,
                         predictor_input_shape  = predictor_input_shape,
-                        merger_config       = cfg,
+                        merger_config          = cfg,
                         frames                 = frames,
+                        frames_root_path       = input_path,
                         output_path            = output_path,
                         model_iter             = model.get_iter()
                     ).run()

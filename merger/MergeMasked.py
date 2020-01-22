@@ -334,7 +334,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
 
 
 def MergeMasked (predictor_func, predictor_input_shape, cfg, frame_info):
-    img_bgr_uint8 = cv2_imread(frame_info.filename)
+    img_bgr_uint8 = cv2_imread(frame_info.filepath)
     img_bgr_uint8 = imagelib.normalize_channels (img_bgr_uint8, 3)
     img_bgr = img_bgr_uint8.astype(np.float32) / 255.0
 

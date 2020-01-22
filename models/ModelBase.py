@@ -158,6 +158,8 @@ class ModelBase(object):
         self.batch_size = self.load_or_def_option('batch_size', 1)
         #####
 
+        io.input_skip_pending()
+        
         self.on_initialize_options()
         if self.is_first_run():
             # save as default options only for first run model initialize

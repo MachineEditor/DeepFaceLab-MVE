@@ -67,11 +67,15 @@ DeepFaceLab is used by such popular youtube channels as
 ||bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr||
 ||||
 |Collect facesets|You can collect faceset of any celebrity that can be used in DeepFaceLab and share it [in the community](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|
+</td></tr>
 
 <tr><td align="center" width="9999">
   
 ## Meme zone
 <p align="center"><img src="doc/DeepFaceLab is working.png"></p>
+
+</td></tr>
+<tr><td align="center" width="9999">
 
 <sub>#deepfacelab #deepfakes #faceswap #face-swap #deep-learning #deeplearning #deep-neural-networks #deepface #deep-face-swap #fakeapp #fake-app #neural-networks #neural-nets</sub>
 

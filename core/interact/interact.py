@@ -367,6 +367,7 @@ class InteractBase(object):
     def input_in_time (self, str, max_time_sec):
         sq = multiprocessing.Queue()
         p = multiprocessing.Process(target=self.input_process, args=( sys.stdin.fileno(), sq, str))
+        p.daemon = True
         p.start()
         t = time.time()
         inp = False
@@ -380,6 +381,25 @@ class InteractBase(object):
         sys.stdin = os.fdopen( sys.stdin.fileno() )
         return inp
 
+    def input_process_skip_pending(self, stdin_fd):
+        sys.stdin = os.fdopen(stdin_fd)
+        while True:
+            try:
+                if sys.stdin.isatty():
+                    sys.stdin.read()
+            except:
+                pass
+            
+    def input_skip_pending(self):                    
+        """
+        skips unnecessary inputs between the dialogs
+        """
+        p = multiprocessing.Process(target=self.input_process_skip_pending, args=( sys.stdin.fileno(), ))
+        p.daemon = True
+        p.start()
+        time.sleep(0.5)
+        p.terminate()        
+        sys.stdin = os.fdopen( sys.stdin.fileno() )
 
 
 class InteractDesktop(InteractBase):
