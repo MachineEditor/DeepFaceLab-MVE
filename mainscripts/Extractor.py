@@ -156,6 +156,8 @@ class ExtractSubprocessor(Subprocessor):
                             landmarks_extractor,
                             rects_extractor,
                             ):
+            h, w, ch = image.shape
+            
             if data.rects_rotation == 0:
                 rotated_image = image
             elif data.rects_rotation == 90:

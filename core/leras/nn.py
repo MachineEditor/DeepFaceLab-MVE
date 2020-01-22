@@ -76,15 +76,19 @@ class nn():
             
             first_run = False
             
-            if sys.platform[0:3] == 'win':
-                devices_str = ""
-                for device in device_config.devices:
-                    devices_str += "_" + device.name.replace(' ','_')
-                
-                compute_cache_path = Path(os.environ['APPDATA']) / 'NVIDIA' / ('ComputeCache' + devices_str)
-                if not compute_cache_path.exists():
-                    first_run = True
-                os.environ['CUDA_CACHE_PATH'] = str(compute_cache_path)
+            if not device_config.cpu_only:
+                if sys.platform[0:3] == 'win':
+                    if all( [ x.name == device_config.devices[0].name for x in device_config.devices ] ):
+                        devices_str = "_" + device_config.devices[0].name.replace(' ','_')
+                    else:
+                        devices_str = ""
+                        for device in device_config.devices:
+                            devices_str += "_" + device.name.replace(' ','_')
+                        
+                    compute_cache_path = Path(os.environ['APPDATA']) / 'NVIDIA' / ('ComputeCache' + devices_str)
+                    if not compute_cache_path.exists():
+                        first_run = True
+                    os.environ['CUDA_CACHE_PATH'] = str(compute_cache_path)
 
             os.environ['TF_MIN_GPU_MULTIPROCESSOR_COUNT'] = '2'
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # tf log errors only
