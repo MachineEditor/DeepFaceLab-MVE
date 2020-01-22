@@ -247,7 +247,7 @@ class Subprocessor(object):
 
             for cli in self.clis[:]:
                 if cli.state == 1:
-                    if cli.sent_time != and self.no_response_time_sec != 0 and (time.time() - cli.sent_time) > self.no_response_time_sec:
+                    if cli.sent_time != 0 and self.no_response_time_sec != 0 and (time.time() - cli.sent_time) > self.no_response_time_sec:
                         #subprocess busy too long
                         print ( '%s doesnt response, terminating it.' % (cli.name) )
                         self.on_data_return (cli.host_dict, cli.sent_data )
