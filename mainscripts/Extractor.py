@@ -55,8 +55,6 @@ class ExtractSubprocessor(Subprocessor):
             if stdin_fd is not None and DEBUG:
                 sys.stdin = os.fdopen(stdin_fd)
 
-            self.log_info (f"Running on {client_dict['device_name'] }")
-
             if self.cpu_only:
                 device_config = nn.DeviceConfig.CPU()
                 place_model_on_cpu = True
@@ -66,6 +64,8 @@ class ExtractSubprocessor(Subprocessor):
 
             if self.type == 'all' or 'rects' in self.type or 'landmarks' in self.type:
                 nn.initialize (device_config)
+                
+            self.log_info (f"Running on {client_dict['device_name'] }")
                 
             if self.type == 'all' or self.type == 'rects-s3fd' or 'landmarks' in self.type:
                 self.rects_extractor = facelib.S3FDExtractor(place_model_on_cpu=place_model_on_cpu)

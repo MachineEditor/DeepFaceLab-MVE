@@ -46,6 +46,7 @@ DeepFaceLab is used by such popular youtube channels as
 |Ready to work facesets|[mrdeepfakes](https://mrdeepfakes.com/forums/forum-celebrity-facesets)||
 ||||
 |Communication groups|[telegram (English / Russian)](https://t.me/DeepFaceLab_official)|Don't forget to hide your phone number.|
+||[telegram (English only)](https://t.me/DeepFaceLab_official_en)|Don't forget to hide your phone number.|
 ||[mrdeepfakes](https://mrdeepfakes.com/forums/)|the biggest (Not) Safe For Work English community|
 ||QQ 951138799| Chinese QQ group for ML/AI experts||
 ||[deepfaker.xyz](https://www.deepfaker.xyz)|Chinesse guys are localizing DeepFaceLab|
