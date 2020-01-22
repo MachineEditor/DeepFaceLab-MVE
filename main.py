@@ -1,4 +1,8 @@
 if __name__ == "__main__":
+    # Fix for linux
+    import multiprocessing 
+    multiprocessing.set_start_method("spawn")
+    
     from core.leras import nn    
     nn.initialize_main_env()
     
@@ -6,8 +10,7 @@ if __name__ == "__main__":
     import sys
     import time
     import argparse
-    import multiprocessing
-    multiprocessing.set_start_method("spawn")
+    
     from core import pathex
     from core import osex
     from pathlib import Path
