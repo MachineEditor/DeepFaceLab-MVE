@@ -1,3 +1,5 @@
+import copy
+
 def initialize_optimizers(nn):
     tf = nn.tf
     from tensorflow.python.ops import state_ops, control_flow_ops
