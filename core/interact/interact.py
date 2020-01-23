@@ -390,7 +390,10 @@ class InteractBase(object):
             except:
                 pass
             
-    def input_skip_pending(self):                    
+    def input_skip_pending(self):        
+        if is_colab:
+            # currently it does not work on Colab
+            return
         """
         skips unnecessary inputs between the dialogs
         """
