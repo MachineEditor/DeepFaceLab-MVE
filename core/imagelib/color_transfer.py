@@ -342,9 +342,6 @@ def channel_hist_match(source, template, hist_match_threshold=255, mask=None):
     s_values, bin_idx, s_counts = np.unique(source, return_inverse=True,
                                             return_counts=True)
     t_values, t_counts = np.unique(template, return_counts=True)
-    ms_values, mbin_idx, ms_counts = np.unique(source, return_inverse=True,
-                                            return_counts=True)
-    mt_values, mt_counts = np.unique(template, return_counts=True)
 
     s_quantiles = np.cumsum(s_counts).astype(np.float64)
     s_quantiles = hist_match_threshold * s_quantiles / s_quantiles[-1]
