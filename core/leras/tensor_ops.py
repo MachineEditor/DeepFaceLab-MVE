@@ -187,6 +187,25 @@ def initialize_tensor_ops(nn):
 
     nn.tf_style_loss = tf_style_loss
     
+    def tf_channel_histogram (input, bins, data_range):
+        range_min, range_max = data_range
+        bin_range = (range_max-range_min) / (bins-1)
+        reduce_axes = [*range(input.shape.ndims)][1:]        
+        x = input
+        x += bin_range/2
+        output = []
+        for i in range(bins-1, -1, -1):
+            y = x - (i*bin_range)            
+            ones_mask = tf.sign( tf.nn.relu(y) )            
+            x = x * (1.0 - ones_mask)                        
+            output.append ( tf.expand_dims(tf.reduce_sum (ones_mask, axis=reduce_axes ), -1) )
+        return tf.concat(output[::-1],-1)
+    nn.tf_channel_histogram = tf_channel_histogram
+    
+    def tf_histogram(input, bins=256, data_range=(0,1.0)):        
+        return tf.concat ( [tf.expand_dims( tf_channel_histogram( input[...,i], bins=bins, data_range=data_range ), -1 ) for i in range(input.shape[-1])], -1 )
+    nn.tf_histogram = tf_histogram
+
     def tf_dssim(img1,img2, max_val, filter_size=11, filter_sigma=1.5, k1=0.01, k2=0.03):
     
         ch = img2.shape[-1]

@@ -42,6 +42,8 @@ class nn():
     tf_random_binomial = None
     tf_gaussian_blur = None
     tf_style_loss = None
+    tf_channel_histogram = None
+    tf_histogram = None
     tf_dssim = None
     
     # Layers
