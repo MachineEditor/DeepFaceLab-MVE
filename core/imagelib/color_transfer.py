@@ -299,7 +299,7 @@ def linear_color_transfer(target_img, source_img, mode='pca', eps=1e-5):
     matched_img += mu_s
     matched_img[matched_img>1] = 1
     matched_img[matched_img<0] = 0
-    return matched_img
+    return matched_img.astype(source_img.dtype)
 
 def lab_image_stats(image):
     # compute the mean and standard deviation of each channel
