@@ -8,7 +8,7 @@ class FaceType(IntEnum):
     FULL_NO_ALIGN = 3
     HEAD = 4
     HEAD_NO_ALIGN = 5
-        
+
     MARK_ONLY = 10, #no align at all, just embedded faceinfo
 
     @staticmethod

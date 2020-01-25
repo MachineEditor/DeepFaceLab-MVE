@@ -237,7 +237,7 @@ class MergeSubprocessor(Subprocessor):
                 try:
                     with open( str(self.merger_session_filepath), "rb") as f:
                         session_data = pickle.loads(f.read())
-                    
+
                 except Exception as e:
                     pass
 
@@ -282,8 +282,8 @@ class MergeSubprocessor(Subprocessor):
                 self.frames_done_idxs = s_frames_done_idxs
 
                 rewind_to_begin = len(self.frames_idxs) == 0 # all frames are done?
-                
-                if self.model_iter != s_model_iter:                    
+
+                if self.model_iter != s_model_iter:
                     # model was more trained, recompute all frames
                     rewind_to_begin = True
                     for frame in self.frames:
@@ -461,15 +461,15 @@ class MergeSubprocessor(Subprocessor):
                 if key == 27: #esc
                     self.is_interactive_quitting = True
                 elif self.screen_manager.get_current() is self.main_screen:
-                    
-                    if self.merger_config.type == MergerConfig.TYPE_MASKED and chr_key in self.masked_keys:                        
+
+                    if self.merger_config.type == MergerConfig.TYPE_MASKED and chr_key in self.masked_keys:
                         self.process_remain_frames = False
 
                         if cur_frame is not None:
                             cfg = cur_frame.cfg
                             prev_cfg = cfg.copy()
 
-                            if cfg.type == MergerConfig.TYPE_MASKED:                                
+                            if cfg.type == MergerConfig.TYPE_MASKED:
                                 self.masked_keys_funcs[chr_key](cfg, shift_pressed)
 
                             if prev_cfg != cfg:
@@ -485,7 +485,7 @@ class MergeSubprocessor(Subprocessor):
                             if chr_key == ',':
                                 if shift_pressed:
                                     go_first_frame = True
-                                
+
                             elif chr_key == 'm':
                                 if not shift_pressed:
                                     go_prev_frame_overriding_cfg = True
@@ -499,7 +499,7 @@ class MergeSubprocessor(Subprocessor):
                             if chr_key == '.':
                                 if shift_pressed:
                                     self.process_remain_frames = not self.process_remain_frames
-                                    
+
                             elif chr_key == '/':
                                 if not shift_pressed:
                                     go_next_frame_overriding_cfg = True
@@ -566,7 +566,7 @@ class MergeSubprocessor(Subprocessor):
                                 frame.cfg = cur_frame.cfg.copy()
                             else:
                                 frame.cfg = f[ self.frames_idxs[i-1] ].cfg.copy()
-                            
+
                             frame.is_done = False #initiate solve again
                             frame.is_shown = False
 
@@ -775,7 +775,7 @@ def main (model_class_name=None,
             io.log_info ("No frames to merge in input_dir.")
         else:
             MergeSubprocessor (
-                        is_interactive         = is_interactive,                        
+                        is_interactive         = is_interactive,
                         merger_session_filepath = merger_session_filepath,
                         predictor_func         = predictor_func,
                         predictor_input_shape  = predictor_input_shape,

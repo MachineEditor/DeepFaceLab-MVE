@@ -37,7 +37,7 @@ opts:
 
     'resolution' : N
     'motion_blur' : (chance_int, range) - chance 0..100 to apply to face (not mask), and max_size of motion blur
-    'ct_mode' : 
+    'ct_mode' :
     'normalize_tanh' : bool
 
 """
@@ -94,11 +94,11 @@ class SampleProcessor(object):
     @staticmethod
     def process (samples, sample_process_options, output_sample_types, debug, ct_sample=None):
         SPTF = SampleProcessor.Types
-        
+
         sample_rnd_seed = np.random.randint(0x80000000)
-        
+
         outputs = []
-        for sample in samples:                
+        for sample in samples:
             sample_bgr = sample.load_bgr()
             ct_sample_bgr = None
             ct_sample_mask = None
@@ -123,9 +123,11 @@ class SampleProcessor(object):
                 normalize_vgg = opts.get('normalize_vgg', False)
                 motion_blur = opts.get('motion_blur', None)
                 gaussian_blur = opts.get('gaussian_blur', None)
-                
+
                 ct_mode = opts.get('ct_mode', 'None')
                 normalize_tanh = opts.get('normalize_tanh', False)
+                data_format = opts.get('data_format', 'NHWC')
+
 
                 img_type = SPTF.NONE
                 target_face_type = SPTF.NONE
@@ -149,7 +151,7 @@ class SampleProcessor(object):
                     img = l
                 elif img_type == SPTF.IMG_PITCH_YAW_ROLL or img_type == SPTF.IMG_PITCH_YAW_ROLL_SIGMOID:
                     pitch_yaw_roll = sample.get_pitch_yaw_roll()
-                    
+
                     if params['flip']:
                         yaw = -yaw
 
@@ -174,7 +176,7 @@ class SampleProcessor(object):
                             if len(mask.shape) == 2:
                                 mask = mask[...,np.newaxis]
 
-                            
+
                         return img, mask
 
                     img = sample_bgr
@@ -202,7 +204,7 @@ class SampleProcessor(object):
                     if gaussian_blur is not None:
                         chance, kernel_max_size = gaussian_blur
                         chance = np.clip(chance, 0, 100)
-                        
+
                         if np.random.randint(100) < chance:
                             img = cv2.GaussianBlur(img, ( np.random.randint( kernel_max_size )*2+1 ,) *2 , 0)
 
@@ -221,7 +223,7 @@ class SampleProcessor(object):
                             img = cv2.resize( img, (resolution,resolution), cv2.INTER_CUBIC )
                         else:
                             img, mask = do_transform (img, mask)
-                            
+
                             mat = LandmarksProcessor.get_transform_mat (sample.landmarks, resolution, target_ft)
                             img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=(cv2.BORDER_REPLICATE if border_replicate else cv2.BORDER_CONSTANT), flags=cv2.INTER_CUBIC )
                             mask = cv2.warpAffine( mask, mat, (resolution,resolution), borderMode=cv2.BORDER_CONSTANT, flags=cv2.INTER_CUBIC )
@@ -256,7 +258,7 @@ class SampleProcessor(object):
                             img_bgr = imagelib.reinhard_color_transfer ( np.clip( (img_bgr*255).astype(np.uint8), 0, 255),
                                                                         np.clip( (ct_sample_bgr_resized*255).astype(np.uint8), 0, 255) )
                             img_bgr = np.clip( img_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
-                        elif ct_mode == 'mkl':                    
+                        elif ct_mode == 'mkl':
                             img_bgr = imagelib.color_transfer_mkl (img_bgr, ct_sample_bgr_resized)
                         elif ct_mode == 'idt':
                             img_bgr = imagelib.color_transfer_idt (img_bgr, ct_sample_bgr_resized)
@@ -271,21 +273,21 @@ class SampleProcessor(object):
                         img_bgr[:,:,0] -= 103.939
                         img_bgr[:,:,1] -= 116.779
                         img_bgr[:,:,2] -= 123.68
-                        
+
                     if mode_type == SPTF.MODE_BGR:
                         img = img_bgr
                     elif mode_type == SPTF.MODE_BGR_SHUFFLE:
                         rnd_state = np.random.RandomState (sample_rnd_seed)
                         img = np.take (img_bgr, rnd_state.permutation(img_bgr.shape[-1]), axis=-1)
-                        
+
                     elif mode_type == SPTF.MODE_BGR_RANDOM_HSV_SHIFT:
                         rnd_state = np.random.RandomState (sample_rnd_seed)
                         hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
-                        h, s, v = cv2.split(hsv)                    
+                        h, s, v = cv2.split(hsv)
                         h = (h + rnd_state.randint(360) ) % 360
                         s = np.clip ( s + rnd_state.random()-0.5, 0, 1 )
                         v = np.clip ( v + rnd_state.random()-0.5, 0, 1 )
-                        hsv = cv2.merge([h, s, v])                    
+                        hsv = cv2.merge([h, s, v])
                         img = np.clip( cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR) , 0, 1 )
                     elif mode_type == SPTF.MODE_G:
                         img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)[...,None]
@@ -300,9 +302,13 @@ class SampleProcessor(object):
                         else:
                             img = np.clip (img, 0.0, 1.0)
 
+                    if data_format == "NCHW":
+                        img = np.transpose(img, (2,0,1) )
+
+
                 outputs_sample.append ( img )
             outputs += [outputs_sample]
-            
+
         return outputs
 
 """

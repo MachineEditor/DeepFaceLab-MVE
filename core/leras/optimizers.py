@@ -73,7 +73,7 @@ def initialize_optimizers(nn):
             e = tf.device('/CPU:0') if vars_on_cpu else None
             if e: e.__enter__()
             with tf.variable_scope(self.name):
-                accumulators = [ tf.get_variable ( f'acc_{i+self.accumulator_counter}', v.shape, initializer=tf.initializers.constant(0.0), trainable=False)
+                accumulators = [ tf.get_variable ( f'acc_{i+self.accumulator_counter}', v.shape, dtype=v.dtype, initializer=tf.initializers.constant(0.0), trainable=False)
                                     for (i, v ) in enumerate(trainable_weights) ]
 
                 self.accumulators_dict.update ( { v.name : acc for v,acc in zip(trainable_weights,accumulators) } )
@@ -81,13 +81,13 @@ def initialize_optimizers(nn):
                 self.accumulator_counter += len(trainable_weights)
 
                 if self.lr_dropout != 1.0:
-                    lr_rnds = [ nn.tf_random_binomial( v.shape, p=self.lr_dropout) for v in trainable_weights ]
+                    lr_rnds = [ nn.tf_random_binomial( v.shape, p=self.lr_dropout, dtype=v.dtype) for v in trainable_weights ]
                     self.lr_rnds_dict.update ( { v.name : rnd for v,rnd in zip(trainable_weights,lr_rnds) } )
             if e: e.__exit__(None, None, None)
 
         def get_update_op(self, grads_vars):
             updates = []
-            lr = self.lr
+
             if self.clipnorm > 0.0:
                 norm = tf.sqrt( sum([tf.reduce_sum(tf.square(g)) for g,v in grads_vars]))
             updates += [ state_ops.assign_add( self.iterations, 1) ]
@@ -96,8 +96,14 @@ def initialize_optimizers(nn):
                     g = self.tf_clip_norm(g, self.clipnorm, norm)
 
                 a = self.accumulators_dict[v.name]
-                new_a = self.rho * a + (1. - self.rho) * tf.square(g)
-                v_diff = - lr * g / (tf.sqrt(new_a) + self.epsilon)
+
+                rho = tf.cast(self.rho, a.dtype)
+                new_a = rho * a + (1. - rho) * tf.square(g)
+
+                lr = tf.cast(self.lr, a.dtype)
+                epsilon = tf.cast(self.epsilon, a.dtype)
+
+                v_diff = - lr * g / (tf.sqrt(new_a) + epsilon)
                 if self.lr_dropout != 1.0:
                     lr_rnd = self.lr_rnds_dict[v.name]
                     v_diff *= lr_rnd

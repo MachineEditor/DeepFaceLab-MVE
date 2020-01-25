@@ -15,34 +15,34 @@ def save_faceset_metadata_folder(input_path):
     input_path = Path(input_path)
 
     metadata_filepath = input_path / 'meta.dat'
-    
+
     io.log_info (f"Saving metadata to {str(metadata_filepath)}\r\n")
 
     d = {}
     for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path), "Processing"):
         filepath = Path(filepath)
         dflimg = DFLIMG.load (filepath)
-        
-        dfl_dict = dflimg.getDFLDictData()        
+
+        dfl_dict = dflimg.getDFLDictData()
         d[filepath.name] = ( dflimg.get_shape(), dfl_dict )
-    
+
     try:
         with open(metadata_filepath, "wb") as f:
             f.write ( pickle.dumps(d) )
     except:
         raise Exception( 'cannot save %s' % (filename) )
-    
+
     io.log_info("Now you can edit images.")
-    io.log_info("!!! Keep same filenames in the folder.")  
-    io.log_info("You can change size of images, restoring process will downscale back to original size.")  
+    io.log_info("!!! Keep same filenames in the folder.")
+    io.log_info("You can change size of images, restoring process will downscale back to original size.")
     io.log_info("After that, use restore metadata.")
-    
+
 def restore_faceset_metadata_folder(input_path):
     input_path = Path(input_path)
 
     metadata_filepath = input_path / 'meta.dat'
     io.log_info (f"Restoring metadata from {str(metadata_filepath)}.\r\n")
-    
+
     if not metadata_filepath.exists():
         io.log_err(f"Unable to find {str(metadata_filepath)}.")
 
@@ -54,27 +54,27 @@ def restore_faceset_metadata_folder(input_path):
 
     for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path), "Processing"):
         filepath = Path(filepath)
-        
+
         shape, dfl_dict = d.get(filepath.name, None)
-        
+
         img = cv2_imread (str(filepath))
         if img.shape != shape:
             img = cv2.resize (img, (shape[1], shape[0]), cv2.INTER_LANCZOS4 )
-        
+
             if filepath.suffix == '.png':
-                cv2_imwrite (str(filepath), img)         
-            elif filepath.suffix == '.jpg':            
+                cv2_imwrite (str(filepath), img)
+            elif filepath.suffix == '.jpg':
                 cv2_imwrite (str(filepath), img, [int(cv2.IMWRITE_JPEG_QUALITY), 100] )
 
         if filepath.suffix == '.png':
-            DFLPNG.embed_dfldict( str(filepath), dfl_dict )            
-        elif filepath.suffix == '.jpg':            
+            DFLPNG.embed_dfldict( str(filepath), dfl_dict )
+        elif filepath.suffix == '.jpg':
             DFLJPG.embed_dfldict( str(filepath), dfl_dict )
         else:
             continue
-       
+
     metadata_filepath.unlink()
-     
+
 def remove_ie_polys_file (filepath):
     filepath = Path(filepath)
 
@@ -95,7 +95,7 @@ def remove_ie_polys_folder(input_path):
     for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path), "Removing"):
         filepath = Path(filepath)
         remove_ie_polys_file(filepath)
-        
+
 def remove_fanseg_file (filepath):
     filepath = Path(filepath)
 

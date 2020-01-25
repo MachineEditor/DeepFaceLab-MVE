@@ -68,7 +68,7 @@ class ModelBase(object):
                         s = f"[{i}] : {model_name} "
                         if i == 0:
                             s += "- latest"
-                        io.log_info (s)                    
+                        io.log_info (s)
 
                     inp = io.input_str(f"", "0", show_default_value=False )
                     model_idx = -1
@@ -81,27 +81,27 @@ class ModelBase(object):
                         if len(inp) == 1:
                             is_rename = inp[0] == 'r'
                             is_delete = inp[0] == 'd'
-                            
+
                             if is_rename or is_delete:
                                 if len(saved_models_names) != 0:
-                                    
+
                                     if is_rename:
                                         name = io.input_str(f"Enter the name of the model you want to rename")
                                     elif is_delete:
-                                        name = io.input_str(f"Enter the name of the model you want to delete")                                    
-                                    
+                                        name = io.input_str(f"Enter the name of the model you want to delete")
+
                                     if name in saved_models_names:
-                                        
+
                                         if is_rename:
                                             new_model_name = io.input_str(f"Enter new name of the model")
 
                                         for filepath in pathex.get_file_paths(saved_models_path):
                                             filepath_name = filepath.name
-                                            
+
                                             model_filename, remain_filename = filepath_name.split('_', 1)
                                             if model_filename == name:
-                                                
-                                                if is_rename:                                                
+
+                                                if is_rename:
                                                     new_filepath = filepath.parent / ( new_model_name + '_' + remain_filename )
                                                     filepath.rename (new_filepath)
                                                 elif is_delete:
@@ -159,7 +159,7 @@ class ModelBase(object):
         #####
 
         io.input_skip_pending()
-        
+
         self.on_initialize_options()
         if self.is_first_run():
             # save as default options only for first run model initialize
@@ -172,7 +172,7 @@ class ModelBase(object):
 
         self.on_initialize()
         self.options['batch_size'] = self.batch_size
-        
+
         if self.is_training:
             self.preview_history_path = self.saved_models_path / ( f'{self.get_model_name()}_history' )
             self.autobackups_path     = self.saved_models_path / ( f'{self.get_model_name()}_autobackups' )
@@ -326,7 +326,7 @@ class ModelBase(object):
 
     def get_pretraining_data_path(self):
         return self.pretraining_data_path
-        
+
     def get_target_iter(self):
         return self.target_iter
 
@@ -479,7 +479,7 @@ class ModelBase(object):
         #Find the longest key name and value string. Used as column widths.
         width_name = max([len(k) for k in self.options.keys()] + [17]) + 1 # Single space buffer to left edge. Minimum of 17, the length of the longest static string used "Current iteration"
         width_value = max([len(str(x)) for x in self.options.values()] + [len(str(self.get_iter())), len(self.get_model_name())]) + 1 # Single space buffer to right edge
-        if not self.device_config.cpu_only: #Check length of GPU names
+        if len(self.device_config.devices) != 0: #Check length of GPU names
             width_value = max([len(device.name)+1 for device in self.device_config.devices] + [width_value])
         width_total = width_name + width_value + 2 #Plus 2 for ": "
 
@@ -499,7 +499,7 @@ class ModelBase(object):
 
         summary_text += [f'=={" Running On ":-^{width_total}}=='] # Training hardware info
         summary_text += [f'=={" "*width_total}==']
-        if self.device_config.cpu_only:
+        if len(self.device_config.devices) == 0:
             summary_text += [f'=={"Using device": >{width_name}}: {"CPU": <{width_value}}=='] # cpu_only
         else:
             for device in self.device_config.devices:

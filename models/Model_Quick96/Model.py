@@ -13,11 +13,13 @@ from samplelib import *
 class QModel(ModelBase):
     #override
     def on_initialize(self):
-        nn.initialize()
+        device_config = nn.getCurrentDeviceConfig()
+        self.model_data_format = "NCHW" if len(device_config.devices) != 0 else "NHWC"
+        nn.initialize(data_format=self.model_data_format)
         tf = nn.tf
 
-        conv_kernel_initializer = nn.initializers.ca
-        
+        conv_kernel_initializer = nn.initializers.ca()
+
         class Downscale(nn.ModelBase):
             def __init__(self, in_ch, out_ch, kernel_size=5, dilations=1, subpixel=True, use_activator=True, *kwargs ):
                 self.in_ch = in_ch
@@ -39,7 +41,7 @@ class QModel(ModelBase):
                 x = self.conv1(x)
 
                 if self.subpixel:
-                    x = tf.nn.space_to_depth(x, 2)
+                    x = nn.tf_space_to_depth(x, 2)
 
                 if self.use_activator:
                     x = nn.tf_gelu(x)
@@ -63,7 +65,7 @@ class QModel(ModelBase):
                 for down in self.downs:
                     x = down(x)
                 return x
-       
+
         class Upscale(nn.ModelBase):
             def on_build(self, in_ch, out_ch, kernel_size=3 ):
                 self.conv1 = nn.Conv2D( in_ch, out_ch*4, kernel_size=kernel_size, padding='SAME', kernel_initializer=conv_kernel_initializer)
@@ -71,9 +73,9 @@ class QModel(ModelBase):
             def forward(self, x):
                 x = self.conv1(x)
                 x = nn.tf_gelu(x)
-                x = tf.nn.depth_to_space(x, 2)
+                x = nn.tf_depth_to_space(x, 2)
                 return x
-                
+
         class ResidualBlock(nn.ModelBase):
             def on_build(self, ch, kernel_size=3 ):
                 self.conv1 = nn.Conv2D( ch, ch, kernel_size=kernel_size, padding='SAME', kernel_initializer=conv_kernel_initializer)
@@ -109,7 +111,7 @@ class QModel(ModelBase):
             def forward(self, inp):
                 x = self.dense1(inp)
                 x = self.dense2(x)
-                x = tf.reshape (x, (-1, lowest_dense_res, lowest_dense_res, self.ae_out_ch))
+                x = nn.tf_reshape_4D (x, lowest_dense_res, lowest_dense_res, self.ae_out_ch)
                 x = self.upscale1(x)
                 x = self.res1(x)
                 return x
@@ -118,11 +120,11 @@ class QModel(ModelBase):
                 return self.ae_out_ch
 
         class Decoder(nn.ModelBase):
-            def on_build(self, in_ch, d_ch):        
-                self.upscale1 = Upscale(in_ch, d_ch*4)                
-                self.res1     = ResidualBlock(d_ch*4)                
-                self.upscale2 = Upscale(d_ch*4, d_ch*2)                
-                self.res2     = ResidualBlock(d_ch*2)                
+            def on_build(self, in_ch, d_ch):
+                self.upscale1 = Upscale(in_ch, d_ch*4)
+                self.res1     = ResidualBlock(d_ch*4)
+                self.upscale2 = Upscale(d_ch*4, d_ch*2)
+                self.res2     = ResidualBlock(d_ch*2)
                 self.upscale3 = Upscale(d_ch*2, d_ch*1)
                 self.res3     = ResidualBlock(d_ch*1)
 
@@ -134,8 +136,8 @@ class QModel(ModelBase):
                 self.out_convm = nn.Conv2D( d_ch//2, 1, kernel_size=1, padding='SAME', kernel_initializer=conv_kernel_initializer)
 
             def forward(self, inp):
-                z = inp                    
-                x = self.upscale1 (z)                
+                z = inp
+                x = self.upscale1 (z)
                 x = self.res1     (x)
                 x = self.upscale2 (x)
                 x = self.res2     (x)
@@ -158,7 +160,7 @@ class QModel(ModelBase):
         d_dims = 64
         self.pretrain = False
         self.pretrain_just_disabled = False
-        
+
         masked_training = True
 
         models_opt_on_gpu = len(devices) == 1 and devices[0].total_mem_gb >= 4
@@ -167,8 +169,8 @@ class QModel(ModelBase):
 
         input_nc = 3
         output_nc = 3
-        bgr_shape = (resolution, resolution, output_nc)
-        mask_shape = (resolution, resolution, 1)
+        bgr_shape = nn.get4Dshape(resolution,resolution,input_nc)
+        mask_shape = nn.get4Dshape(resolution,resolution,1)
         lowest_dense_res = resolution // 16
 
         self.model_filename_list = []
@@ -176,22 +178,22 @@ class QModel(ModelBase):
 
         with tf.device ('/CPU:0'):
             #Place holders on CPU
-            self.warped_src = tf.placeholder (tf.float32, (None,)+bgr_shape)
-            self.warped_dst = tf.placeholder (tf.float32, (None,)+bgr_shape)
+            self.warped_src = tf.placeholder (nn.tf_floatx, bgr_shape)
+            self.warped_dst = tf.placeholder (nn.tf_floatx, bgr_shape)
 
-            self.target_src = tf.placeholder (tf.float32, (None,)+bgr_shape)
-            self.target_dst = tf.placeholder (tf.float32, (None,)+bgr_shape)
+            self.target_src = tf.placeholder (nn.tf_floatx, bgr_shape)
+            self.target_dst = tf.placeholder (nn.tf_floatx, bgr_shape)
 
-            self.target_srcm = tf.placeholder (tf.float32, (None,)+mask_shape)
-            self.target_dstm = tf.placeholder (tf.float32, (None,)+mask_shape)
+            self.target_srcm = tf.placeholder (nn.tf_floatx, mask_shape)
+            self.target_dstm = tf.placeholder (nn.tf_floatx, mask_shape)
 
         # Initializing model classes
         with tf.device (models_opt_device):
             self.encoder = Encoder(in_ch=input_nc, e_ch=e_dims, name='encoder')
-            encoder_out_ch = self.encoder.compute_output_shape ( (tf.float32, (None,resolution,resolution,input_nc)))[-1]
+            encoder_out_ch = self.encoder.compute_output_channels ( (nn.tf_floatx, bgr_shape))
 
             self.inter = Inter (in_ch=encoder_out_ch, lowest_dense_res=lowest_dense_res, ae_ch=ae_dims, ae_out_ch=ae_dims, d_ch=d_dims, name='inter')
-            inter_out_ch = self.inter.compute_output_shape ( (tf.float32, (None,encoder_out_ch)))[-1]
+            inter_out_ch = self.inter.compute_output_channels ( (nn.tf_floatx, (None,encoder_out_ch)))
 
             self.decoder_src = Decoder(in_ch=inter_out_ch, d_ch=d_dims, name='decoder_src')
             self.decoder_dst = Decoder(in_ch=inter_out_ch, d_ch=d_dims, name='decoder_dst')
@@ -203,7 +205,7 @@ class QModel(ModelBase):
 
             if self.is_training:
                 self.src_dst_trainable_weights = self.encoder.get_weights() + self.inter.get_weights() + self.decoder_src.get_weights() + self.decoder_dst.get_weights()
-                
+
                 # Initialize optimizers
                 self.src_dst_opt = nn.TFRMSpropOptimizer(lr=2e-4, lr_dropout=0.3, name='src_dst_opt')
                 self.src_dst_opt.initialize_variables(self.src_dst_trainable_weights, vars_on_cpu=optimizer_vars_on_cpu )
@@ -222,7 +224,7 @@ class QModel(ModelBase):
             gpu_pred_src_srcm_list = []
             gpu_pred_dst_dstm_list = []
             gpu_pred_src_dstm_list = []
-            
+
             gpu_src_losses = []
             gpu_dst_losses = []
             gpu_src_dst_loss_gvs = []
@@ -239,7 +241,7 @@ class QModel(ModelBase):
                         gpu_target_srcm  = self.target_srcm[batch_slice,:,:,:]
                         gpu_target_dstm  = self.target_dstm[batch_slice,:,:,:]
 
-                    # process model tensors                    
+                    # process model tensors
                     gpu_src_code     = self.inter(self.encoder(gpu_warped_src))
                     gpu_dst_code     = self.inter(self.encoder(gpu_warped_dst))
                     gpu_pred_src_src, gpu_pred_src_srcm = self.decoder_src(gpu_src_code)
@@ -249,11 +251,11 @@ class QModel(ModelBase):
                     gpu_pred_src_src_list.append(gpu_pred_src_src)
                     gpu_pred_dst_dst_list.append(gpu_pred_dst_dst)
                     gpu_pred_src_dst_list.append(gpu_pred_src_dst)
-                    
+
                     gpu_pred_src_srcm_list.append(gpu_pred_src_srcm)
                     gpu_pred_dst_dstm_list.append(gpu_pred_dst_dstm)
                     gpu_pred_src_dstm_list.append(gpu_pred_src_dstm)
-                    
+
                     gpu_target_srcm_blur = nn.tf_gaussian_blur(gpu_target_srcm,  max(1, resolution // 32) )
                     gpu_target_dstm_blur = nn.tf_gaussian_blur(gpu_target_dstm,  max(1, resolution // 32) )
 
@@ -271,11 +273,11 @@ class QModel(ModelBase):
 
                     gpu_src_loss =  tf.reduce_mean ( 10*nn.tf_dssim(gpu_target_srcmasked_opt, gpu_pred_src_src_masked_opt, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
                     gpu_src_loss += tf.reduce_mean ( 10*tf.square ( gpu_target_srcmasked_opt - gpu_pred_src_src_masked_opt ), axis=[1,2,3])
-                    gpu_src_loss += tf.reduce_mean ( tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
+                    gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
 
                     gpu_dst_loss  = tf.reduce_mean ( 10*nn.tf_dssim(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0, filter_size=int(resolution/11.6) ), axis=[1])
                     gpu_dst_loss += tf.reduce_mean ( 10*tf.square(  gpu_target_dst_masked_opt- gpu_pred_dst_dst_masked_opt ), axis=[1,2,3])
-                    gpu_dst_loss += tf.reduce_mean ( tf.square( gpu_target_dstm - gpu_pred_dst_dstm ),axis=[1,2,3] )
+                    gpu_dst_loss += tf.reduce_mean ( 10*tf.square( gpu_target_dstm - gpu_pred_dst_dstm ),axis=[1,2,3] )
 
                     gpu_src_losses += [gpu_src_loss]
                     gpu_dst_losses += [gpu_dst_loss]
@@ -286,29 +288,16 @@ class QModel(ModelBase):
 
             # Average losses and gradients, and create optimizer update ops
             with tf.device (models_opt_device):
-                if gpu_count == 1:
-                    pred_src_src = gpu_pred_src_src_list[0]
-                    pred_dst_dst = gpu_pred_dst_dst_list[0]
-                    pred_src_dst = gpu_pred_src_dst_list[0]
-                    pred_src_srcm = gpu_pred_src_srcm_list[0]
-                    pred_dst_dstm = gpu_pred_dst_dstm_list[0]
-                    pred_src_dstm = gpu_pred_src_dstm_list[0]
-                    
-                    src_loss = gpu_src_losses[0]
-                    dst_loss = gpu_dst_losses[0]
-                    src_dst_loss_gv = gpu_src_dst_loss_gvs[0]
-                else:
-                    pred_src_src = tf.concat(gpu_pred_src_src_list, 0)
-                    pred_dst_dst = tf.concat(gpu_pred_dst_dst_list, 0)
-                    pred_src_dst = tf.concat(gpu_pred_src_dst_list, 0)
-                    pred_src_srcm = tf.concat(gpu_pred_src_srcm_list, 0)
-                    pred_dst_dstm = tf.concat(gpu_pred_dst_dstm_list, 0)
-                    pred_src_dstm = tf.concat(gpu_pred_src_dstm_list, 0)
-                    
-                    src_loss = nn.tf_average_tensor_list(gpu_src_losses)
-                    dst_loss = nn.tf_average_tensor_list(gpu_dst_losses)
-                    src_dst_loss_gv = nn.tf_average_gv_list (gpu_src_dst_loss_gvs)
+                pred_src_src  = nn.tf_concat(gpu_pred_src_src_list, 0)
+                pred_dst_dst  = nn.tf_concat(gpu_pred_dst_dst_list, 0)
+                pred_src_dst  = nn.tf_concat(gpu_pred_src_dst_list, 0)
+                pred_src_srcm = nn.tf_concat(gpu_pred_src_srcm_list, 0)
+                pred_dst_dstm = nn.tf_concat(gpu_pred_dst_dstm_list, 0)
+                pred_src_dstm = nn.tf_concat(gpu_pred_src_dstm_list, 0)
 
+                src_loss = nn.tf_average_tensor_list(gpu_src_losses)
+                dst_loss = nn.tf_average_tensor_list(gpu_dst_losses)
+                src_dst_loss_gv = nn.tf_average_gv_list (gpu_src_dst_loss_gvs)
                 src_dst_loss_gv_op = self.src_dst_opt.get_update_op (src_dst_loss_gv)
 
             # Initializing training and view functions
@@ -341,17 +330,15 @@ class QModel(ModelBase):
                 _, gpu_pred_dst_dstm = self.decoder_dst(gpu_dst_code)
 
             def AE_merge( warped_dst):
+
                 return nn.tf_sess.run ( [gpu_pred_src_dst, gpu_pred_dst_dstm, gpu_pred_src_dstm], feed_dict={self.warped_dst:warped_dst})
 
             self.AE_merge = AE_merge
-            
-        
-        
-        
+
         # Loading/initializing all models/optimizers weights
         for model, filename in io.progress_bar_generator(self.model_filename_list, "Initializing models"):
             do_init = self.is_first_run()
-                        
+
             if self.pretrain_just_disabled:
                 if model == self.inter:
                     do_init = True
@@ -359,16 +346,15 @@ class QModel(ModelBase):
             if not do_init:
                 do_init = not model.load_weights( self.get_strpath_storage_for_file(filename) )
 
-            if do_init and self.pretrained_model_path is not None:                
+            if do_init and self.pretrained_model_path is not None:
                 pretrained_filepath = self.pretrained_model_path / filename
                 if pretrained_filepath.exists():
                     do_init = not model.load_weights(pretrained_filepath)
-                    
+
             if do_init:
                 model.init_weights()
 
         # initializing sample generators
-
         if self.is_training:
             t = SampleProcessor.Types
             face_type = t.FACE_TYPE_FULL
@@ -384,19 +370,19 @@ class QModel(ModelBase):
             self.set_training_data_generators ([
                     SampleGeneratorFace(training_data_src_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(random_flip=True if self.pretrain else False),
-                        output_sample_types = [ {'types' : (t.IMG_WARPED_TRANSFORMED, face_type, t.MODE_BGR), 'resolution':resolution, },
-                                                {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_BGR), 'resolution': resolution, },
-                                                {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_M), 'resolution': resolution } ],
+                        output_sample_types = [ {'types' : (t.IMG_WARPED_TRANSFORMED, face_type, t.MODE_BGR), 'data_format':nn.data_format, 'resolution':resolution, },
+                                                {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_BGR),        'data_format':nn.data_format, 'resolution': resolution, },
+                                                {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_M),          'data_format':nn.data_format, 'resolution': resolution } ],
                         generators_count=src_generators_count ),
 
                     SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(random_flip=True if self.pretrain else False),
-                        output_sample_types = [ {'types' : (t.IMG_WARPED_TRANSFORMED, face_type, t.MODE_BGR), 'resolution':resolution},
-                                                {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_BGR), 'resolution': resolution},
-                                                {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_M), 'resolution': resolution} ],
+                        output_sample_types = [ {'types' : (t.IMG_WARPED_TRANSFORMED, face_type, t.MODE_BGR), 'data_format':nn.data_format, 'resolution':resolution},
+                                                {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_BGR),        'data_format':nn.data_format, 'resolution': resolution},
+                                                {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_M),          'data_format':nn.data_format, 'resolution': resolution} ],
                         generators_count=dst_generators_count )
                              ])
-                             
+
             self.last_samples = None
 
     #override
@@ -408,22 +394,21 @@ class QModel(ModelBase):
         for model, filename in io.progress_bar_generator(self.get_model_filename_list(), "Saving", leave=False):
             model.save_weights ( self.get_strpath_storage_for_file(filename) )
 
-
     #override
     def onTrainOneIter(self):
         if self.get_iter() % 3 == 0 and self.last_samples is not None:
             ( (warped_src, target_src, target_srcm), \
-              (warped_dst, target_dst, target_dstm) ) = self.last_samples 
-            src_loss, dst_loss = self.src_dst_train (target_src, target_src, target_srcm, 
+              (warped_dst, target_dst, target_dstm) ) = self.last_samples
+            src_loss, dst_loss = self.src_dst_train (target_src, target_src, target_srcm,
                                                      target_dst, target_dst, target_dstm)
         else:
             samples = self.last_samples = self.generate_next_samples()
             ( (warped_src, target_src, target_srcm), \
               (warped_dst, target_dst, target_dstm) ) = samples
 
-            src_loss, dst_loss = self.src_dst_train (warped_src, target_src, target_srcm, 
+            src_loss, dst_loss = self.src_dst_train (warped_src, target_src, target_srcm,
                                                      warped_dst, target_dst, target_dstm)
-        
+
         return ( ('src_loss', src_loss), ('dst_loss', dst_loss), )
 
     #override
@@ -435,8 +420,10 @@ class QModel(ModelBase):
                 [ [sample[0:n_samples] for sample in sample_list ]
                                                  for sample_list in samples ]
 
-        S, D, SS, DD, DDM, SD, SDM = [ np.clip(x, 0.0, 1.0) for x in ([target_src,target_dst] + self.AE_view (target_src, target_dst) ) ]
+        S, D, SS, DD, DDM, SD, SDM = [ np.clip( nn.to_data_format(x,"NHWC", self.model_data_format), 0.0, 1.0) for x in ([target_src,target_dst] + self.AE_view (target_src, target_dst) ) ]
         DDM, SDM, = [ np.repeat (x, (3,), -1) for x in [DDM, SDM] ]
+
+        target_srcm, target_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format) for x in ([target_srcm, target_dstm] )]
 
         result = []
         st = []
@@ -456,8 +443,10 @@ class QModel(ModelBase):
         return result
 
     def predictor_func (self, face=None):
+        face = face[None,...]
+        face = nn.to_data_format(face, self.model_data_format, "NHWC")
 
-        bgr, mask_dst_dstm, mask_src_dstm = self.AE_merge (face[np.newaxis,...])
+        bgr, mask_dst_dstm, mask_src_dstm = [ nn.to_data_format(x, "NHWC", self.model_data_format).astype(np.float32) for x in self.AE_merge (face) ]
         mask = mask_dst_dstm[0] * mask_src_dstm[0]
         return bgr[0], mask[...,0]
 

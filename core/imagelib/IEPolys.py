@@ -54,7 +54,7 @@ class IEPolys:
         self.n = max(0, self.n-1)
         self.dirty = True
         return self.n
-        
+
     def n_inc(self):
         self.n = min(len(self.list), self.n+1)
         self.dirty = True

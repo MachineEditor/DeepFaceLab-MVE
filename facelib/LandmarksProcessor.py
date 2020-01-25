@@ -263,29 +263,29 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0, full_
     tb_diag_vec /= npla.norm(tb_diag_vec)
     bt_diag_vec = (l_p[1]-l_p[3]).astype(np.float32)
     bt_diag_vec /= npla.norm(bt_diag_vec)
-    
+
     mod = (1.0 / scale)* ( npla.norm(l_p[0]-l_p[2])*(padding*np.sqrt(2.0) + 0.5) )
-    
+
     if not remove_align:
-        l_t = np.array( [ np.round( l_c - tb_diag_vec*mod ), 
-                          np.round( l_c + bt_diag_vec*mod ), 
-                          np.round( l_c + tb_diag_vec*mod ) ] )    
+        l_t = np.array( [ np.round( l_c - tb_diag_vec*mod ),
+                          np.round( l_c + bt_diag_vec*mod ),
+                          np.round( l_c + tb_diag_vec*mod ) ] )
     else:
-        l_t = np.array( [ np.round( l_c - tb_diag_vec*mod ), 
-                          np.round( l_c + bt_diag_vec*mod ), 
+        l_t = np.array( [ np.round( l_c - tb_diag_vec*mod ),
+                          np.round( l_c + bt_diag_vec*mod ),
                           np.round( l_c + tb_diag_vec*mod ),
-                          np.round( l_c - bt_diag_vec*mod ), 
+                          np.round( l_c - bt_diag_vec*mod ),
                          ] )
-                          
+
         area = mathlib.polygon_area(l_t[:,0], l_t[:,1] )
         side = np.float32(math.sqrt(area) / 2)
-        l_t = np.array( [ np.round( l_c + [-side,-side] ), 
-                          np.round( l_c + [ side,-side] ), 
-                          np.round( l_c + [ side, side] ) ] )    
-        
+        l_t = np.array( [ np.round( l_c + [-side,-side] ),
+                          np.round( l_c + [ side,-side] ),
+                          np.round( l_c + [ side, side] ) ] )
+
     pts2 = np.float32(( (0,0),(output_size,0),(output_size,output_size) ))
     mat = cv2.getAffineTransform(l_t,pts2)
-    
+
 
     #if remove_align:
     #    bbox = transform_points ( [ (0,0), (0,output_size), (output_size, output_size), (output_size,0) ], mat, True)
@@ -301,24 +301,24 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0, full_
     return mat
 
 #if full_face_align_top and (face_type == FaceType.FULL or face_type == FaceType.FULL_NO_ALIGN):
-#    #lmrks2 = expand_eyebrows(image_landmarks)    
-#    #lmrks2_ = transform_points( [ lmrks2[19], lmrks2[24] ], mat, False )     
-#    #y_diff = np.float32( (0,np.min(lmrks2_[:,1])) ) 
+#    #lmrks2 = expand_eyebrows(image_landmarks)
+#    #lmrks2_ = transform_points( [ lmrks2[19], lmrks2[24] ], mat, False )
+#    #y_diff = np.float32( (0,np.min(lmrks2_[:,1])) )
 #    #y_diff = transform_points( [ np.float32( (0,0) ), y_diff], mat, True)
 #    #y_diff = y_diff[1]-y_diff[0]
-#    
+#
 #    x_diff = np.float32((0,0))
-#    
-#    lmrks2_ = transform_points( [ image_landmarks[0], image_landmarks[16] ], mat, False )   
+#
+#    lmrks2_ = transform_points( [ image_landmarks[0], image_landmarks[16] ], mat, False )
 #    if lmrks2_[0,0] < 0:
-#        x_diff = lmrks2_[0,0]        
+#        x_diff = lmrks2_[0,0]
 #        x_diff = transform_points( [ np.float32( (0,0) ), np.float32((x_diff,0)) ], mat, True)
-#        x_diff = x_diff[1]-x_diff[0]        
+#        x_diff = x_diff[1]-x_diff[0]
 #    elif lmrks2_[1,0] >= output_size:
 #        x_diff = lmrks2_[1,0]-(output_size-1)
 #        x_diff = transform_points( [ np.float32( (0,0) ), np.float32((x_diff,0)) ], mat, True)
-#        x_diff = x_diff[1]-x_diff[0]    
-#    
+#        x_diff = x_diff[1]-x_diff[0]
+#
 #    mat = cv2.getAffineTransform( l_t+y_diff+x_diff ,pts2)
 def expand_eyebrows(lmrks, eyebrows_expand_mod=1.0):
     if len(lmrks) != 68:
@@ -687,5 +687,5 @@ def estimate_pitch_yaw_roll(aligned_256px_landmarks):
     pitch = np.clip ( pitch, -math.pi, math.pi )
     yaw = np.clip ( yaw , -math.pi, math.pi )
     roll = np.clip ( roll, -math.pi, math.pi )
-    
+
     return -pitch, yaw, roll

@@ -12,7 +12,7 @@ class SubprocessGenerator(object):
         self.p = None
         if start_now:
             self._start()
-            
+
     def _start(self):
         if self.p == None:
             user_param = self.user_param

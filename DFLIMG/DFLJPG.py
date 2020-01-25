@@ -197,7 +197,7 @@ class DFLJPG(object):
             else:
                 io.log_err("Unable to encode fanseg_mask for %s" % (filename) )
                 fanseg_mask = None
-                
+
         if ie_polys is not None:
             if not isinstance(ie_polys, list):
                 ie_polys = ie_polys.dump()

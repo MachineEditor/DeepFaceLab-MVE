@@ -12,19 +12,19 @@ import cv2
 import models
 from core.interact import interact as io
 
-def trainerThread (s2c, c2s, e,  
+def trainerThread (s2c, c2s, e,
                     model_class_name = None,
                     saved_models_path = None,
                     training_data_src_path = None,
                     training_data_dst_path = None,
-                    pretraining_data_path = None,         
-                    pretrained_model_path = None,                               
-                    no_preview=False, 
+                    pretraining_data_path = None,
+                    pretrained_model_path = None,
+                    no_preview=False,
                     force_model_name=None,
                     force_gpu_idxs=None,
-                    cpu_only=None,   
+                    cpu_only=None,
                     execute_programs = None,
-                    debug=False,                  
+                    debug=False,
                     **kwargs):
     while True:
         try:
@@ -98,11 +98,11 @@ def trainerThread (s2c, c2s, e,
                         exec_prog = False
                         if prog_time > 0 and (cur_time - start_time) >= prog_time:
                             x[0] = 0
-                            exec_prog = True                            
-                        elif prog_time < 0 and (cur_time - last_time)  >= -prog_time:
-                            x[2] = cur_time                            
                             exec_prog = True
-                            
+                        elif prog_time < 0 and (cur_time - last_time)  >= -prog_time:
+                            x[2] = cur_time
+                            exec_prog = True
+
                         if exec_prog:
                             try:
                                 exec(prog)
@@ -110,12 +110,12 @@ def trainerThread (s2c, c2s, e,
                                 print("Unable to execute program: %s" % (prog) )
 
                     if not is_reached_goal:
-                                        
+
                         if model.get_iter() == 0:
                             io.log_info("")
                             io.log_info("Trying to do the first iteration. If an error occurs, reduce the model parameters.")
                             io.log_info("")
-                            
+
                         iter, iter_time = model.train_one_iter()
 
                         loss_history = model.get_loss_history()
@@ -127,8 +127,8 @@ def trainerThread (s2c, c2s, e,
 
                         if shared_state['after_save']:
                             shared_state['after_save'] = False
-                            last_save_time = time.time() 
-                            
+                            last_save_time = time.time()
+
                             mean_loss = np.mean ( [ np.array(loss_history[i]) for i in range(save_iter, iter) ], axis=0)
 
                             for loss_value in mean_loss:
@@ -145,10 +145,10 @@ def trainerThread (s2c, c2s, e,
                                 io.log_info ('\r' + loss_string, end='')
                             else:
                                 io.log_info (loss_string, end='\r')
-                        
+
                         if model.get_iter() == 1:
                             model_save()
-                        
+
                         if model.get_target_iter() != 0 and model.is_reached_iter_goal():
                             io.log_info ('Reached target iteration.')
                             model_save()

@@ -31,7 +31,7 @@ class Sample(object):
                  'source_filename',
                  'person_name',
                  'pitch_yaw_roll',
-                 '_filename_offset_size',                 
+                 '_filename_offset_size',
                 ]
 
     def __init__(self, sample_type=None,
@@ -39,10 +39,10 @@ class Sample(object):
                        face_type=None,
                        shape=None,
                        landmarks=None,
-                       ie_polys=None,                       
+                       ie_polys=None,
                        eyebrows_expand_mod=None,
                        source_filename=None,
-                       person_name=None,                       
+                       person_name=None,
                        pitch_yaw_roll=None,
                        **kwargs):
 
@@ -55,15 +55,15 @@ class Sample(object):
         self.eyebrows_expand_mod = eyebrows_expand_mod
         self.source_filename = source_filename
         self.person_name = person_name
-        self.pitch_yaw_roll = pitch_yaw_roll 
-        
+        self.pitch_yaw_roll = pitch_yaw_roll
+
         self._filename_offset_size = None
- 
+
     def get_pitch_yaw_roll(self):
         if self.pitch_yaw_roll is None:
             self.pitch_yaw_roll = LandmarksProcessor.estimate_pitch_yaw_roll(landmarks)
         return self.pitch_yaw_roll
-        
+
     def set_filename_offset_size(self, filename, offset, size):
         self._filename_offset_size = (filename, offset, size)
 

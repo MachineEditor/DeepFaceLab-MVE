@@ -287,7 +287,7 @@ class DFLPNG(object):
                 f.write ( inst.dump() )
         except:
             raise Exception( 'cannot save %s' % (filename) )
-        
+
     @staticmethod
     def embed_data(filename, face_type=None,
                              landmarks=None,
@@ -312,11 +312,11 @@ class DFLPNG(object):
             else:
                 io.log_err("Unable to encode fanseg_mask for %s" % (filename) )
                 fanseg_mask = None
-        
+
         if ie_polys is not None:
             if not isinstance(ie_polys, list):
                 ie_polys = ie_polys.dump()
-                
+
         DFLPNG.embed_dfldict (filename, {'face_type': face_type,
                                          'landmarks': landmarks,
                                          'ie_polys' : ie_polys,
@@ -351,7 +351,7 @@ class DFLPNG(object):
         if fanseg_mask is None: fanseg_mask = self.get_fanseg_mask()
         if eyebrows_expand_mod is None: eyebrows_expand_mod = self.get_eyebrows_expand_mod()
         if relighted is None: relighted = self.get_relighted()
-        
+
         DFLPNG.embed_data (filename, face_type=face_type,
                                      landmarks=landmarks,
                                      ie_polys=ie_polys,
@@ -368,7 +368,7 @@ class DFLPNG(object):
 
     def remove_fanseg_mask(self):
         self.dfl_dict['fanseg_mask'] = None
-        
+
     def remove_source_filename(self):
         self.dfl_dict['source_filename'] = None
 

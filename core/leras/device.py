@@ -1,7 +1,7 @@
 import sys
 import ctypes
 import os
-    
+
 class Device(object):
     def __init__(self, index, name, total_mem, free_mem, cc=0):
         self.index = index
@@ -11,25 +11,25 @@ class Device(object):
         self.total_mem_gb = total_mem / 1024**3
         self.free_mem = free_mem
         self.free_mem_gb = free_mem / 1024**3
-        
+
     def __str__(self):
         return f"[{self.index}]:[{self.name}][{self.free_mem_gb:.3}/{self.total_mem_gb :.3}]"
 
 class Devices(object):
     all_devices = None
-    
+
     def __init__(self, devices):
         self.devices = devices
 
     def __len__(self):
         return len(self.devices)
-        
+
     def __getitem__(self, key):
         result = self.devices[key]
         if isinstance(key, slice):
             return Devices(result)
         return result
-        
+
     def __iter__(self):
         for device in self.devices:
             yield device
@@ -59,14 +59,14 @@ class Devices(object):
             if device.index == idx:
                 return device
         return None
-        
+
     def get_devices_from_index_list(self, idx_list):
         result = []
         for device in self.devices:
             if device.index in idx_list:
                 result += [device]
         return Devices(result)
-        
+
     def get_equal_devices(self, device):
         device_name = device.name
         result = []
@@ -74,7 +74,7 @@ class Devices(object):
             if device.name == device_name:
                 result.append (device)
         return Devices(result)
-    
+
     def get_devices_at_least_mem(self, totalmemsize_gb):
         result = []
         for device in self.devices:
@@ -84,7 +84,7 @@ class Devices(object):
 
     @staticmethod
     def initialize_main_env():
-        min_cc = int(os.environ.get("TF_MIN_REQ_CAP", 35)) 
+        min_cc = int(os.environ.get("TF_MIN_REQ_CAP", 35))
         libnames = ('libcuda.so', 'libcuda.dylib', 'nvcuda.dll')
         for libname in libnames:
             try:
@@ -122,40 +122,40 @@ class Devices(object):
                     if cuda.cuMemGetInfo_v2(ctypes.byref(freeMem), ctypes.byref(totalMem)) == 0:
                         cc = cc_major.value * 10 + cc_minor.value
                         if cc >= min_cc:
-                            devices.append ( {'name'      : name.split(b'\0', 1)[0].decode(),                                               
+                            devices.append ( {'name'      : name.split(b'\0', 1)[0].decode(),
                                               'total_mem' : totalMem.value,
                                               'free_mem'  : freeMem.value,
                                               'cc'        : cc
                                               })
                     cuda.cuCtxDetach(context)
-    
+
         os.environ['NN_DEVICES_INITIALIZED'] = '1'
-        os.environ['NN_DEVICES_COUNT'] = str(len(devices))        
-        for i, device in enumerate(devices):            
+        os.environ['NN_DEVICES_COUNT'] = str(len(devices))
+        for i, device in enumerate(devices):
             os.environ[f'NN_DEVICE_{i}_NAME'] = device['name']
             os.environ[f'NN_DEVICE_{i}_TOTAL_MEM'] = str(device['total_mem'])
             os.environ[f'NN_DEVICE_{i}_FREE_MEM'] = str(device['free_mem'])
             os.environ[f'NN_DEVICE_{i}_CC'] = str(device['cc'])
-        
+
     @staticmethod
-    def getDevices():        
-        if Devices.all_devices is None:    
+    def getDevices():
+        if Devices.all_devices is None:
             if int(os.environ.get("NN_DEVICES_INITIALIZED", 0)) != 1:
-                raise Exception("nn devices are not initialized. Run initialize_main_env() in main process.")            
+                raise Exception("nn devices are not initialized. Run initialize_main_env() in main process.")
             devices = []
-            for i in range ( int(os.environ['NN_DEVICES_COUNT']) ):                
+            for i in range ( int(os.environ['NN_DEVICES_COUNT']) ):
                 devices.append ( Device(index=i,
-                                        name=os.environ[f'NN_DEVICE_{i}_NAME'],                                               
+                                        name=os.environ[f'NN_DEVICE_{i}_NAME'],
                                         total_mem=int(os.environ[f'NN_DEVICE_{i}_TOTAL_MEM']),
                                         free_mem=int(os.environ[f'NN_DEVICE_{i}_FREE_MEM']),
                                         cc=int(os.environ[f'NN_DEVICE_{i}_CC']) ))
             Devices.all_devices = Devices(devices)
-            
+
         return Devices.all_devices
-    
+
 """
-if Devices.all_devices is None:    
-            min_cc = int(os.environ.get("TF_MIN_REQ_CAP", 35)) 
+if Devices.all_devices is None:
+            min_cc = int(os.environ.get("TF_MIN_REQ_CAP", 35))
 
             libnames = ('libcuda.so', 'libcuda.dylib', 'nvcuda.dll')
             for libname in libnames:
@@ -195,7 +195,7 @@ if Devices.all_devices is None:
                             cc = cc_major.value * 10 + cc_minor.value
                             if cc >= min_cc:
                                 devices.append ( Device(index=i,
-                                                        name=name.split(b'\0', 1)[0].decode(),                                               
+                                                        name=name.split(b'\0', 1)[0].decode(),
                                                         total_mem=totalMem.value,
                                                         free_mem=freeMem.value,
                                                         cc=cc) )

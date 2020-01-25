@@ -16,7 +16,7 @@ class Subprocessor(object):
             c2s = multiprocessing.Queue()
             self.p = multiprocessing.Process(target=self._subprocess_run, args=(client_dict,s2c,c2s) )
             self.s2c = s2c
-            self.c2s = c2s            
+            self.c2s = c2s
             self.p.daemon = True
             self.p.start()
 
@@ -88,13 +88,13 @@ class Subprocessor(object):
                     print ('Exception: %s' % (traceback.format_exc()) )
 
             c2s.put ( {'op': 'error', 'data' : data} )
-        
+
         # disable pickling
         def __getstate__(self):
             return dict()
         def __setstate__(self, d):
             self.__dict__.update(d)
-            
+
     #overridable
     def __init__(self, name, SubprocessorCli_class, no_response_time_sec = 0, io_loop_sleep_time=0.005, initialize_subprocesses_in_serial=False):
         if not issubclass(SubprocessorCli_class, Subprocessor.Cli):

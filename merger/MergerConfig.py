@@ -43,7 +43,7 @@ class MergerConfig(object):
     def ask_settings(self):
         s = """Choose sharpen mode: \n"""
         for key in self.sharpen_dict.keys():
-            s += f"""({key}) {self.sharpen_dict[key]}\n"""            
+            s += f"""({key}) {self.sharpen_dict[key]}\n"""
         io.log_info(s)
         self.sharpen_mode = io.input_int ("", 0, valid_list=self.sharpen_dict.keys(), help_message="Enhance details by applying sharpen filter.")
 

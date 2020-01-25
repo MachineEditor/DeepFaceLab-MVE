@@ -20,18 +20,18 @@ def scantree(path):
             yield from scantree(entry.path)  # see below for Python 2.x
         else:
             yield entry
-            
+
 def get_image_paths(dir_path, image_extensions=image_extensions, subdirs=False):
     dir_path = Path (dir_path)
 
     result = []
     if dir_path.exists():
-        
+
         if subdirs:
             gen = scantree(str(dir_path))
         else:
             gen = scandir(str(dir_path))
-        
+
         for x in list(gen):
             if any([x.name.lower().endswith(ext) for ext in image_extensions]):
                 result.append(x.path)
@@ -51,7 +51,7 @@ def get_image_unique_filestem_paths(dir_path, verbose_print_func=None):
         result_dup.add(f_stem)
 
     return sorted(result)
-    
+
 def get_file_paths(dir_path):
     dir_path = Path (dir_path)
 
@@ -59,7 +59,7 @@ def get_file_paths(dir_path):
         return [ Path(x) for x in sorted([ x.path for x in list(scandir(str(dir_path))) if x.is_file() ]) ]
     else:
         return []
-    
+
 def get_all_dir_names (dir_path):
     dir_path = Path (dir_path)
 
@@ -67,7 +67,7 @@ def get_all_dir_names (dir_path):
         return sorted([ x.name for x in list(scandir(str(dir_path))) if x.is_dir() ])
     else:
         return []
-    
+
 def get_all_dir_names_startswith (dir_path, startswith):
     dir_path = Path (dir_path)
     startswith = startswith.lower()
@@ -98,7 +98,7 @@ def move_all_files (src_dir_path, dst_dir_path):
     for p in paths:
         p = Path(p)
         p.rename ( Path(dst_dir_path) / p.name )
-        
+
 def delete_all_files (dir_path):
     paths = get_file_paths(dir_path)
     for p in paths:

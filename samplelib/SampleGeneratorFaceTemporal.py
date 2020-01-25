@@ -14,11 +14,11 @@ from samplelib import (SampleGeneratorBase, SampleHost, SampleProcessor,
 
 
 class SampleGeneratorFaceTemporal(SampleGeneratorBase):
-    def __init__ (self, samples_path, debug, batch_size, 
-                        temporal_image_count=3, 
-                        sample_process_options=SampleProcessor.Options(), 
-                        output_sample_types=[], 
-                        generators_count=2, 
+    def __init__ (self, samples_path, debug, batch_size,
+                        temporal_image_count=3,
+                        sample_process_options=SampleProcessor.Options(),
+                        output_sample_types=[],
+                        generators_count=2,
                         **kwargs):
         super().__init__(samples_path, debug, batch_size)
 
@@ -35,11 +35,11 @@ class SampleGeneratorFaceTemporal(SampleGeneratorBase):
         samples_len = len(samples)
         if samples_len == 0:
             raise ValueError('No training data provided.')
-        
+
         mult_max = 1
         l = samples_len - ( (self.temporal_image_count)*mult_max - (mult_max-1)  )
         index_host = mplib.IndexHost(l+1)
-        
+
         pickled_samples = pickle.dumps(samples, 4)
         if self.debug:
             self.generators = [ThisThreadGenerator ( self.batch_func, (pickled_samples, index_host.create_cli(),) )]
@@ -64,9 +64,9 @@ class SampleGeneratorFaceTemporal(SampleGeneratorBase):
 
         while True:
             batches = None
-            
+
             indexes = index_host.multi_get(bs)
-            
+
             for n_batch in range(self.batch_size):
                 idx = indexes[n_batch]
 

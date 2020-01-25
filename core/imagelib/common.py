@@ -13,24 +13,24 @@ def normalize_channels(img, target_channels):
     if c == 0 and target_channels > 0:
         img = img[...,np.newaxis]
         c = 1
-        
+
     if c == 1 and target_channels > 1:
         img = np.repeat (img, target_channels, -1)
         c = target_channels
-        
+
     if c > target_channels:
         img = img[...,0:target_channels]
         c = target_channels
 
     return img
-    
+
 def cut_odd_image(img):
     h, w, c = img.shape
     wm, hm = w % 2, h % 2
-    if wm + hm != 0: 
+    if wm + hm != 0:
         img = img[0:h-hm,0:w-wm,:]
     return img
-    
+
 def overlay_alpha_image(img_target, img_source, xy_offset=(0,0) ):
     (h,w,c) = img_source.shape
     if c != 4:

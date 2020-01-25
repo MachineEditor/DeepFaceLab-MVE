@@ -6,7 +6,7 @@ def gen_warp_params (source, flip, rotation_range=[-10,10], scale_range=[-0.5, 0
     h,w,c = source.shape
     if (h != w):
         raise ValueError ('gen_warp_params accepts only square images.')
-    
+
     if rnd_seed != None:
         rnd_state = np.random.RandomState (rnd_seed)
     else:
@@ -15,9 +15,9 @@ def gen_warp_params (source, flip, rotation_range=[-10,10], scale_range=[-0.5, 0
     rotation = rnd_state.uniform( rotation_range[0], rotation_range[1] )
     scale = rnd_state.uniform(1 +scale_range[0], 1 +scale_range[1])
     tx = rnd_state.uniform( tx_range[0], tx_range[1] )
-    ty = rnd_state.uniform( ty_range[0], ty_range[1] )    
+    ty = rnd_state.uniform( ty_range[0], ty_range[1] )
     p_flip = flip and rnd_state.randint(10) < 4
-    
+
     #random warp by grid
     cell_size = [ w // (2**i) for i in range(1,4) ] [ rnd_state.randint(3) ]
     cell_count = w // cell_size + 1

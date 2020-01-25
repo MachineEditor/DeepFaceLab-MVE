@@ -1,16 +1,16 @@
 if __name__ == "__main__":
     # Fix for linux
-    import multiprocessing 
+    import multiprocessing
     multiprocessing.set_start_method("spawn")
-    
-    from core.leras import nn    
+
+    from core.leras import nn
     nn.initialize_main_env()
-    
+
     import os
     import sys
     import time
     import argparse
-    
+
     from core import pathex
     from core import osex
     from pathlib import Path
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     class fixPathAction(argparse.Action):
         def __call__(self, parser, namespace, values, option_string=None):
             setattr(namespace, self.dest, os.path.abspath(os.path.expanduser(values)))
-    
+
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers()
 
@@ -32,7 +32,7 @@ if __name__ == "__main__":
         Extractor.main( detector                = arguments.detector,
                         input_path              = Path(arguments.input_dir),
                         output_path             = Path(arguments.output_dir),
-                        output_debug            = arguments.output_debug,                        
+                        output_debug            = arguments.output_debug,
                         manual_fix              = arguments.manual_fix,
                         manual_output_debug_fix = arguments.manual_output_debug_fix,
                         manual_window_size      = arguments.manual_window_size,
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     p.add_argument('--manual-window-size', type=int, dest="manual_window_size", default=1368, help="Manual fix window size. Default: 1368.")
     p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Extract on CPU..")
     p.add_argument('--force-gpu-idxs', dest="force_gpu_idxs", default=None, help="Force to choose GPU indexes separated by comma.")
-    
+
     p.set_defaults (func=process_extract)
 
     def process_dev_extract_vggface2_dataset(arguments):
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     p = subparsers.add_parser( "dev_test", help="")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
     p.set_defaults (func=process_dev_test)
-    
+
     def process_sort(arguments):
         osex.set_process_lowest_prio()
         from mainscripts import Sorter
@@ -133,14 +133,14 @@ if __name__ == "__main__":
 
         if arguments.remove_ie_polys:
             Util.remove_ie_polys_folder (input_path=arguments.input_dir)
-    
+
         if arguments.save_faceset_metadata:
             Util.save_faceset_metadata_folder (input_path=arguments.input_dir)
-            
+
         if arguments.restore_faceset_metadata:
             Util.restore_faceset_metadata_folder (input_path=arguments.input_dir)
-            
-        if arguments.pack_faceset:            
+
+        if arguments.pack_faceset:
             io.log_info ("Performing faceset packing...\r\n")
             from samplelib import PackedFaceset
             PackedFaceset.pack( Path(arguments.input_dir) )
@@ -149,7 +149,7 @@ if __name__ == "__main__":
             io.log_info ("Performing faceset unpacking...\r\n")
             from samplelib import PackedFaceset
             PackedFaceset.unpack( Path(arguments.input_dir) )
-            
+
     p = subparsers.add_parser( "util", help="Utilities.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
     p.add_argument('--convert-png-to-jpg', action="store_true", dest="convert_png_to_jpg", default=False, help="Convert DeepFaceLAB PNG files to JPEG.")
@@ -166,7 +166,7 @@ if __name__ == "__main__":
 
     def process_train(arguments):
         osex.set_process_lowest_prio()
-                    
+
 
         kwargs = {'model_class_name'         : arguments.model_name,
                   'saved_models_path'        : Path(arguments.model_dir),
@@ -179,7 +179,7 @@ if __name__ == "__main__":
                   'force_gpu_idxs'           : arguments.force_gpu_idxs,
                   'cpu_only'                 : arguments.cpu_only,
                   'execute_programs'         : [ [int(x[0]), x[1] ] for x in arguments.execute_program ],
-                  'debug'                    : arguments.debug,    
+                  'debug'                    : arguments.debug,
                   }
         from mainscripts import Trainer
         Trainer.main(**kwargs)
@@ -188,12 +188,12 @@ if __name__ == "__main__":
     p.add_argument('--training-data-src-dir', required=True, action=fixPathAction, dest="training_data_src_dir", help="Dir of extracted SRC faceset.")
     p.add_argument('--training-data-dst-dir', required=True, action=fixPathAction, dest="training_data_dst_dir", help="Dir of extracted DST faceset.")
     p.add_argument('--pretraining-data-dir', action=fixPathAction, dest="pretraining_data_dir", default=None, help="Optional dir of extracted faceset that will be used in pretraining mode.")
-    p.add_argument('--pretrained-model-dir', action=fixPathAction, dest="pretrained_model_dir", default=None, help="Optional dir of pretrain model files. (Currently only for Quick96).")    
+    p.add_argument('--pretrained-model-dir', action=fixPathAction, dest="pretrained_model_dir", default=None, help="Optional dir of pretrain model files. (Currently only for Quick96).")
     p.add_argument('--model-dir', required=True, action=fixPathAction, dest="model_dir", help="Saved models dir.")
     p.add_argument('--model', required=True, dest="model_name", choices=pathex.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Model class name.")
     p.add_argument('--debug', action="store_true", dest="debug", default=False, help="Debug samples.")
     p.add_argument('--no-preview', action="store_true", dest="no_preview", default=False, help="Disable preview window.")
-    p.add_argument('--force-model-name', dest="force_model_name", default=None, help="Forcing to choose model name from model/ folder.")    
+    p.add_argument('--force-model-name', dest="force_model_name", default=None, help="Forcing to choose model name from model/ folder.")
     p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Train on CPU.")
     p.add_argument('--force-gpu-idxs', dest="force_gpu_idxs", default=None, help="Force to choose GPU indexes separated by comma.")
     p.add_argument('--execute-program', dest="execute_program", default=[], action='append', nargs='+')
@@ -221,7 +221,7 @@ if __name__ == "__main__":
     p.add_argument('--aligned-dir', action=fixPathAction, dest="aligned_dir", default=None, help="Aligned directory. This is where the extracted of dst faces stored.")
     p.add_argument('--model-dir', required=True, action=fixPathAction, dest="model_dir", help="Model dir.")
     p.add_argument('--model', required=True, dest="model_name", choices=pathex.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Model class name.")
-    p.add_argument('--force-model-name', dest="force_model_name", default=None, help="Forcing to choose model name from model/ folder.")    
+    p.add_argument('--force-model-name', dest="force_model_name", default=None, help="Forcing to choose model name from model/ folder.")
     p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Merge on CPU.")
     p.add_argument('--force-gpu-idxs', dest="force_gpu_idxs", default=None, help="Force to choose GPU indexes separated by comma.")
     p.set_defaults(func=process_merge)
@@ -304,18 +304,18 @@ if __name__ == "__main__":
     def process_faceset_enhancer(arguments):
         osex.set_process_lowest_prio()
         from mainscripts import FacesetEnhancer
-        FacesetEnhancer.process_folder ( Path(arguments.input_dir),     
+        FacesetEnhancer.process_folder ( Path(arguments.input_dir),
                                          cpu_only=arguments.cpu_only,
                                          force_gpu_idxs=arguments.force_gpu_idxs
                                        )
-        
+
     p = facesettool_parser.add_parser ("enhance", help="Enhance details in DFL faceset.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory of aligned faces.")
     p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Process on CPU.")
     p.add_argument('--force-gpu-idxs', dest="force_gpu_idxs", default=None, help="Force to choose GPU indexes separated by comma.")
-    
+
     p.set_defaults(func=process_faceset_enhancer)
-    
+
     """
     def process_relight_faceset(arguments):
         osex.set_process_lowest_prio()
@@ -326,7 +326,7 @@ if __name__ == "__main__":
         osex.set_process_lowest_prio()
         from mainscripts import FacesetRelighter
         FacesetRelighter.delete_relighted (arguments.input_dir)
-        
+
     p = facesettool_parser.add_parser ("relight", help="Synthesize new faces from existing ones by relighting them. With the relighted faces neural network will better reproduce face shadows.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory of aligned faces.")
     p.add_argument('--lighten', action="store_true", dest="lighten", default=None, help="Lighten the faces.")

@@ -18,7 +18,7 @@ class FANExtractor(object):
         if not model_path.exists():
             raise Exception("Unable to load FANExtractor model")
 
-        nn.initialize()
+        nn.initialize(data_format="NHWC")
         tf = nn.tf
 
         class ConvBlock(nn.ModelBase):
@@ -29,10 +29,10 @@ class FANExtractor(object):
                 self.bn1 = nn.BatchNorm2D(in_planes)
                 self.conv1 = nn.Conv2D (in_planes, out_planes/2, kernel_size=3, strides=1, padding='SAME', use_bias=False )
 
-                self.bn2 = nn.BatchNorm2D(out_planes/2)
+                self.bn2 = nn.BatchNorm2D(out_planes//2)
                 self.conv2 = nn.Conv2D (out_planes/2, out_planes/4, kernel_size=3, strides=1, padding='SAME', use_bias=False )
 
-                self.bn3 = nn.BatchNorm2D(out_planes/4)
+                self.bn3 = nn.BatchNorm2D(out_planes//4)
                 self.conv3 = nn.Conv2D (out_planes/4, out_planes/4, kernel_size=3, strides=1, padding='SAME', use_bias=False )
 
                 if self.in_planes != self.out_planes:
@@ -55,6 +55,7 @@ class FANExtractor(object):
                 x = self.bn3(x)
                 x = tf.nn.relu(x)
                 x = out3 = self.conv3(x)
+
                 x = tf.concat ([out1, out2, out3], axis=-1)
 
                 if self.in_planes != self.out_planes:
@@ -148,7 +149,9 @@ class FANExtractor(object):
                     if i < 4 - 1:
                         ll = self.bl[i](ll)
                         previous = previous + ll + self.al[i](tmp_out)
-                return outputs[-1]
+                x = outputs[-1]
+                x = tf.transpose(x, (0,3,1,2) )
+                return x
 
         e = None
         if place_model_on_cpu:
@@ -159,7 +162,7 @@ class FANExtractor(object):
         self.model.load_weights(str(model_path))
         if e is not None: e.__exit__(None,None,None)
 
-        self.model.build_for_run ([ ( tf.float32, (256,256,3) ) ])
+        self.model.build_for_run ([ ( tf.float32, (None,256,256,3) ) ])
 
     def extract (self, input_image, rects, second_pass_extractor=None, is_bgr=True, multi_sample=False):
         if len(rects) == 0:
@@ -197,7 +200,7 @@ class FANExtractor(object):
 
                 predicted = []
                 for i in range( len(images) ):
-                    predicted += [ self.model.run ( [ images[i][None,...] ]  ).transpose (0,3,1,2)[0] ]
+                    predicted += [ self.model.run ( [ images[i][None,...] ]  )[0] ]
 
                 predicted = np.stack(predicted)
 

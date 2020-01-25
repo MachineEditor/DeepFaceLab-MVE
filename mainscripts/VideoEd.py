@@ -101,7 +101,7 @@ def denoise_image_sequence( input_dir, ext=None, factor=None ):
     kwargs = {}
     if ext == 'jpg':
         kwargs.update ({'q:v':'2'})
-        
+
     job = ( ffmpeg
             .input(str ( input_path / ('%5d.'+ext) ) )
             .filter("hqdn3d", factor, factor, 5,5)
@@ -174,7 +174,7 @@ def video_from_sequence( input_dir, output_file, reference_file=None, ext=None, 
     input_image_paths = pathex.get_image_paths(input_path)
 
     i_in = ffmpeg.input('pipe:', format='image2pipe', r=fps)
-    
+
     output_args = [i_in]
 
     if ref_in_a is not None:
@@ -200,14 +200,14 @@ def video_from_sequence( input_dir, output_file, reference_file=None, ext=None, 
 
     job = ( ffmpeg.output(*output_args, **output_kwargs).overwrite_output() )
 
-    try:        
+    try:
         job_run = job.run_async(pipe_stdin=True)
-        
+
         for image_path in input_image_paths:
             with open (image_path, "rb") as f:
-                image_bytes = f.read()            
+                image_bytes = f.read()
                 job_run.stdin.write (image_bytes)
-        
+
         job_run.stdin.close()
         job_run.wait()
     except:

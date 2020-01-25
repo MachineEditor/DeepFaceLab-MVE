@@ -47,7 +47,7 @@ class ExtractSubprocessor(Subprocessor):
             self.max_faces_from_image = client_dict['max_faces_from_image']
             self.device_idx           = client_dict['device_idx']
             self.cpu_only             = client_dict['device_type'] == 'CPU'
-            self.final_output_path    = client_dict['final_output_path']            
+            self.final_output_path    = client_dict['final_output_path']
             self.output_debug_path    = client_dict['output_debug_path']
 
             #transfer and set stdin in order to work code.interact in debug subprocess
@@ -64,9 +64,9 @@ class ExtractSubprocessor(Subprocessor):
 
             if self.type == 'all' or 'rects' in self.type or 'landmarks' in self.type:
                 nn.initialize (device_config)
-                
+
             self.log_info (f"Running on {client_dict['device_name'] }")
-                
+
             if self.type == 'all' or self.type == 'rects-s3fd' or 'landmarks' in self.type:
                 self.rects_extractor = facelib.S3FDExtractor(place_model_on_cpu=place_model_on_cpu)
 
@@ -79,8 +79,8 @@ class ExtractSubprocessor(Subprocessor):
         def process_data(self, data):
             if 'landmarks' in self.type and len(data.rects) == 0:
                 return data
-                
-            filepath = data.filepath                
+
+            filepath = data.filepath
             cached_filepath, image = self.cached_image
             if cached_filepath != filepath:
                 image = cv2_imread( filepath )
@@ -93,7 +93,7 @@ class ExtractSubprocessor(Subprocessor):
 
             h, w, c = image.shape
             extract_from_dflimg = (h == w and DFLIMG.load (filepath) is not None)
-            
+
             if 'rects' in self.type or self.type == 'all':
                 data = ExtractSubprocessor.Cli.rects_stage (data=data,
                                                             image=image,
@@ -119,7 +119,7 @@ class ExtractSubprocessor(Subprocessor):
                                                            final_output_path=self.final_output_path,
                                                            )
             return data
-            
+
         @staticmethod
         def rects_stage(data,
                         image,
@@ -157,7 +157,7 @@ class ExtractSubprocessor(Subprocessor):
                             rects_extractor,
                             ):
             h, w, ch = image.shape
-            
+
             if data.rects_rotation == 0:
                 rotated_image = image
             elif data.rects_rotation == 90:
@@ -323,7 +323,7 @@ class ExtractSubprocessor(Subprocessor):
         self.manual_window_size = manual_window_size
         self.max_faces_from_image = max_faces_from_image
         self.result = []
-        
+
         self.devices = ExtractSubprocessor.get_devices_for_config(self.type, device_config)
 
         super().__init__('Extractor', ExtractSubprocessor.Cli,
@@ -731,21 +731,21 @@ def main(detector=None,
         if detector == 'manual':
             io.log_info ('Performing manual extract...')
             data = ExtractSubprocessor ([ ExtractSubprocessor.Data(Path(filename)) for filename in input_path_image_paths ], 'landmarks-manual', image_size, face_type, output_debug_path if output_debug else None, manual_window_size=manual_window_size, device_config=device_config).run()
-        
+
             io.log_info ('Performing 3rd pass...')
             data = ExtractSubprocessor (data, 'final', image_size, face_type, output_debug_path if output_debug else None, final_output_path=output_path, device_config=device_config).run()
-        
+
         else:
             io.log_info ('Extracting faces...')
-            data = ExtractSubprocessor ([ ExtractSubprocessor.Data(Path(filename)) for filename in input_path_image_paths ], 
-                                         'all', 
-                                         image_size, 
-                                         face_type, 
-                                         output_debug_path if output_debug else None, 
-                                         max_faces_from_image=max_faces_from_image, 
+            data = ExtractSubprocessor ([ ExtractSubprocessor.Data(Path(filename)) for filename in input_path_image_paths ],
+                                         'all',
+                                         image_size,
+                                         face_type,
+                                         output_debug_path if output_debug else None,
+                                         max_faces_from_image=max_faces_from_image,
                                          final_output_path=output_path,
                                          device_config=device_config).run()
-            
+
         faces_detected += sum([d.faces_detected for d in data])
 
         if manual_fix:

@@ -319,14 +319,14 @@ class MaskEditor:
 
     def get_ie_polys(self):
         return self.ie_polys
-    
+
     def set_ie_polys(self, saved_ie_polys):
         self.state = self.STATE_NONE
         self.ie_polys = saved_ie_polys
         self.redo_to_end_point()
         self.mask_finish()
-        
-        
+
+
 def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None, no_default_mask=False):
     input_path = Path(input_dir)
 
@@ -341,7 +341,7 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None, no_default
 
     if not skipped_path.exists():
         skipped_path.mkdir(parents=True)
-        
+
     if not no_default_mask:
         eyebrows_expand_mod = np.clip ( io.input_int ("Default eyebrows expand modifier?", 100, add_info="0..400"), 0, 400 ) / 100.0
     else:
@@ -368,7 +368,7 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None, no_default
     do_save_count = 0
     do_skip_move_count = 0
     do_skip_count = 0
-    
+
     def jobs_count():
         return do_prev_count + do_save_move_count + do_save_count + do_skip_move_count + do_skip_count
 

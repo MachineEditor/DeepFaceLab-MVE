@@ -11,17 +11,14 @@ def initialize_initializers(nn):
 
     class initializers():
         class ca (init_ops.Initializer):
-            def __init__(self, dtype=None):
-                pass
-
             def __call__(self, shape, dtype=None, partition_info=None):
-                return tf.zeros( shape, name="_cai_")
+                return tf.zeros( shape, dtype=dtype, name="_cai_")
 
             @staticmethod
             def generate_batch( data_list, eps_std=0.05 ):
                 # list of (shape, np.dtype)
                 return CAInitializerSubprocessor (data_list).run()
-  
+
     nn.initializers = initializers
 
 class CAInitializerSubprocessor(Subprocessor):
@@ -62,7 +59,7 @@ class CAInitializerSubprocessor(Subprocessor):
         x = x * np.sqrt( (2/fan_in) / np.var(x) )
         x = np.transpose( x, (2, 3, 1, 0) )
         return x.astype(dtype)
-                
+
     class Cli(Subprocessor.Cli):
         #override
         def process_data(self, data):

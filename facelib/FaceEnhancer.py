@@ -11,7 +11,7 @@ class FaceEnhancer(object):
     x4 face enhancer
     """
     def __init__(self, place_model_on_cpu=False):
-        nn.initialize()
+        nn.initialize(data_format="NHWC")
         tf = nn.tf
 
         class FaceEnhancer (nn.ModelBase):
@@ -167,9 +167,9 @@ class FaceEnhancer(object):
         self.model.load_weights (model_path)
         if e is not None: e.__exit__(None,None,None)
 
-        self.model.build_for_run ([ (tf.float32, (192,192,3) ),
-                                    (tf.float32, (1,) ),
-                                    (tf.float32, (1,) ),
+        self.model.build_for_run ([ (tf.float32, nn.get4Dshape (192,192,3) ),
+                                    (tf.float32, (None,1,) ),
+                                    (tf.float32, (None,1,) ),
                                 ])
 
 
@@ -185,14 +185,14 @@ class FaceEnhancer(object):
 
         ih,iw,ic = inp_img.shape
         h,w,c = ih,iw,ic
-        
+
         th,tw = h*up_res, w*up_res
-        
+
         t_padding = 0
         b_padding = 0
         l_padding = 0
         r_padding = 0
-        
+
         if h < patch_size:
             t_padding = (patch_size-h)//2
             b_padding = (patch_size-h) - t_padding
@@ -200,24 +200,24 @@ class FaceEnhancer(object):
         if w < patch_size:
             l_padding = (patch_size-w)//2
             r_padding = (patch_size-w) - l_padding
-            
+
         if t_padding != 0:
             inp_img = np.concatenate ([ np.zeros ( (t_padding,w,c), dtype=np.float32 ), inp_img ], axis=0 )
-            h,w,c = inp_img.shape            
-                                        
+            h,w,c = inp_img.shape
+
         if b_padding != 0:
             inp_img = np.concatenate ([ inp_img, np.zeros ( (b_padding,w,c), dtype=np.float32 ) ], axis=0 )
             h,w,c = inp_img.shape
-            
+
         if l_padding != 0:
             inp_img = np.concatenate ([ np.zeros ( (h,l_padding,c), dtype=np.float32 ), inp_img ], axis=1 )
-            h,w,c = inp_img.shape            
-                                        
+            h,w,c = inp_img.shape
+
         if r_padding != 0:
             inp_img = np.concatenate ([ inp_img, np.zeros ( (h,r_padding,c), dtype=np.float32 ) ], axis=1 )
             h,w,c = inp_img.shape
-            
-            
+
+
         i_max = w-patch_size+1
         j_max = h-patch_size+1
 
@@ -248,7 +248,7 @@ class FaceEnhancer(object):
 
         if t_padding+b_padding+l_padding+r_padding != 0:
             final_img = final_img [t_padding*up_res:(h-b_padding)*up_res, l_padding*up_res:(w-r_padding)*up_res,:]
-            
+
         if preserve_size:
             final_img = cv2.resize (final_img, (iw,ih), cv2.INTER_LANCZOS4)
 
@@ -271,15 +271,15 @@ class FaceEnhancer(object):
         patch_size_half = patch_size // 2
 
         h,w,c = inp_img.shape
-        
+
         th,tw = h*up_res, w*up_res
-        
+
         preupscale_rate = 1.0
-        
+
         if h < patch_size or w < patch_size:
             preupscale_rate = 1.0 / ( max(h,w) / patch_size )
-            
-        if preupscale_rate != 1.0:            
+
+        if preupscale_rate != 1.0:
             inp_img = cv2.resize (inp_img, ( int(w*preupscale_rate), int(h*preupscale_rate) ), cv2.INTER_LANCZOS4)
             h,w,c = inp_img.shape
 
@@ -314,7 +314,7 @@ class FaceEnhancer(object):
         if preserve_size:
             final_img = cv2.resize (final_img, (w,h), cv2.INTER_LANCZOS4)
         else:
-            if preupscale_rate != 1.0:        
+            if preupscale_rate != 1.0:
                 final_img = cv2.resize (final_img, (tw,th), cv2.INTER_LANCZOS4)
 
         if not is_tanh:

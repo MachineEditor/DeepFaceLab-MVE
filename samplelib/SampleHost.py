@@ -15,10 +15,6 @@ from .Sample import Sample, SampleType
 
 
 class SampleHost:
-
-
-
-
     samples_cache = dict()
     @staticmethod
     def get_person_id_max_count(samples_path):
@@ -47,7 +43,7 @@ class SampleHost:
         if            sample_type == SampleType.IMAGE:
             if  samples[sample_type] is None:
                 samples[sample_type] = [ Sample(filename=filename) for filename in io.progress_bar_generator( pathex.get_image_paths(samples_path), "Loading") ]
-        
+
         elif          sample_type == SampleType.FACE:
             if  samples[sample_type] is None:
                 try:
@@ -61,12 +57,12 @@ class SampleHost:
                 if result is None:
                     result = SampleHost.load_face_samples( pathex.get_image_paths(samples_path) )
                 samples[sample_type] = result
-                
+
         elif          sample_type == SampleType.FACE_TEMPORAL_SORTED:
                 result = SampleHost.load (SampleType.FACE, samples_path)
                 result = SampleHost.upgradeToFaceTemporalSortedSamples(result)
                 samples[sample_type] = result
-                
+
         return samples[sample_type]
 
     @staticmethod
@@ -92,17 +88,17 @@ class SampleHost:
                                         source_filename=source_filename,
                                     ))
         return sample_list
-        
+
     """
     @staticmethod
     def load_face_samples ( image_paths):
         sample_list = []
-        
+
         for filename in io.progress_bar_generator (image_paths, desc="Loading"):
-            dflimg = DFLIMG.load (Path(filename))            
+            dflimg = DFLIMG.load (Path(filename))
             if dflimg is None:
                 io.log_err (f"{filename} is not a dfl image file.")
-            else:                        
+            else:
                 sample_list.append( Sample(filename=filename,
                                            sample_type=SampleType.FACE,
                                            face_type=FaceType.fromString ( dflimg.get_face_type() ),
@@ -114,15 +110,15 @@ class SampleHost:
                                     ))
         return sample_list
     """
-    
+
     @staticmethod
     def upgradeToFaceTemporalSortedSamples( samples ):
         new_s = [ (s, s.source_filename) for s in samples]
         new_s = sorted(new_s, key=operator.itemgetter(1))
 
         return [ s[0] for s in new_s]
-        
-        
+
+
 class FaceSamplesLoaderSubprocessor(Subprocessor):
     #override
     def __init__(self, image_paths ):

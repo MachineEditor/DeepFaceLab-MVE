@@ -16,7 +16,7 @@ def _get_pil_font (font, size):
 
 def get_text_image( shape, text, color=(1,1,1), border=0.2, font=None):
     h,w,c = shape
-    try:        
+    try:
         pil_font = _get_pil_font( localization.get_default_ttf_font_name() , h-2)
 
         canvas = Image.new('RGB', (w,h) , (0,0,0) )
@@ -25,7 +25,7 @@ def get_text_image( shape, text, color=(1,1,1), border=0.2, font=None):
         draw.text(offset, text, font=pil_font, fill=tuple((np.array(color)*255).astype(np.int)) )
 
         result = np.asarray(canvas) / 255
-        
+
         if c > 3:
             result = np.concatenate ( (result, np.ones ((h,w,c-3)) ), axis=-1 )
         elif c < 3:

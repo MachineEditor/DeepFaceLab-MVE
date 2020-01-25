@@ -189,29 +189,29 @@ class InteractBase(object):
         ar = self.key_events.get(wnd_name, [])
         self.key_events[wnd_name] = []
         return ar
-        
+
     def input(self, s):
         return input(s)
 
     def input_number(self, s, default_value, valid_list=None, show_default_value=True, add_info=None, help_message=None):
         if show_default_value and default_value is not None:
             s = f"[{default_value}] {s}"
-            
+
         if add_info is not None or \
            help_message is not None:
             s += " ("
-            
+
         if add_info is not None:
             s += f" {add_info}"
         if help_message is not None:
             s += " ?:help"
-            
+
         if add_info is not None or \
            help_message is not None:
             s += " )"
-            
+
         s += " : "
-        
+
         while True:
             try:
                 inp = input(s)
@@ -232,32 +232,32 @@ class InteractBase(object):
             except:
                 result = default_value
                 break
-        
+
         print(result)
         return result
-        
+
     def input_int(self, s, default_value, valid_list=None, add_info=None, show_default_value=True, help_message=None):
         if show_default_value:
             if len(s) != 0:
                 s = f"[{default_value}] {s}"
             else:
                 s = f"[{default_value}]"
-        
+
         if add_info is not None or \
            help_message is not None:
             s += " ("
-            
+
         if add_info is not None:
             s += f" {add_info}"
         if help_message is not None:
             s += " ?:help"
-            
+
         if add_info is not None or \
            help_message is not None:
             s += " )"
-            
+
         s += " : "
-        
+
         while True:
             try:
                 inp = input(s)
@@ -280,13 +280,13 @@ class InteractBase(object):
         print (result)
         return result
 
-    def input_bool(self, s, default_value, help_message=None):        
+    def input_bool(self, s, default_value, help_message=None):
         s = f"[{yn_str[default_value]}] {s} ( y/n"
 
         if help_message is not None:
             s += " ?:help"
         s += " ) : "
-            
+
         while True:
             try:
                 inp = input(s)
@@ -305,46 +305,46 @@ class InteractBase(object):
     def input_str(self, s, default_value=None, valid_list=None, show_default_value=True, help_message=None):
         if show_default_value and default_value is not None:
             s = f"[{default_value}] {s}"
-            
+
         if valid_list is not None or \
            help_message is not None:
             s += " ("
-           
+
         if valid_list is not None:
             s += " " + "/".join(valid_list)
-           
+
         if help_message is not None:
             s += " ?:help"
-        
+
         if valid_list is not None or \
            help_message is not None:
             s += " )"
-            
+
         s += " : "
-        
-        
+
+
         while True:
             try:
                 inp = input(s)
-                
+
                 if len(inp) == 0:
                     if default_value is None:
                         print("")
                         return None
                     result = default_value
                     break
-                
+
                 if help_message is not None and inp == '?':
                     print(help_message)
                     continue
-                
+
                 if valid_list is not None:
                     if inp.lower() in valid_list:
                         result = inp.lower()
                         break
                     if inp in valid_list:
                         result = inp
-                        break                    
+                        break
                     continue
 
                 result = inp
@@ -352,10 +352,10 @@ class InteractBase(object):
             except:
                 result = default_value
                 break
-        
+
         print(result)
         return result
-        
+
     def input_process(self, stdin_fd, sq, str):
         sys.stdin = os.fdopen(stdin_fd)
         try:
@@ -389,8 +389,8 @@ class InteractBase(object):
                     sys.stdin.read()
             except:
                 pass
-            
-    def input_skip_pending(self):        
+
+    def input_skip_pending(self):
         if is_colab:
             # currently it does not work on Colab
             return
@@ -401,7 +401,7 @@ class InteractBase(object):
         p.daemon = True
         p.start()
         time.sleep(0.5)
-        p.terminate()        
+        p.terminate()
         sys.stdin = os.fdopen( sys.stdin.fileno() )
 
 
@@ -409,11 +409,11 @@ class InteractDesktop(InteractBase):
     def __init__(self):
         colorama.init()
         super().__init__()
-        
+
     def color_red(self):
         pass
-        
-        
+
+
     def is_support_windows(self):
         return True
 
@@ -469,7 +469,7 @@ class InteractDesktop(InteractBase):
             shift_pressed = False
             if ord_key != -1:
                 chr_key = chr(ord_key)
-                
+
                 if chr_key >= 'A' and chr_key <= 'Z':
                     shift_pressed = True
                     ord_key += 32
