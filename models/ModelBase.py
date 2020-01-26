@@ -95,7 +95,7 @@ class ModelBase(object):
                                         if is_rename:
                                             new_model_name = io.input_str(f"Enter new name of the model")
 
-                                        for filepath in pathex.get_file_paths(saved_models_path):
+                                        for filepath in pathex.get_paths(saved_models_path):
                                             filepath_name = filepath.name
 
                                             model_filename, remain_filename = filepath_name.split('_', 1)

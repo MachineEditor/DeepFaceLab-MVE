@@ -52,6 +52,14 @@ def get_image_unique_filestem_paths(dir_path, verbose_print_func=None):
 
     return sorted(result)
 
+def get_paths(dir_path):
+    dir_path = Path (dir_path)
+
+    if dir_path.exists():
+        return [ Path(x) for x in sorted([ x.path for x in list(scandir(str(dir_path))) ]) ]
+    else:
+        return []
+        
 def get_file_paths(dir_path):
     dir_path = Path (dir_path)
 
