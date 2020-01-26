@@ -413,18 +413,15 @@ class QModel(ModelBase):
 
     #override
     def onGetPreview(self, samples):
-        n_samples = min(4, self.get_batch_size() )
-
         ( (warped_src, target_src, target_srcm),
-          (warped_dst, target_dst, target_dstm) ) = \
-                [ [sample[0:n_samples] for sample in sample_list ]
-                                                 for sample_list in samples ]
+          (warped_dst, target_dst, target_dstm) ) = samples
 
         S, D, SS, DD, DDM, SD, SDM = [ np.clip( nn.to_data_format(x,"NHWC", self.model_data_format), 0.0, 1.0) for x in ([target_src,target_dst] + self.AE_view (target_src, target_dst) ) ]
         DDM, SDM, = [ np.repeat (x, (3,), -1) for x in [DDM, SDM] ]
 
         target_srcm, target_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format) for x in ([target_srcm, target_dstm] )]
 
+        n_samples = min(4, self.get_batch_size() )
         result = []
         st = []
         for i in range(n_samples):

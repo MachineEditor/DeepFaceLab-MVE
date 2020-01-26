@@ -35,7 +35,7 @@ def initialize_tensor_ops(nn):
         gv = [*zip(grads,vars)]
         for g,v in gv:
             if g is None:
-                raise Exception("No gradient for variable {v.name}")
+                raise Exception(f"No gradient for variable {v.name}")
         return gv
     nn.tf_gradients = tf_gradients
 
