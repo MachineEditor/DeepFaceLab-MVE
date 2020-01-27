@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from pathlib import Path
+from core.interact import interact as io
 import traceback
 
 #allows to open non-english characters path
