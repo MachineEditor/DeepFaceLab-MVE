@@ -90,7 +90,7 @@ class SAEHDModel(ModelBase):
             if len(device_config.devices) == 1:
                 self.options['models_opt_on_gpu'] = io.input_bool ("Place models and optimizer on GPU", default_models_opt_on_gpu, help_message="When you train on one GPU, by default model and optimizer weights are placed on GPU to accelerate the process. You can place they on CPU to free up extra VRAM, thus set bigger dimensions.")
 
-            self.options['use_float16'] = io.input_bool ("Use float16", default_use_float16, help_message="Experimental option. Reduces the model size by half. Increases the speed of training. Decreases the accuracy of the model. The model may collapse. Model does not study the mask in large resolutions.")
+            self.options['use_float16'] = io.input_bool ("Use float16", default_use_float16, help_message="Experimental option. Reduces the model size by half. Increases the speed of training. Decreases the accuracy of the model. The model may collapse. Model does not study the mask in large resolutions. Uses tensor cores if available on GPU and model contains divisble by 8 dimensions, such as enc/dec dims, batch size.")
             self.options['lr_dropout']  = io.input_bool ("Use learning rate dropout", default_lr_dropout, help_message="When the face is trained enough, you can enable this option to get extra sharpness for less amount of iterations.")
             self.options['random_warp'] = io.input_bool ("Enable random warp of samples", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness for less amount of iterations.")
 
