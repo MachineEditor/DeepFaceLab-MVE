@@ -39,6 +39,7 @@ class MergeSubprocessor(Subprocessor):
             self.frame_info = frame_info
             self.next_temporal_frame_infos = next_temporal_frame_infos
             self.output_filepath = None
+            self.output_mask_filepath = None
 
             self.idx = None
             self.cfg = None
@@ -54,6 +55,7 @@ class MergeSubprocessor(Subprocessor):
                            frame_info=None,
                            next_temporal_frame_infos=None,
                            output_filepath=None,
+                           output_mask_filepath=None,
                            need_return_image = False):
             self.idx = idx
             self.cfg = cfg
@@ -61,6 +63,7 @@ class MergeSubprocessor(Subprocessor):
             self.frame_info = frame_info
             self.next_temporal_frame_infos = next_temporal_frame_infos
             self.output_filepath = output_filepath
+            self.output_mask_filepath = output_mask_filepath
 
             self.need_return_image = need_return_image
             if self.need_return_image:
@@ -123,35 +126,22 @@ class MergeSubprocessor(Subprocessor):
             cfg.superres_func = self.superres_func
 
             frame_info = pf.frame_info
-
             filepath = frame_info.filepath
-            landmarks_list = frame_info.landmarks_list
 
-            output_filepath = pf.output_filepath
-            need_return_image = pf.need_return_image
+            if len(frame_info.landmarks_list) == 0:
+                self.log_info (f'no faces found for {filepath.name}, copying without faces')
 
-            if len(landmarks_list) == 0:
-                self.log_info ( 'no faces found for %s, copying without faces' % (filepath.name) )
+                img_bgr = cv2_imread(filepath)
+                imagelib.normalize_channels(img_bgr, 3)
+                cv2_imwrite (pf.output_filepath, img_bgr)
+                h,w,c = img_bgr.shape
 
-                if cfg.export_mask_alpha:
-                    img_bgr = cv2_imread(filepath)
-                    h,w,c = img_bgr.shape
-                    if c == 1:
-                        img_bgr = np.repeat(img_bgr, 3, -1)
-                    if c == 3:
-                        img_bgr = np.concatenate ([img_bgr,  np.zeros((h,w,1), dtype=img_bgr.dtype) ], axis=-1)
+                img_mask = np.zeros( (h,w,1), dtype=img_bgr.dtype)
+                cv2_imwrite (pf.output_mask_filepath, img_mask)
 
-                    cv2_imwrite (output_filepath, img_bgr)
-                else:
-                    if filepath.suffix == '.png':
-                        shutil.copy ( str(filepath), str(output_filepath) )
-                    else:
-                        img_bgr = cv2_imread(filepath)
-                        cv2_imwrite (output_filepath, img_bgr)
+                if pf.need_return_image:
+                    pf.image = np.concatenate ([img_bgr, img_mask], axis=-1)
 
-                if need_return_image:
-                    img_bgr = cv2_imread(filepath)
-                    pf.image = img_bgr
             else:
                 if cfg.type == MergerConfig.TYPE_MASKED:
                     cfg.fanseg_input_size = self.fanseg_input_size
@@ -172,10 +162,10 @@ class MergeSubprocessor(Subprocessor):
                                                         pf.frame_info,
                                                         pf.next_temporal_frame_infos )
 
-                if output_filepath is not None and final_img is not None:
-                    cv2_imwrite (output_filepath, final_img )
+                cv2_imwrite (pf.output_filepath,      final_img[...,0:3] )
+                cv2_imwrite (pf.output_mask_filepath, final_img[...,3:4] )
 
-                if need_return_image:
+                if pf.need_return_image:
                     pf.image = final_img
 
             return pf
@@ -186,7 +176,7 @@ class MergeSubprocessor(Subprocessor):
             return pf.frame_info.filepath
 
     #override
-    def __init__(self, is_interactive, merger_session_filepath, predictor_func, predictor_input_shape, merger_config, frames, frames_root_path, output_path, model_iter):
+    def __init__(self, is_interactive, merger_session_filepath, predictor_func, predictor_input_shape, merger_config, frames, frames_root_path, output_path, output_mask_path, model_iter):
         if len (frames) == 0:
             raise ValueError ("len (frames) == 0")
 
@@ -226,6 +216,7 @@ class MergeSubprocessor(Subprocessor):
 
         self.frames_root_path = frames_root_path
         self.output_path = output_path
+        self.output_mask_path = output_mask_path
         self.model_iter = model_iter
 
         self.prefetch_frame_count = self.process_count = min(6,multiprocessing.cpu_count())
@@ -305,12 +296,17 @@ class MergeSubprocessor(Subprocessor):
             for filename in pathex.get_image_paths(self.output_path): #remove all images in output_path
                 Path(filename).unlink()
 
+            for filename in pathex.get_image_paths(self.output_mask_path): #remove all images in output_mask_path
+                Path(filename).unlink()
+
+
             frames[0].cfg = self.merger_config.copy()
 
         for i in range( len(self.frames) ):
             frame = self.frames[i]
             frame.idx = i
-            frame.output_filepath = self.output_path / ( frame.frame_info.filepath.stem + '.png' )
+            frame.output_filepath      = self.output_path      / ( frame.frame_info.filepath.stem + '.png' )
+            frame.output_mask_filepath = self.output_mask_path / ( frame.frame_info.filepath.stem + '.png' )
 
     #override
     def process_info_generator(self):
@@ -353,9 +349,6 @@ class MergeSubprocessor(Subprocessor):
                     '3' : lambda cfg,shift_pressed: cfg.set_mode(3),
                     '4' : lambda cfg,shift_pressed: cfg.set_mode(4),
                     '5' : lambda cfg,shift_pressed: cfg.set_mode(5),
-                    '6' : lambda cfg,shift_pressed: cfg.set_mode(6),
-                    '7' : lambda cfg,shift_pressed: cfg.set_mode(7),
-                    '8' : lambda cfg,shift_pressed: cfg.set_mode(8),
                     'q' : lambda cfg,shift_pressed: cfg.add_hist_match_threshold(1 if not shift_pressed else 5),
                     'a' : lambda cfg,shift_pressed: cfg.add_hist_match_threshold(-1 if not shift_pressed else -5),
                     'w' : lambda cfg,shift_pressed: cfg.add_erode_mask_modifier(1 if not shift_pressed else 5),
@@ -379,7 +372,6 @@ class MergeSubprocessor(Subprocessor):
                     'x' : lambda cfg,shift_pressed: cfg.toggle_mask_mode(),
                     'c' : lambda cfg,shift_pressed: cfg.toggle_color_transfer_mode(),
                     'v' : lambda cfg,shift_pressed: cfg.toggle_super_resolution_mode(),
-                    'b' : lambda cfg,shift_pressed: cfg.toggle_export_mask_alpha(),
                     'n' : lambda cfg,shift_pressed: cfg.toggle_sharpen_mode(),
                     }
             self.masked_keys = list(self.masked_keys_funcs.keys())
@@ -393,6 +385,7 @@ class MergeSubprocessor(Subprocessor):
 
             for frame in self.frames:
                 frame.output_filepath = None
+                frame.output_mask_filepath = None
                 frame.image = None
 
             session_data = {
@@ -435,12 +428,19 @@ class MergeSubprocessor(Subprocessor):
                             io.log_info (cur_frame.cfg.to_string( cur_frame.frame_info.filepath.name) )
 
                             if cur_frame.image is None:
-                                cur_frame.image = cv2_imread ( cur_frame.output_filepath)
-                                if cur_frame.image is None:
+                                image      = cv2_imread (cur_frame.output_filepath)
+                                image_mask = cv2_imread (cur_frame.output_mask_filepath)
+                                if image is None or image_mask is None:
                                     # unable to read? recompute then
                                     cur_frame.is_done = False
                                     cur_frame.is_shown = False
-                            self.main_screen.set_image(cur_frame.image)
+                                else:
+                                    image_mask = imagelib.normalize_channels(image_mask, 1)
+                                    cur_frame.image = np.concatenate([image, image_mask], -1)
+
+                            if cur_frame.is_done:
+                                self.main_screen.set_image(cur_frame.image)
+
                         else:
                             self.main_screen.set_waiting_icon(True)
 
@@ -510,6 +510,8 @@ class MergeSubprocessor(Subprocessor):
                             self.screen_manager.get_current().diff_scale(-0.1)
                         elif chr_key == '=':
                             self.screen_manager.get_current().diff_scale(0.1)
+                        elif chr_key == 'b':
+                            self.screen_manager.get_current().toggle_show_checker_board()
 
         if go_prev_frame:
             if cur_frame is None or cur_frame.is_done:
@@ -607,6 +609,7 @@ class MergeSubprocessor(Subprocessor):
                                                            frame_info=frame.frame_info,
                                                            next_temporal_frame_infos=frame.next_temporal_frame_infos,
                                                            output_filepath=frame.output_filepath,
+                                                           output_mask_filepath=frame.output_mask_filepath,
                                                            need_return_image=True )
 
         return None
@@ -621,6 +624,7 @@ def main (model_class_name=None,
           force_model_name=None,
           input_path=None,
           output_path=None,
+          output_mask_path=None,
           aligned_path=None,
           force_gpu_idxs=None,
           cpu_only=None):
@@ -633,6 +637,9 @@ def main (model_class_name=None,
 
         if not output_path.exists():
             output_path.mkdir(parents=True, exist_ok=True)
+
+        if not output_mask_path.exists():
+            output_mask_path.mkdir(parents=True, exist_ok=True)
 
         if not saved_models_path.exists():
             io.log_err('Model directory not found. Please ensure it exists.')
@@ -783,6 +790,7 @@ def main (model_class_name=None,
                         frames                 = frames,
                         frames_root_path       = input_path,
                         output_path            = output_path,
+                        output_mask_path       = output_mask_path,
                         model_iter             = model.get_iter()
                     ).run()
 

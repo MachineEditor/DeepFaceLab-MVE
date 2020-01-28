@@ -30,6 +30,7 @@ class Screen(object):
         self.scale = 1
         self.force_update = True
         self.is_first_appear = True
+        self.show_checker_board = False
 
         self.last_screen_shape = (480,640,3)
         self.checkerboard_image = None
@@ -38,6 +39,10 @@ class Screen(object):
 
     def set_waiting_icon(self, b):
         self.waiting_icon = b
+
+    def toggle_show_checker_board(self):
+        self.show_checker_board = not self.show_checker_board
+        self.force_update = True
 
     def set_image(self, img):
         if not img is self.image:
@@ -85,11 +90,14 @@ class Screen(object):
                 screen = cv2.resize ( screen, ( int(w*self.scale), int(h*self.scale) ) )
 
             if c == 4:
-                if self.checkerboard_image is None or self.checkerboard_image.shape[0:2] != screen.shape[0:2]:
-                    self.checkerboard_image = ScreenAssets.build_checkerboard_a(screen.shape)
+                if not self.show_checker_board:
+                    screen = screen[...,0:3]
+                else:
+                    if self.checkerboard_image is None or self.checkerboard_image.shape[0:2] != screen.shape[0:2]:
+                        self.checkerboard_image = ScreenAssets.build_checkerboard_a(screen.shape)
 
-                screen = screen[...,0:3]*0.75 + 64*self.checkerboard_image*(1- (screen[...,3:4].astype(np.float32)/255.0) )
-                screen = screen.astype(np.uint8)
+                    screen = screen[...,0:3]*0.75 + 64*self.checkerboard_image*(1- (screen[...,3:4].astype(np.float32)/255.0) )
+                    screen = screen.astype(np.uint8)
 
             io.show_image(self.scrn_manager.wnd_name, screen)
 

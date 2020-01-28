@@ -14,7 +14,7 @@ class QModel(ModelBase):
     #override
     def on_initialize(self):
         device_config = nn.getCurrentDeviceConfig()
-        self.model_data_format = "NCHW" if len(device_config.devices) != 0 else "NHWC"
+        self.model_data_format = "NCHW" if len(device_config.devices) != 0 and not self.is_debug()  else "NHWC"
         nn.initialize(data_format=self.model_data_format)
         tf = nn.tf
 
@@ -167,9 +167,9 @@ class QModel(ModelBase):
         models_opt_device = '/GPU:0' if models_opt_on_gpu and self.is_training else '/CPU:0'
         optimizer_vars_on_cpu = models_opt_device=='/CPU:0'
 
-        input_nc = 3
-        output_nc = 3
-        bgr_shape = nn.get4Dshape(resolution,resolution,input_nc)
+        input_ch = 3
+        output_ch = 3
+        bgr_shape = nn.get4Dshape(resolution,resolution,input_ch)
         mask_shape = nn.get4Dshape(resolution,resolution,1)
         lowest_dense_res = resolution // 16
 
@@ -189,7 +189,7 @@ class QModel(ModelBase):
 
         # Initializing model classes
         with tf.device (models_opt_device):
-            self.encoder = Encoder(in_ch=input_nc, e_ch=e_dims, name='encoder')
+            self.encoder = Encoder(in_ch=input_ch, e_ch=e_dims, name='encoder')
             encoder_out_ch = self.encoder.compute_output_channels ( (nn.tf_floatx, bgr_shape))
 
             self.inter = Inter (in_ch=encoder_out_ch, lowest_dense_res=lowest_dense_res, ae_ch=ae_dims, ae_out_ch=ae_dims, d_ch=d_dims, name='inter')
@@ -228,7 +228,7 @@ class QModel(ModelBase):
             gpu_src_losses = []
             gpu_dst_losses = []
             gpu_src_dst_loss_gvs = []
-
+            
             for gpu_id in range(gpu_count):
                 with tf.device( f'/GPU:{gpu_id}' if len(devices) != 0 else f'/CPU:0' ):
                     batch_slice = slice( gpu_id*bs_per_gpu, (gpu_id+1)*bs_per_gpu )
@@ -262,7 +262,7 @@ class QModel(ModelBase):
                     gpu_target_dst_masked      = gpu_target_dst*gpu_target_dstm_blur
                     gpu_target_dst_anti_masked = gpu_target_dst*(1.0 - gpu_target_dstm_blur)
 
-                    gpu_target_srcmasked_opt  = gpu_target_src*gpu_target_srcm_blur if masked_training else gpu_target_src
+                    gpu_target_src_masked_opt  = gpu_target_src*gpu_target_srcm_blur if masked_training else gpu_target_src
                     gpu_target_dst_masked_opt = gpu_target_dst_masked if masked_training else gpu_target_dst
 
                     gpu_pred_src_src_masked_opt = gpu_pred_src_src*gpu_target_srcm_blur if masked_training else gpu_pred_src_src
@@ -271,8 +271,8 @@ class QModel(ModelBase):
                     gpu_psd_target_dst_masked = gpu_pred_src_dst*gpu_target_dstm_blur
                     gpu_psd_target_dst_anti_masked = gpu_pred_src_dst*(1.0 - gpu_target_dstm_blur)
 
-                    gpu_src_loss =  tf.reduce_mean ( 10*nn.tf_dssim(gpu_target_srcmasked_opt, gpu_pred_src_src_masked_opt, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
-                    gpu_src_loss += tf.reduce_mean ( 10*tf.square ( gpu_target_srcmasked_opt - gpu_pred_src_src_masked_opt ), axis=[1,2,3])
+                    gpu_src_loss =  tf.reduce_mean ( 10*nn.tf_dssim(gpu_target_src_masked_opt, gpu_pred_src_src_masked_opt, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                    gpu_src_loss += tf.reduce_mean ( 10*tf.square ( gpu_target_src_masked_opt - gpu_pred_src_src_masked_opt ), axis=[1,2,3])
                     gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
 
                     gpu_dst_loss  = tf.reduce_mean ( 10*nn.tf_dssim(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0, filter_size=int(resolution/11.6) ), axis=[1])
@@ -282,8 +282,8 @@ class QModel(ModelBase):
                     gpu_src_losses += [gpu_src_loss]
                     gpu_dst_losses += [gpu_dst_loss]
 
-                    gpu_src_dst_loss = gpu_src_loss + gpu_dst_loss
-                    gpu_src_dst_loss_gvs += [ nn.tf_gradients ( gpu_src_dst_loss, self.src_dst_trainable_weights ) ]
+                    gpu_G_loss = gpu_src_loss + gpu_dst_loss
+                    gpu_src_dst_loss_gvs += [ nn.tf_gradients ( gpu_G_loss, self.src_dst_trainable_weights ) ]
 
 
             # Average losses and gradients, and create optimizer update ops
@@ -362,10 +362,9 @@ class QModel(ModelBase):
             training_data_src_path = self.training_data_src_path if not self.pretrain else self.get_pretraining_data_path()
             training_data_dst_path = self.training_data_dst_path if not self.pretrain else self.get_pretraining_data_path()
 
-            cpu_count = multiprocessing.cpu_count()
-
+            cpu_count = min(multiprocessing.cpu_count(), 8)
             src_generators_count = cpu_count // 2
-            dst_generators_count = cpu_count - src_generators_count
+            dst_generators_count = cpu_count // 2
 
             self.set_training_data_generators ([
                     SampleGeneratorFace(training_data_src_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
@@ -396,18 +395,19 @@ class QModel(ModelBase):
 
     #override
     def onTrainOneIter(self):
+
         if self.get_iter() % 3 == 0 and self.last_samples is not None:
             ( (warped_src, target_src, target_srcm), \
               (warped_dst, target_dst, target_dstm) ) = self.last_samples
-            src_loss, dst_loss = self.src_dst_train (target_src, target_src, target_srcm,
-                                                     target_dst, target_dst, target_dstm)
+            warped_src = target_src
+            warped_dst = target_dst
         else:
             samples = self.last_samples = self.generate_next_samples()
             ( (warped_src, target_src, target_srcm), \
               (warped_dst, target_dst, target_dstm) ) = samples
 
-            src_loss, dst_loss = self.src_dst_train (warped_src, target_src, target_srcm,
-                                                     warped_dst, target_dst, target_dstm)
+        src_loss, dst_loss = self.src_dst_train (warped_src, target_src, target_srcm,
+                                                 warped_dst, target_dst, target_dstm)
 
         return ( ('src_loss', src_loss), ('dst_loss', dst_loss), )
 
@@ -440,8 +440,7 @@ class QModel(ModelBase):
         return result
 
     def predictor_func (self, face=None):
-        face = face[None,...]
-        face = nn.to_data_format(face, self.model_data_format, "NHWC")
+        face = nn.to_data_format(face[None,...], self.model_data_format, "NHWC")
 
         bgr, mask_dst_dstm, mask_src_dstm = [ nn.to_data_format(x, "NHWC", self.model_data_format).astype(np.float32) for x in self.AE_merge (face) ]
         mask = mask_dst_dstm[0] * mask_src_dstm[0]

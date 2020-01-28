@@ -8,7 +8,7 @@ import numpy as np
 from core import mplib
 from core.joblib import SubprocessGenerator, ThisThreadGenerator
 from facelib import LandmarksProcessor
-from samplelib import (SampleGeneratorBase, SampleHost, SampleProcessor,
+from samplelib import (SampleGeneratorBase, SampleLoader, SampleProcessor,
                        SampleType)
 
 
@@ -33,7 +33,7 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
 
         raise NotImplementedError("Currently SampleGeneratorFacePerson is not implemented.")
 
-        samples_host = SampleHost.mp_host (SampleType.FACE, self.samples_path)
+        samples_host = SampleLoader.mp_host (SampleType.FACE, self.samples_path)
         samples = samples_host.get_list()
         self.samples_len = len(samples)
 
@@ -98,7 +98,7 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
 
     @staticmethod
     def get_person_id_max_count(samples_path):
-        return SampleHost.get_person_id_max_count(samples_path)
+        return SampleLoader.get_person_id_max_count(samples_path)
 
 """
 if self.person_id_mode==1:

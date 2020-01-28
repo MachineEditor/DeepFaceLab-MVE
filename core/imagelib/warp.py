@@ -47,11 +47,13 @@ def gen_warp_params (source, flip, rotation_range=[-10,10], scale_range=[-0.5, 0
 
     return params
 
-def warp_by_params (params, img, warp, transform, flip, is_border_replicate):
-    if warp:
+def warp_by_params (params, img, can_warp, can_transform, can_flip, border_replicate):
+    if can_warp:
         img = cv2.remap(img, params['mapx'], params['mapy'], cv2.INTER_CUBIC )
-    if transform:
-        img = cv2.warpAffine( img, params['rmat'], (params['w'], params['w']), borderMode=(cv2.BORDER_REPLICATE if is_border_replicate else cv2.BORDER_CONSTANT), flags=cv2.INTER_CUBIC )
-    if flip and params['flip']:
+    if can_transform:
+        img = cv2.warpAffine( img, params['rmat'], (params['w'], params['w']), borderMode=(cv2.BORDER_REPLICATE if border_replicate else cv2.BORDER_CONSTANT), flags=cv2.INTER_CUBIC )
+    if len(img.shape) == 2:
+        img = img[...,None]
+    if can_flip and params['flip']:
         img = img[:,::-1,...]
     return img

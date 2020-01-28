@@ -3,7 +3,7 @@ import shutil
 import struct
 from pathlib import Path
 
-import samplelib.SampleHost
+import samplelib.SampleLoader
 from core.interact import interact as io
 from samplelib import Sample
 from core import pathex
@@ -34,7 +34,7 @@ class PackedFaceset():
         else:
             image_paths = pathex.get_image_paths(samples_path)
 
-        samples = samplelib.SampleHost.load_face_samples(image_paths)
+        samples = samplelib.SampleLoader.load_face_samples(image_paths)
         samples_len = len(samples)
 
         samples_configs = []

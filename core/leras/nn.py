@@ -46,6 +46,7 @@ class nn():
     # Tensor ops
     tf_get_value = None
     tf_batch_set_value = None
+    tf_init_weights = None
     tf_gradients = None
     tf_average_gv_list = None
     tf_average_tensor_list = None
@@ -78,6 +79,9 @@ class nn():
     # Optimizers
     TFBaseOptimizer = None
     TFRMSpropOptimizer = None
+    
+    # Models
+    PatchDiscriminator = None
 
     @staticmethod
     def initialize(device_config=None, floatx="float32", data_format="NHWC"):
@@ -138,11 +142,13 @@ class nn():
             from .layers import initialize_layers
             from .initializers import initialize_initializers
             from .optimizers import initialize_optimizers
+            from .models import initialize_models
 
             initialize_tensor_ops(nn)
             initialize_layers(nn)
             initialize_initializers(nn)
             initialize_optimizers(nn)
+            initialize_models(nn)
 
         if nn.tf_sess is None:
             nn.tf_sess = tf.Session(config=nn.tf_sess_config)

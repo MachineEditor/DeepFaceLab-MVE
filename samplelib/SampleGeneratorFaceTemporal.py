@@ -9,7 +9,7 @@ import numpy as np
 from core import mplib
 from core.joblib import SubprocessGenerator, ThisThreadGenerator
 from facelib import LandmarksProcessor
-from samplelib import (SampleGeneratorBase, SampleHost, SampleProcessor,
+from samplelib import (SampleGeneratorBase, SampleLoader, SampleProcessor,
                        SampleType)
 
 
@@ -31,7 +31,7 @@ class SampleGeneratorFaceTemporal(SampleGeneratorBase):
         else:
             self.generators_count = generators_count
 
-        samples = SampleHost.load (SampleType.FACE_TEMPORAL_SORTED, self.samples_path)
+        samples = SampleLoader.load (SampleType.FACE_TEMPORAL_SORTED, self.samples_path)
         samples_len = len(samples)
         if samples_len == 0:
             raise ValueError('No training data provided.')

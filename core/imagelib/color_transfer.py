@@ -299,7 +299,7 @@ def linear_color_transfer(target_img, source_img, mode='pca', eps=1e-5):
     matched_img += mu_s
     matched_img[matched_img>1] = 1
     matched_img[matched_img<0] = 0
-    return matched_img.astype(source_img.dtype)
+    return np.clip(matched_img.astype(source_img.dtype), 0, 1)
 
 def lab_image_stats(image):
     # compute the mean and standard deviation of each channel
@@ -391,3 +391,24 @@ def color_transfer_mix(img_src,img_trg):
 
 
     return (img_rct / 255.0).astype(np.float32)
+
+def color_transfer(ct_mode, img_src, img_trg):
+    """
+    color transfer for [0,1] float inputs
+    """
+    if ct_mode == 'lct':
+        out = linear_color_transfer (img_src, img_trg)
+    elif ct_mode == 'rct':
+        out = reinhard_color_transfer ( np.clip( img_src*255, 0, 255 ).astype(np.uint8),
+                                        np.clip( img_trg*255, 0, 255 ).astype(np.uint8) )
+        out = np.clip( out.astype(np.float32) / 255.0, 0.0, 1.0)
+    elif ct_mode == 'mkl':
+        out = color_transfer_mkl (img_src, img_trg)
+    elif ct_mode == 'idt':
+        out = color_transfer_idt (img_src, img_trg)
+    elif ct_mode == 'sot':
+        out = color_transfer_sot (img_src, img_trg)
+        out = np.clip( out, 0.0, 1.0)
+    else:
+        raise ValueError(f"unknown ct_mode {ct_mode}")
+    return out

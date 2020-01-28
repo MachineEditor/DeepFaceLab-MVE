@@ -4,8 +4,10 @@ from pathlib import Path
 from core.interact import interact as io
 import traceback
 
-#allows to open non-english characters path
 def cv2_imread(filename, flags=cv2.IMREAD_UNCHANGED, loader_func=None):
+    """
+    allows to open non-english characters path
+    """
     try:
         if loader_func is not None:
             bytes = bytearray(loader_func(filename))

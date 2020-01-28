@@ -68,7 +68,7 @@ def cut_video ( input_file, from_time=None, to_time=None, audio_track_id=None, b
     if bitrate is None:
         bitrate = max (1, io.input_int ("Bitrate of output file in MB/s", 25) )
 
-    kwargs = {"c:v": "libx265",
+    kwargs = {"c:v": "libx264",
               "b:v": "%dM" %(bitrate),
               "pix_fmt": "yuv420p",
              }
@@ -113,7 +113,7 @@ def denoise_image_sequence( input_dir, ext=None, factor=None ):
     except:
         io.log_err ("ffmpeg fail, job commandline:" + str(job.compile()) )
 
-def video_from_sequence( input_dir, output_file, reference_file=None, ext=None, fps=None, bitrate=None, lossless=None ):
+def video_from_sequence( input_dir, output_file, reference_file=None, ext=None, fps=None, bitrate=None, include_audio=False, lossless=None ):
     input_path = Path(input_dir)
     output_file_path = Path(output_file)
     reference_file_path = Path(reference_file) if reference_file is not None else None
@@ -177,7 +177,7 @@ def video_from_sequence( input_dir, output_file, reference_file=None, ext=None, 
 
     output_args = [i_in]
 
-    if ref_in_a is not None:
+    if include_audio and ref_in_a is not None:
         output_args += [ref_in_a]
 
     output_args += [str (output_file_path)]
@@ -185,18 +185,21 @@ def video_from_sequence( input_dir, output_file, reference_file=None, ext=None, 
     output_kwargs = {}
 
     if lossless:
-        output_kwargs.update ({"c:v": "png"
+        output_kwargs.update ({"c:v": "libx264",
+                               "crf": "0",
+                               "pix_fmt": "yuv420p",
                               })
     else:
-        output_kwargs.update ({"c:v": "libx265",
+        output_kwargs.update ({"c:v": "libx264",
                                "b:v": "%dM" %(bitrate),
                                "pix_fmt": "yuv420p",
                               })
-
-    output_kwargs.update ({"c:a": "aac",
-                           "b:a": "192k",
-                           "ar" : "48000"
-                          })
+                              
+    if include_audio and ref_in_a is not None:
+        output_kwargs.update ({"c:a": "aac",
+                               "b:a": "192k",
+                               "ar" : "48000"
+                               })
 
     job = ( ffmpeg.output(*output_args, **output_kwargs).overwrite_output() )
 

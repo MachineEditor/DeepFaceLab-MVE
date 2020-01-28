@@ -297,7 +297,18 @@ class ExtractSubprocessor(Subprocessor):
             if not cpu_only:
                 if type == 'landmarks-manual':
                     devices = [devices.get_best_device()]
-                result = [ (device.index, 'GPU', device.name, device.total_mem_gb) for device in devices ]
+                
+                result = []
+                
+                for device in devices:
+                    count = 1
+                    
+                    if count == 1:
+                        result += [ (device.index, 'GPU', device.name, device.total_mem_gb) ]
+                    else:
+                        for i in range(count):                            
+                            result += [ (device.index, 'GPU', f"{device.name} #{i}", device.total_mem_gb) ]
+
                 return result
             else:
                 if type == 'landmarks-manual':

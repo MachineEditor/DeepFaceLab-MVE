@@ -29,7 +29,28 @@ def initialize_tensor_ops(nn):
                 nn.tf_sess.run(assign_ops, feed_dict=feed_dict)
     nn.tf_batch_set_value = tf_batch_set_value
 
+    def tf_init_weights(weights):
+        ops = []
 
+        ca_tuples_w = []
+        ca_tuples = []
+        for w in weights:
+            initializer = w.initializer
+            for input in initializer.inputs:
+                if "_cai_" in input.name:
+                    ca_tuples_w.append (w)
+                    ca_tuples.append ( (w.shape.as_list(), w.dtype.as_numpy_dtype) )
+                    break
+            else:
+                ops.append (initializer)
+
+        if len(ops) != 0:
+            nn.tf_sess.run (ops)
+
+        if len(ca_tuples) != 0:
+            nn.tf_batch_set_value( [*zip(ca_tuples_w, nn.initializers.ca.generate_batch (ca_tuples))] )
+    nn.tf_init_weights = tf_init_weights
+    
     def tf_gradients ( loss, vars ):
         grads = gradients.gradients(loss, vars, colocate_gradients_with_ops=True )
         gv = [*zip(grads,vars)]

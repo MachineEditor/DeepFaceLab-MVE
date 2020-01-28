@@ -9,7 +9,7 @@ import numpy as np
 from core import mplib
 from core.joblib import SubprocessGenerator, ThisThreadGenerator
 from facelib import LandmarksProcessor
-from samplelib import (SampleGeneratorBase, SampleHost, SampleProcessor,
+from samplelib import (SampleGeneratorBase, SampleLoader, SampleProcessor,
                        SampleType)
 
 
@@ -39,7 +39,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
         else:
             self.generators_count = max(1, generators_count)
 
-        samples = SampleHost.load (SampleType.FACE, self.samples_path)
+        samples = SampleLoader.load (SampleType.FACE, self.samples_path)
         self.samples_len = len(samples)
 
         if self.samples_len == 0:
@@ -48,7 +48,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
         index_host = mplib.IndexHost(self.samples_len)
 
         if random_ct_samples_path is not None:
-            ct_samples = SampleHost.load (SampleType.FACE, random_ct_samples_path)
+            ct_samples = SampleLoader.load (SampleType.FACE, random_ct_samples_path)
             ct_index_host = mplib.IndexHost( len(ct_samples) )
         else:
             ct_samples = None

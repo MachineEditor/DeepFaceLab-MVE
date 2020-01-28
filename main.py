@@ -201,23 +201,23 @@ if __name__ == "__main__":
 
     def process_merge(arguments):
         osex.set_process_lowest_prio()
-        kwargs = {'model_class_name'       : arguments.model_name,
-                  'saved_models_path'      : Path(arguments.model_dir),
-                  'training_data_src_path' : Path(arguments.training_data_src_dir) if arguments.training_data_src_dir is not None else None,
-                  'force_model_name'       : arguments.force_model_name,
-                  'input_path'   : Path(arguments.input_dir),
-                  'output_path'  : Path(arguments.output_dir),
-                  'aligned_path'  : Path(arguments.aligned_dir) if arguments.aligned_dir is not None else None,
-                  'cpu_only'       : arguments.cpu_only,
-                  'force_gpu_idxs' : arguments.force_gpu_idxs,
-                }
         from mainscripts import Merger
-        Merger.main (**kwargs)
+        Merger.main ( model_class_name       = arguments.model_name,
+                      saved_models_path      = Path(arguments.model_dir),
+                      training_data_src_path = Path(arguments.training_data_src_dir) if arguments.training_data_src_dir is not None else None,
+                      force_model_name       = arguments.force_model_name,
+                      input_path             = Path(arguments.input_dir),
+                      output_path            = Path(arguments.output_dir),
+                      output_mask_path       = Path(arguments.output_mask_dir),
+                      aligned_path           = Path(arguments.aligned_dir) if arguments.aligned_dir is not None else None,
+                      force_gpu_idxs         = arguments.force_gpu_idxs,
+                      cpu_only               = arguments.cpu_only)
 
     p = subparsers.add_parser( "merge", help="Merger")
     p.add_argument('--training-data-src-dir', action=fixPathAction, dest="training_data_src_dir", default=None, help="(optional, may be required by some models) Dir of extracted SRC faceset.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
     p.add_argument('--output-dir', required=True, action=fixPathAction, dest="output_dir", help="Output directory. This is where the merged files will be stored.")
+    p.add_argument('--output-mask-dir', required=True, action=fixPathAction, dest="output_mask_dir", help="Output mask directory. This is where the mask files will be stored.")
     p.add_argument('--aligned-dir', action=fixPathAction, dest="aligned_dir", default=None, help="Aligned directory. This is where the extracted of dst faces stored.")
     p.add_argument('--model-dir', required=True, action=fixPathAction, dest="model_dir", help="Model dir.")
     p.add_argument('--model', required=True, dest="model_name", choices=pathex.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Model class name.")
@@ -268,13 +268,14 @@ if __name__ == "__main__":
     def process_videoed_video_from_sequence(arguments):
         osex.set_process_lowest_prio()
         from mainscripts import VideoEd
-        VideoEd.video_from_sequence (arguments.input_dir,
-                                     arguments.output_file,
-                                     arguments.reference_file,
-                                     arguments.ext,
-                                     arguments.fps,
-                                     arguments.bitrate,
-                                     arguments.lossless)
+        VideoEd.video_from_sequence (input_dir      = arguments.input_dir,
+                                     output_file    = arguments.output_file,
+                                     reference_file = arguments.reference_file,
+                                     ext      = arguments.ext,
+                                     fps      = arguments.fps,
+                                     bitrate  = arguments.bitrate,
+                                     include_audio = arguments.include_audio,
+                                     lossless = arguments.lossless)
 
     p = videoed_parser.add_parser( "video-from-sequence", help="Make video from image sequence.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input file to be processed. Specify .*-extension to find first file.")
@@ -283,7 +284,9 @@ if __name__ == "__main__":
     p.add_argument('--ext', dest="ext", default='png', help="Image format (extension) of input files.")
     p.add_argument('--fps', type=int, dest="fps", default=None, help="FPS of output file. Overwritten by reference-file.")
     p.add_argument('--bitrate', type=int, dest="bitrate", default=None, help="Bitrate of output file in Megabits.")
+    p.add_argument('--include-audio', action="store_true", dest="include_audio", default=False, help="Include audio from reference file.")
     p.add_argument('--lossless', action="store_true", dest="lossless", default=False, help="PNG codec.")
+
     p.set_defaults(func=process_videoed_video_from_sequence)
 
     def process_labelingtool_edit_mask(arguments):

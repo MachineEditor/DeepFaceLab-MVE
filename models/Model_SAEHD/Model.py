@@ -33,7 +33,9 @@ class SAEHDModel(ModelBase):
         default_archi              = self.options['archi']              = self.load_or_def_option('archi', 'dfhd')
         default_ae_dims            = self.options['ae_dims']            = self.load_or_def_option('ae_dims', 256)
         default_e_dims             = self.options['e_dims']             = self.load_or_def_option('e_dims', 64)
-        default_d_dims             = self.options['d_dims']             = self.load_or_def_option('d_dims', 64)
+
+        default_d_dims             = 48 if self.options['archi'] == 'dfhd' else 64
+        default_d_dims             = self.options['d_dims']             = self.load_or_def_option('d_dims', default_d_dims)
 
         default_d_mask_dims        = default_d_dims // 3
         default_d_mask_dims        += default_d_mask_dims % 2
@@ -43,6 +45,7 @@ class SAEHDModel(ModelBase):
         default_learn_mask         = self.options['learn_mask']         = self.load_or_def_option('learn_mask', True)
         default_lr_dropout         = self.options['lr_dropout']         = self.load_or_def_option('lr_dropout', False)
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
+        default_gan_power          = self.options['gan_power']          = self.load_or_def_option('gan_power', 0.0)
         default_true_face_power    = self.options['true_face_power']    = self.load_or_def_option('true_face_power', 0.0)
         default_face_style_power   = self.options['face_style_power']   = self.load_or_def_option('face_style_power', 0.0)
         default_bg_style_power     = self.options['bg_style_power']     = self.load_or_def_option('bg_style_power', 0.0)
@@ -87,13 +90,15 @@ class SAEHDModel(ModelBase):
             self.options['lr_dropout']  = io.input_bool ("Use learning rate dropout", default_lr_dropout, help_message="When the face is trained enough, you can enable this option to get extra sharpness for less amount of iterations.")
             self.options['random_warp'] = io.input_bool ("Enable random warp of samples", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness for less amount of iterations.")
 
+            self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 10.0", help_message="Train the network in Generative Adversarial manner. Accelerates the speed of training. Forces the neural network to learn small details of the face. You can enable/disable this option at any time. Typical value is 1.0"), 0.0, 10.0 )
+
             if 'df' in self.options['archi']:
-                self.options['true_face_power'] = np.clip ( io.input_number (" 'True face' power.", default_true_face_power, add_info="0.0000 .. 1.0", help_message="Experimental option. Discriminates result face to be more like src face. Higher value - stronger discrimination. Comparison - https://i.imgur.com/czScS9q.png"), 0.0, 1.0 )
+                self.options['true_face_power'] = np.clip ( io.input_number ("'True face' power.", default_true_face_power, add_info="0.0000 .. 1.0", help_message="Experimental option. Discriminates result face to be more like src face. Higher value - stronger discrimination. Typical value is 0.01 . Comparison - https://i.imgur.com/czScS9q.png"), 0.0, 1.0 )
             else:
                 self.options['true_face_power'] = 0.0
 
             self.options['face_style_power'] = np.clip ( io.input_number("Face style power", default_face_style_power, add_info="0.0..100.0", help_message="Learn to transfer face style details such as light and color conditions. Warning: Enable it only after 10k iters, when predicted face is clear enough to start learn style. Start from 0.1 value and check history changes. Enabling this option increases the chance of model collapse."), 0.0, 100.0 )
-            self.options['bg_style_power'] = np.clip ( io.input_number("Background style power", default_bg_style_power, add_info="0.0..100.0", help_message="Learn to transfer background around face. This can make face more like dst. Enabling this option increases the chance of model collapse."), 0.0, 100.0 )
+            self.options['bg_style_power'] = np.clip ( io.input_number("Background style power", default_bg_style_power, add_info="0.0..100.0", help_message="Learn to transfer background around face. This can make face more like dst. Enabling this option increases the chance of model collapse. Typical value is 2.0"), 0.0, 100.0 )
             self.options['ct_mode'] = io.input_str (f"Color transfer for src faceset", default_ct_mode, ['none','rct','lct','mkl','idt','sot'], help_message="Change color distribution of src samples close to dst samples. Try all modes to find the best.")
             self.options['clipgrad'] = io.input_bool ("Enable gradient clipping", default_clipgrad, help_message="Gradient clipping reduces chance of model collapse, sacrificing speed of training.")
             self.options['pretrain'] = io.input_bool ("Enable pretraining mode", default_pretrain, help_message="Pretrain the model with large amount of various faces. After that, model can be used to train the fakes more quickly.")
@@ -110,7 +115,7 @@ class SAEHDModel(ModelBase):
     #override
     def on_initialize(self):
         device_config = nn.getCurrentDeviceConfig()
-        self.model_data_format = "NCHW" if len(device_config.devices) != 0 else "NHWC"
+        self.model_data_format = "NCHW" if len(device_config.devices) != 0 and not self.is_debug() else "NHWC"
         nn.initialize(floatx="float16" if self.options['use_float16'] else "float32",
                       data_format=self.model_data_format)
         tf = nn.tf
@@ -129,17 +134,15 @@ class SAEHDModel(ModelBase):
 
             def on_build(self, *args, **kwargs ):
                 self.conv1 = nn.Conv2D( self.in_ch,
-                                          self.out_ch // (4 if self.subpixel else 1),
-                                          kernel_size=self.kernel_size,
-                                          strides=1 if self.subpixel else 2,
-                                          padding='SAME', dilations=self.dilations, kernel_initializer=conv_kernel_initializer)
+                                        self.out_ch // (4 if self.subpixel else 1),
+                                        kernel_size=self.kernel_size,
+                                        strides=1 if self.subpixel else 2,
+                                        padding='SAME', dilations=self.dilations, kernel_initializer=conv_kernel_initializer)
 
             def forward(self, x):
                 x = self.conv1(x)
-
                 if self.subpixel:
                     x = nn.tf_space_to_depth(x, 2)
-
                 if self.use_activator:
                     x = tf.nn.leaky_relu(x, 0.1)
                 return x
@@ -332,7 +335,7 @@ class SAEHDModel(ModelBase):
         device_config = nn.getCurrentDeviceConfig()
         devices = device_config.devices
 
-        resolution = self.options['resolution']
+        self.resolution = resolution = self.options['resolution']
         learn_mask = self.options['learn_mask']
         archi = self.options['archi']
         ae_dims = self.options['ae_dims']
@@ -341,15 +344,17 @@ class SAEHDModel(ModelBase):
         d_mask_dims = self.options['d_mask_dims']
         self.pretrain = self.options['pretrain']
 
+        self.gan_power = gan_power = self.options['gan_power'] if not self.pretrain else 0.0
+
         masked_training = True
 
         models_opt_on_gpu = False if len(devices) != 1 else self.options['models_opt_on_gpu']
         models_opt_device = '/GPU:0' if models_opt_on_gpu and self.is_training else '/CPU:0'
         optimizer_vars_on_cpu = models_opt_device=='/CPU:0'
 
-        input_nc = 3
-        output_nc = 3
-        bgr_shape = nn.get4Dshape(resolution,resolution,input_nc)
+        input_ch = 3
+        output_ch = 3
+        bgr_shape = nn.get4Dshape(resolution,resolution,input_ch)
         mask_shape = nn.get4Dshape(resolution,resolution,1)
         lowest_dense_res = resolution // 16
 
@@ -370,7 +375,7 @@ class SAEHDModel(ModelBase):
         # Initializing model classes
         with tf.device (models_opt_device):
             if 'df' in archi:
-                self.encoder = Encoder(in_ch=input_nc, e_ch=e_dims, is_hd='hd' in archi, name='encoder')
+                self.encoder = Encoder(in_ch=input_ch, e_ch=e_dims, is_hd='hd' in archi, name='encoder')
                 encoder_out_ch = self.encoder.compute_output_channels ( (nn.tf_floatx, bgr_shape))
 
                 self.inter = Inter (in_ch=encoder_out_ch, lowest_dense_res=lowest_dense_res, ae_ch=ae_dims, ae_out_ch=ae_dims, name='inter')
@@ -386,11 +391,11 @@ class SAEHDModel(ModelBase):
 
                 if self.is_training:
                     if self.options['true_face_power'] != 0:
-                        self.dis = CodeDiscriminator(ae_dims, code_res=lowest_dense_res*2, name='dis' )
-                        self.model_filename_list += [ [self.dis, 'dis.npy'] ]
+                        self.code_discriminator = CodeDiscriminator(ae_dims, code_res=lowest_dense_res*2, name='dis' )
+                        self.model_filename_list += [ [self.code_discriminator, 'code_discriminator.npy'] ]
 
             elif 'liae' in archi:
-                self.encoder = Encoder(in_ch=input_nc, e_ch=e_dims, is_hd='hd' in archi, name='encoder')
+                self.encoder = Encoder(in_ch=input_ch, e_ch=e_dims, is_hd='hd' in archi, name='encoder')
                 encoder_out_ch = self.encoder.compute_output_channels ( (nn.tf_floatx, bgr_shape))
 
                 self.inter_AB = Inter(in_ch=encoder_out_ch, lowest_dense_res=lowest_dense_res, ae_ch=ae_dims, ae_out_ch=ae_dims*2, name='inter_AB')
@@ -407,6 +412,12 @@ class SAEHDModel(ModelBase):
                                               [self.decoder , 'decoder.npy'] ]
 
             if self.is_training:
+                if gan_power != 0:
+                    self.D_src = nn.PatchDiscriminator(patch_size=resolution//16, in_ch=output_ch, base_ch=512, name="D_src")
+                    self.D_dst = nn.PatchDiscriminator(patch_size=resolution//16, in_ch=output_ch, base_ch=512, name="D_dst")
+                    self.model_filename_list += [ [self.D_src, 'D_src.npy'] ]
+                    self.model_filename_list += [ [self.D_dst, 'D_dst.npy'] ]
+
                 # Initialize optimizers
                 lr=5e-5
                 lr_dropout = 0.3 if self.options['lr_dropout'] else 1.0
@@ -424,9 +435,14 @@ class SAEHDModel(ModelBase):
                 self.src_dst_opt.initialize_variables (self.src_dst_all_trainable_weights, vars_on_cpu=optimizer_vars_on_cpu)
 
                 if self.options['true_face_power'] != 0:
-                    self.D_opt = nn.TFRMSpropOptimizer(lr=lr, lr_dropout=lr_dropout, clipnorm=clipnorm, name='D_opt')
-                    self.D_opt.initialize_variables ( self.dis.get_weights(), vars_on_cpu=optimizer_vars_on_cpu)
-                    self.model_filename_list += [ (self.D_opt, 'D_opt.npy') ]
+                    self.D_code_opt = nn.TFRMSpropOptimizer(lr=lr, lr_dropout=lr_dropout, clipnorm=clipnorm, name='D_code_opt')
+                    self.D_code_opt.initialize_variables ( self.code_discriminator.get_weights(), vars_on_cpu=optimizer_vars_on_cpu)
+                    self.model_filename_list += [ (self.D_code_opt, 'D_code_opt.npy') ]
+
+                if gan_power != 0:
+                    self.D_src_dst_opt = nn.TFRMSpropOptimizer(lr=lr, lr_dropout=lr_dropout, clipnorm=clipnorm, name='D_src_dst_opt')
+                    self.D_src_dst_opt.initialize_variables ( self.D_src.get_weights()+self.D_dst.get_weights(), vars_on_cpu=optimizer_vars_on_cpu)
+                    self.model_filename_list += [ (self.D_src_dst_opt, 'D_src_dst_opt.npy') ]
 
         if self.is_training:
             # Adjust batch size for multiple GPU
@@ -445,9 +461,9 @@ class SAEHDModel(ModelBase):
 
             gpu_src_losses = []
             gpu_dst_losses = []
-            gpu_src_dst_loss_gvs = []
-            gpu_D_loss_gvs = []
-
+            gpu_G_loss_gvs = []
+            gpu_D_code_loss_gvs = []
+            gpu_D_src_dst_loss_gvs = []
             for gpu_id in range(gpu_count):
                 with tf.device( f'/GPU:{gpu_id}' if len(devices) != 0 else f'/CPU:0' ):
 
@@ -497,8 +513,8 @@ class SAEHDModel(ModelBase):
                     gpu_target_dst_masked      = gpu_target_dst*gpu_target_dstm_blur
                     gpu_target_dst_anti_masked = gpu_target_dst*(1.0 - gpu_target_dstm_blur)
 
-                    gpu_target_srcmasked_opt  = gpu_target_src*gpu_target_srcm_blur if masked_training else gpu_target_src
-                    gpu_target_dst_masked_opt = gpu_target_dst_masked if masked_training else gpu_target_dst
+                    gpu_target_src_masked_opt  = gpu_target_src*gpu_target_srcm_blur if masked_training else gpu_target_src
+                    gpu_target_dst_masked_opt  = gpu_target_dst_masked if masked_training else gpu_target_dst
 
                     gpu_pred_src_src_masked_opt = gpu_pred_src_src*gpu_target_srcm_blur if masked_training else gpu_pred_src_src
                     gpu_pred_dst_dst_masked_opt = gpu_pred_dst_dst*gpu_target_dstm_blur if masked_training else gpu_pred_dst_dst
@@ -506,8 +522,8 @@ class SAEHDModel(ModelBase):
                     gpu_psd_target_dst_masked = gpu_pred_src_dst*gpu_target_dstm_blur
                     gpu_psd_target_dst_anti_masked = gpu_pred_src_dst*(1.0 - gpu_target_dstm_blur)
 
-                    gpu_src_loss =  tf.reduce_mean ( 10*nn.tf_dssim(gpu_target_srcmasked_opt, gpu_pred_src_src_masked_opt, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
-                    gpu_src_loss += tf.reduce_mean ( 10*tf.square ( gpu_target_srcmasked_opt - gpu_pred_src_src_masked_opt ), axis=[1,2,3])
+                    gpu_src_loss =  tf.reduce_mean ( 10*nn.tf_dssim(gpu_target_src_masked_opt, gpu_pred_src_src_masked_opt, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                    gpu_src_loss += tf.reduce_mean ( 10*tf.square ( gpu_target_src_masked_opt - gpu_pred_src_src_masked_opt ), axis=[1,2,3])
                     if learn_mask:
                         gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
 
@@ -528,26 +544,48 @@ class SAEHDModel(ModelBase):
                     gpu_src_losses += [gpu_src_loss]
                     gpu_dst_losses += [gpu_dst_loss]
 
-                    gpu_src_dst_loss = gpu_src_loss + gpu_dst_loss
+                    gpu_G_loss = gpu_src_loss + gpu_dst_loss
+
+                    def DLoss(labels,logits):
+                        return tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits), axis=[1,2,3])
 
                     if self.options['true_face_power'] != 0:
-                        def DLoss(labels,logits):
-                            return tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits), axis=[1,2,3])
-
-                        gpu_src_code_d = self.dis( gpu_src_code )
-                        gpu_src_code_d_ones = tf.ones_like(gpu_src_code_d)
+                        gpu_src_code_d = self.code_discriminator( gpu_src_code )
+                        gpu_src_code_d_ones  = tf.ones_like (gpu_src_code_d)
                         gpu_src_code_d_zeros = tf.zeros_like(gpu_src_code_d)
-                        gpu_dst_code_d = self.dis( gpu_dst_code )
+                        gpu_dst_code_d = self.code_discriminator( gpu_dst_code )
                         gpu_dst_code_d_ones = tf.ones_like(gpu_dst_code_d)
 
-                        gpu_src_dst_loss += self.options['true_face_power']*DLoss(gpu_src_code_d_ones, gpu_src_code_d)
+                        gpu_G_loss += self.options['true_face_power']*DLoss(gpu_src_code_d_ones, gpu_src_code_d)
 
-                        gpu_D_loss = (DLoss(gpu_src_code_d_ones , gpu_dst_code_d) + \
-                                      DLoss(gpu_src_code_d_zeros, gpu_src_code_d) ) * 0.5
+                        gpu_D_code_loss = (DLoss(gpu_src_code_d_ones , gpu_dst_code_d) + \
+                                           DLoss(gpu_src_code_d_zeros, gpu_src_code_d) ) * 0.5
 
-                        gpu_D_loss_gvs += [ nn.tf_gradients (gpu_D_loss, self.dis.get_weights() ) ]
+                        gpu_D_code_loss_gvs += [ nn.tf_gradients (gpu_D_code_loss, self.code_discriminator.get_weights() ) ]
 
-                    gpu_src_dst_loss_gvs += [ nn.tf_gradients ( gpu_src_dst_loss, self.src_dst_trainable_weights ) ]
+                    if gan_power != 0:
+                        gpu_pred_src_src_d       = self.D_src(gpu_pred_src_src_masked_opt)
+                        gpu_pred_src_src_d_ones  = tf.ones_like (gpu_pred_src_src_d)
+                        gpu_pred_src_src_d_zeros = tf.zeros_like(gpu_pred_src_src_d)
+                        gpu_target_src_d         = self.D_src(gpu_target_src_masked_opt)
+                        gpu_target_src_d_ones    = tf.ones_like(gpu_target_src_d)
+                        gpu_pred_dst_dst_d       = self.D_dst(gpu_pred_dst_dst_masked_opt)
+                        gpu_pred_dst_dst_d_ones  = tf.ones_like (gpu_pred_dst_dst_d)
+                        gpu_pred_dst_dst_d_zeros = tf.zeros_like(gpu_pred_dst_dst_d)
+                        gpu_target_dst_d         = self.D_dst(gpu_target_dst_masked_opt)
+                        gpu_target_dst_d_ones    = tf.ones_like(gpu_target_dst_d)
+
+                        gpu_D_src_dst_loss = (DLoss(gpu_target_src_d_ones   , gpu_target_src_d) + \
+                                              DLoss(gpu_pred_src_src_d_zeros, gpu_pred_src_src_d) ) * 0.5 + \
+                                             (DLoss(gpu_target_dst_d_ones   , gpu_target_dst_d) + \
+                                              DLoss(gpu_pred_dst_dst_d_zeros, gpu_pred_dst_dst_d) ) * 0.5
+
+                        gpu_D_src_dst_loss_gvs += [ nn.tf_gradients (gpu_D_src_dst_loss, self.D_src.get_weights()+self.D_dst.get_weights() ) ]
+
+                        gpu_G_loss += gan_power*(DLoss(gpu_pred_src_src_d_ones, gpu_pred_src_src_d) + DLoss(gpu_pred_dst_dst_d_ones, gpu_pred_dst_dst_d))
+
+
+                    gpu_G_loss_gvs += [ nn.tf_gradients ( gpu_G_loss, self.src_dst_trainable_weights ) ]
 
 
             # Average losses and gradients, and create optimizer update ops
@@ -558,15 +596,15 @@ class SAEHDModel(ModelBase):
                 pred_src_srcm = nn.tf_concat(gpu_pred_src_srcm_list, 0)
                 pred_dst_dstm = nn.tf_concat(gpu_pred_dst_dstm_list, 0)
                 pred_src_dstm = nn.tf_concat(gpu_pred_src_dstm_list, 0)
-
                 src_loss = nn.tf_average_tensor_list(gpu_src_losses)
                 dst_loss = nn.tf_average_tensor_list(gpu_dst_losses)
-                src_dst_loss_gv = nn.tf_average_gv_list (gpu_src_dst_loss_gvs)
-                src_dst_loss_gv_op = self.src_dst_opt.get_update_op (src_dst_loss_gv )
+                src_dst_loss_gv_op = self.src_dst_opt.get_update_op (nn.tf_average_gv_list (gpu_G_loss_gvs))
 
                 if self.options['true_face_power'] != 0:
-                    D_loss_gv = nn.tf_average_gv_list(gpu_D_loss_gvs)
-                    D_loss_gv_op = self.D_opt.get_update_op (D_loss_gv )
+                    D_loss_gv_op = self.D_code_opt.get_update_op (nn.tf_average_gv_list(gpu_D_code_loss_gvs))
+
+                if gan_power != 0:
+                    src_D_src_dst_loss_gv_op = self.D_src_dst_opt.get_update_op (nn.tf_average_gv_list(gpu_D_src_dst_loss_gvs) )
 
 
             # Initializing training and view functions
@@ -589,6 +627,17 @@ class SAEHDModel(ModelBase):
                 def D_train(warped_src, warped_dst):
                     nn.tf_sess.run ([D_loss_gv_op], feed_dict={self.warped_src: warped_src, self.warped_dst: warped_dst})
                 self.D_train = D_train
+
+            if gan_power != 0:
+                def D_src_dst_train(warped_src, target_src, target_srcm, \
+                                    warped_dst, target_dst, target_dstm):
+                    nn.tf_sess.run ([src_D_src_dst_loss_gv_op], feed_dict={self.warped_src :warped_src,
+                                                                           self.target_src :target_src,
+                                                                           self.target_srcm:target_srcm,
+                                                                           self.warped_dst :warped_dst,
+                                                                           self.target_dst :target_dst,
+                                                                           self.target_dstm:target_dstm})
+                self.D_src_dst_train = D_src_dst_train
 
             if learn_mask:
                 def AE_view(warped_src, warped_dst):
@@ -663,12 +712,11 @@ class SAEHDModel(ModelBase):
 
             t_img_warped = t.IMG_WARPED_TRANSFORMED if self.options['random_warp'] else t.IMG_TRANSFORMED
 
-            cpu_count = multiprocessing.cpu_count()
-
+            cpu_count = min(multiprocessing.cpu_count(), 8)
             src_generators_count = cpu_count // 2
+            dst_generators_count = cpu_count // 2
             if self.options['ct_mode'] != 'none':
                 src_generators_count = int(src_generators_count * 1.5)
-            dst_generators_count = cpu_count - src_generators_count
 
             self.set_training_data_generators ([
                     SampleGeneratorFace(training_data_src_path, random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
@@ -706,6 +754,9 @@ class SAEHDModel(ModelBase):
         if self.options['true_face_power'] != 0 and not self.pretrain:
             self.D_train (warped_src, warped_dst)
 
+        if self.gan_power != 0:
+            self.D_src_dst_train (warped_src, target_src, target_srcm, warped_dst, target_dst, target_dstm)
+
         return ( ('src_loss', src_loss), ('dst_loss', dst_loss), )
 
     #override
@@ -721,7 +772,8 @@ class SAEHDModel(ModelBase):
 
         target_srcm, target_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format) for x in ([target_srcm, target_dstm] )]
 
-        n_samples = min(4, self.get_batch_size() )
+        n_samples = min(4, self.get_batch_size(), 800 // self.resolution )
+
         result = []
         st = []
         for i in range(n_samples):
@@ -742,8 +794,7 @@ class SAEHDModel(ModelBase):
         return result
 
     def predictor_func (self, face=None):
-        face = face[None,...]
-        face = nn.to_data_format(face, self.model_data_format, "NHWC")
+        face = nn.to_data_format(face[None,...], self.model_data_format, "NHWC")
 
         if self.options['learn_mask']:
             bgr, mask_dst_dstm, mask_src_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format).astype(np.float32) for x in self.AE_merge (face) ]

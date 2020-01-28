@@ -113,8 +113,8 @@ class ModelBase(object):
                         self.model_name = saved_models_names[model_idx]
 
                 else:
-                    self.model_name = io.input_str(f"No saved models found. Enter a name of a new model", "noname")
-
+                    self.model_name = io.input_str(f"No saved models found. Enter a name of a new model", "new")
+                    self.model_name = self.model_name.replace('_', ' ')
                 break
 
         self.model_name = self.model_name + '_' + self.model_class_name
@@ -159,8 +159,8 @@ class ModelBase(object):
         #####
 
         io.input_skip_pending()
-
         self.on_initialize_options()
+
         if self.is_first_run():
             # save as default options only for first run model initialize
             self.default_options_path.write_bytes( pickle.dumps (self.options) )
@@ -172,6 +172,8 @@ class ModelBase(object):
 
         self.on_initialize()
         self.options['batch_size'] = self.batch_size
+
+
 
         if self.is_training:
             self.preview_history_path = self.saved_models_path / ( f'{self.get_model_name()}_history' )
@@ -275,7 +277,7 @@ class ModelBase(object):
 
     def ask_batch_size(self, suggest_batch_size=None):
         default_batch_size = self.load_or_def_option('batch_size', suggest_batch_size or self.batch_size)
-        self.batch_size = max(0, io.input_int("Batch_size", default_batch_size, help_message="Larger batch size is better for NN's generalization, but it can cause Out of Memory error. Tune this value for your videocard manually."))
+        self.options['batch_size'] = self.batch_size = max(0, io.input_int("Batch_size", default_batch_size, help_message="Larger batch size is better for NN's generalization, but it can cause Out of Memory error. Tune this value for your videocard manually."))
 
 
     #overridable

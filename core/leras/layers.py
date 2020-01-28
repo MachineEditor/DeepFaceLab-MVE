@@ -78,26 +78,7 @@ def initialize_layers(nn):
             return True
 
         def init_weights(self):
-            ops = []
-
-            ca_tuples_w = []
-            ca_tuples = []
-            for w in self.get_weights():
-                initializer = w.initializer
-                for input in initializer.inputs:
-                    if "_cai_" in input.name:
-                        ca_tuples_w.append (w)
-                        ca_tuples.append ( (w.shape.as_list(), w.dtype.as_numpy_dtype) )
-                        break
-                else:
-                    ops.append (initializer)
-
-            if len(ops) != 0:
-                nn.tf_sess.run (ops)
-
-            if len(ca_tuples) != 0:
-                nn.tf_batch_set_value( [*zip(ca_tuples_w, nn.initializers.ca.generate_batch (ca_tuples))] )
-
+            nn.tf_init_weights(self.get_weights())
     nn.Saveable = Saveable
 
     class LayerBase():
@@ -302,7 +283,8 @@ def initialize_layers(nn):
                 raise ValueError ("strides must be an int type")
             if not isinstance(dilations, int):
                 raise ValueError ("dilations must be an int type")
-
+            kernel_size = int(kernel_size)
+            
             if dtype is None:
                 dtype = nn.tf_floatx
 
@@ -405,7 +387,8 @@ def initialize_layers(nn):
         def __init__(self, in_ch, out_ch, kernel_size, strides=2, padding='SAME', use_bias=True, use_wscale=False, kernel_initializer=None, bias_initializer=None, trainable=True, dtype=None, **kwargs ):
             if not isinstance(strides, int):
                 raise ValueError ("strides must be an int type")
-
+            kernel_size = int(kernel_size)
+            
             if dtype is None:
                 dtype = nn.tf_floatx
 

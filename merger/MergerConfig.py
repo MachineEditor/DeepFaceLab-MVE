@@ -101,10 +101,7 @@ mode_dict = {0:'original',
              2:'hist-match',
              3:'seamless',
              4:'seamless-hist-match',
-             5:'raw-rgb',
-             6:'raw-rgb-mask',
-             7:'raw-mask-only',
-             8:'raw-predicted-only'}
+             5:'raw-rgb',}
 
 mode_str_dict = {}
 
@@ -144,7 +141,6 @@ class MergerConfigMasked(MergerConfig):
                        image_denoise_power = 0,
                        bicubic_degrade_power = 0,
                        color_degrade_power = 0,
-                       export_mask_alpha = False,
                        **kwargs
                        ):
 
@@ -158,6 +154,9 @@ class MergerConfigMasked(MergerConfig):
         self.clip_hborder_mask_per = clip_hborder_mask_per
 
         #default changeable params
+        if mode not in mode_str_dict:
+            mode = mode_dict[1]
+
         self.mode = mode
         self.masked_hist_match = masked_hist_match
         self.hist_match_threshold = hist_match_threshold
@@ -170,7 +169,6 @@ class MergerConfigMasked(MergerConfig):
         self.image_denoise_power = image_denoise_power
         self.bicubic_degrade_power = bicubic_degrade_power
         self.color_degrade_power = color_degrade_power
-        self.export_mask_alpha = export_mask_alpha
 
     def copy(self):
         return copy.copy(self)
@@ -216,9 +214,6 @@ class MergerConfigMasked(MergerConfig):
 
     def add_bicubic_degrade_power(self, diff):
         self.bicubic_degrade_power = np.clip ( self.bicubic_degrade_power+diff, 0, 100)
-
-    def toggle_export_mask_alpha(self):
-        self.export_mask_alpha = not self.export_mask_alpha
 
     def ask_settings(self):
         s = """Choose mode: \n"""
@@ -267,7 +262,6 @@ class MergerConfigMasked(MergerConfig):
             self.image_denoise_power = np.clip ( io.input_int ("Choose image degrade by denoise power", 0, add_info="0..500"), 0, 500)
             self.bicubic_degrade_power = np.clip ( io.input_int ("Choose image degrade by bicubic rescale power", 0, add_info="0..100"), 0, 100)
             self.color_degrade_power = np.clip (  io.input_int ("Degrade color power of final image", 0, add_info="0..100"), 0, 100)
-            self.export_mask_alpha = io.input_bool("Export png with alpha channel of the mask?", False)
 
         io.log_info ("")
 
@@ -287,8 +281,7 @@ class MergerConfigMasked(MergerConfig):
                    self.color_transfer_mode == other.color_transfer_mode and \
                    self.image_denoise_power == other.image_denoise_power and \
                    self.bicubic_degrade_power == other.bicubic_degrade_power and \
-                   self.color_degrade_power == other.color_degrade_power and \
-                   self.export_mask_alpha == other.export_mask_alpha
+                   self.color_degrade_power == other.color_degrade_power
 
         return False
 
@@ -324,8 +317,7 @@ class MergerConfigMasked(MergerConfig):
         if 'raw' not in self.mode:
             r += (f"""image_denoise_power: {self.image_denoise_power}\n"""
                   f"""bicubic_degrade_power: {self.bicubic_degrade_power}\n"""
-                  f"""color_degrade_power: {self.color_degrade_power}\n"""
-                  f"""export_mask_alpha: {self.export_mask_alpha}\n""")
+                  f"""color_degrade_power: {self.color_degrade_power}\n""")
 
         r += "================"
 
