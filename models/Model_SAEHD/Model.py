@@ -55,13 +55,12 @@ class SAEHDModel(ModelBase):
             self.ask_random_flip()
             self.ask_batch_size(suggest_batch_size)
 
-
+        if self.is_first_run():
             resolution = io.input_int("Resolution", default_resolution, add_info="64-256", help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 16.")
             resolution = np.clip ( (resolution // 16) * 16, 64, 256)
             self.options['resolution'] = resolution
             self.options['face_type'] = io.input_str ("Face type", default_face_type, ['h','mf','f'], help_message="Half / mid face / full face. Half face has better resolution, but covers less area of cheeks. Mid face is 30% wider than half face.").lower()
-
-            self.options['archi'] = io.input_str ("AE architecture", default_archi, ['dfhd','liaehd','df','liae'], help_message="'df' keeps faces more natural. 'liae' can fix overly different face shapes. 'hd' is heavyweight version for the best quality.").lower() #-s version is slower, but has decreased change to collapse.
+            self.options['archi'] = io.input_str ("AE architecture", default_archi, ['dfhd','liaehd','df','liae'], help_message="'df' keeps faces more natural. 'liae' can fix overly different face shapes. 'hd' is heavyweight version for the best quality.").lower()
 
         default_d_dims             = 48 if self.options['archi'] == 'dfhd' else 64
         default_d_dims             = self.options['d_dims']             = self.load_or_def_option('d_dims', default_d_dims)
