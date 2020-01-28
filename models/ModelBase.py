@@ -200,45 +200,48 @@ class ModelBase(object):
                     if not isinstance(generator, SampleGeneratorBase):
                         raise ValueError('training data generator is not subclass of SampleGeneratorBase')
 
-            if self.sample_for_preview is None or self.choose_preview_history:
-                if self.choose_preview_history and io.is_support_windows():
-                    io.log_info ("Choose image for the preview history. [p] - next. [enter] - confirm.")
-                    wnd_name = "[p] - next. [enter] - confirm."
-                    io.named_window(wnd_name)
-                    io.capture_keys(wnd_name)
-                    choosed = False
-                    while not choosed:
-                        self.sample_for_preview = self.generate_next_samples()
-                        preview = self.get_static_preview()
-                        io.show_image( wnd_name, (preview*255).astype(np.uint8) )
-
-                        while True:
-                            key_events = io.get_key_events(wnd_name)
-                            key, chr_key, ctrl_pressed, alt_pressed, shift_pressed = key_events[-1] if len(key_events) > 0 else (0,0,False,False,False)
-                            if key == ord('\n') or key == ord('\r'):
-                                choosed = True
-                                break
-                            elif key == ord('p'):
-                                break
-
-                            try:
-                                io.process_messages(0.1)
-                            except KeyboardInterrupt:
-                                choosed = True
-
-                    io.destroy_window(wnd_name)
-                else:
-                    self.sample_for_preview = self.generate_next_samples()
-
-            try:
-                self.get_static_preview()
-            except:
-                self.sample_for_preview = self.generate_next_samples()
-
-            self.last_sample = self.sample_for_preview
+            self.update_sample_for_preview(choose_preview_history=self.choose_preview_history)
 
         io.log_info( self.get_summary_text() )
+        
+    def update_sample_for_preview(self, choose_preview_history=False, force_new=False):
+        if self.sample_for_preview is None or choose_preview_history or force_new:
+            if choose_preview_history and io.is_support_windows():
+                io.log_info ("Choose image for the preview history. [p] - next. [enter] - confirm.")
+                wnd_name = "[p] - next. [enter] - confirm."
+                io.named_window(wnd_name)
+                io.capture_keys(wnd_name)
+                choosed = False
+                while not choosed:
+                    self.sample_for_preview = self.generate_next_samples()
+                    preview = self.get_static_preview()
+                    io.show_image( wnd_name, (preview*255).astype(np.uint8) )
 
+                    while True:
+                        key_events = io.get_key_events(wnd_name)
+                        key, chr_key, ctrl_pressed, alt_pressed, shift_pressed = key_events[-1] if len(key_events) > 0 else (0,0,False,False,False)
+                        if key == ord('\n') or key == ord('\r'):
+                            choosed = True
+                            break
+                        elif key == ord('p'):
+                            break
+
+                        try:
+                            io.process_messages(0.1)
+                        except KeyboardInterrupt:
+                            choosed = True
+
+                io.destroy_window(wnd_name)
+            else:
+                self.sample_for_preview = self.generate_next_samples()
+
+        try:
+            self.get_static_preview()
+        except:
+            self.sample_for_preview = self.generate_next_samples()
+
+        self.last_sample = self.sample_for_preview
+                
     def load_or_def_option(self, name, def_value):
         options_val = self.options.get(name, None)
         if options_val is not None:

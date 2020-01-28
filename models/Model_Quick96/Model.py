@@ -337,11 +337,12 @@ class QModel(ModelBase):
 
         # Loading/initializing all models/optimizers weights
         for model, filename in io.progress_bar_generator(self.model_filename_list, "Initializing models"):
-            do_init = self.is_first_run()
-
             if self.pretrain_just_disabled:
+                do_init = False
                 if model == self.inter:
                     do_init = True
+            else:
+                do_init = self.is_first_run()
 
             if not do_init:
                 do_init = not model.load_weights( self.get_strpath_storage_for_file(filename) )
