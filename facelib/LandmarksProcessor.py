@@ -609,7 +609,13 @@ def mirror_landmarks (landmarks, val):
     result[:,0] = val - result[:,0] - 1
     return result
 
-def draw_landmarks (image, image_landmarks, color=(0,255,0), transparent_mask=False, ie_polys=None):
+def get_face_struct_mask (image_shape, image_landmarks, eyebrows_expand_mod=1.0, ie_polys=None, color=(1,) ):
+    mask = np.zeros(image_shape[0:2]+( len(color),),dtype=np.float32)
+    lmrks = expand_eyebrows(image_landmarks, eyebrows_expand_mod)
+    draw_landmarks (mask, image_landmarks, color=color, draw_circles=False, thickness=2, ie_polys=ie_polys)    
+    return mask
+    
+def draw_landmarks (image, image_landmarks, color=(0,255,0), draw_circles=True, thickness=1, transparent_mask=False, ie_polys=None):
     if len(image_landmarks) != 68:
         raise Exception('get_image_eye_mask works only with 68 landmarks')
 
@@ -625,16 +631,18 @@ def draw_landmarks (image, image_landmarks, color=(0,255,0), transparent_mask=Fa
 
     # open shapes
     cv2.polylines(image, tuple(np.array([v]) for v in ( right_eyebrow, jaw, left_eyebrow, np.concatenate((nose, [nose[-6]])) )),
-                  False, color, lineType=cv2.LINE_AA)
+                  False, color, thickness=thickness, lineType=cv2.LINE_AA)
     # closed shapes
     cv2.polylines(image, tuple(np.array([v]) for v in (right_eye, left_eye, mouth)),
-                  True, color, lineType=cv2.LINE_AA)
-    # the rest of the cicles
-    for x, y in np.concatenate((right_eyebrow, left_eyebrow, mouth, right_eye, left_eye, nose), axis=0):
-        cv2.circle(image, (x, y), 1, color, 1, lineType=cv2.LINE_AA)
-    # jaw big circles
-    for x, y in jaw:
-        cv2.circle(image, (x, y), 2, color, lineType=cv2.LINE_AA)
+                  True, color, thickness=thickness, lineType=cv2.LINE_AA)
+                  
+    if draw_circles:
+        # the rest of the cicles
+        for x, y in np.concatenate((right_eyebrow, left_eyebrow, mouth, right_eye, left_eye, nose), axis=0):
+            cv2.circle(image, (x, y), 1, color, 1, lineType=cv2.LINE_AA)
+        # jaw big circles
+        for x, y in jaw:
+            cv2.circle(image, (x, y), 2, color, lineType=cv2.LINE_AA)
 
     if transparent_mask:
         mask = get_image_hull_mask (image.shape, image_landmarks, ie_polys=ie_polys)

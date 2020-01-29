@@ -725,14 +725,14 @@ class SAEHDModel(ModelBase):
                         sample_process_options=SampleProcessor.Options(random_flip=self.random_flip),
                         output_sample_types = [ {'types' : (t_img_warped, face_type, t.MODE_BGR),      'data_format':nn.data_format, 'resolution': resolution, 'ct_mode': self.options['ct_mode'] },
                                                 {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_BGR), 'data_format':nn.data_format, 'resolution': resolution, 'ct_mode': self.options['ct_mode'] },
-                                                {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_M),   'data_format':nn.data_format, 'resolution': resolution } ],
+                                                {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_FACE_MASK_HULL),   'data_format':nn.data_format, 'resolution': resolution } ],
                         generators_count=src_generators_count ),
 
                     SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(random_flip=self.random_flip),
                         output_sample_types = [ {'types' : (t_img_warped, face_type, t.MODE_BGR),      'data_format':nn.data_format, 'resolution': resolution},
                                                 {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_BGR), 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_M),   'data_format':nn.data_format, 'resolution': resolution} ],
+                                                {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_FACE_MASK_HULL),   'data_format':nn.data_format, 'resolution': resolution} ],
                         generators_count=dst_generators_count )
                              ])
 
