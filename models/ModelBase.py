@@ -345,8 +345,7 @@ class ModelBase(object):
         return self.onGetPreview (self.sample_for_preview)[0][1] #first preview, and bgr
 
     def save(self):
-        summary_path = self.get_strpath_storage_for_file('summary.txt')
-        Path( summary_path ).write_text( self.get_summary_text() )
+        Path( self.get_summary_path() ).write_text( self.get_summary_text() )
 
         self.onSave()
 
@@ -360,42 +359,49 @@ class ModelBase(object):
         pathex.write_bytes_safe (self.model_data_path, pickle.dumps(model_data) )
 
         if self.autobackup:
-            bckp_filename_list = [ self.get_strpath_storage_for_file(filename) for _, filename in self.get_model_filename_list() ]
-            bckp_filename_list += [ str(summary_path), str(self.model_data_path) ]
-
             current_hour = time.localtime().tm_hour
             if self.autobackup_current_hour != current_hour:
                 self.autobackup_current_hour = current_hour
+                self.create_backup()
+                
+    def create_backup(self):
+        io.log_info ("Creating backup...", end='\r')
+        
+        if not self.autobackups_path.exists():
+            self.autobackups_path.mkdir(exist_ok=True)
+                        
+        bckp_filename_list = [ self.get_strpath_storage_for_file(filename) for _, filename in self.get_model_filename_list() ]
+        bckp_filename_list += [ str(self.get_summary_path()), str(self.model_data_path) ]
+        
+        for i in range(15,0,-1):
+            idx_str = '%.2d' % i
+            next_idx_str = '%.2d' % (i+1)
 
-                for i in range(15,0,-1):
-                    idx_str = '%.2d' % i
-                    next_idx_str = '%.2d' % (i+1)
+            idx_backup_path = self.autobackups_path / idx_str
+            next_idx_packup_path = self.autobackups_path / next_idx_str
 
-                    idx_backup_path = self.autobackups_path / idx_str
-                    next_idx_packup_path = self.autobackups_path / next_idx_str
+            if idx_backup_path.exists():
+                if i == 15:
+                    pathex.delete_all_files(idx_backup_path)
+                else:
+                    next_idx_packup_path.mkdir(exist_ok=True)
+                    pathex.move_all_files (idx_backup_path, next_idx_packup_path)
 
-                    if idx_backup_path.exists():
-                        if i == 15:
-                            pathex.delete_all_files(idx_backup_path)
-                        else:
-                            next_idx_packup_path.mkdir(exist_ok=True)
-                            pathex.move_all_files (idx_backup_path, next_idx_packup_path)
+            if i == 1:
+                idx_backup_path.mkdir(exist_ok=True)
+                for filename in bckp_filename_list:
+                    shutil.copy ( str(filename), str(idx_backup_path / Path(filename).name) )
 
-                    if i == 1:
-                        idx_backup_path.mkdir(exist_ok=True)
-                        for filename in bckp_filename_list:
-                            shutil.copy ( str(filename), str(idx_backup_path / Path(filename).name) )
+                previews = self.get_previews()
+                plist = []
+                for i in range(len(previews)):
+                    name, bgr = previews[i]
+                    plist += [ (bgr, idx_backup_path / ( ('preview_%s.jpg') % (name))  )  ]
 
-                        previews = self.get_previews()
-                        plist = []
-                        for i in range(len(previews)):
-                            name, bgr = previews[i]
-                            plist += [ (bgr, idx_backup_path / ( ('preview_%s.jpg') % (name))  )  ]
-
-                        for preview, filepath in plist:
-                            preview_lh = ModelBase.get_loss_history_preview(self.loss_history, self.iter, preview.shape[1], preview.shape[2])
-                            img = (np.concatenate ( [preview_lh, preview], axis=0 ) * 255).astype(np.uint8)
-                            cv2_imwrite (filepath, img )
+                for preview, filepath in plist:
+                    preview_lh = ModelBase.get_loss_history_preview(self.loss_history, self.iter, preview.shape[1], preview.shape[2])
+                    img = (np.concatenate ( [preview_lh, preview], axis=0 ) * 255).astype(np.uint8)
+                    cv2_imwrite (filepath, img )
 
     def debug_one_iter(self):
         images = []
@@ -479,6 +485,9 @@ class ModelBase(object):
     def get_strpath_storage_for_file(self, filename):
         return str( self.saved_models_path / ( self.get_model_name() + '_' + filename) )
 
+    def get_summary_path(self):
+        return self.get_strpath_storage_for_file('summary.txt')
+        
     def get_summary_text(self):
         ###Generate text summary of model hyperparameters
         #Find the longest key name and value string. Used as column widths.

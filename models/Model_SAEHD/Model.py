@@ -349,7 +349,7 @@ class SAEHDModel(ModelBase):
 
         masked_training = True
 
-        models_opt_on_gpu = False if len(devices) != 1 else self.options['models_opt_on_gpu']
+        models_opt_on_gpu = False if len(devices) == 0 else self.options['models_opt_on_gpu']
         models_opt_device = '/GPU:0' if models_opt_on_gpu and self.is_training else '/CPU:0'
         optimizer_vars_on_cpu = models_opt_device=='/CPU:0'
 

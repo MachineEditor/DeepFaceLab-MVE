@@ -67,6 +67,10 @@ def trainerThread (s2c, c2s, e,
                     io.log_info ("Saving....", end='\r')
                     model.save()
                     shared_state['after_save'] = True
+                    
+            def model_backup():
+                if not debug and not is_reached_goal:
+                    model.create_backup()             
 
             def send_preview():
                 if not debug:
@@ -172,6 +176,8 @@ def trainerThread (s2c, c2s, e,
                     op = input['op']
                     if op == 'save':
                         model_save()
+                    elif op == 'backup':
+                        model_backup()
                     elif op == 'preview':
                         if is_reached_goal:
                             model.pass_one_iter()
@@ -277,7 +283,7 @@ def main(**kwargs):
 
                 # HEAD
                 head_lines = [
-                    '[s]:save [enter]:exit',
+                    '[s]:save [b]:backup [enter]:exit',
                     '[p]:update [space]:next preview [l]:change history range',
                     'Preview: "%s" [%d/%d]' % (selected_preview_name,selected_preview+1, len(previews) )
                     ]
@@ -314,6 +320,8 @@ def main(**kwargs):
                 s2c.put ( {'op': 'close'} )
             elif key == ord('s'):
                 s2c.put ( {'op': 'save'} )
+            elif key == ord('b'):
+                s2c.put ( {'op': 'backup'} )
             elif key == ord('p'):
                 if not is_waiting_preview:
                     is_waiting_preview = True
