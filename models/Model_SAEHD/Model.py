@@ -35,7 +35,6 @@ class SAEHDModel(ModelBase):
         default_e_dims             = self.options['e_dims']             = self.load_or_def_option('e_dims', 64)
         self.options['d_dims'] = None
         self.options['d_mask_dims'] = None
-        default_use_float16        = self.options['use_float16']        = self.load_or_def_option('use_float16', False)
         default_learn_mask         = self.options['learn_mask']         = self.load_or_def_option('learn_mask', True)
         default_lr_dropout         = self.options['lr_dropout']         = self.load_or_def_option('lr_dropout', False)
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
@@ -89,7 +88,6 @@ class SAEHDModel(ModelBase):
             if len(device_config.devices) == 1:
                 self.options['models_opt_on_gpu'] = io.input_bool ("Place models and optimizer on GPU", default_models_opt_on_gpu, help_message="When you train on one GPU, by default model and optimizer weights are placed on GPU to accelerate the process. You can place they on CPU to free up extra VRAM, thus set bigger dimensions.")
 
-            self.options['use_float16'] = io.input_bool ("Use float16", default_use_float16, help_message="Experimental option. Reduces the model size by half. Increases the speed of training. Decreases the accuracy of the model. The model may collapse. Model does not study the mask in large resolutions. Uses tensor cores if available on GPU and model contains divisble by 8 dimensions, such as enc/dec dims, batch size.")
             self.options['lr_dropout']  = io.input_bool ("Use learning rate dropout", default_lr_dropout, help_message="When the face is trained enough, you can enable this option to get extra sharpness for less amount of iterations.")
             self.options['random_warp'] = io.input_bool ("Enable random warp of samples", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness for less amount of iterations.")
 
@@ -115,8 +113,7 @@ class SAEHDModel(ModelBase):
     def on_initialize(self):
         device_config = nn.getCurrentDeviceConfig()
         self.model_data_format = "NCHW" if len(device_config.devices) != 0 and not self.is_debug() else "NHWC"
-        nn.initialize(floatx="float16" if self.options['use_float16'] else "float32",
-                      data_format=self.model_data_format)
+        nn.initialize(data_format=self.model_data_format)
         tf = nn.tf
 
         conv_kernel_initializer = nn.initializers.ca()
@@ -349,7 +346,7 @@ class SAEHDModel(ModelBase):
 
         masked_training = True
 
-        models_opt_on_gpu = False if len(devices) == 0 else self.options['models_opt_on_gpu']
+        models_opt_on_gpu = False if len(devices) == 0 else True if len(devices) > 1 else self.options['models_opt_on_gpu']
         models_opt_device = '/GPU:0' if models_opt_on_gpu and self.is_training else '/CPU:0'
         optimizer_vars_on_cpu = models_opt_device=='/CPU:0'
 

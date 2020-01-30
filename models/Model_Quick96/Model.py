@@ -163,7 +163,7 @@ class QModel(ModelBase):
 
         masked_training = True
 
-        models_opt_on_gpu = len(devices) >= 1 and all([dev.total_mem_gb >= 2 for dev in devices])
+        models_opt_on_gpu = len(devices) >= 1 and all([dev.total_mem_gb >= 4 for dev in devices])
         models_opt_device = '/GPU:0' if models_opt_on_gpu and self.is_training else '/CPU:0'
         optimizer_vars_on_cpu = models_opt_device=='/CPU:0'
 
