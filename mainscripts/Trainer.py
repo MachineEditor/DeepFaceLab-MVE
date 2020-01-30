@@ -133,7 +133,7 @@ def trainerThread (s2c, c2s, e,
                             shared_state['after_save'] = False
                             last_save_time = time.time()
 
-                            mean_loss = np.mean ( [ np.array(loss_history[i]) for i in range(save_iter, iter) ], axis=0)
+                            mean_loss = np.mean ( loss_history[save_iter:iter], axis=0)
 
                             for loss_value in mean_loss:
                                 loss_string += "[%.4f]" % (loss_value)
