@@ -45,7 +45,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
         prd_face_mask_a_0 = cv2.resize (dst_face_mask_a_0, predictor_input_shape[0:2] )
         predictor_masked = False
 
-    if cfg.super_resolution_mode:
+    if cfg.super_resolution_mode != 0:
         prd_face_bgr = cfg.superres_func(cfg.super_resolution_mode, prd_face_bgr)
         prd_face_bgr = np.clip(prd_face_bgr, 0, 1)
 
@@ -269,7 +269,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
                 k_size = int(frame_info.motion_power*cfg_mp)
                 if k_size >= 1:
                     k_size = np.clip (k_size+1, 2, 50)
-                    if cfg.super_resolution_mode:
+                    if cfg.super_resolution_mode != 0:
                         k_size *= 2
                     out_face_bgr = imagelib.LinearMotionBlur (out_face_bgr, k_size , frame_info.motion_deg)
 
