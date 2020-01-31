@@ -30,7 +30,7 @@ class SAEHDModel(ModelBase):
         default_resolution         = self.options['resolution']         = self.load_or_def_option('resolution', 128)
         default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'f')
         default_models_opt_on_gpu  = self.options['models_opt_on_gpu']  = self.load_or_def_option('models_opt_on_gpu', True)
-        default_archi              = self.options['archi']              = self.load_or_def_option('archi', 'dfhd')
+        default_archi              = self.options['archi']              = self.load_or_def_option('archi', 'df')
         default_ae_dims            = self.options['ae_dims']            = self.load_or_def_option('ae_dims', 256)
         default_e_dims             = self.options['e_dims']             = self.load_or_def_option('e_dims', 64)
         self.options['d_dims'] = None
