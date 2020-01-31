@@ -133,8 +133,8 @@ class MergerConfigMasked(MergerConfig):
                        masked_hist_match=True,
                        hist_match_threshold = 238,
                        mask_mode = 1,
-                       erode_mask_modifier = 50,
-                       blur_mask_modifier = 50,
+                       erode_mask_modifier = 100,
+                       blur_mask_modifier = 200,
                        motion_blur_power = 0,
                        output_face_scale = 0,
                        color_transfer_mode = ctm_str_dict['rct'],
@@ -177,11 +177,11 @@ class MergerConfigMasked(MergerConfig):
         self.mode = mode_dict.get (mode, self.default_mode)
 
     def toggle_masked_hist_match(self):
-        if self.mode == 'hist-match' or self.mode == 'hist-match-bw':
+        if self.mode == 'hist-match':
             self.masked_hist_match = not self.masked_hist_match
 
     def add_hist_match_threshold(self, diff):
-        if self.mode == 'hist-match' or self.mode == 'hist-match-bw' or self.mode == 'seamless-hist-match':
+        if self.mode == 'hist-match' or self.mode == 'seamless-hist-match':
             self.hist_match_threshold = np.clip ( self.hist_match_threshold+diff , 0, 255)
 
     def toggle_mask_mode(self):
@@ -195,7 +195,7 @@ class MergerConfigMasked(MergerConfig):
         self.erode_mask_modifier = np.clip ( self.erode_mask_modifier+diff , -400, 400)
 
     def add_blur_mask_modifier(self, diff):
-        self.blur_mask_modifier = np.clip ( self.blur_mask_modifier+diff , -400, 400)
+        self.blur_mask_modifier = np.clip ( self.blur_mask_modifier+diff , 0, 400)
 
     def add_motion_blur_power(self, diff):
         self.motion_blur_power = np.clip ( self.motion_blur_power+diff, 0, 100)
@@ -225,10 +225,10 @@ class MergerConfigMasked(MergerConfig):
         self.mode = mode_dict.get (mode, self.default_mode )
 
         if 'raw' not in self.mode:
-            if self.mode == 'hist-match' or self.mode == 'hist-match-bw':
+            if self.mode == 'hist-match':
                 self.masked_hist_match = io.input_bool("Masked hist match?", True)
 
-            if self.mode == 'hist-match' or self.mode == 'hist-match-bw' or self.mode == 'seamless-hist-match':
+            if self.mode == 'hist-match' or self.mode == 'seamless-hist-match':
                 self.hist_match_threshold = np.clip ( io.input_int("Hist match threshold", 255, add_info="0..255"), 0, 255)
 
         if self.face_type == FaceType.FULL:
@@ -247,7 +247,7 @@ class MergerConfigMasked(MergerConfig):
 
         if 'raw' not in self.mode:
             self.erode_mask_modifier = np.clip ( io.input_int ("Choose erode mask modifier", 0, add_info="-400..400"), -400, 400)
-            self.blur_mask_modifier =  np.clip ( io.input_int ("Choose blur mask modifier", 0, add_info="-400..400"), -400, 400)
+            self.blur_mask_modifier =  np.clip ( io.input_int ("Choose blur mask modifier", 0, add_info="0..400"), 0, 400)
             self.motion_blur_power = np.clip ( io.input_int ("Choose motion blur power", 0, add_info="0..100"), 0, 100)
 
         self.output_face_scale = np.clip (io.input_int ("Choose output face scale modifier", 0, add_info="-50..50" ), -50, 50)
@@ -291,10 +291,10 @@ class MergerConfigMasked(MergerConfig):
             f"""Mode: {self.mode}\n"""
             )
 
-        if self.mode == 'hist-match' or self.mode == 'hist-match-bw':
+        if self.mode == 'hist-match':
             r += f"""masked_hist_match: {self.masked_hist_match}\n"""
 
-        if self.mode == 'hist-match' or self.mode == 'hist-match-bw' or self.mode == 'seamless-hist-match':
+        if self.mode == 'hist-match' or self.mode == 'seamless-hist-match':
             r += f"""hist_match_threshold: {self.hist_match_threshold}\n"""
 
         if self.face_type == FaceType.FULL:
