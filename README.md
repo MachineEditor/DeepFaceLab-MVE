@@ -1,6 +1,12 @@
 ﻿<table align="center"><tr><td align="center" width="9999">
 <img src="doc/DFL_welcome.jpg" align="center">
-<p align="center"><img src="doc/logo_cuda.png"><img src="doc/logo_tensorflow.png"></p>
+
+<p align="center">
+
+![](doc/logo_cuda.png)
+![](doc/logo_tensorflow.png)
+
+</p>
   
 # DeepFaceLab  
 ### the leading software for creating deepfakes
@@ -12,7 +18,7 @@ More than 95% of deepfake videos are created with DeepFaceLab.
 
 DeepFaceLab is used by such popular youtube channels as
 
-|<img src="doc/youtube_icon.png"> [Ctrl Shift Face](https://www.youtube.com/channel/UCKpH0CKltc73e4wh0_pgL3g)|<img src="doc/youtube_icon.png"> [Sham00k](https://www.youtube.com/channel/UCZXbWcv7fSZFTAZV4beckyw/videos)|<img src="doc/youtube_icon.png"> [Collider videos](https://www.youtube.com/watch?v=A91P2qtPT54&list=PLayt6616lBclvOprvrC8qKGCO-mAhPRux)|<img src="doc/youtube_icon.png"> [iFake](https://www.youtube.com/channel/UCC0lK2Zo2BMXX-k1Ks0r7dg/videos)|<img src="doc/youtube_icon.png"> [VFXChris Ume](https://www.youtube.com/channel/UCGf4OlX_aTt8DlrgiH3jN3g/videos)|
+|![](doc/youtube_icon.png) [Ctrl Shift Face](https://www.youtube.com/channel/UCKpH0CKltc73e4wh0_pgL3g)|![](doc/youtube_icon.png) [Sham00k](https://www.youtube.com/channel/UCZXbWcv7fSZFTAZV4beckyw/videos)|![](doc/youtube_icon.png) [Collider videos](https://www.youtube.com/watch?v=A91P2qtPT54&list=PLayt6616lBclvOprvrC8qKGCO-mAhPRux)|![](doc/youtube_icon.png) [iFake](https://www.youtube.com/channel/UCC0lK2Zo2BMXX-k1Ks0r7dg/videos)|![](doc/youtube_icon.png) [VFXChris Ume](https://www.youtube.com/channel/UCGf4OlX_aTt8DlrgiH3jN3g/videos)|
 |---|---|---|---|---|
 </td></tr>
 <tr><td align="center" width="9999">
@@ -26,7 +32,7 @@ deepfake quality progress
 
 |<p align="center">first contact</p>|<p align="center">nowadays</p>|
 |---|---|
-|<img src="doc/quality_first_contact.jpg">|<img src="doc/quality_nowadays.jpg">|
+|![](doc/quality_first_contact.jpg)|![](doc/quality_nowadays.jpg)|
 </td></tr>
 
 <tr><td align="center" width="9999">
@@ -81,7 +87,11 @@ deepfake quality progress
 <tr><td align="center" width="9999">
   
 ## Meme zone
-<p align="center"><img src="doc/DeepFaceLab is working.png"></p>
+<p align="center">
+
+![](doc/DeepFaceLab_is_working.png)
+
+</p>
 
 </td></tr>
 <tr><td align="center" width="9999">
