@@ -219,7 +219,7 @@ class MergeSubprocessor(Subprocessor):
         self.output_mask_path = output_mask_path
         self.model_iter = model_iter
 
-        self.prefetch_frame_count = self.process_count = min(6,multiprocessing.cpu_count())
+        self.prefetch_frame_count = self.process_count = multiprocessing.cpu_count()
 
         session_data = None
         if self.is_interactive and self.merger_session_filepath.exists():
