@@ -43,7 +43,10 @@ class Screen(object):
     def toggle_show_checker_board(self):
         self.show_checker_board = not self.show_checker_board
         self.force_update = True
-
+    
+    def get_image(self):
+        return self.image
+        
     def set_image(self, img):
         if not img is self.image:
             self.force_update = True

@@ -100,7 +100,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
         elif cfg.mask_mode == 7:
             prd_face_mask_a_0 = prd_face_mask_a_0 * FAN_dst_face_mask_a_0
 
-    prd_face_mask_a_0[ prd_face_mask_a_0 < 0.001 ] = 0.0
+    prd_face_mask_a_0[ prd_face_mask_a_0 < (1.0/255.0) ] = 0.0 # get rid of noise
 
 
     # process mask in local predicted space
@@ -123,7 +123,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
         # clip eroded/dilated mask in actual predict area
         # pad with half blur size in order to accuratelly fade to zero at the boundary
         clip_size = input_size + blur // 2
-
+        
         prd_face_mask_a_0[:clip_size,:] = 0
         prd_face_mask_a_0[-clip_size:,:] = 0
         prd_face_mask_a_0[:,:clip_size] = 0
@@ -132,14 +132,16 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
         if blur > 0:
             blur = blur + (1-blur % 2)
             prd_face_mask_a_0 = cv2.GaussianBlur(prd_face_mask_a_0, (blur, blur) , 0)
-
+    
         prd_face_mask_a_0 = prd_face_mask_a_0[input_size:-input_size,input_size:-input_size]
+
         prd_face_mask_a_0 = np.clip(prd_face_mask_a_0, 0, 1)
 
     img_face_mask_a = cv2.warpAffine( prd_face_mask_a_0, face_mask_output_mat, img_size, np.zeros(img_bgr.shape[0:2], dtype=np.float32), flags=cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC )[...,None]
     img_face_mask_a = np.clip (img_face_mask_a, 0.0, 1.0)
-    img_face_mask_a [ img_face_mask_a <= 0.1 ] = 0.0 #get rid of noise
 
+    img_face_mask_a [ img_face_mask_a < (1.0/255.0) ] = 0.0 # get rid of noise
+    
     if prd_face_mask_a_0.shape[0] != output_size:
         prd_face_mask_a_0 = cv2.resize (prd_face_mask_a_0, (output_size,output_size), cv2.INTER_CUBIC)
 

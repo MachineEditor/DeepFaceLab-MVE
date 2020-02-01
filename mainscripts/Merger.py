@@ -232,6 +232,7 @@ class MergeSubprocessor(Subprocessor):
                 except Exception as e:
                     pass
 
+        rewind_to_frame_idx = None
         self.frames = frames
         self.frames_idxs = [ *range(len(self.frames)) ]
         self.frames_done_idxs = []
@@ -272,19 +273,15 @@ class MergeSubprocessor(Subprocessor):
                 self.frames_idxs = s_frames_idxs
                 self.frames_done_idxs = s_frames_done_idxs
 
-                rewind_to_begin = len(self.frames_idxs) == 0 # all frames are done?
-
                 if self.model_iter != s_model_iter:
                     # model was more trained, recompute all frames
-                    rewind_to_begin = True
+                    rewind_to_frame_idx = -1
                     for frame in self.frames:
                         frame.is_done = False
-
-                if rewind_to_begin:
-                    while len(self.frames_done_idxs) > 0:
-                        prev_frame = self.frames[self.frames_done_idxs.pop()]
-                        self.frames_idxs.insert(0, prev_frame.idx)
-
+                elif len(self.frames_idxs) == 0:
+                    # all frames are done?
+                    rewind_to_frame_idx = -1
+       
                 if len(self.frames_idxs) != 0:
                     cur_frame = self.frames[self.frames_idxs[0]]
                     cur_frame.is_shown = False
@@ -307,7 +304,25 @@ class MergeSubprocessor(Subprocessor):
             frame.idx = i
             frame.output_filepath      = self.output_path      / ( frame.frame_info.filepath.stem + '.png' )
             frame.output_mask_filepath = self.output_mask_path / ( frame.frame_info.filepath.stem + '.png' )
+            
+            if not frame.output_filepath.exists() or \
+               not frame.output_mask_filepath.exists():
+                # if some frame does not exist, recompute and rewind
+                frame.is_done = False
+                frame.is_shown = False
+                
+                if rewind_to_frame_idx is None:
+                    rewind_to_frame_idx = i-1
+                else:
+                    rewind_to_frame_idx = min(rewind_to_frame_idx, i-1)
 
+        if rewind_to_frame_idx is not None:
+            while len(self.frames_done_idxs) > 0:
+                if self.frames_done_idxs[-1] > rewind_to_frame_idx:
+                    prev_frame = self.frames[self.frames_done_idxs.pop()]
+                    self.frames_idxs.insert(0, prev_frame.idx)
+                else:
+                    break
     #override
     def process_info_generator(self):
         r = [0] if MERGER_DEBUG else range(self.process_count)
@@ -418,38 +433,37 @@ class MergeSubprocessor(Subprocessor):
             cur_frame = self.frames[self.frames_idxs[0]]
 
         if self.is_interactive:
-            self.main_screen.set_waiting_icon(False)
+            
+            screen_image = None if self.process_remain_frames else \
+                                   self.main_screen.get_image()
+            
+            self.main_screen.set_image(None)
+            self.main_screen.set_waiting_icon( self.process_remain_frames or \
+                                               self.is_interactive_quitting )
 
-            if not self.is_interactive_quitting and not self.process_remain_frames:
-                if cur_frame is not None:
-                    if not cur_frame.is_shown:
-                        if cur_frame.is_done:
-                            cur_frame.is_shown = True
-                            io.log_info (cur_frame.cfg.to_string( cur_frame.frame_info.filepath.name) )
+            if cur_frame is not None and not self.is_interactive_quitting:
 
+                if not self.process_remain_frames:
+                    if cur_frame.is_done:
+                        if not cur_frame.is_shown:
                             if cur_frame.image is None:
-                                image      = cv2_imread (cur_frame.output_filepath)
-                                image_mask = cv2_imread (cur_frame.output_mask_filepath)
+                                image      = cv2_imread (cur_frame.output_filepath, verbose=False)
+                                image_mask = cv2_imread (cur_frame.output_mask_filepath, verbose=False)
                                 if image is None or image_mask is None:
                                     # unable to read? recompute then
                                     cur_frame.is_done = False
-                                    cur_frame.is_shown = False
                                 else:
                                     image_mask = imagelib.normalize_channels(image_mask, 1)
                                     cur_frame.image = np.concatenate([image, image_mask], -1)
 
-                            if cur_frame.is_done:
-                                self.main_screen.set_image(cur_frame.image)
+                            if cur_frame.is_done:        
+                                io.log_info (cur_frame.cfg.to_string( cur_frame.frame_info.filepath.name) )                        
+                                cur_frame.is_shown = True
+                                screen_image = cur_frame.image
+                    else:
+                        self.main_screen.set_waiting_icon(True)
 
-                        else:
-                            self.main_screen.set_waiting_icon(True)
-
-                else:
-                    self.main_screen.set_image(None)
-            else:
-                self.main_screen.set_image(None)
-                self.main_screen.set_waiting_icon(True)
-
+            self.main_screen.set_image(screen_image)                                
             self.screen_manager.show_current()
 
             key_events = self.screen_manager.get_key_events()
