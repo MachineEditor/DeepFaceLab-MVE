@@ -691,43 +691,63 @@ def main (model_class_name=None,
                 def generator():
                     for sample in io.progress_bar_generator( packed_samples, "Collecting alignments"):
                         filepath = Path(sample.filename)
-                        yield DFLIMG.load(filepath, loader_func=lambda x: sample.read_raw_file()  )
+                        yield filepath, DFLIMG.load(filepath, loader_func=lambda x: sample.read_raw_file()  )
             else:
                 def generator():
                     for filepath in io.progress_bar_generator( pathex.get_image_paths(aligned_path), "Collecting alignments"):
                         filepath = Path(filepath)
-                        yield DFLIMG.load(filepath)
+                        yield filepath,  DFLIMG.load(filepath)
 
             alignments = {}
             multiple_faces_detected = False
 
-            for dflimg in generator():
+            for filepath, dflimg in generator():
                 if dflimg is None:
                     io.log_err ("%s is not a dfl image file" % (filepath.name) )
                     continue
 
                 source_filename = dflimg.get_source_filename()
-                if source_filename is None or source_filename == "_":
+                if source_filename is None:
                     continue
 
-                source_filename = Path(source_filename)
-                source_filename_stem = source_filename.stem
+                source_filepath = Path(source_filename)
+                source_filename_stem = source_filepath.stem
 
                 if source_filename_stem not in alignments.keys():
                     alignments[ source_filename_stem ] = []
 
                 alignments_ar = alignments[ source_filename_stem ]
-                alignments_ar.append (dflimg.get_source_landmarks())
+                alignments_ar.append ( (dflimg.get_source_landmarks(), filepath, source_filepath ) )
+            
                 if len(alignments_ar) > 1:
                     multiple_faces_detected = True
 
             if multiple_faces_detected:
-                io.log_info ("Warning: multiple faces detected. Strongly recommended to process them separately.")
+                io.log_info ("")
+                io.log_info ("Warning: multiple faces detected. Only one alignment file should refer one source file.")
+                io.log_info ("")
+                
+            for a_key in list(alignments.keys()):
+                a_ar = alignments[a_key]
+                if len(a_ar) > 1:
+                    for _, filepath, source_filepath in a_ar:                        
+                        io.log_info (f"alignment {filepath.name} refers to {source_filepath.name} ")
+                    io.log_info ("")
+                                
+            if multiple_faces_detected:
+                io.log_info ("It is strongly recommended to process the faces separatelly.")
+                io.log_info ("Use 'recover original filename' to determine the exact duplicates.")
+                io.log_info ("")
 
-            frames = [ MergeSubprocessor.Frame( frame_info=FrameInfo(filepath=Path(p), landmarks_list=alignments.get(Path(p).stem, None))) for p in input_path_image_paths ]
+            frames = [ MergeSubprocessor.Frame( frame_info=FrameInfo(filepath=Path(p), 
+                                                                     landmarks_list=alignments.get(Path(p).stem, (None,)  )[0]
+                                                                    )
+                                              )
+                       for p in input_path_image_paths ]
 
             if multiple_faces_detected:
                 io.log_info ("Warning: multiple faces detected. Motion blur will not be used.")
+                io.log_info ("")
             else:
                 s = 256
                 local_pts = [ (s//2-1, s//2-1), (s//2-1,0) ] #center+up
