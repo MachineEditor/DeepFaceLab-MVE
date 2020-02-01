@@ -437,7 +437,6 @@ class MergeSubprocessor(Subprocessor):
             screen_image = None if self.process_remain_frames else \
                                    self.main_screen.get_image()
             
-            self.main_screen.set_image(None)
             self.main_screen.set_waiting_icon( self.process_remain_frames or \
                                                self.is_interactive_quitting )
 
