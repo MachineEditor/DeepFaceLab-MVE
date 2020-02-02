@@ -733,14 +733,16 @@ def main (model_class_name=None,
                     for _, filepath, source_filepath in a_ar:                        
                         io.log_info (f"alignment {filepath.name} refers to {source_filepath.name} ")
                     io.log_info ("")
-                                
+                     
+                alignments[a_key] = [ a[0] for a in a_ar]
+        
             if multiple_faces_detected:
                 io.log_info ("It is strongly recommended to process the faces separatelly.")
                 io.log_info ("Use 'recover original filename' to determine the exact duplicates.")
                 io.log_info ("")
 
             frames = [ MergeSubprocessor.Frame( frame_info=FrameInfo(filepath=Path(p), 
-                                                                     landmarks_list=alignments.get(Path(p).stem, (None,)  )[0]
+                                                                     landmarks_list=alignments.get(Path(p).stem, None)
                                                                     )
                                               )
                        for p in input_path_image_paths ]
