@@ -48,7 +48,7 @@ class SAEHDModel(ModelBase):
 
         ask_override = self.ask_override()
         if self.is_first_run() or ask_override:
-            self.ask_enable_autobackup()
+            self.ask_autobackup_hour()
             self.ask_write_preview_history()
             self.ask_target_iter()
             self.ask_random_flip()

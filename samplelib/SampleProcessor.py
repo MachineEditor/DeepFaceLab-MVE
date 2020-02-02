@@ -154,9 +154,14 @@ class SampleProcessor(object):
                         if motion_blur is not None:
                             chance, mb_max_size = motion_blur
                             chance = np.clip(chance, 0, 100)
+                            
+                            rnd_state = np.random.RandomState (sample_rnd_seed)
+                            mblur_rnd_chance = rnd_state.randint(100)
+                            mblur_rnd_kernel = rnd_state.randint(mb_max_size)+1
+                            mblur_rnd_deg    = rnd_state.randint(360)
 
-                            if np.random.randint(100) < chance:
-                                img = imagelib.LinearMotionBlur (img, np.random.randint( mb_max_size )+1, np.random.randint(360) )
+                            if mblur_rnd_chance < chance:
+                                img = imagelib.LinearMotionBlur (img, mblur_rnd_kernel, mblur_rnd_deg )
 
                         if gaussian_blur is not None:
                             chance, kernel_max_size = gaussian_blur

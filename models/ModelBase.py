@@ -165,7 +165,7 @@ class ModelBase(object):
             # save as default options only for first run model initialize
             self.default_options_path.write_bytes( pickle.dumps (self.options) )
 
-        self.autobackup = self.options.get('autobackup', False)
+        self.autobackup_hour = self.options.get('autobackup_hour', 0)
         self.write_preview_history = self.options.get('write_preview_history', False)
         self.target_iter = self.options.get('target_iter',0)
         self.random_flip = self.options.get('random_flip',True)
@@ -179,8 +179,8 @@ class ModelBase(object):
             self.preview_history_path = self.saved_models_path / ( f'{self.get_model_name()}_history' )
             self.autobackups_path     = self.saved_models_path / ( f'{self.get_model_name()}_autobackups' )
 
-            if self.autobackup:
-                self.autobackup_current_hour = time.localtime().tm_hour
+            if self.autobackup_hour != 0:
+                self.autobackup_start_hour = int(time.time() // 3600)
 
                 if not self.autobackups_path.exists():
                     self.autobackups_path.mkdir(exist_ok=True)
@@ -256,9 +256,9 @@ class ModelBase(object):
     def ask_override(self):
         return self.is_training and self.iter != 0 and io.input_in_time ("Press enter in 2 seconds to override model settings.", 5 if io.is_colab() else 2 )
 
-    def ask_enable_autobackup(self):
-        default_autobackup = self.options['autobackup'] = self.load_or_def_option('autobackup', False)
-        self.options['autobackup'] = io.input_bool(f"Enable autobackup", default_autobackup, help_message="Autobackup model files with preview every hour for last 15 hours. Latest backup located in model/<>_autobackups/01")
+    def ask_autobackup_hour(self):
+        default_autobackup_hour = self.options['autobackup_hour'] = self.load_or_def_option('autobackup_hour', 0)
+        self.options['autobackup_hour'] = io.input_int(f"Autobackup every N hour", default_autobackup_hour, add_info="0..24", help_message="Autobackup model files with preview every N hour. Latest backup located in model/<>_autobackups/01")
 
     def ask_write_preview_history(self):
         default_write_preview_history = self.load_or_def_option('write_preview_history', False)
@@ -358,10 +358,11 @@ class ModelBase(object):
         }
         pathex.write_bytes_safe (self.model_data_path, pickle.dumps(model_data) )
 
-        if self.autobackup:
-            current_hour = time.localtime().tm_hour
-            if self.autobackup_current_hour != current_hour:
-                self.autobackup_current_hour = current_hour
+        if self.autobackup_hour != 0:
+            current_hour = int(time.time() // 3600)       
+            diff_hour = self.autobackup_start_hour - current_hour     
+            if diff_hour > 0 and diff_hour % self.autobackup_hour == 0:
+                self.autobackup_start_hour = current_hour
                 self.create_backup()
                 
     def create_backup(self):
@@ -373,7 +374,7 @@ class ModelBase(object):
         bckp_filename_list = [ self.get_strpath_storage_for_file(filename) for _, filename in self.get_model_filename_list() ]
         bckp_filename_list += [ str(self.get_summary_path()), str(self.model_data_path) ]
         
-        for i in range(15,0,-1):
+        for i in range(24,0,-1):
             idx_str = '%.2d' % i
             next_idx_str = '%.2d' % (i+1)
 
@@ -381,7 +382,7 @@ class ModelBase(object):
             next_idx_packup_path = self.autobackups_path / next_idx_str
 
             if idx_backup_path.exists():
-                if i == 15:
+                if i == 24:
                     pathex.delete_all_files(idx_backup_path)
                 else:
                     next_idx_packup_path.mkdir(exist_ok=True)
