@@ -26,8 +26,8 @@ def MergeFaceAvatar (predictor_func, predictor_input_shape, cfg, prev_temporal_f
 
     prd_f = predictor_func ( prev_imgs, img, next_imgs )
 
-    if cfg.super_resolution_mode != 0:
-        prd_f = cfg.superres_func(cfg.super_resolution_mode, prd_f)
+    #if cfg.super_resolution_mode != 0:
+    #    prd_f = cfg.superres_func(cfg.super_resolution_mode, prd_f)
 
     if cfg.sharpen_mode != 0 and cfg.sharpen_amount != 0:
         prd_f = cfg.sharpen_func ( prd_f, cfg.sharpen_mode, 3, cfg.sharpen_amount)

@@ -15,8 +15,6 @@ class MergerConfig(object):
     TYPE_IMAGE_WITH_LANDMARKS = 4
 
     def __init__(self, type=0,
-
-                       super_resolution_mode=0,
                        sharpen_mode=0,
                        blursharpen_amount=0,
                        **kwargs
@@ -28,11 +26,9 @@ class MergerConfig(object):
         self.fanseg_input_size = None
         self.fanseg_extract_func = None
 
-        self.super_res_dict = {0:"None", 1:'FaceEnhancer'}
         self.sharpen_dict = {0:"None", 1:'box', 2:'gaussian'}
 
         #default changeable params
-        self.super_resolution_mode = super_resolution_mode
         self.sharpen_mode = sharpen_mode
         self.blursharpen_amount = blursharpen_amount
 
@@ -50,12 +46,6 @@ class MergerConfig(object):
         if self.sharpen_mode != 0:
             self.blursharpen_amount = np.clip ( io.input_int ("Choose blur/sharpen amount", 0, add_info="-100..100"), -100, 100 )
 
-        s = """Choose super resolution mode: \n"""
-        for key in self.super_res_dict.keys():
-            s += f"""({key}) {self.super_res_dict[key]}\n"""
-        io.log_info(s)
-        self.super_resolution_mode = io.input_int ("", 0, valid_list=self.super_res_dict.keys(), help_message="Enhance details by applying superresolution network.")
-
     def toggle_sharpen_mode(self):
         a = list( self.sharpen_dict.keys() )
         self.sharpen_mode = a[ (a.index(self.sharpen_mode)+1) % len(a) ]
@@ -63,19 +53,11 @@ class MergerConfig(object):
     def add_blursharpen_amount(self, diff):
         self.blursharpen_amount = np.clip ( self.blursharpen_amount+diff, -100, 100)
 
-    def toggle_super_resolution_mode(self):
-        a = list( self.super_res_dict.keys() )
-        self.super_resolution_mode = a[ (a.index(self.super_resolution_mode)+1) % len(a) ]
-
     #overridable
     def get_config(self):
         d = self.__dict__.copy()
         d.pop('type')
         return d
-        return {'sharpen_mode':self.sharpen_mode,
-                'blursharpen_amount':self.blursharpen_amount,
-                'super_resolution_mode':self.super_resolution_mode
-                }
 
     #overridable
     def __eq__(self, other):
@@ -83,8 +65,7 @@ class MergerConfig(object):
 
         if isinstance(other, MergerConfig):
             return self.sharpen_mode == other.sharpen_mode and \
-                   self.blursharpen_amount == other.blursharpen_amount and \
-                   self.super_resolution_mode == other.super_resolution_mode
+                   self.blursharpen_amount == other.blursharpen_amount
 
         return False
 
@@ -93,7 +74,6 @@ class MergerConfig(object):
         r = ""
         r += f"sharpen_mode : {self.sharpen_dict[self.sharpen_mode]}\n"
         r += f"blursharpen_amount : {self.blursharpen_amount}\n"
-        r += f"super_resolution_mode : {self.super_res_dict[self.super_resolution_mode]}\n"
         return r
 
 mode_dict = {0:'original',
@@ -137,6 +117,7 @@ class MergerConfigMasked(MergerConfig):
                        blur_mask_modifier = 0,
                        motion_blur_power = 0,
                        output_face_scale = 0,
+                       super_resolution_power = 0,
                        color_transfer_mode = ctm_str_dict['rct'],
                        image_denoise_power = 0,
                        bicubic_degrade_power = 0,
@@ -165,6 +146,7 @@ class MergerConfigMasked(MergerConfig):
         self.blur_mask_modifier = blur_mask_modifier
         self.motion_blur_power = motion_blur_power
         self.output_face_scale = output_face_scale
+        self.super_resolution_power = super_resolution_power
         self.color_transfer_mode = color_transfer_mode
         self.image_denoise_power = image_denoise_power
         self.bicubic_degrade_power = bicubic_degrade_power
@@ -205,6 +187,9 @@ class MergerConfigMasked(MergerConfig):
 
     def toggle_color_transfer_mode(self):
         self.color_transfer_mode = (self.color_transfer_mode+1) % ( max(ctm_dict.keys())+1 )
+
+    def add_super_resolution_power(self, diff):
+        self.super_resolution_power = np.clip ( self.super_resolution_power+diff , 0, 100)
 
     def add_color_degrade_power(self, diff):
         self.color_degrade_power = np.clip ( self.color_degrade_power+diff , 0, 100)
@@ -257,6 +242,8 @@ class MergerConfigMasked(MergerConfig):
             self.color_transfer_mode = ctm_str_dict[self.color_transfer_mode]
 
         super().ask_settings()
+ 
+        self.super_resolution_power = np.clip ( io.input_int ("Choose super resolution power", 0, add_info="0..100", help_message="Enhance details by applying superresolution network."), 0, 100)
 
         if 'raw' not in self.mode:
             self.image_denoise_power = np.clip ( io.input_int ("Choose image degrade by denoise power", 0, add_info="0..500"), 0, 500)
@@ -279,6 +266,7 @@ class MergerConfigMasked(MergerConfig):
                    self.motion_blur_power == other.motion_blur_power and \
                    self.output_face_scale == other.output_face_scale and \
                    self.color_transfer_mode == other.color_transfer_mode and \
+                   self.super_resolution_power == other.super_resolution_power and \
                    self.image_denoise_power == other.image_denoise_power and \
                    self.bicubic_degrade_power == other.bicubic_degrade_power and \
                    self.color_degrade_power == other.color_degrade_power
@@ -313,7 +301,8 @@ class MergerConfigMasked(MergerConfig):
             r += f"""color_transfer_mode: { ctm_dict[self.color_transfer_mode]}\n"""
 
         r += super().to_string(filename)
-
+        r += f"""super_resolution_power: {self.super_resolution_power}\n"""
+        
         if 'raw' not in self.mode:
             r += (f"""image_denoise_power: {self.image_denoise_power}\n"""
                   f"""bicubic_degrade_power: {self.bicubic_degrade_power}\n"""

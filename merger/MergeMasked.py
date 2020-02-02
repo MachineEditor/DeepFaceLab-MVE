@@ -22,7 +22,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
     input_size = predictor_input_shape[0]
     mask_subres_size = input_size*4
     output_size = input_size
-    if cfg.super_resolution_mode != 0:
+    if cfg.super_resolution_power != 0:
         output_size *= 4
 
     face_mat        = LandmarksProcessor.get_transform_mat (img_face_landmarks, output_size, face_type=cfg.face_type)
@@ -53,8 +53,12 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
         prd_face_mask_a_0 = cv2.resize (dst_face_mask_a_0, (input_size,input_size) )
         predictor_masked = False
 
-    if cfg.super_resolution_mode != 0:
-        prd_face_bgr = cfg.superres_func(cfg.super_resolution_mode, prd_face_bgr)
+    if cfg.super_resolution_power != 0:
+        prd_face_bgr_enhanced = cfg.superres_func(prd_face_bgr)
+        mod = cfg.super_resolution_power / 100.0
+
+        prd_face_bgr = cv2.resize(prd_face_bgr, (output_size,output_size))*(1.0-mod) + \
+                       prd_face_bgr_enhanced*mod
         prd_face_bgr = np.clip(prd_face_bgr, 0, 1)
 
         if predictor_masked:
@@ -123,7 +127,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
         # clip eroded/dilated mask in actual predict area
         # pad with half blur size in order to accuratelly fade to zero at the boundary
         clip_size = input_size + blur // 2
-        
+
         prd_face_mask_a_0[:clip_size,:] = 0
         prd_face_mask_a_0[-clip_size:,:] = 0
         prd_face_mask_a_0[:,:clip_size] = 0
@@ -132,7 +136,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
         if blur > 0:
             blur = blur + (1-blur % 2)
             prd_face_mask_a_0 = cv2.GaussianBlur(prd_face_mask_a_0, (blur, blur) , 0)
-    
+
         prd_face_mask_a_0 = prd_face_mask_a_0[input_size:-input_size,input_size:-input_size]
 
         prd_face_mask_a_0 = np.clip(prd_face_mask_a_0, 0, 1)
@@ -141,7 +145,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
     img_face_mask_a = np.clip (img_face_mask_a, 0.0, 1.0)
 
     img_face_mask_a [ img_face_mask_a < (1.0/255.0) ] = 0.0 # get rid of noise
-    
+
     if prd_face_mask_a_0.shape[0] != output_size:
         prd_face_mask_a_0 = cv2.resize (prd_face_mask_a_0, (output_size,output_size), cv2.INTER_CUBIC)
 
@@ -277,7 +281,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
                 k_size = int(frame_info.motion_power*cfg_mp)
                 if k_size >= 1:
                     k_size = np.clip (k_size+1, 2, 50)
-                    if cfg.super_resolution_mode != 0:
+                    if cfg.super_resolution_power != 0:
                         k_size *= 2
                     out_face_bgr = imagelib.LinearMotionBlur (out_face_bgr, k_size , frame_info.motion_deg)
 

@@ -190,12 +190,11 @@ class MergeSubprocessor(Subprocessor):
         self.predictor_input_shape = predictor_input_shape
 
         self.face_enhancer = None
-        def superres_func(mode, face_bgr):
-            if mode == 1:
-                if self.face_enhancer is None:
-                    self.face_enhancer = FaceEnhancer(place_model_on_cpu=True)
+        def superres_func(face_bgr):            
+            if self.face_enhancer is None:
+                self.face_enhancer = FaceEnhancer(place_model_on_cpu=True)
 
-                return self.face_enhancer.enhance (face_bgr, is_tanh=True, preserve_size=False)
+            return self.face_enhancer.enhance (face_bgr, is_tanh=True, preserve_size=False)
 
         self.superres_host, self.superres_func = SubprocessFunctionCaller.make_pair(superres_func)
 
@@ -372,6 +371,8 @@ class MergeSubprocessor(Subprocessor):
                     'd' : lambda cfg,shift_pressed: cfg.add_blur_mask_modifier(-1 if not shift_pressed else -5),
                     'r' : lambda cfg,shift_pressed: cfg.add_motion_blur_power(1 if not shift_pressed else 5),
                     'f' : lambda cfg,shift_pressed: cfg.add_motion_blur_power(-1 if not shift_pressed else -5),
+                    't' : lambda cfg,shift_pressed: cfg.add_super_resolution_power(1 if not shift_pressed else 5),
+                    'g' : lambda cfg,shift_pressed: cfg.add_super_resolution_power(-1 if not shift_pressed else -5),
                     'y' : lambda cfg,shift_pressed: cfg.add_blursharpen_amount(1 if not shift_pressed else 5),
                     'h' : lambda cfg,shift_pressed: cfg.add_blursharpen_amount(-1 if not shift_pressed else -5),
                     'u' : lambda cfg,shift_pressed: cfg.add_output_face_scale(1 if not shift_pressed else 5),
@@ -386,7 +387,6 @@ class MergeSubprocessor(Subprocessor):
                     'z' : lambda cfg,shift_pressed: cfg.toggle_masked_hist_match(),
                     'x' : lambda cfg,shift_pressed: cfg.toggle_mask_mode(),
                     'c' : lambda cfg,shift_pressed: cfg.toggle_color_transfer_mode(),
-                    'v' : lambda cfg,shift_pressed: cfg.toggle_super_resolution_mode(),
                     'n' : lambda cfg,shift_pressed: cfg.toggle_sharpen_mode(),
                     }
             self.masked_keys = list(self.masked_keys_funcs.keys())
@@ -523,7 +523,7 @@ class MergeSubprocessor(Subprocessor):
                             self.screen_manager.get_current().diff_scale(-0.1)
                         elif chr_key == '=':
                             self.screen_manager.get_current().diff_scale(0.1)
-                        elif chr_key == 'b':
+                        elif chr_key == 'v':
                             self.screen_manager.get_current().toggle_show_checker_board()
 
         if go_prev_frame:
