@@ -360,7 +360,8 @@ class ModelBase(object):
 
         if self.autobackup_hour != 0:
             current_hour = int(time.time() // 3600)       
-            diff_hour = self.autobackup_start_hour - current_hour     
+            diff_hour = current_hour - self.autobackup_start_hour
+
             if diff_hour > 0 and diff_hour % self.autobackup_hour == 0:
                 self.autobackup_start_hour = current_hour
                 self.create_backup()
