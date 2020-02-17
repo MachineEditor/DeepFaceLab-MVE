@@ -8,7 +8,7 @@ from facelib import FaceType, LandmarksProcessor
 from core.interact import interact as io
 from core.cv2ex import *
 
-def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img_bgr_uint8, img_bgr, img_face_landmarks):
+def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img_bgr_uint8, img_bgr, img_face_landmarks, img_landmarks_prev, img_landmarks_next):
     img_size = img_bgr.shape[1], img_bgr.shape[0]
     img_face_mask_a = LandmarksProcessor.get_image_hull_mask (img_bgr.shape, img_face_landmarks)
 
@@ -18,20 +18,29 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
     out_img = img_bgr.copy()
     out_merging_mask_a = None
 
-    mask_subres = 4
     input_size = predictor_input_shape[0]
     mask_subres_size = input_size*4
     output_size = input_size
-    if cfg.super_resolution_power != 0:
+    if cfg.super_resolution_power != 0 or cfg.smooth_rect:
         output_size *= 4
 
-    face_mat        = LandmarksProcessor.get_transform_mat (img_face_landmarks, output_size, face_type=cfg.face_type)
-    face_output_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, output_size, face_type=cfg.face_type, scale= 1.0 + 0.01*cfg.output_face_scale   )
+    if cfg.smooth_rect:
+        average_frame_count=5
+        average_center_frame_count=1
+    else:
+        average_frame_count=0
+        average_center_frame_count=0
+
+    def get_transform_mat(*args, **kwargs):
+        return LandmarksProcessor.get_averaged_transform_mat (img_face_landmarks, img_landmarks_prev, img_landmarks_next, average_frame_count, average_center_frame_count, *args, **kwargs)
+
+    face_mat        = get_transform_mat (output_size, face_type=cfg.face_type)
+    face_output_mat = get_transform_mat (output_size, face_type=cfg.face_type, scale= 1.0 + 0.01*cfg.output_face_scale)
 
     if mask_subres_size == output_size:
         face_mask_output_mat = face_output_mat
     else:
-        face_mask_output_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, mask_subres_size, face_type=cfg.face_type, scale= 1.0 + 0.01*cfg.output_face_scale   )
+        face_mask_output_mat = get_transform_mat (mask_subres_size, face_type=cfg.face_type, scale= 1.0 + 0.01*cfg.output_face_scale)
 
     dst_face_bgr      = cv2.warpAffine( img_bgr        , face_mat, (output_size, output_size), flags=cv2.INTER_CUBIC )
     dst_face_bgr      = np.clip(dst_face_bgr, 0, 1)
@@ -56,11 +65,13 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
     if cfg.super_resolution_power != 0:
         prd_face_bgr_enhanced = cfg.superres_func(prd_face_bgr)
         mod = cfg.super_resolution_power / 100.0
-
-        prd_face_bgr = cv2.resize(prd_face_bgr, (output_size,output_size))*(1.0-mod) + \
-                       prd_face_bgr_enhanced*mod
+        prd_face_bgr = cv2.resize(prd_face_bgr, (output_size,output_size))*(1.0-mod) + prd_face_bgr_enhanced*mod
+        prd_face_bgr = np.clip(prd_face_bgr, 0, 1)
+    elif cfg.smooth_rect:
+        prd_face_bgr = cv2.resize(prd_face_bgr, (output_size,output_size), cv2.INTER_CUBIC)
         prd_face_bgr = np.clip(prd_face_bgr, 0, 1)
 
+    if cfg.super_resolution_power != 0 or cfg.smooth_rect:
         if predictor_masked:
             prd_face_mask_a_0 = cv2.resize (prd_face_mask_a_0,  (output_size, output_size), cv2.INTER_CUBIC)
         else:
@@ -77,14 +88,14 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
 
         if cfg.mask_mode >= 4 and cfg.mask_mode <= 7:
 
-            full_face_fanseg_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, cfg.fanseg_input_size, face_type=FaceType.FULL)
+            full_face_fanseg_mat = get_transform_mat (cfg.fanseg_input_size, face_type=FaceType.FULL)
             dst_face_fanseg_bgr = cv2.warpAffine(img_bgr, full_face_fanseg_mat, (cfg.fanseg_input_size,)*2, flags=cv2.INTER_CUBIC )
             dst_face_fanseg_mask = cfg.fanseg_extract_func( FaceType.FULL, dst_face_fanseg_bgr )
 
             if cfg.face_type == FaceType.FULL:
                 FAN_dst_face_mask_a_0 = cv2.resize (dst_face_fanseg_mask, (output_size,output_size), cv2.INTER_CUBIC)
             else:
-                face_fanseg_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, cfg.fanseg_input_size, face_type=cfg.face_type)
+                face_fanseg_mat = get_transform_mat (cfg.fanseg_input_size, face_type=cfg.face_type)
 
                 fanseg_rect_corner_pts = np.array ( [ [0,0], [cfg.fanseg_input_size-1,0], [0,cfg.fanseg_input_size-1] ], dtype=np.float32 )
                 a = LandmarksProcessor.transform_points (fanseg_rect_corner_pts, face_fanseg_mat, invert=True )
@@ -106,13 +117,12 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
 
     prd_face_mask_a_0[ prd_face_mask_a_0 < (1.0/255.0) ] = 0.0 # get rid of noise
 
+    # resize to mask_subres_size
+    if prd_face_mask_a_0.shape[0] != mask_subres_size:
+        prd_face_mask_a_0 = cv2.resize (prd_face_mask_a_0, (mask_subres_size, mask_subres_size), cv2.INTER_CUBIC)
 
     # process mask in local predicted space
     if 'raw' not in cfg.mode:
-        # resize to mask_subres_size
-        if prd_face_mask_a_0.shape[0] != mask_subres_size:
-            prd_face_mask_a_0 = cv2.resize (prd_face_mask_a_0, (mask_subres_size, mask_subres_size), cv2.INTER_CUBIC)
-
         # add zero pad
         prd_face_mask_a_0 = np.pad (prd_face_mask_a_0, input_size)
 
@@ -281,7 +291,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
                 k_size = int(frame_info.motion_power*cfg_mp)
                 if k_size >= 1:
                     k_size = np.clip (k_size+1, 2, 50)
-                    if cfg.super_resolution_power != 0:
+                    if cfg.super_resolution_power != 0 or cfg.smooth_rect:
                         k_size *= 2
                     out_face_bgr = imagelib.LinearMotionBlur (out_face_bgr, k_size , frame_info.motion_deg)
 
@@ -321,14 +331,20 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
     return out_img, out_merging_mask_a
 
 
-def MergeMasked (predictor_func, predictor_input_shape, cfg, frame_info):
+def MergeMasked (predictor_func, predictor_input_shape, cfg, frame_info, prev_temporal_frame_infos=None, next_temporal_frame_infos=None):
     img_bgr_uint8 = cv2_imread(frame_info.filepath)
     img_bgr_uint8 = imagelib.normalize_channels (img_bgr_uint8, 3)
     img_bgr = img_bgr_uint8.astype(np.float32) / 255.0
 
+
     outs = []
     for face_num, img_landmarks in enumerate( frame_info.landmarks_list ):
-        out_img, out_img_merging_mask = MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img_bgr_uint8, img_bgr, img_landmarks)
+        img_landmarks_prev = [ x.landmarks_list[0] for x in prev_temporal_frame_infos if len(x.landmarks_list) != 0] \
+                                                         if prev_temporal_frame_infos is not None else []
+        img_landmarks_next = [ x.landmarks_list[0] for x in next_temporal_frame_infos if len(x.landmarks_list) != 0] \
+                                                         if next_temporal_frame_infos is not None else []
+
+        out_img, out_img_merging_mask = MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img_bgr_uint8, img_bgr, img_landmarks, img_landmarks_prev, img_landmarks_next)
         outs += [ (out_img, out_img_merging_mask) ]
 
     #Combining multiple face outputs

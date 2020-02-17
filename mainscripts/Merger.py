@@ -148,7 +148,7 @@ class MergeSubprocessor(Subprocessor):
                     cfg.fanseg_extract_func = self.fanseg_extract_func
 
                     try:
-                        final_img = MergeMasked (self.predictor_func, self.predictor_input_shape, cfg, frame_info)
+                        final_img = MergeMasked (self.predictor_func, self.predictor_input_shape, cfg, frame_info, pf.prev_temporal_frame_infos, pf.next_temporal_frame_infos)
                     except Exception as e:
                         e_str = traceback.format_exc()
                         if 'MemoryError' in e_str:
@@ -387,6 +387,7 @@ class MergeSubprocessor(Subprocessor):
                     'z' : lambda cfg,shift_pressed: cfg.toggle_masked_hist_match(),
                     'x' : lambda cfg,shift_pressed: cfg.toggle_mask_mode(),
                     'c' : lambda cfg,shift_pressed: cfg.toggle_color_transfer_mode(),
+                    'b' : lambda cfg,shift_pressed: cfg.toggle_smooth_rect(),
                     'n' : lambda cfg,shift_pressed: cfg.toggle_sharpen_mode(),
                     }
             self.masked_keys = list(self.masked_keys_funcs.keys())
@@ -673,7 +674,8 @@ def main (model_class_name=None,
             cfg.ask_settings()
 
         input_path_image_paths = pathex.get_image_paths(input_path)
-
+        
+ 
         if cfg.type == MergerConfig.TYPE_MASKED:
             if not aligned_path.exists():
                 io.log_err('Aligned directory not found. Please ensure it exists.')
@@ -741,11 +743,34 @@ def main (model_class_name=None,
                 io.log_info ("Use 'recover original filename' to determine the exact duplicates.")
                 io.log_info ("")
 
-            frames = [ MergeSubprocessor.Frame( frame_info=FrameInfo(filepath=Path(p), 
-                                                                     landmarks_list=alignments.get(Path(p).stem, None)
-                                                                    )
-                                              )
-                       for p in input_path_image_paths ]
+            filesdata = []
+            for filepath in io.progress_bar_generator(input_path_image_paths, "Collecting info"):
+                filepath=Path(filepath)
+                filesdata += [ FrameInfo(filepath=filepath, landmarks_list=alignments.get(filepath.stem, None)) ]
+    
+            frames = []
+            filesdata_len = len(filesdata)
+            for i in range(len(filesdata)):
+                frame_info = filesdata[i]
+
+                if multiple_faces_detected:
+                    prev_temporal_frame_infos = None
+                    next_temporal_frame_infos = None
+                else:
+                    prev_temporal_frame_infos = []
+                    next_temporal_frame_infos = []
+
+                    for t in range (1,6):
+                        prev_frame_info = filesdata[ max(i -t, 0) ]
+                        next_frame_info = filesdata[ min(i +t, filesdata_len-1 )]
+
+                        prev_temporal_frame_infos.insert (0, prev_frame_info )
+                        next_temporal_frame_infos.append (   next_frame_info )
+
+                frames.append ( MergeSubprocessor.Frame(prev_temporal_frame_infos=prev_temporal_frame_infos,
+                                                        frame_info=frame_info,
+                                                        next_temporal_frame_infos=next_temporal_frame_infos) )
+        
 
             if multiple_faces_detected:
                 io.log_info ("Warning: multiple faces detected. Motion blur will not be used.")
@@ -783,6 +808,8 @@ def main (model_class_name=None,
 
 
         elif cfg.type == MergerConfig.TYPE_FACE_AVATAR:
+            pass
+            """
             filesdata = []
             for filepath in io.progress_bar_generator(input_path_image_paths, "Collecting info"):
                 filepath = Path(filepath)
@@ -812,7 +839,7 @@ def main (model_class_name=None,
                 frames.append ( MergeSubprocessor.Frame(prev_temporal_frame_infos=prev_temporal_frame_infos,
                                                           frame_info=frame_info,
                                                           next_temporal_frame_infos=next_temporal_frame_infos) )
-
+            """
         if len(frames) == 0:
             io.log_info ("No frames to merge in input_dir.")
         else:
