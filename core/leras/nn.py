@@ -55,6 +55,7 @@ class nn():
     tf_upsample2d = None
     tf_upsample2d_bilinear = None
     tf_flatten = None
+    tf_max_pool = None
     tf_reshape_4D = None
     tf_random_binomial = None
     tf_gaussian_blur = None
@@ -82,7 +83,8 @@ class nn():
     
     # Models
     PatchDiscriminator = None
-
+    IllumDiscriminator = None
+    
     @staticmethod
     def initialize(device_config=None, floatx="float32", data_format="NHWC"):
 
