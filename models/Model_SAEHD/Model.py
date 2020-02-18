@@ -645,7 +645,7 @@ class SAEHDModel(ModelBase):
 
             if gan_power != 0:
                 def D_src_dst_train(warped_src, target_src, target_srcm_all, \
-                                    warped_dst, target_dst, target_dstm_all:
+                                    warped_dst, target_dst, target_dstm_all):
                     nn.tf_sess.run ([src_D_src_dst_loss_gv_op], feed_dict={self.warped_src :warped_src,
                                                                            self.target_src :target_src,
                                                                            self.target_srcm_all:target_srcm_all,
