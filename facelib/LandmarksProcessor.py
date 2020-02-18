@@ -328,8 +328,8 @@ def expand_eyebrows(lmrks, eyebrows_expand_mod=1.0):
 
 
 
-def get_image_hull_mask (image_shape, image_landmarks, eyebrows_expand_mod=1.0, ie_polys=None, color=(1,) ):
-    hull_mask = np.zeros(image_shape[0:2]+( len(color),),dtype=np.float32)
+def get_image_hull_mask (image_shape, image_landmarks, eyebrows_expand_mod=1.0, ie_polys=None ):
+    hull_mask = np.zeros(image_shape[0:2]+(1,),dtype=np.float32)
 
     lmrks = expand_eyebrows(image_landmarks, eyebrows_expand_mod)
 
@@ -345,7 +345,7 @@ def get_image_hull_mask (image_shape, image_landmarks, eyebrows_expand_mod=1.0, 
 
     for item in parts:
         merged = np.concatenate(item)
-        cv2.fillConvexPoly(hull_mask, cv2.convexHull(merged), color )
+        cv2.fillConvexPoly(hull_mask, cv2.convexHull(merged), (1,) )
 
     if ie_polys is not None:
         ie_polys.overlay_mask(hull_mask)
@@ -390,7 +390,7 @@ def alpha_to_color (img_alpha, color):
 def get_cmask (image_shape, lmrks, eyebrows_expand_mod=1.0):
     h,w,c = image_shape
 
-    hull = get_image_hull_mask (image_shape, lmrks, eyebrows_expand_mod, color=(1,) )
+    hull = get_image_hull_mask (image_shape, lmrks, eyebrows_expand_mod )
 
     result = np.zeros( (h,w,3), dtype=np.float32 )
 

@@ -35,11 +35,12 @@ class SampleProcessor(object):
         MODE_BGR                   = 40  #BGR
         MODE_G                     = 41  #Grayscale
         MODE_GGG                   = 42  #3xGrayscale
-        MODE_FACE_MASK_HULL        = 43  #mask hull as grayscale
+        MODE_FACE_MASK_ALL_HULL    = 43  #mask all hull as grayscale
         MODE_FACE_MASK_EYES_HULL   = 44  #mask eyes hull as grayscale
-        MODE_FACE_MASK_STRUCT      = 45  #mask structure as grayscale
-        MODE_BGR_SHUFFLE           = 46  #BGR shuffle
-        MODE_BGR_RANDOM_HSV_SHIFT  = 47
+        MODE_FACE_MASK_ALL_EYES_HULL = 45  #combo all + eyes as grayscale
+        MODE_FACE_MASK_STRUCT      = 46  #mask structure as grayscale
+        MODE_BGR_SHUFFLE           = 47  #BGR shuffle
+        MODE_BGR_RANDOM_HSV_SHIFT  = 48
         MODE_END = 50
 
     class Options(object):
@@ -107,11 +108,13 @@ class SampleProcessor(object):
                     if target_face_type == SPTF.NONE:
                          raise ValueError("target face type must be defined for face samples")
                 else:
-                    if mode_type == SPTF.MODE_FACE_MASK_HULL:
-                        raise ValueError("MODE_FACE_MASK_HULL applicable only for face samples")
+                    if mode_type == SPTF.MODE_FACE_MASK_ALL_HULL:
+                        raise ValueError("MODE_FACE_MASK_ALL_HULL applicable only for face samples")
                     if mode_type == SPTF.MODE_FACE_MASK_EYES_HULL:
                         raise ValueError("MODE_FACE_MASK_EYES_HULL applicable only for face samples")
-                    elif mode_type == SPTF.MODE_FACE_MASK_STRUCT:
+                    if mode_type == SPTF.MODE_FACE_MASK_ALL_EYES_HULL:
+                        raise ValueError("MODE_FACE_MASK_ALL_EYES_HULL applicable only for face samples")
+                    if mode_type == SPTF.MODE_FACE_MASK_STRUCT:
                         raise ValueError("MODE_FACE_MASK_STRUCT applicable only for face samples")
 
                 can_warp      = (img_type==SPTF.IMG_WARPED or img_type==SPTF.IMG_WARPED_TRANSFORMED)
@@ -141,16 +144,33 @@ class SampleProcessor(object):
                     if mode_type == SPTF.NONE:
                         raise ValueError ('expected MODE_ type')
 
-                    if mode_type == SPTF.MODE_FACE_MASK_HULL:
-                        if sample.eyebrows_expand_mod is not None:
-                            img = LandmarksProcessor.get_image_hull_mask (sample_bgr.shape, sample.landmarks, eyebrows_expand_mod=sample.eyebrows_expand_mod )
-                        else:
-                            img = LandmarksProcessor.get_image_hull_mask (sample_bgr.shape, sample.landmarks)
+                    if mode_type == SPTF.MODE_FACE_MASK_ALL_HULL or \
+                       mode_type == SPTF.MODE_FACE_MASK_EYES_HULL or \
+                       mode_type == SPTF.MODE_FACE_MASK_ALL_EYES_HULL:
 
+                        if mode_type == SPTF.MODE_FACE_MASK_ALL_HULL or \
+                           mode_type == SPTF.MODE_FACE_MASK_ALL_EYES_HULL:
+                            if sample.eyebrows_expand_mod is not None:
+                                all_mask = LandmarksProcessor.get_image_hull_mask (sample_bgr.shape, sample.landmarks, eyebrows_expand_mod=sample.eyebrows_expand_mod )
+                            else:
+                                all_mask = LandmarksProcessor.get_image_hull_mask (sample_bgr.shape, sample.landmarks)
+                            
+                            all_mask = np.clip(all_mask, 0, 1)
+                            
+                        if mode_type == SPTF.MODE_FACE_MASK_EYES_HULL or \
+                           mode_type == SPTF.MODE_FACE_MASK_ALL_EYES_HULL:
+                            eyes_mask = LandmarksProcessor.get_image_eye_mask (sample_bgr.shape, sample.landmarks)
+                            eyes_mask = np.clip(eyes_mask, 0, 1)
+                            
+                        if mode_type == SPTF.MODE_FACE_MASK_ALL_HULL:
+                            img = all_mask
+                        elif mode_type == SPTF.MODE_FACE_MASK_EYES_HULL:
+                            img = eyes_mask
+                        elif mode_type == SPTF.MODE_FACE_MASK_ALL_EYES_HULL:
+                            img = all_mask + eyes_mask
+                            
                         if sample.ie_polys is not None:
                             sample.ie_polys.overlay_mask(img)
-                    elif mode_type == SPTF.MODE_FACE_MASK_EYES_HULL:
-                        img = LandmarksProcessor.get_image_eye_mask (sample_bgr.shape, sample.landmarks)
 
                     elif mode_type == SPTF.MODE_FACE_MASK_STRUCT:
                         if sample.eyebrows_expand_mod is not None:
@@ -186,12 +206,13 @@ class SampleProcessor(object):
                         if sample.face_type == FaceType.MARK_ONLY:
                             mat  = LandmarksProcessor.get_transform_mat (sample.landmarks, sample.shape[0], target_ft)
 
-                            if mode_type == SPTF.MODE_FACE_MASK_HULL or \
+                            if mode_type == SPTF.MODE_FACE_MASK_ALL_HULL or \
                                mode_type == SPTF.MODE_FACE_MASK_EYES_HULL or \
+                               mode_type == SPTF.MODE_FACE_MASK_ALL_EYES_HULL or \
                                mode_type == SPTF.MODE_FACE_MASK_STRUCT:
-                                img = cv2.warpAffine( img, mat, (sample.shape[0],sample.shape[0]), flags=cv2.INTER_CUBIC )
-                                img = imagelib.warp_by_params (params, img, can_warp, can_transform, can_flip=True, border_replicate=False)
-                                img = cv2.resize( img, (resolution,resolution), cv2.INTER_CUBIC )[...,None]
+                                img = cv2.warpAffine( img, mat, (sample.shape[0],sample.shape[0]), flags=cv2.INTER_LINEAR )
+                                img = imagelib.warp_by_params (params, img, can_warp, can_transform, can_flip=True, border_replicate=False, cv2_inter=cv2.INTER_LINEAR)
+                                img = cv2.resize( img, (resolution,resolution), cv2.INTER_LINEAR )[...,None]
                             else:
                                 img  = cv2.warpAffine( img,  mat, (sample.shape[0],sample.shape[0]), flags=cv2.INTER_CUBIC )
                                 img  = imagelib.warp_by_params (params, img,  can_warp, can_transform, can_flip=True, border_replicate=True)
@@ -200,11 +221,12 @@ class SampleProcessor(object):
                         else:
                             mat = LandmarksProcessor.get_transform_mat (sample.landmarks, resolution, target_ft)
 
-                            if mode_type == SPTF.MODE_FACE_MASK_HULL or \
+                            if mode_type == SPTF.MODE_FACE_MASK_ALL_HULL or \
                                mode_type == SPTF.MODE_FACE_MASK_EYES_HULL or \
-                               mode_type == SPTF.MODE_FACE_MASK_STRUCT:
-                                img = imagelib.warp_by_params (params, img, can_warp, can_transform, can_flip=True, border_replicate=False)
-                                img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=cv2.BORDER_CONSTANT, flags=cv2.INTER_CUBIC )[...,None]
+                               mode_type == SPTF.MODE_FACE_MASK_ALL_EYES_HULL or \
+                               mode_type == SPTF.MODE_FACE_MASK_STRUCT:                                
+                                img = imagelib.warp_by_params (params, img, can_warp, can_transform, can_flip=True, border_replicate=False, cv2_inter=cv2.INTER_LINEAR)
+                                img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=cv2.BORDER_CONSTANT, flags=cv2.INTER_LINEAR )[...,None]                                
                             else:
                                 img  = imagelib.warp_by_params (params, img,  can_warp, can_transform, can_flip=True, border_replicate=True)
                                 img  = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=cv2.BORDER_REPLICATE, flags=cv2.INTER_CUBIC )
@@ -213,10 +235,11 @@ class SampleProcessor(object):
                         img  = cv2.resize( img,  (resolution,resolution), cv2.INTER_CUBIC )
 
 
-                    if mode_type == SPTF.MODE_FACE_MASK_HULL or \
+                    if mode_type == SPTF.MODE_FACE_MASK_ALL_HULL or \
                        mode_type == SPTF.MODE_FACE_MASK_EYES_HULL or \
+                       mode_type == SPTF.MODE_FACE_MASK_ALL_EYES_HULL or \
                        mode_type == SPTF.MODE_FACE_MASK_STRUCT:
-                        out_sample = np.clip(img.astype(np.float32), 0, 1)
+                        out_sample = img.astype(np.float32)
                     else:
                         img = np.clip(img.astype(np.float32), 0, 1)
 
