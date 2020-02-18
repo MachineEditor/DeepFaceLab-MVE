@@ -119,7 +119,6 @@ class MergerConfigMasked(MergerConfig):
                        output_face_scale = 0,
                        super_resolution_power = 0,
                        color_transfer_mode = ctm_str_dict['rct'],
-                       smooth_rect = True,
                        image_denoise_power = 0,
                        bicubic_degrade_power = 0,
                        color_degrade_power = 0,
@@ -149,7 +148,6 @@ class MergerConfigMasked(MergerConfig):
         self.output_face_scale = output_face_scale
         self.super_resolution_power = super_resolution_power
         self.color_transfer_mode = color_transfer_mode
-        self.smooth_rect = smooth_rect
         self.image_denoise_power = image_denoise_power
         self.bicubic_degrade_power = bicubic_degrade_power
         self.color_degrade_power = color_degrade_power
@@ -189,9 +187,6 @@ class MergerConfigMasked(MergerConfig):
 
     def toggle_color_transfer_mode(self):
         self.color_transfer_mode = (self.color_transfer_mode+1) % ( max(ctm_dict.keys())+1 )
-
-    def toggle_smooth_rect(self):
-        self.smooth_rect = not self.smooth_rect
 
     def add_super_resolution_power(self, diff):
         self.super_resolution_power = np.clip ( self.super_resolution_power+diff , 0, 100)
@@ -246,8 +241,6 @@ class MergerConfigMasked(MergerConfig):
             self.color_transfer_mode = io.input_str ( "Color transfer to predicted face", None, valid_list=list(ctm_str_dict.keys())[1:] )
             self.color_transfer_mode = ctm_str_dict[self.color_transfer_mode]
 
-        self.smooth_rect = io.input_bool("Smooth rect?", True, help_message="Decreases jitter of predicting rect by using temporal interpolation. You can disable this option if you have problems with dynamic scenes.")
-
         super().ask_settings()
 
         self.super_resolution_power = np.clip ( io.input_int ("Choose super resolution power", 0, add_info="0..100", help_message="Enhance details by applying superresolution network."), 0, 100)
@@ -273,7 +266,6 @@ class MergerConfigMasked(MergerConfig):
                    self.motion_blur_power == other.motion_blur_power and \
                    self.output_face_scale == other.output_face_scale and \
                    self.color_transfer_mode == other.color_transfer_mode and \
-                   self.smooth_rect == other.smooth_rect and \
                    self.super_resolution_power == other.super_resolution_power and \
                    self.image_denoise_power == other.image_denoise_power and \
                    self.bicubic_degrade_power == other.bicubic_degrade_power and \
@@ -307,8 +299,6 @@ class MergerConfigMasked(MergerConfig):
 
         if 'raw' not in self.mode:
             r += f"""color_transfer_mode: {ctm_dict[self.color_transfer_mode]}\n"""
-
-        r += f"""smooth_rect: {self.smooth_rect}\n"""
 
         r += super().to_string(filename)
         r += f"""super_resolution_power: {self.super_resolution_power}\n"""
