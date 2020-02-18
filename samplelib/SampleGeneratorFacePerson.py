@@ -52,7 +52,7 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
             self.generators = [iter_utils.ThisThreadGenerator ( self.batch_func, (samples_host.create_cli(), index2d_host.create_cli(),) )]
         else:
             self.generators_count = np.clip(multiprocessing.cpu_count(), 2, 4)
-            self.generators = [iter_utils.SubprocessGenerator ( self.batch_func, (samples_host.create_cli(), index2d_host.create_cli(),), start_now=True ) for i in range(self.generators_count) ]
+            self.generators = [iter_utils.SubprocessGenerator ( self.batch_func, (samples_host.create_cli(), index2d_host.create_cli(),) ) for i in range(self.generators_count) ]
 
         self.generator_counter = -1
 

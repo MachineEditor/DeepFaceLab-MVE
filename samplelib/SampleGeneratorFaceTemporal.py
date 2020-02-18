@@ -44,7 +44,7 @@ class SampleGeneratorFaceTemporal(SampleGeneratorBase):
         if self.debug:
             self.generators = [ThisThreadGenerator ( self.batch_func, (pickled_samples, index_host.create_cli(),) )]
         else:
-            self.generators = [SubprocessGenerator ( self.batch_func, (pickled_samples, index_host.create_cli(),), start_now=True ) for i in range(self.generators_count) ]
+            self.generators = [SubprocessGenerator ( self.batch_func, (pickled_samples, index_host.create_cli(),) ) for i in range(self.generators_count) ]
 
         self.generator_counter = -1
 

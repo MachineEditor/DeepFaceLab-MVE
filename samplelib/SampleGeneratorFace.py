@@ -60,7 +60,10 @@ class SampleGeneratorFace(SampleGeneratorBase):
         if self.debug:
             self.generators = [ThisThreadGenerator ( self.batch_func, (pickled_samples, index_host.create_cli(), ct_pickled_samples, ct_index_host.create_cli() if ct_index_host is not None else None) )]
         else:
-            self.generators = [SubprocessGenerator ( self.batch_func, (pickled_samples, index_host.create_cli(), ct_pickled_samples, ct_index_host.create_cli() if ct_index_host is not None else None), start_now=True ) for i in range(self.generators_count) ]
+            self.generators = [SubprocessGenerator ( self.batch_func, (pickled_samples, index_host.create_cli(), ct_pickled_samples, ct_index_host.create_cli() if ct_index_host is not None else None), start_now=False ) \
+                               for i in range(self.generators_count) ]
+                               
+            SubprocessGenerator.start_in_parallel( self.generators )
 
         self.generator_counter = -1
 
