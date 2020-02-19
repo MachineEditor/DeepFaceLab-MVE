@@ -33,8 +33,8 @@ class SAEHDModel(ModelBase):
         default_archi              = self.options['archi']              = self.load_or_def_option('archi', 'df')
         default_ae_dims            = self.options['ae_dims']            = self.load_or_def_option('ae_dims', 256)
         default_e_dims             = self.options['e_dims']             = self.load_or_def_option('e_dims', 64)
-        self.options['d_dims'] = None
-        self.options['d_mask_dims'] = None
+        default_d_dims             = self.options['d_dims']             = self.options.get('d_dims', None)
+        default_d_mask_dims        = self.options['d_mask_dims']        = self.options.get('d_mask_dims', None)
         default_learn_mask         = self.options['learn_mask']         = self.load_or_def_option('learn_mask', True)
         default_eyes_prio          = self.options['eyes_prio']          = self.load_or_def_option('eyes_prio', False)
         default_lr_dropout         = self.options['lr_dropout']         = self.load_or_def_option('lr_dropout', False)
@@ -64,6 +64,7 @@ class SAEHDModel(ModelBase):
 
         default_d_dims             = 48 if self.options['archi'] == 'dfhd' else 64
         default_d_dims             = self.options['d_dims']             = self.load_or_def_option('d_dims', default_d_dims)
+
 
         default_d_mask_dims        = default_d_dims // 3
         default_d_mask_dims        += default_d_mask_dims % 2

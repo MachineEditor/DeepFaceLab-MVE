@@ -248,8 +248,8 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
 
             if 'seamless' in cfg.mode and cfg.color_transfer_mode != 0:
                 if cfg.color_transfer_mode == 1:
-                    out_face_bgr = imagelib.reinhard_color_transfer ( (out_face_bgr*prd_face_mask_area_a*255).astype(np.uint8),
-                                                                      (dst_face_bgr*prd_face_mask_area_a*255).astype(np.uint8) )
+                    out_face_bgr = imagelib.reinhard_color_transfer ( np.clip(out_face_bgr*prd_face_mask_area_a*255, 0, 255).astype(np.uint8),
+                                                                      np.clip(dst_face_bgr*prd_face_mask_area_a*255, 0, 255).astype(np.uint8) )
                     out_face_bgr = np.clip( out_face_bgr.astype(np.float32) / 255.0, 0.0, 1.0)
                 elif cfg.color_transfer_mode == 2: #lct
                     out_face_bgr = imagelib.linear_color_transfer (out_face_bgr, dst_face_bgr)

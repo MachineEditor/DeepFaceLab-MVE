@@ -366,8 +366,8 @@ def color_hist_match(src_im, tar_im, hist_match_threshold=255):
     return matched
 
 def color_transfer_mix(img_src,img_trg):
-    img_src = (img_src*255.0).astype(np.uint8)
-    img_trg = (img_trg*255.0).astype(np.uint8)
+    img_src = np.clip(img_src*255.0, 0, 255).astype(np.uint8)
+    img_trg = np.clip(img_trg*255.0, 0, 255).astype(np.uint8)
 
     img_src_lab = cv2.cvtColor(img_src, cv2.COLOR_BGR2LAB)
     img_trg_lab = cv2.cvtColor(img_trg, cv2.COLOR_BGR2LAB)
