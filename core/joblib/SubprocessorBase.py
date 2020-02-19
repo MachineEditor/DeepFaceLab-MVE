@@ -289,7 +289,7 @@ class Subprocessor(object):
                         terminate_it = True
                         break
 
-                if self.no_response_time_sec != 0 and (time.time() - cli.sent_time) > self.no_response_time_sec:
+                if (time.time() - cli.sent_time) > 30:
                     terminate_it = True
 
                 if terminate_it:
