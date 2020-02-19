@@ -194,9 +194,13 @@ class SampleProcessor(object):
                         if gaussian_blur is not None:
                             chance, kernel_max_size = gaussian_blur
                             chance = np.clip(chance, 0, 100)
+                            
+                            rnd_state = np.random.RandomState (sample_rnd_seed+1)
+                            gblur_rnd_chance = rnd_state.randint(100)
+                            gblur_rnd_kernel = rnd_state.randint(kernel_max_size)*2+1
 
-                            if np.random.randint(100) < chance:
-                                img = cv2.GaussianBlur(img, ( np.random.randint( kernel_max_size )*2+1 ,) *2 , 0)
+                            if gblur_rnd_chance < chance:
+                                img = cv2.GaussianBlur(img, (gblur_rnd_kernel,) *2 , 0)
 
                     if is_face_sample:
                         target_ft = SampleProcessor.SPTF_FACETYPE_TO_FACETYPE[target_face_type]
