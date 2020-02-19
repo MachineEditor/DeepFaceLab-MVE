@@ -244,7 +244,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape, cfg, frame_info, img
 
             out_img = img_bgr*(1-img_face_mask_a) + (out_img*img_face_mask_a)
 
-            out_face_bgr = cv2.warpAffine( out_img, face_mat, (output_size, output_size) )
+            out_face_bgr = cv2.warpAffine( out_img, face_mat, (output_size, output_size), flags=cv2.INTER_CUBIC )
 
             if 'seamless' in cfg.mode and cfg.color_transfer_mode != 0:
                 if cfg.color_transfer_mode == 1:
