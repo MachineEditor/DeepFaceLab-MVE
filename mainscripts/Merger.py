@@ -180,7 +180,7 @@ class MergeSubprocessor(Subprocessor):
         if len (frames) == 0:
             raise ValueError ("len (frames) == 0")
 
-        super().__init__('Merger', MergeSubprocessor.Cli, 86400 if MERGER_DEBUG else 60, io_loop_sleep_time=0.001)
+        super().__init__('Merger', MergeSubprocessor.Cli, io_loop_sleep_time=0.001)
 
         self.is_interactive = is_interactive
         self.merger_session_filepath = Path(merger_session_filepath)
