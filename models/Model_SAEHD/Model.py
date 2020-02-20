@@ -85,7 +85,7 @@ class SAEHDModel(ModelBase):
 
         if self.is_first_run() or ask_override:
             self.options['learn_mask']  = io.input_bool ("Learn mask", default_learn_mask, help_message="Learning mask can help model to recognize face directions. Learn without mask can reduce model size, in this case merger forced to use 'not predicted mask' that is not smooth as predicted.")
-            self.options['eyes_prio']  = io.input_bool ("Eyes priority", default_eyes_prio, help_message="fix eye problems during training  ( especially on HD architectures ) by forcing the neural network to train eyes with higher priority. before/after https://i.imgur.com/YQHOuSR.jpg . It does not guarantee the right eye direction.")
+            self.options['eyes_prio']  = io.input_bool ("Eyes priority", default_eyes_prio, help_message='Helps to fix eye problems during training like "alien eyes" and wrong eyes direction ( especially on HD architectures ) by forcing the neural network to train eyes with higher priority. before/after https://i.imgur.com/YQHOuSR.jpg ')
 
         if self.is_first_run() or ask_override:
             if len(device_config.devices) == 1:
