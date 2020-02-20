@@ -216,7 +216,7 @@ class FANExtractor(object):
             for i, lmrks in enumerate(landmarks):
                 try:
                     if lmrks is not None:
-                        image_to_face_mat = LandmarksProcessor.get_transform_mat (lmrks, 256, FaceType.FULL, full_face_align_top=False)
+                        image_to_face_mat = LandmarksProcessor.get_transform_mat (lmrks, 256, FaceType.FULL)
                         face_image = cv2.warpAffine(input_image, image_to_face_mat, (256, 256), cv2.INTER_CUBIC )
 
                         rects2 = second_pass_extractor.extract(face_image, is_bgr=is_bgr)
