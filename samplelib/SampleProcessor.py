@@ -41,6 +41,7 @@ class SampleProcessor(object):
         MODE_FACE_MASK_STRUCT      = 46  #mask structure as grayscale
         MODE_BGR_SHUFFLE           = 47  #BGR shuffle
         MODE_BGR_RANDOM_HSV_SHIFT  = 48
+        MODE_BGR_RANDOM_RGB_LEVELS = 49
         MODE_END = 50
 
     class Options(object):
@@ -269,6 +270,20 @@ class SampleProcessor(object):
                             v = np.clip ( v + rnd_state.random()-0.5, 0, 1 )
                             hsv = cv2.merge([h, s, v])
                             out_sample = np.clip( cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR) , 0, 1 )
+                            
+                        elif mode_type == SPTF.MODE_BGR_RANDOM_RGB_LEVELS:
+                            rnd_state = np.random.RandomState (sample_rnd_seed)
+                            np_rnd = rnd_state.rand                            
+                            
+                            inBlack  = np.array([np_rnd()*0.25    , np_rnd()*0.25    , np_rnd()*0.25], dtype=np.float32)
+                            inWhite  = np.array([1.0-np_rnd()*0.25, 1.0-np_rnd()*0.25, 1.0-np_rnd()*0.25], dtype=np.float32)
+                            inGamma  = np.array([0.5+np_rnd(), 0.5+np_rnd(), 0.5+np_rnd()], dtype=np.float32)
+                            outBlack = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+                            outWhite = np.array([1.0, 1.0, 1.0], dtype=np.float32)
+                            
+                            out_sample = np.clip( (img - inBlack) / (inWhite - inBlack), 0, 1 )                            
+                            out_sample = ( out_sample ** (1/inGamma) ) *  (outWhite - outBlack) + outBlack
+                            out_sample = np.clip(out_sample, 0, 1)
                         elif mode_type == SPTF.MODE_G:
                             out_sample = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)[...,None]
                         elif mode_type == SPTF.MODE_GGG:
