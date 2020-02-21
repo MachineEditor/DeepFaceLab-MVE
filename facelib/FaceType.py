@@ -6,8 +6,9 @@ class FaceType(IntEnum):
     MID_FULL = 1
     FULL = 2
     FULL_NO_ALIGN = 3
-    HEAD = 4
-    HEAD_NO_ALIGN = 5
+    WHOLE_FACE = 4
+    HEAD = 5
+    HEAD_NO_ALIGN = 6
 
     MARK_ONLY = 10, #no align at all, just embedded faceinfo
 
@@ -25,6 +26,7 @@ class FaceType(IntEnum):
 from_string_dict = {'half_face': FaceType.HALF,
                     'midfull_face': FaceType.MID_FULL,
                     'full_face': FaceType.FULL,
+                    'whole_face': FaceType.WHOLE_FACE,
                     'head' : FaceType.HEAD,
                     'mark_only' : FaceType.MARK_ONLY,
                     'full_face_no_align' : FaceType.FULL_NO_ALIGN,
@@ -33,6 +35,7 @@ from_string_dict = {'half_face': FaceType.HALF,
 to_string_dict = { FaceType.HALF : 'half_face',
                    FaceType.MID_FULL : 'midfull_face',
                    FaceType.FULL : 'full_face',
+                   FaceType.WHOLE_FACE : 'whole_face',
                    FaceType.HEAD : 'head',
                    FaceType.MARK_ONLY :'mark_only',
                    FaceType.FULL_NO_ALIGN : 'full_face_no_align',

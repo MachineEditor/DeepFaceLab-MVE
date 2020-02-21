@@ -680,7 +680,6 @@ def main(detector=None,
          manual_fix=False,
          manual_output_debug_fix=False,
          manual_window_size=1368,
-         image_size=256,
          face_type='full_face',
          max_faces_from_image=0,
          cpu_only = False,
@@ -688,6 +687,8 @@ def main(detector=None,
          ):
     face_type = FaceType.fromString(face_type)
 
+    image_size = 512 if face_type == FaceType.WHOLE_FACE else 256
+    
     if not input_path.exists():
         io.log_err ('Input directory not found. Please ensure it exists.')
         return
@@ -710,7 +711,7 @@ def main(detector=None,
         if not manual_output_debug_fix and input_path != output_path:
             output_images_paths = pathex.get_image_paths(output_path)
             if len(output_images_paths) > 0:
-                io.input(f"WARNING !!! \n {output_path} contains files! \n They will be deleted. \n Press enter to continue.")
+                io.input(f"\n WARNING !!! \n {output_path} contains files! \n They will be deleted. \n Press enter to continue.\n")
                 for filename in output_images_paths:
                     Path(filename).unlink()
     else:

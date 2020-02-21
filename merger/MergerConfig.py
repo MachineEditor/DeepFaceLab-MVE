@@ -107,8 +107,6 @@ class MergerConfigMasked(MergerConfig):
 
     def __init__(self, face_type=FaceType.FULL,
                        default_mode = 'overlay',
-                       clip_hborder_mask_per = 0,
-
                        mode='overlay',
                        masked_hist_match=True,
                        hist_match_threshold = 238,
@@ -128,11 +126,10 @@ class MergerConfigMasked(MergerConfig):
         super().__init__(type=MergerConfig.TYPE_MASKED, **kwargs)
 
         self.face_type = face_type
-        if self.face_type not in [FaceType.HALF, FaceType.MID_FULL, FaceType.FULL ]:
+        if self.face_type not in [FaceType.HALF, FaceType.MID_FULL, FaceType.FULL, FaceType.WHOLE_FACE ]:
             raise ValueError("MergerConfigMasked does not support this type of face.")
 
         self.default_mode = default_mode
-        self.clip_hborder_mask_per = clip_hborder_mask_per
 
         #default changeable params
         if mode not in mode_str_dict:

@@ -454,7 +454,6 @@ class QModel(ModelBase):
         import merger
         return self.predictor_func, (self.resolution, self.resolution, 3), merger.MergerConfigMasked(face_type=face_type,
                                      default_mode = 'overlay',
-                                     clip_hborder_mask_per=0.0625 if (face_type != FaceType.HALF) else 0,
                                     )
 
 Model = QModel

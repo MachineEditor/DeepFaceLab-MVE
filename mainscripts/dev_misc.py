@@ -394,7 +394,6 @@ def extract_fanseg(input_dir, device_args={} ):
 
 #unused in end user workflow
 def extract_umd_csv(input_file_csv,
-                    image_size=256,
                     face_type='full_face',
                     device_args={} ):
 
@@ -456,7 +455,7 @@ def extract_umd_csv(input_file_csv,
         data = ExtractSubprocessor (data, 'landmarks', multi_gpu=multi_gpu, cpu_only=cpu_only).run()
 
         io.log_info ('Performing 3rd pass...')
-        data = ExtractSubprocessor (data, 'final', image_size, face_type, None, multi_gpu=multi_gpu, cpu_only=cpu_only, manual=False, final_output_path=output_path).run()
+        data = ExtractSubprocessor (data, 'final', face_type, None, multi_gpu=multi_gpu, cpu_only=cpu_only, manual=False, final_output_path=output_path).run()
         faces_detected += sum([d.faces_detected for d in data])
 
 

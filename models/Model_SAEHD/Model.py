@@ -35,6 +35,7 @@ class SAEHDModel(ModelBase):
         default_e_dims             = self.options['e_dims']             = self.load_or_def_option('e_dims', 64)
         default_d_dims             = self.options['d_dims']             = self.options.get('d_dims', None)
         default_d_mask_dims        = self.options['d_mask_dims']        = self.options.get('d_mask_dims', None)
+        default_masked_training    = self.options['masked_training']    = self.load_or_def_option('masked_training', True)
         default_learn_mask         = self.options['learn_mask']         = self.load_or_def_option('learn_mask', True)
         default_eyes_prio          = self.options['eyes_prio']          = self.load_or_def_option('eyes_prio', False)
         default_lr_dropout         = self.options['lr_dropout']         = self.load_or_def_option('lr_dropout', False)
@@ -59,7 +60,7 @@ class SAEHDModel(ModelBase):
             resolution = io.input_int("Resolution", default_resolution, add_info="64-256", help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 16.")
             resolution = np.clip ( (resolution // 16) * 16, 64, 256)
             self.options['resolution'] = resolution
-            self.options['face_type'] = io.input_str ("Face type", default_face_type, ['h','mf','f'], help_message="Half / mid face / full face. Half face has better resolution, but covers less area of cheeks. Mid face is 30% wider than half face.").lower()
+            self.options['face_type'] = io.input_str ("Face type", default_face_type, ['h','mf','f','wf'], help_message="Half / mid face / full face / whole face. Half face has better resolution, but covers less area of cheeks. Mid face is 30% wider than half face. 'Whole face' covers full area of face include forehead, but requires manual merge in Adobe After Effects.").lower()
             self.options['archi'] = io.input_str ("AE architecture", default_archi, ['dfhd','liaehd','df','liae'], help_message="'df' keeps faces more natural. 'liae' can fix overly different face shapes. 'hd' is heavyweight version for the best quality.").lower()
 
         default_d_dims             = 48 if self.options['archi'] == 'dfhd' else 64
@@ -84,9 +85,12 @@ class SAEHDModel(ModelBase):
             self.options['d_mask_dims'] = d_mask_dims + d_mask_dims % 2
 
         if self.is_first_run() or ask_override:
-            self.options['learn_mask']  = io.input_bool ("Learn mask", default_learn_mask, help_message="Learning mask can help model to recognize face directions. Learn without mask can reduce model size, in this case merger forced to use 'not predicted mask' that is not smooth as predicted.")
+            if self.options['face_type'] == 'wf':
+                self.options['masked_training']  = io.input_bool ("Masked training", default_masked_training, help_message="This option is available only for 'whole_face' type. Masked training clips training area to full_face mask, thus network will train the faces properly.  When the face is trained enough, disable this option to train all area of the frame. Merge with 'raw-rgb' mode, then use Adobe After Effects to manually mask and compose whole face include forehead.")
+            
+            self.options['learn_mask']  = io.input_bool ("Learn mask", default_learn_mask, help_message="Learning mask will produce a smooth mask in the merger. Also it works as guide for neural network to recognize face directions.")
             self.options['eyes_prio']  = io.input_bool ("Eyes priority", default_eyes_prio, help_message='Helps to fix eye problems during training like "alien eyes" and wrong eyes direction ( especially on HD architectures ) by forcing the neural network to train eyes with higher priority. before/after https://i.imgur.com/YQHOuSR.jpg ')
-
+      
         if self.is_first_run() or ask_override:
             if len(device_config.devices) == 1:
                 self.options['models_opt_on_gpu'] = io.input_bool ("Place models and optimizer on GPU", default_models_opt_on_gpu, help_message="When you train on one GPU, by default model and optimizer weights are placed on GPU to accelerate the process. You can place they on CPU to free up extra VRAM, thus set bigger dimensions.")
@@ -101,11 +105,15 @@ class SAEHDModel(ModelBase):
             else:
                 self.options['true_face_power'] = 0.0
 
-            self.options['face_style_power'] = np.clip ( io.input_number("Face style power", default_face_style_power, add_info="0.0..100.0", help_message="Learn to transfer face style details such as light and color conditions. Warning: Enable it only after 10k iters, when predicted face is clear enough to start learn style. Start from 0.001 value and check history changes. Enabling this option increases the chance of model collapse."), 0.0, 100.0 )
-            self.options['bg_style_power'] = np.clip ( io.input_number("Background style power", default_bg_style_power, add_info="0.0..100.0", help_message="Learn to transfer background around face. This can make face more like dst. Enabling this option increases the chance of model collapse. Typical value is 2.0"), 0.0, 100.0 )
+            if self.options['face_type'] != 'wf':
+                self.options['face_style_power'] = np.clip ( io.input_number("Face style power", default_face_style_power, add_info="0.0..100.0", help_message="Learn to transfer face style details such as light and color conditions. Warning: Enable it only after 10k iters, when predicted face is clear enough to start learn style. Start from 0.001 value and check history changes. Enabling this option increases the chance of model collapse."), 0.0, 100.0 )
+                self.options['bg_style_power'] = np.clip ( io.input_number("Background style power", default_bg_style_power, add_info="0.0..100.0", help_message="Learn to transfer background around face. This can make face more like dst. Enabling this option increases the chance of model collapse. Typical value is 2.0"), 0.0, 100.0 )
+                
             self.options['ct_mode'] = io.input_str (f"Color transfer for src faceset", default_ct_mode, ['none','rct','lct','mkl','idt','sot'], help_message="Change color distribution of src samples close to dst samples. Try all modes to find the best.")
             self.options['clipgrad'] = io.input_bool ("Enable gradient clipping", default_clipgrad, help_message="Gradient clipping reduces chance of model collapse, sacrificing speed of training.")
-            self.options['pretrain'] = io.input_bool ("Enable pretraining mode", default_pretrain, help_message="Pretrain the model with large amount of various faces. After that, model can be used to train the fakes more quickly.")
+            
+            if self.options['face_type'] != 'wf':
+                self.options['pretrain'] = io.input_bool ("Enable pretraining mode", default_pretrain, help_message="Pretrain the model with large amount of various faces. After that, model can be used to train the fakes more quickly.")
 
         if self.options['pretrain'] and self.get_pretraining_data_path() is None:
             raise Exception("pretraining_data_path is not defined")
@@ -348,7 +356,7 @@ class SAEHDModel(ModelBase):
 
         self.gan_power = gan_power = self.options['gan_power'] if not self.pretrain else 0.0
 
-        masked_training = True
+        masked_training = self.options['masked_training']
 
         models_opt_on_gpu = False if len(devices) == 0 else True if len(devices) > 1 else self.options['models_opt_on_gpu']
         models_opt_device = '/GPU:0' if models_opt_on_gpu and self.is_training else '/CPU:0'
@@ -721,7 +729,9 @@ class SAEHDModel(ModelBase):
                 face_type = t.FACE_TYPE_MID_FULL
             elif self.options['face_type'] == 'f':
                 face_type = t.FACE_TYPE_FULL
-
+            elif self.options['face_type'] == 'wf':
+                face_type = t.FACE_TYPE_WHOLE_FACE
+                
             training_data_src_path = self.training_data_src_path if not self.pretrain else self.get_pretraining_data_path()
             training_data_dst_path = self.training_data_dst_path if not self.pretrain else self.get_pretraining_data_path()
 
@@ -838,11 +848,12 @@ class SAEHDModel(ModelBase):
             face_type = FaceType.MID_FULL
         elif self.options['face_type'] == 'f':
             face_type = FaceType.FULL
-
+        elif self.options['face_type'] == 'wf':
+            face_type = FaceType.WHOLE_FACE
+            
         import merger
         return self.predictor_func, (self.options['resolution'], self.options['resolution'], 3), merger.MergerConfigMasked(face_type=face_type,
                                      default_mode = 'overlay' if self.options['ct_mode'] != 'none' or self.options['face_style_power'] or self.options['bg_style_power'] else 'seamless',
-                                     clip_hborder_mask_per=0.0625 if (face_type != FaceType.HALF) else 0,
                                     )
 
 Model = SAEHDModel

@@ -25,10 +25,11 @@ class SampleProcessor(object):
         FACE_TYPE_HALF             = 10
         FACE_TYPE_MID_FULL         = 11
         FACE_TYPE_FULL             = 12
-        FACE_TYPE_HEAD             = 13  #currently unused
-        FACE_TYPE_AVATAR           = 14  #currently unused
-        FACE_TYPE_FULL_NO_ALIGN    = 15
-        FACE_TYPE_HEAD_NO_ALIGN    = 16
+        FACE_TYPE_WHOLE_FACE       = 13
+        FACE_TYPE_HEAD             = 14  #currently unused
+        FACE_TYPE_AVATAR           = 15  #currently unused
+        FACE_TYPE_FULL_NO_ALIGN    = 16
+        FACE_TYPE_HEAD_NO_ALIGN    = 17
         FACE_TYPE_END = 20
 
         MODE_BEGIN = 40
@@ -55,6 +56,7 @@ class SampleProcessor(object):
     SPTF_FACETYPE_TO_FACETYPE =  {  Types.FACE_TYPE_HALF : FaceType.HALF,
                                     Types.FACE_TYPE_MID_FULL : FaceType.MID_FULL,
                                     Types.FACE_TYPE_FULL : FaceType.FULL,
+                                    Types.FACE_TYPE_WHOLE_FACE : FaceType.WHOLE_FACE,
                                     Types.FACE_TYPE_HEAD : FaceType.HEAD,
                                     Types.FACE_TYPE_FULL_NO_ALIGN : FaceType.FULL_NO_ALIGN,
                                     Types.FACE_TYPE_HEAD_NO_ALIGN : FaceType.HEAD_NO_ALIGN,
