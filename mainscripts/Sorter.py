@@ -723,11 +723,11 @@ def sort_by_absdiff(input_path):
     image_paths = pathex.get_image_paths(input_path)
     image_paths_len = len(image_paths)
 
-    batch_size = 1024
+    batch_size = 512
     batch_size_remain = image_paths_len % batch_size
 
-    i_t = tf.placeholder (tf.float32, (None,256,256,3) )
-    j_t = tf.placeholder (tf.float32, (None,256,256,3) )
+    i_t = tf.placeholder (tf.float32, (None,None,None,None) )
+    j_t = tf.placeholder (tf.float32, (None,None,None,None) )
 
     outputs_full = []
     outputs_remain = []
