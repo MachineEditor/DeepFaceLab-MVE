@@ -109,7 +109,7 @@ def initialize_layers(nn):
 
     class Conv2D(LayerBase):
         """
-        use_wscale  bool enables equalized learning rate, kernel_initializer will be forced to random_normal
+        use_wscale  bool enables equalized learning rate, if kernel_initializer is None, it will be forced to random_normal
 
 
         """
@@ -171,7 +171,8 @@ def initialize_layers(nn):
                 fan_in = self.kernel_size*self.kernel_size*self.in_ch
                 he_std = gain / np.sqrt(fan_in) # He init
                 self.wscale = tf.constant(he_std, dtype=self.dtype )
-                kernel_initializer = tf.initializers.random_normal(0, 1.0, dtype=self.dtype)
+                if kernel_initializer is None:
+                    kernel_initializer = tf.initializers.random_normal(0, 1.0, dtype=self.dtype)
 
             if kernel_initializer is None:
                 kernel_initializer = tf.initializers.glorot_uniform(dtype=self.dtype)
@@ -217,7 +218,7 @@ def initialize_layers(nn):
     class Conv2DTranspose(LayerBase):
         """
         use_wscale      enables weight scale (equalized learning rate)
-                        kernel_initializer will be forced to random_normal
+                        if kernel_initializer is None, it will be forced to random_normal
         """
         def __init__(self, in_ch, out_ch, kernel_size, strides=2, padding='SAME', use_bias=True, use_wscale=False, kernel_initializer=None, bias_initializer=None, trainable=True, dtype=None, **kwargs ):
             if not isinstance(strides, int):
@@ -247,7 +248,9 @@ def initialize_layers(nn):
                 fan_in = self.kernel_size*self.kernel_size*self.in_ch
                 he_std = gain / np.sqrt(fan_in) # He init
                 self.wscale = tf.constant(he_std, dtype=self.dtype )
-                kernel_initializer = tf.initializers.random_normal(0, 1.0, dtype=self.dtype)
+                if kernel_initializer is None:
+                    kernel_initializer = tf.initializers.random_normal(0, 1.0, dtype=self.dtype)
+                    
             if kernel_initializer is None:
                 kernel_initializer = tf.initializers.glorot_uniform(dtype=self.dtype)
             self.weight = tf.get_variable("weight", (self.kernel_size,self.kernel_size,self.out_ch,self.in_ch), dtype=self.dtype, initializer=kernel_initializer, trainable=self.trainable )
@@ -367,7 +370,7 @@ def initialize_layers(nn):
         def __init__(self, in_ch, out_ch, use_bias=True, use_wscale=False, maxout_ch=0, kernel_initializer=None, bias_initializer=None, trainable=True, dtype=None, **kwargs ):
             """
             use_wscale          enables weight scale (equalized learning rate)
-                                kernel_initializer will be forced to random_normal
+                                if kernel_initializer is None, it will be forced to random_normal
 
             maxout_ch     https://link.springer.com/article/10.1186/s40537-019-0233-0
                                 typical 2-4 if you want to enable DenseMaxout behaviour
@@ -399,7 +402,8 @@ def initialize_layers(nn):
                 fan_in = np.prod( weight_shape[:-1] )
                 he_std = gain / np.sqrt(fan_in) # He init
                 self.wscale = tf.constant(he_std, dtype=self.dtype )
-                kernel_initializer = tf.initializers.random_normal(0, 1.0, dtype=self.dtype)
+                if kernel_initializer is None:
+                    kernel_initializer = tf.initializers.random_normal(0, 1.0, dtype=self.dtype)
 
             if kernel_initializer is None:
                 kernel_initializer = tf.initializers.glorot_uniform(dtype=self.dtype)
