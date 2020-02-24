@@ -564,7 +564,8 @@ def sort_best(input_path, include_by_blur=True):
     grads = 128
     imgs_per_grad = round (target_count / grads)
 
-    grads_space = np.linspace (-math.pi / 2, math.pi / 2,grads)
+    #instead of math.pi / 2, using -1.2,+1.2 because actually maximum yaw for 2DFAN landmarks are -1.2+1.2
+    grads_space = np.linspace (-1.2, 1.2,grads)
 
     yaws_sample_list = [None]*grads
     for g in io.progress_bar_generator ( range(grads), "Sort by yaw"):
