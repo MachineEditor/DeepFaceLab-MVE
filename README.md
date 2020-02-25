@@ -44,7 +44,8 @@ deepfake quality progress
 
 ||||
 |---|---|---|
-|Windows|[Google drive](https://drive.google.com/open?id=1BCFK_L7lPNwMbEQ_kFPqPpDdFEOd_Dci)|if the download quota is exceeded, add the file to your own google drive and download from it|
+|Windows|[github releases](https://github.com/iperov/DeepFaceLab/releases)|Direct download|
+||[Google drive](https://drive.google.com/open?id=1BCFK_L7lPNwMbEQ_kFPqPpDdFEOd_Dci)|if the download quota is exceeded, add the file to your own google drive and download from it|
 ||[Torrent page](https://rutracker.org/forum/viewtopic.php?t=5558863)|Use bittorrent client.| 
 |Google Colab|[github](https://github.com/chervonij/DFL-Colab)|by @chervonij . You can train fakes for free using Google Colab.|
 |CentOS Linux|[github](https://github.com/elemantalcode/dfl)|by @elemantalcode .|
