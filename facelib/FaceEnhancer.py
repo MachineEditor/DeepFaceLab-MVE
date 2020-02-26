@@ -111,23 +111,23 @@ class FaceEnhancer(object):
                 x = tf.nn.leaky_relu(self.center_conv2(x), 0.1)
                 x = tf.nn.leaky_relu(self.center_conv3(x), 0.1)
 
-                x = tf.concat( [nn.tf_upsample2d_bilinear(x), e4], -1 )
+                x = tf.concat( [nn.tf_resize2d_bilinear(x), e4], -1 )
                 x = tf.nn.leaky_relu(self.d4_conv0(x), 0.1)
                 x = tf.nn.leaky_relu(self.d4_conv1(x), 0.1)
 
-                x = tf.concat( [nn.tf_upsample2d_bilinear(x), e3], -1 )
+                x = tf.concat( [nn.tf_resize2d_bilinear(x), e3], -1 )
                 x = tf.nn.leaky_relu(self.d3_conv0(x), 0.1)
                 x = tf.nn.leaky_relu(self.d3_conv1(x), 0.1)
 
-                x = tf.concat( [nn.tf_upsample2d_bilinear(x), e2], -1 )
+                x = tf.concat( [nn.tf_resize2d_bilinear(x), e2], -1 )
                 x = tf.nn.leaky_relu(self.d2_conv0(x), 0.1)
                 x = tf.nn.leaky_relu(self.d2_conv1(x), 0.1)
 
-                x = tf.concat( [nn.tf_upsample2d_bilinear(x), e1], -1 )
+                x = tf.concat( [nn.tf_resize2d_bilinear(x), e1], -1 )
                 x = tf.nn.leaky_relu(self.d1_conv0(x), 0.1)
                 x = tf.nn.leaky_relu(self.d1_conv1(x), 0.1)
 
-                x = tf.concat( [nn.tf_upsample2d_bilinear(x), e0], -1 )
+                x = tf.concat( [nn.tf_resize2d_bilinear(x), e0], -1 )
                 x = tf.nn.leaky_relu(self.d0_conv0(x), 0.1)
                 x = d0 = tf.nn.leaky_relu(self.d0_conv1(x), 0.1)
 
@@ -138,22 +138,22 @@ class FaceEnhancer(object):
                 x = d0
                 x = tf.nn.leaky_relu(self.dec2x_conv0(x), 0.1)
                 x = tf.nn.leaky_relu(self.dec2x_conv1(x), 0.1)
-                x = d2x = nn.tf_upsample2d_bilinear(x)
+                x = d2x = nn.tf_resize2d_bilinear(x)
 
                 x = tf.nn.leaky_relu(self.out2x_conv0(x), 0.1)
                 x = self.out2x_conv1(x)
 
-                out2x = nn.tf_upsample2d_bilinear(out1x) + tf.nn.tanh(x)
+                out2x = nn.tf_resize2d_bilinear(out1x) + tf.nn.tanh(x)
 
                 x = d2x
                 x = tf.nn.leaky_relu(self.dec4x_conv0(x), 0.1)
                 x = tf.nn.leaky_relu(self.dec4x_conv1(x), 0.1)
-                x = d4x = nn.tf_upsample2d_bilinear(x)
+                x = d4x = nn.tf_resize2d_bilinear(x)
 
                 x = tf.nn.leaky_relu(self.out4x_conv0(x), 0.1)
                 x = self.out4x_conv1(x)
 
-                out4x = nn.tf_upsample2d_bilinear(out2x) + tf.nn.tanh(x)
+                out4x = nn.tf_resize2d_bilinear(out2x) + tf.nn.tanh(x)
 
                 return out4x
 
