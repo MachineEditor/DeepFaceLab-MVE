@@ -53,7 +53,7 @@ class nn():
     tf_concat = None
     tf_gelu = None
     tf_upsample2d = None
-    tf_upsample2d_bilinear = None
+    tf_resize2d_bilinear = None
     tf_flatten = None
     tf_max_pool = None
     tf_reshape_4D = None
