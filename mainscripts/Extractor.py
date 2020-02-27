@@ -261,7 +261,7 @@ class ExtractSubprocessor(Subprocessor):
                             shutil.copy ( str(filepath), str(output_filepath) )
                     else:
                         output_filepath = output_path / f"{filepath.stem}_{face_idx}.jpg"
-                        cv2_imwrite(output_filepath, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 100] )
+                        cv2_imwrite(output_filepath, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 90] )
 
                     DFLJPG.embed_data(output_filepath, face_type=FaceType.toString(face_type),
                                                     landmarks=face_image_landmarks.tolist(),
@@ -687,7 +687,7 @@ def main(detector=None,
          ):
     face_type = FaceType.fromString(face_type)
 
-    image_size = 512 if face_type == FaceType.WHOLE_FACE else 256
+    image_size = 512
     
     if not input_path.exists():
         io.log_err ('Input directory not found. Please ensure it exists.')
