@@ -63,11 +63,14 @@ class SampleProcessor(object):
                                  }
 
     @staticmethod
-    def process (samples, sample_process_options, output_sample_types, debug, ct_sample=None):
+    def process (samples, sample_process_options, output_sample_types, debug, ct_sample=None, rnd_state=None):
         SPTF = SampleProcessor.Types
 
-        sample_rnd_seed = np.random.randint(0x80000000)
-
+        if rnd_state is None:
+            rnd_state = np.random.RandomState( np.random.randint(0x80000000) )
+            
+        sample_rnd_seed = rnd_state.randint(0x80000000)
+        
         outputs = []
         for sample in samples:
             sample_bgr = sample.load_bgr()
@@ -79,7 +82,7 @@ class SampleProcessor(object):
             if debug and is_face_sample:
                 LandmarksProcessor.draw_landmarks (sample_bgr, sample.landmarks, (0, 1, 0))
 
-            params = imagelib.gen_warp_params(sample_bgr, sample_process_options.random_flip, rotation_range=sample_process_options.rotation_range, scale_range=sample_process_options.scale_range, tx_range=sample_process_options.tx_range, ty_range=sample_process_options.ty_range, rnd_seed=sample_rnd_seed )
+            params = imagelib.gen_warp_params(sample_bgr, sample_process_options.random_flip, rotation_range=sample_process_options.rotation_range, scale_range=sample_process_options.scale_range, tx_range=sample_process_options.tx_range, ty_range=sample_process_options.ty_range, rnd_state=rnd_state )
 
             outputs_sample = []
             for opts in output_sample_types:
@@ -186,10 +189,10 @@ class SampleProcessor(object):
                             chance, mb_max_size = motion_blur
                             chance = np.clip(chance, 0, 100)
 
-                            rnd_state = np.random.RandomState (sample_rnd_seed)
-                            mblur_rnd_chance = rnd_state.randint(100)
-                            mblur_rnd_kernel = rnd_state.randint(mb_max_size)+1
-                            mblur_rnd_deg    = rnd_state.randint(360)
+                            l_rnd_state = np.random.RandomState (sample_rnd_seed)
+                            mblur_rnd_chance = l_rnd_state.randint(100)
+                            mblur_rnd_kernel = l_rnd_state.randint(mb_max_size)+1
+                            mblur_rnd_deg    = l_rnd_state.randint(360)
 
                             if mblur_rnd_chance < chance:
                                 img = imagelib.LinearMotionBlur (img, mblur_rnd_kernel, mblur_rnd_deg )
@@ -198,9 +201,9 @@ class SampleProcessor(object):
                             chance, kernel_max_size = gaussian_blur
                             chance = np.clip(chance, 0, 100)
                             
-                            rnd_state = np.random.RandomState (sample_rnd_seed+1)
-                            gblur_rnd_chance = rnd_state.randint(100)
-                            gblur_rnd_kernel = rnd_state.randint(kernel_max_size)*2+1
+                            l_rnd_state = np.random.RandomState (sample_rnd_seed+1)
+                            gblur_rnd_chance = l_rnd_state.randint(100)
+                            gblur_rnd_kernel = l_rnd_state.randint(kernel_max_size)*2+1
 
                             if gblur_rnd_chance < chance:
                                 img = cv2.GaussianBlur(img, (gblur_rnd_kernel,) *2 , 0)
@@ -260,22 +263,22 @@ class SampleProcessor(object):
                         if mode_type == SPTF.MODE_BGR:
                             out_sample = img
                         elif mode_type == SPTF.MODE_BGR_SHUFFLE:
-                            rnd_state = np.random.RandomState (sample_rnd_seed)
-                            out_sample = np.take (img, rnd_state.permutation(img.shape[-1]), axis=-1)
+                            l_rnd_state = np.random.RandomState (sample_rnd_seed)
+                            out_sample = np.take (img, l_rnd_state.permutation(img.shape[-1]), axis=-1)
 
                         elif mode_type == SPTF.MODE_BGR_RANDOM_HSV_SHIFT:
-                            rnd_state = np.random.RandomState (sample_rnd_seed)
+                            l_rnd_state = np.random.RandomState (sample_rnd_seed)
                             hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
                             h, s, v = cv2.split(hsv)
-                            h = (h + rnd_state.randint(360) ) % 360
-                            s = np.clip ( s + rnd_state.random()-0.5, 0, 1 )
-                            v = np.clip ( v + rnd_state.random()-0.5, 0, 1 )
+                            h = (h + l_rnd_state.randint(360) ) % 360
+                            s = np.clip ( s + l_rnd_state.random()-0.5, 0, 1 )
+                            v = np.clip ( v + l_rnd_state.random()-0.5, 0, 1 )
                             hsv = cv2.merge([h, s, v])
                             out_sample = np.clip( cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR) , 0, 1 )
                             
                         elif mode_type == SPTF.MODE_BGR_RANDOM_RGB_LEVELS:
-                            rnd_state = np.random.RandomState (sample_rnd_seed)
-                            np_rnd = rnd_state.rand                            
+                            l_rnd_state = np.random.RandomState (sample_rnd_seed)
+                            np_rnd = l_rnd_state.rand                            
                             
                             inBlack  = np.array([np_rnd()*0.25    , np_rnd()*0.25    , np_rnd()*0.25], dtype=np.float32)
                             inWhite  = np.array([1.0-np_rnd()*0.25, 1.0-np_rnd()*0.25, 1.0-np_rnd()*0.25], dtype=np.float32)
