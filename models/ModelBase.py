@@ -173,17 +173,9 @@ class ModelBase(object):
         self.on_initialize()
         self.options['batch_size'] = self.batch_size
 
-
-
         if self.is_training:
             self.preview_history_path = self.saved_models_path / ( f'{self.get_model_name()}_history' )
             self.autobackups_path     = self.saved_models_path / ( f'{self.get_model_name()}_autobackups' )
-
-            if self.autobackup_hour != 0:
-                self.autobackup_start_hour = int(time.time() // 3600)
-
-                if not self.autobackups_path.exists():
-                    self.autobackups_path.mkdir(exist_ok=True)
 
             if self.write_preview_history or io.is_colab():
                 if not self.preview_history_path.exists():
@@ -201,6 +193,12 @@ class ModelBase(object):
                         raise ValueError('training data generator is not subclass of SampleGeneratorBase')
 
             self.update_sample_for_preview(choose_preview_history=self.choose_preview_history)
+            
+            if self.autobackup_hour != 0:
+                self.autobackup_start_time = time.time()
+
+                if not self.autobackups_path.exists():
+                    self.autobackups_path.mkdir(exist_ok=True)
 
         io.log_info( self.get_summary_text() )
         
@@ -256,12 +254,12 @@ class ModelBase(object):
     def ask_override(self):
         return self.is_training and self.iter != 0 and io.input_in_time ("Press enter in 2 seconds to override model settings.", 5 if io.is_colab() else 2 )
 
-    def ask_autobackup_hour(self):
-        default_autobackup_hour = self.options['autobackup_hour'] = self.load_or_def_option('autobackup_hour', 0)
+    def ask_autobackup_hour(self, default_value):
+        default_autobackup_hour = self.options['autobackup_hour'] = self.load_or_def_option('autobackup_hour', default_value)
         self.options['autobackup_hour'] = io.input_int(f"Autobackup every N hour", default_autobackup_hour, add_info="0..24", help_message="Autobackup model files with preview every N hour. Latest backup located in model/<>_autobackups/01")
 
-    def ask_write_preview_history(self):
-        default_write_preview_history = self.load_or_def_option('write_preview_history', False)
+    def ask_write_preview_history(self, default_value=False):
+        default_write_preview_history = self.load_or_def_option('write_preview_history', default_value)
         self.options['write_preview_history'] = io.input_bool(f"Write preview history", default_write_preview_history, help_message="Preview history will be writed to <ModelName>_history folder.")
 
         if self.options['write_preview_history']:
@@ -270,8 +268,8 @@ class ModelBase(object):
             elif io.is_colab():
                 self.choose_preview_history = io.input_bool("Randomly choose new image for preview history", False, help_message="Preview image history will stay stuck with old faces if you reuse the same model on different celebs. Choose no unless you are changing src/dst to a new person")
 
-    def ask_target_iter(self):
-        default_target_iter = self.load_or_def_option('target_iter', 0)
+    def ask_target_iter(self, default_value=0):
+        default_target_iter = self.load_or_def_option('target_iter', default_value)
         self.options['target_iter'] = max(0, io.input_int("Target iteration", default_target_iter))
 
     def ask_random_flip(self):
@@ -359,11 +357,10 @@ class ModelBase(object):
         pathex.write_bytes_safe (self.model_data_path, pickle.dumps(model_data) )
 
         if self.autobackup_hour != 0:
-            current_hour = int(time.time() // 3600)       
-            diff_hour = current_hour - self.autobackup_start_hour
+            diff_hour = int ( (time.time() - self.autobackup_start_time) // 3600 )
 
             if diff_hour > 0 and diff_hour % self.autobackup_hour == 0:
-                self.autobackup_start_hour = current_hour
+                self.autobackup_start_time += self.autobackup_hour*3600
                 self.create_backup()
                 
     def create_backup(self):

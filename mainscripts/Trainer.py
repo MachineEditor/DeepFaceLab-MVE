@@ -131,8 +131,7 @@ def trainerThread (s2c, c2s, e,
 
                         if shared_state['after_save']:
                             shared_state['after_save'] = False
-                            last_save_time = time.time()
-
+                            
                             mean_loss = np.mean ( loss_history[save_iter:iter], axis=0)
 
                             for loss_value in mean_loss:
@@ -160,6 +159,7 @@ def trainerThread (s2c, c2s, e,
                             io.log_info ('You can use preview now.')
 
                 if not is_reached_goal and (time.time() - last_save_time) >= save_interval_min*60:
+                    last_save_time += save_interval_min*60
                     model_save()
                     send_preview()
 
