@@ -63,13 +63,10 @@ class SampleProcessor(object):
                                  }
 
     @staticmethod
-    def process (samples, sample_process_options, output_sample_types, debug, ct_sample=None, rnd_state=None):
+    def process (samples, sample_process_options, output_sample_types, debug, ct_sample=None):
         SPTF = SampleProcessor.Types
 
-        if rnd_state is None:
-            rnd_state = np.random.RandomState( np.random.randint(0x80000000) )
-            
-        sample_rnd_seed = rnd_state.randint(0x80000000)
+        sample_rnd_seed = np.random.randint(0x80000000)
         
         outputs = []
         for sample in samples:
@@ -82,7 +79,7 @@ class SampleProcessor(object):
             if debug and is_face_sample:
                 LandmarksProcessor.draw_landmarks (sample_bgr, sample.landmarks, (0, 1, 0))
 
-            params = imagelib.gen_warp_params(sample_bgr, sample_process_options.random_flip, rotation_range=sample_process_options.rotation_range, scale_range=sample_process_options.scale_range, tx_range=sample_process_options.tx_range, ty_range=sample_process_options.ty_range, rnd_state=rnd_state )
+            params = imagelib.gen_warp_params(sample_bgr, sample_process_options.random_flip, rotation_range=sample_process_options.rotation_range, scale_range=sample_process_options.scale_range, tx_range=sample_process_options.tx_range, ty_range=sample_process_options.ty_range )
 
             outputs_sample = []
             for opts in output_sample_types:
