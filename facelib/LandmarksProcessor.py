@@ -272,6 +272,7 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
     mod = (1.0 / scale)* ( npla.norm(g_p[0]-g_p[2])*(padding*np.sqrt(2.0) + 0.5) )
     
     if face_type == FaceType.WHOLE_FACE:
+        # adjust center for WHOLE_FACE, 7% below in order to cover more forehead
         vec = (g_p[0]-g_p[3]).astype(np.float32)
         vec_len = npla.norm(vec)
         vec /= vec_len
