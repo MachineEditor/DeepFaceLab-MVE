@@ -364,6 +364,7 @@ class InteractBase(object):
         except:
             sq.put (False)
         
+        print("111")
         outnull_file = open(os.devnull, 'w')
         errnull_file = open(os.devnull, 'w')
 
@@ -381,7 +382,7 @@ class InteractBase(object):
 
         sys.stdout = outnull_file
         sys.stderr = errnull_file
-        
+        print("222")
     
     def input_in_time (self, str, max_time_sec):
         sq = multiprocessing.Queue()
