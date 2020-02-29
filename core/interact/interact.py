@@ -366,7 +366,11 @@ class InteractBase(object):
             sq.put (True)
         except:
             sq.put (False)
-
+        sq.close()
+        sq = None
+        import gc
+        gc.collect()
+        
     def input_in_time (self, str, max_time_sec):
         sq = multiprocessing.Queue()
         p = multiprocessing.Process(target=self.input_process, args=( sys.stdin.fileno(), sq, str))
@@ -381,6 +385,7 @@ class InteractBase(object):
             if time.time() - t > max_time_sec:
                 break
         p.terminate()        
+        p.join()
         sq.close()
         old_stdin = sys.stdin
         sys.stdin = os.fdopen( os.dup(sys.stdin.fileno()) )
