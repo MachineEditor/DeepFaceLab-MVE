@@ -377,8 +377,10 @@ class InteractBase(object):
                 break
             if time.time() - t > max_time_sec:
                 break
-        p.terminate()
-        sys.stdin = os.fdopen( sys.stdin.fileno() )
+        p.terminate()        
+        old_stdin = sys.stdin
+        sys.stdin = os.fdopen( os.dup(sys.stdin.fileno()) )
+        old_stdin.close()        
         return inp
 
     def input_process_skip_pending(self, stdin_fd):
