@@ -350,9 +350,7 @@ if __name__ == "__main__":
     arguments.func(arguments)
 
     print ("Done.")
-else:
-    import warnings
-    warnings.filterwarnings(action='ignore', message='semaphore_tracker')
+
 '''
 import code
 code.interact(local=dict(globals(), **locals()))
