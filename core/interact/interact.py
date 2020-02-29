@@ -384,6 +384,14 @@ class InteractBase(object):
         return inp
 
     def input_process_skip_pending(self, stdin_fd):
+        import sys
+        if sys.platform != 'win32':
+            # fix for Linux , Ignoring :
+            # /usr/lib/python3.6/multiprocessing/semaphore_tracker.py:143: 
+            # UserWarning: semaphore_tracker: There appear to be 1 leaked semaphores to clean up at shutdown
+            import warnings
+            warnings.simplefilter(action='ignore', category=UserWarning)
+            
         sys.stdin = os.fdopen(stdin_fd)
         while True:
             try:
