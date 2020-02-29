@@ -7,7 +7,7 @@ import types
 import colorama
 import cv2
 from tqdm import tqdm
-
+from core import stdex
 try:
     import IPython #if success we are in colab
     from IPython.display import display, clear_output
@@ -359,30 +359,12 @@ class InteractBase(object):
     def input_process(self, stdin_fd, sq, str):
         sys.stdin = os.fdopen(stdin_fd)
         try:
-            inp = input (str)
+            print(str, end='\r')            
+            stdex.suppress_stdout_stderr().__enter__()
+            inp = input (str)            
             sq.put (True)
         except:
-            sq.put (False)
-        
-        print("111")
-        outnull_file = open(os.devnull, 'w')
-        errnull_file = open(os.devnull, 'w')
-
-        old_stdout_fileno_undup    = sys.stdout.fileno()
-        old_stderr_fileno_undup    = sys.stderr.fileno()
-
-        old_stdout_fileno = os.dup ( sys.stdout.fileno() )
-        old_stderr_fileno = os.dup ( sys.stderr.fileno() )
-
-        old_stdout = sys.stdout
-        old_stderr = sys.stderr
-
-        os.dup2 ( outnull_file.fileno(), old_stdout_fileno_undup )
-        os.dup2 ( errnull_file.fileno(), old_stderr_fileno_undup )
-
-        sys.stdout = outnull_file
-        sys.stderr = errnull_file
-        print("222")
+            sq.put (False)        
     
     def input_in_time (self, str, max_time_sec):
         sq = multiprocessing.Queue()
