@@ -3,6 +3,10 @@ if __name__ == "__main__":
     import multiprocessing
     multiprocessing.set_start_method("spawn")
 
+    if sys.platform != 'win32':
+        import warnings
+        warnings.simplefilter(action='ignore', category=UserWarning)
+
     from core.leras import nn
     nn.initialize_main_env()
 
