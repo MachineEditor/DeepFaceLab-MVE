@@ -359,9 +359,7 @@ class InteractBase(object):
     def input_process(self, stdin_fd, sq, str):
         sys.stdin = os.fdopen(stdin_fd)
         try:
-            print(str, end='\r')            
-            stdex.suppress_stdout_stderr().__enter__()
-            inp = input ()            
+            inp = input (str)            
             sq.put (True)
         except:
             sq.put (False)        
