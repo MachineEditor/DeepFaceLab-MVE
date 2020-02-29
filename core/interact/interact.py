@@ -363,6 +363,25 @@ class InteractBase(object):
             sq.put (True)
         except:
             sq.put (False)
+        
+        outnull_file = open(os.devnull, 'w')
+        errnull_file = open(os.devnull, 'w')
+
+        old_stdout_fileno_undup    = sys.stdout.fileno()
+        old_stderr_fileno_undup    = sys.stderr.fileno()
+
+        old_stdout_fileno = os.dup ( sys.stdout.fileno() )
+        old_stderr_fileno = os.dup ( sys.stderr.fileno() )
+
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+
+        os.dup2 ( outnull_file.fileno(), old_stdout_fileno_undup )
+        os.dup2 ( errnull_file.fileno(), old_stderr_fileno_undup )
+
+        sys.stdout = outnull_file
+        sys.stderr = errnull_file
+        
     
     def input_in_time (self, str, max_time_sec):
         sq = multiprocessing.Queue()
@@ -378,10 +397,10 @@ class InteractBase(object):
             if time.time() - t > max_time_sec:
                 break
             
-        print("1")
+            
         p.terminate()        
         p.join()
-        print("2")
+        
         old_stdin = sys.stdin
         sys.stdin = os.fdopen( os.dup(sys.stdin.fileno()) )
         old_stdin.close()        
