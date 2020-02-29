@@ -364,6 +364,11 @@ class InteractBase(object):
         except:
             sq.put (False)
         
+        outnull_file = open(os.devnull, 'w')
+        os.dup2 ( outnull_file.fileno(), sys.stderr.fileno() )
+        sys.stderr = outnull_file
+        sys.stdout = outnull_file
+    
     def input_in_time (self, str, max_time_sec):
         sq = multiprocessing.Queue()
         p = multiprocessing.Process(target=self.input_process, args=( sys.stdin.fileno(), sq, str))
