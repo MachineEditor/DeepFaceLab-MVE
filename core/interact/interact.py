@@ -358,18 +358,13 @@ class InteractBase(object):
 
     def input_process(self, stdin_fd, sq, str):
         from core import osex
-        osex.linux_ignore_UserWarning()
-        
+        osex.linux_ignore_UserWarning()        
         sys.stdin = os.fdopen(stdin_fd)
         try:
             inp = input (str)
             sq.put (True)
         except:
             sq.put (False)
-        sq.close()
-        sq = None
-        import gc
-        gc.collect()
         
     def input_in_time (self, str, max_time_sec):
         sq = multiprocessing.Queue()
@@ -386,7 +381,6 @@ class InteractBase(object):
                 break
         p.terminate()        
         p.join()
-        sq.close()
         old_stdin = sys.stdin
         sys.stdin = os.fdopen( os.dup(sys.stdin.fileno()) )
         old_stdin.close()        
