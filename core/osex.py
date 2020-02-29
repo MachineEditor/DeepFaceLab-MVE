@@ -34,11 +34,3 @@ def get_screen_size():
         pass
         
     return (1366, 768)
-    
-def linux_ignore_UserWarning():
-    if sys.platform[0:3] != 'win':
-        # fix for Linux , Ignoring :
-        # /usr/lib/python3.6/multiprocessing/semaphore_tracker.py:143: 
-        # UserWarning: semaphore_tracker: There appear to be 1 leaked semaphores to clean up at shutdown
-        import warnings
-        warnings.filterwarnings(action='ignore', message='semaphore_tracker')

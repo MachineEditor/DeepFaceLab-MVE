@@ -357,8 +357,6 @@ class InteractBase(object):
         return result
 
     def input_process(self, stdin_fd, sq, str):
-        from core import osex
-        osex.linux_ignore_UserWarning()        
         sys.stdin = os.fdopen(stdin_fd)
         try:
             inp = input (str)
@@ -387,9 +385,6 @@ class InteractBase(object):
         return inp
 
     def input_process_skip_pending(self, stdin_fd):
-        from core import osex
-        osex.linux_ignore_UserWarning()
-            
         sys.stdin = os.fdopen(stdin_fd)
         while True:
             try:

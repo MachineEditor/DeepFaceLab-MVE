@@ -3,9 +3,6 @@ if __name__ == "__main__":
     import multiprocessing
     multiprocessing.set_start_method("spawn")
 
-    from core import osex
-    osex.linux_ignore_UserWarning()
-    
     from core.leras import nn
     nn.initialize_main_env()
 
@@ -14,7 +11,8 @@ if __name__ == "__main__":
     import time
     import argparse
 
-    from core import pathex    
+    from core import pathex
+    from core import osex
     from pathlib import Path
     from core.interact import interact as io
 
@@ -352,7 +350,9 @@ if __name__ == "__main__":
     arguments.func(arguments)
 
     print ("Done.")
-
+else:
+    import warnings
+    warnings.filterwarnings(action='ignore', message='semaphore_tracker')
 '''
 import code
 code.interact(local=dict(globals(), **locals()))

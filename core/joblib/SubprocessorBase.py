@@ -54,10 +54,7 @@ class Subprocessor(object):
         def log_err(self, msg): self.c2s.put ( {'op': 'log_err' , 'msg':msg } )
         def progress_bar_inc(self, c): self.c2s.put ( {'op': 'progress_bar_inc' , 'c':c } )
 
-        def _subprocess_run(self, client_dict, s2c, c2s):            
-            from core import osex
-            osex.linux_ignore_UserWarning()
-
+        def _subprocess_run(self, client_dict, s2c, c2s):
             self.c2s = c2s
             data = None
             is_error = False
@@ -80,7 +77,7 @@ class Subprocessor(object):
                     time.sleep(0.001)
 
                 self.on_finalize()
-                c2s.put ( {'op': 'finalized'} )                
+                c2s.put ( {'op': 'finalized'} )
             except Subprocessor.SilenceException as e:
                 c2s.put ( {'op': 'error', 'data' : data} )
             except Exception as e:
@@ -89,7 +86,7 @@ class Subprocessor(object):
                     print ('Exception while process data [%s]: %s' % (self.get_data_name(data), traceback.format_exc()) )
                 else:
                     print ('Exception: %s' % (traceback.format_exc()) )
-  
+
             c2s.close()
             s2c.close()
             self.c2s = None
