@@ -3,14 +3,9 @@ if __name__ == "__main__":
     import multiprocessing
     multiprocessing.set_start_method("spawn")
 
-    import sys
-    if sys.platform != 'win32':
-        # fix for Linux , Ignoring :
-        # /usr/lib/python3.6/multiprocessing/semaphore_tracker.py:143: 
-        # UserWarning: semaphore_tracker: There appear to be 1 leaked semaphores to clean up at shutdown
-        import warnings
-        warnings.simplefilter(action='ignore', category=UserWarning)
-        
+    from core import osex
+    osex.linux_ignore_UserWarning()
+    
     from core.leras import nn
     nn.initialize_main_env()
 
@@ -19,8 +14,7 @@ if __name__ == "__main__":
     import time
     import argparse
 
-    from core import pathex
-    from core import osex
+    from core import pathex    
     from pathlib import Path
     from core.interact import interact as io
 

@@ -25,6 +25,6 @@ linux_font_name_map = {
 
 def get_default_ttf_font_name():
     platform = sys.platform
-    if platform == 'win32': return windows_font_name_map.get(system_language, 'cour')
+    if platform[0:3] == 'win': return windows_font_name_map.get(system_language, 'cour')
     elif platform == 'darwin': return darwin_font_name_map.get(system_language, 'cour')
     else: return linux_font_name_map.get(system_language, 'cour')

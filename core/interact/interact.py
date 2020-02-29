@@ -357,14 +357,9 @@ class InteractBase(object):
         return result
 
     def input_process(self, stdin_fd, sq, str):
-        import sys
-        if sys.platform != 'win32':
-            # fix for Linux , Ignoring :
-            # /usr/lib/python3.6/multiprocessing/semaphore_tracker.py:143: 
-            # UserWarning: semaphore_tracker: There appear to be 1 leaked semaphores to clean up at shutdown
-            import warnings
-            warnings.simplefilter(action='ignore', category=UserWarning)
-            
+        from core import osex
+        osex.linux_ignore_UserWarning()
+        
         sys.stdin = os.fdopen(stdin_fd)
         try:
             inp = input (str)
@@ -386,19 +381,15 @@ class InteractBase(object):
             if time.time() - t > max_time_sec:
                 break
         p.terminate()        
+        sq.close()
         old_stdin = sys.stdin
         sys.stdin = os.fdopen( os.dup(sys.stdin.fileno()) )
         old_stdin.close()        
         return inp
 
     def input_process_skip_pending(self, stdin_fd):
-        import sys
-        if sys.platform != 'win32':
-            # fix for Linux , Ignoring :
-            # /usr/lib/python3.6/multiprocessing/semaphore_tracker.py:143: 
-            # UserWarning: semaphore_tracker: There appear to be 1 leaked semaphores to clean up at shutdown
-            import warnings
-            warnings.simplefilter(action='ignore', category=UserWarning)
+        from core import osex
+        osex.linux_ignore_UserWarning()
             
         sys.stdin = os.fdopen(stdin_fd)
         while True:
