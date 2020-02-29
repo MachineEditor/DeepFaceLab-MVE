@@ -3,6 +3,7 @@ if __name__ == "__main__":
     import multiprocessing
     multiprocessing.set_start_method("spawn")
 
+    import sys
     if sys.platform != 'win32':
         import warnings
         warnings.simplefilter(action='ignore', category=UserWarning)
