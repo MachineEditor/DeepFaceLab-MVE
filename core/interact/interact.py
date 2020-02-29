@@ -366,6 +366,7 @@ class InteractBase(object):
         
         outnull_file = open(os.devnull, 'w')
         os.dup2 ( outnull_file.fileno(), sys.stderr.fileno() )
+        os.dup2 ( outnull_file.fileno(), sys.stdout.fileno() )
         sys.stderr = outnull_file
         sys.stdout = outnull_file
     
