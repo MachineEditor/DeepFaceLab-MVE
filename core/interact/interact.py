@@ -361,7 +361,7 @@ class InteractBase(object):
         try:
             print(str, end='\r')            
             stdex.suppress_stdout_stderr().__enter__()
-            inp = input (str)            
+            inp = input ()            
             sq.put (True)
         except:
             sq.put (False)        
