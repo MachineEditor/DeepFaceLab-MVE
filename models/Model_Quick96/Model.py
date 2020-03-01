@@ -155,6 +155,7 @@ class QModel(ModelBase):
         devices = device_config.devices
 
         resolution = self.resolution = 96
+        self.face_type = FaceType.FULL
         ae_dims = 128
         e_dims = 128
         d_dims = 64
@@ -357,9 +358,6 @@ class QModel(ModelBase):
 
         # initializing sample generators
         if self.is_training:
-            t = SampleProcessor.Types
-            face_type = t.FACE_TYPE_FULL
-
             training_data_src_path = self.training_data_src_path if not self.pretrain else self.get_pretraining_data_path()
             training_data_dst_path = self.training_data_dst_path if not self.pretrain else self.get_pretraining_data_path()
 
@@ -370,16 +368,18 @@ class QModel(ModelBase):
             self.set_training_data_generators ([
                     SampleGeneratorFace(training_data_src_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(random_flip=True if self.pretrain else False),
-                        output_sample_types = [ {'types' : (t.IMG_WARPED_TRANSFORMED, face_type, t.MODE_BGR), 'data_format':nn.data_format, 'resolution':resolution, },
-                                                {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_BGR),        'data_format':nn.data_format, 'resolution': resolution, },
-                                                {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_FACE_MASK_ALL_HULL),          'data_format':nn.data_format, 'resolution': resolution } ],
+                        output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':True,  'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.ALL_HULL, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution}
+                                              ],
                         generators_count=src_generators_count ),
 
                     SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(random_flip=True if self.pretrain else False),
-                        output_sample_types = [ {'types' : (t.IMG_WARPED_TRANSFORMED, face_type, t.MODE_BGR), 'data_format':nn.data_format, 'resolution':resolution},
-                                                {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_BGR),        'data_format':nn.data_format, 'resolution': resolution},
-                                                {'types' : (t.IMG_TRANSFORMED, face_type, t.MODE_FACE_MASK_ALL_HULL),          'data_format':nn.data_format, 'resolution': resolution} ],
+                        output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':True,  'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.ALL_HULL, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution}
+                                               ],
                         generators_count=dst_generators_count )
                              ])
 
@@ -449,10 +449,8 @@ class QModel(ModelBase):
 
     #override
     def get_MergerConfig(self):
-        face_type = FaceType.FULL
-
         import merger
-        return self.predictor_func, (self.resolution, self.resolution, 3), merger.MergerConfigMasked(face_type=face_type,
+        return self.predictor_func, (self.resolution, self.resolution, 3), merger.MergerConfigMasked(face_type=self.face_type,
                                      default_mode = 'overlay',
                                     )
 

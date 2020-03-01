@@ -394,7 +394,7 @@ def color_transfer_mix(img_src,img_trg):
 
 def color_transfer(ct_mode, img_src, img_trg):
     """
-    color transfer for [0,1] float inputs
+    color transfer for [0,1] float32 inputs
     """
     if ct_mode == 'lct':
         out = linear_color_transfer (img_src, img_trg)
