@@ -72,7 +72,9 @@ class nn():
     Conv2DTranspose = None
     BlurPool = None
     Dense = None
+    InstanceNorm2D = None
     BatchNorm2D = None
+    AdaIN = None
 
     # Initializers
     initializers = None
