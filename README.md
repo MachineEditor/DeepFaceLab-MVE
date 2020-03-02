@@ -61,15 +61,18 @@ deepfake quality progress
 
 ||||
 |---|---|---|
-|Guides and tutorials|[mrdeepfakes](https://mrdeepfakes.com/forums/forum-guides-and-tutorials)||
+|Guides and tutorials|[DeepFaceLab guide](https://mrdeepfakes.com/forums/thread-guide-deepfacelab-2-0-explained-and-tutorials-recommended)|Main guide|
+||[Google Colab guide](https://mrdeepfakes.com/forums/thread-guide-deepfacelab-google-colab-tutorial)|Guide how to train the fake on Google Colab|
+||[Compositing](https://mrdeepfakes.com/forums/thread-deepfacelab-2-0-compositing-in-davinci-resolve-vegas-pro-and-after-effects)|To achieve the highest quality, compose deepfake manually in video editors such as Davince Resolve or Adobe AfterEffects|
+||[Discussion and suggestions](https://mrdeepfakes.com/forums/thread-deepfacelab-2-0-discussion-tips-suggestions)||
 ||||
 |Ready to work facesets|[mrdeepfakes](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|Celebrity facesets made by community|
 ||||
-|Communication groups|[telegram (English / Russian)](https://t.me/DeepFaceLab_official)|Don't forget to hide your phone number.|
-||[telegram (English only)](https://t.me/DeepFaceLab_official_en)|Don't forget to hide your phone number.|
+|Communication groups|[telegram (English / Russian)](https://t.me/DeepFaceLab_official)|Don't forget to hide your phone number|
+||[telegram (English only)](https://t.me/DeepFaceLab_official_en)|Don't forget to hide your phone number|
 ||[mrdeepfakes](https://mrdeepfakes.com/forums/)|the biggest NSFW English community|
-||QQ 951138799| Chinese QQ group for ML/AI experts||
-||[deepfaker.xyz](https://www.deepfaker.xyz)|Chinesse guys are localizing DeepFaceLab|
+||QQ 951138799| 中文 Chinese QQ group for ML/AI experts||
+||[deepfaker.xyz](https://www.deepfaker.xyz)|中文 Chinese guys are localizing DeepFaceLab|
 ||[reddit r/GifFakes/](https://www.reddit.com/r/GifFakes/new/)|Post your deepfakes there !|
 ||[reddit r/SFWdeepfakes/](https://www.reddit.com/r/SFWdeepfakes/new/)|Post your deepfakes there !|
 
@@ -81,7 +84,7 @@ deepfake quality progress
 
 ||||
 |---|---|---|
-|Donate|If you like this software, please consider a donation. Current **GOAL**: next DeepFaceLab update.||
+|Donate|Sponsor deepfake research and DeepFaceLab development.||
 ||[Donate via Paypal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=lepersorium@gmail.com&lc=US&no_note=0&item_name=Support+DeepFaceLab&cn=&curency_code=USD&bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted)
 ||[Donate via Yandex.Money](https://money.yandex.ru/to/41001142318065)||
 ||bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr||
