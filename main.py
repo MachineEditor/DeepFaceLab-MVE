@@ -176,7 +176,7 @@ if __name__ == "__main__":
                   'pretrained_model_path'    : Path(arguments.pretrained_model_dir) if arguments.pretrained_model_dir is not None else None,
                   'no_preview'               : arguments.no_preview,
                   'force_model_name'         : arguments.force_model_name,
-                  'force_gpu_idxs'           : arguments.force_gpu_idxs,
+                  'force_gpu_idxs'           : [ int(x) for x in arguments.force_gpu_idxs.split(',') ] if arguments.force_gpu_idxs is not None else None,
                   'cpu_only'                 : arguments.cpu_only,
                   'execute_programs'         : [ [int(x[0]), x[1] ] for x in arguments.execute_program ],
                   'debug'                    : arguments.debug,
