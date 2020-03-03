@@ -72,7 +72,7 @@ class SampleProcessor(object):
                 motion_blur    = opts.get('motion_blur', None)
                 gaussian_blur  = opts.get('gaussian_blur', None)
                 normalize_tanh = opts.get('normalize_tanh', False)
-                ct_mode        = opts.get('ct_mode', 'None')
+                ct_mode        = opts.get('ct_mode', None)
                 data_format    = opts.get('data_format', 'NHWC')
                 
                 if sample_type == SPST.FACE_IMAGE or sample_type == SPST.FACE_MASK:
