@@ -1,5 +1,5 @@
-﻿import multiprocessing
-import math
+﻿import math
+import multiprocessing
 import operator
 import os
 import sys
@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 from numpy import linalg as npla
 
-from core import imagelib, pathex
+from core import imagelib, mathlib, pathex
 from core.cv2ex import *
 from core.imagelib import estimate_sharpness
 from core.interact import interact as io
@@ -145,6 +145,32 @@ def sort_by_face_pitch(input_path):
     img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)
 
     return img_list, trash_img_list
+    
+def sort_by_face_source_rect_size(input_path):
+    io.log_info ("Sorting by face rect size...")
+    img_list = []
+    trash_img_list = []
+    for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path), "Loading"):
+        filepath = Path(filepath)
+
+        dflimg = DFLIMG.load (filepath)
+
+        if dflimg is None:
+            io.log_err ("%s is not a dfl image file" % (filepath.name) )
+            trash_img_list.append ( [str(filepath)] )
+            continue
+
+        source_rect = dflimg.get_source_rect()
+        rect_area = mathlib.polygon_area(np.array(source_rect[[0,2,2,0]]).astype(np.float32), np.array(source_rect[[1,1,3,3]]).astype(np.float32))
+                        
+        img_list.append( [str(filepath), rect_area ] )
+
+    io.log_info ("Sorting...")
+    img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)
+
+    return img_list, trash_img_list   
+    
+    
 
 class HistSsimSubprocessor(Subprocessor):
     class Cli(Subprocessor.Cli):
@@ -837,6 +863,7 @@ sort_func_methods = {
     'blur':        ("blur", sort_by_blur),
     'face-yaw':    ("face yaw direction", sort_by_face_yaw),
     'face-pitch':  ("face pitch direction", sort_by_face_pitch),
+    'face-source-rect-size' : ("face rect size in source image", sort_by_face_source_rect_size),
     'hist':        ("histogram similarity", sort_by_hist),
     'hist-dissim': ("histogram dissimilarity", sort_by_hist_dissim),
     'brightness':  ("brightness", sort_by_brightness),
@@ -860,7 +887,7 @@ def main (input_path, sort_by_method=None):
             io.log_info(f"[{i}] {desc}")
 
         io.log_info("")
-        id = io.input_int("", 3, valid_list=[*range(len(key_list))] )
+        id = io.input_int("", 4, valid_list=[*range(len(key_list))] )
 
         sort_by_method = key_list[id]
     else:
