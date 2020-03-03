@@ -61,17 +61,20 @@ deepfake quality progress
 
 ||||
 |---|---|---|
-|Guides and tutorials|[DeepFaceLab guide](https://mrdeepfakes.com/forums/thread-guide-deepfacelab-2-0-explained-and-tutorials-recommended)|Main guide|
+|Guides and tutorials|||
+||[DeepFaceLab guide](https://mrdeepfakes.com/forums/thread-guide-deepfacelab-2-0-explained-and-tutorials-recommended)|Main guide|
 ||[Faceset creation guide](https://mrdeepfakes.com/forums/thread-guide-celebrity-faceset-dataset-creation-how-to-create-celebrity-facesets)|How to create the right faceset |
 ||[Google Colab guide](https://mrdeepfakes.com/forums/thread-guide-deepfacelab-google-colab-tutorial)|Guide how to train the fake on Google Colab|
 ||[Compositing](https://mrdeepfakes.com/forums/thread-deepfacelab-2-0-compositing-in-davinci-resolve-vegas-pro-and-after-effects)|To achieve the highest quality, compose deepfake manually in video editors such as Davince Resolve or Adobe AfterEffects|
 ||[Discussion and suggestions](https://mrdeepfakes.com/forums/thread-deepfacelab-2-0-discussion-tips-suggestions)||
 ||||
-|Ready to work facesets|[mrdeepfakes forum](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|Celebrity facesets made by community|
+|Supplementary material|||
+||[Ready to work facesets](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|Celebrity facesets made by community|
 ||||
-|Pretrained models|[mrdeepfakes forum](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|Use pretrained models to speed up training|
+||[Pretrained models](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|Use pretrained models to speed up training|
 ||||
-|Communication groups|[telegram (English / Russian)](https://t.me/DeepFaceLab_official)|Don't forget to hide your phone number|
+|Communication groups|||
+||[telegram (English / Russian)](https://t.me/DeepFaceLab_official)|Don't forget to hide your phone number|
 ||[telegram (English only)](https://t.me/DeepFaceLab_official_en)|Don't forget to hide your phone number|
 ||[mrdeepfakes](https://mrdeepfakes.com/forums/)|the biggest NSFW English community|
 ||QQ 951138799| 中文 Chinese QQ group for ML/AI experts||
