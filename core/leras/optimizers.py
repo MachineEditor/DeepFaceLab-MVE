@@ -60,25 +60,19 @@ def initialize_optimizers(nn):
                     self.epsilon = tf.Variable (epsilon, name="epsilon")
                     self.iterations = tf.Variable(0, dtype=tf.int64, name='iters')
 
-            self.accumulators = []
-            self.accumulator_counter = 0
             self.accumulators_dict = {}
             self.lr_rnds_dict = {}
 
         def get_weights(self):
-            return [self.lr, self.rho, self.epsilon, self.iterations] + self.accumulators
+            return [self.lr, self.rho, self.epsilon, self.iterations] + list(self.accumulators_dict.values())
 
         def initialize_variables(self, trainable_weights, vars_on_cpu=True):
             # Initialize here all trainable variables used in training
             e = tf.device('/CPU:0') if vars_on_cpu else None
             if e: e.__enter__()
             with tf.variable_scope(self.name):
-                accumulators = [ tf.get_variable ( f'acc_{i+self.accumulator_counter}', v.shape, dtype=v.dtype, initializer=tf.initializers.constant(0.0), trainable=False)
-                                    for (i, v ) in enumerate(trainable_weights) ]
-
-                self.accumulators_dict.update ( { v.name : acc for v,acc in zip(trainable_weights,accumulators) } )
-                self.accumulators += accumulators
-                self.accumulator_counter += len(trainable_weights)
+                accumulators = { v.name : tf.get_variable ( f'acc_{v.name}'.replace(':','_'), v.shape, dtype=v.dtype, initializer=tf.initializers.constant(0.0), trainable=False) for v in trainable_weights }
+                self.accumulators_dict.update ( accumulators)
 
                 if self.lr_dropout != 1.0:
                     lr_rnds = [ nn.tf_random_binomial( v.shape, p=self.lr_dropout, dtype=v.dtype) for v in trainable_weights ]
@@ -95,7 +89,7 @@ def initialize_optimizers(nn):
                 if self.clipnorm > 0.0:
                     g = self.tf_clip_norm(g, self.clipnorm, norm)
 
-                a = self.accumulators_dict[v.name]
+                a = self.accumulators_dict[ v.name ]
 
                 rho = tf.cast(self.rho, a.dtype)
                 new_a = rho * a + (1. - rho) * tf.square(g)

@@ -64,14 +64,14 @@ def initialize_layers(nn):
                 sub_w_name = "/".join(w_name_split[1:])
 
                 w_val = d.get(sub_w_name, None)
-                w_val = np.reshape( w_val, w.shape.as_list() )
 
                 if w_val is None:
-                    io.log_err(f"Weight {w.name} was not loaded from file {filename}")
+                    #io.log_err(f"Weight {w.name} was not loaded from file {filename}")
                     tuples.append ( (w, w.initializer) )
                 else:
+                    w_val = np.reshape( w_val, w.shape.as_list() )
                     tuples.append ( (w, w_val) )
-
+                    
             nn.tf_batch_set_value(tuples)
 
             return True
