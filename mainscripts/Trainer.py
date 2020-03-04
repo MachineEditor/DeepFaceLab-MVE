@@ -33,15 +33,13 @@ def trainerThread (s2c, c2s, e,
             save_interval_min = 15
 
             if not training_data_src_path.exists():
-                io.log_err('Training data src directory does not exist.')
-                break
+                training_data_src_path.mkdir(exist_ok=True, parents=True)
 
             if not training_data_dst_path.exists():
-                io.log_err('Training data dst directory does not exist.')
-                break
+                training_data_dst_path.mkdir(exist_ok=True, parents=True)
 
             if not saved_models_path.exists():
-                saved_models_path.mkdir(exist_ok=True)
+                saved_models_path.mkdir(exist_ok=True, parents=True)
 
             model = models.import_model(model_class_name)(
                         is_training=True,
