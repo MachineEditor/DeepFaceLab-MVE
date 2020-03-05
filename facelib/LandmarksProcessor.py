@@ -308,6 +308,15 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
     mat = cv2.getAffineTransform(l_t,pts2)
     return mat
   
+def get_rect_from_landmarks(image_landmarks):
+    mat = get_transform_mat(image_landmarks, 256, FaceType.FULL_NO_ALIGN)
+    
+    g_p = transform_points (  np.float32([(0,0),(255,255) ]) , mat, True)
+    
+    (l,t,r,b) = g_p[0][0], g_p[0][1], g_p[1][0], g_p[1][1]
+    
+    return (l,t,r,b)
+
 def expand_eyebrows(lmrks, eyebrows_expand_mod=1.0):
     if len(lmrks) != 68:
         raise Exception('works only with 68 landmarks')
@@ -649,7 +658,7 @@ def draw_landmarks (image, image_landmarks, color=(0,255,0), draw_circles=True, 
         mask = get_image_hull_mask (image.shape, image_landmarks, ie_polys=ie_polys)
         image[...] = ( image * (1-mask) + image * mask / 2 )[...]
 
-def draw_rect_landmarks (image, rect, image_landmarks, face_size, face_type, transparent_mask=False, ie_polys=None, landmarks_color=(0,255,0)):
+def draw_rect_landmarks (image, rect, image_landmarks, face_type, face_size=256, transparent_mask=False, ie_polys=None, landmarks_color=(0,255,0)):
     draw_landmarks(image, image_landmarks, color=landmarks_color, transparent_mask=transparent_mask, ie_polys=ie_polys)
     imagelib.draw_rect (image, rect, (255,0,0), 2 )
 

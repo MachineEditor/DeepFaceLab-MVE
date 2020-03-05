@@ -9,7 +9,7 @@ from DFLIMG import *
 from facelib import FaceType, LandmarksProcessor
 from core.interact import interact as io
 from core.joblib import Subprocessor
-from core import pathex
+from core import pathex, imagelib
 from core.cv2ex import *
 
 from . import Extractor, Sorter
@@ -393,6 +393,71 @@ def extract_fanseg(input_dir, device_args={} ):
         data = ExtractSubprocessor ([ ExtractSubprocessor.Data(filename) for filename in paths_to_extract ], 'fanseg', multi_gpu=multi_gpu, cpu_only=cpu_only).run()
 
 #unused in end user workflow
+def dev_test(input_dir ):
+    input_path = Path(input_dir)
+    if not input_path.exists():
+        raise ValueError('input_dir not found. Please ensure it exists.')
+
+    output_path = input_path.parent / (input_path.name+'_aligned')
+
+    io.log_info(f'Output dir is % {output_path}')
+
+    if output_path.exists():
+        output_images_paths = pathex.get_image_paths(output_path)
+        if len(output_images_paths) > 0:
+            io.input_bool("WARNING !!! \n %s contains files! \n They will be deleted. \n Press enter to continue." % (str(output_path)), False )
+            for filename in output_images_paths:
+                Path(filename).unlink()
+    else:
+        output_path.mkdir(parents=True, exist_ok=True)
+
+    images_paths = pathex.get_image_paths(input_path)
+
+    for filepath in io.progress_bar_generator(images_paths, "Processing"):
+        filepath = Path(filepath)
+
+
+        pts_filepath = filepath.parent / (filepath.stem+'.pts')
+        if pts_filepath.exists():
+            pts = pts_filepath.read_text()
+            pts_lines = pts.split('\n')
+
+            lmrk_lines = None
+            for pts_line in pts_lines:
+                if pts_line == '{':
+                    lmrk_lines = []
+                elif pts_line == '}':
+                    break
+                else:
+                    if lmrk_lines is not None:
+                        lmrk_lines.append (pts_line)
+
+            if lmrk_lines is not None and len(lmrk_lines) == 68:
+                try:
+                    lmrks = [ np.array ( lmrk_line.strip().split(' ') ).astype(np.float32).tolist() for lmrk_line in lmrk_lines]
+                except Exception as e:
+                    print(e)
+                    print(filepath)
+                    continue
+
+                rect = LandmarksProcessor.get_rect_from_landmarks(lmrks)
+    
+                output_filepath = output_path / (filepath.stem+'.jpg')
+
+                img = cv2_imread(filepath)
+                img = imagelib.normalize_channels(img, 3)
+                cv2_imwrite(output_filepath, img, [int(cv2.IMWRITE_JPEG_QUALITY), 95] )
+
+                DFLJPG.embed_data(output_filepath, face_type=FaceType.toString(FaceType.MARK_ONLY),
+                                                landmarks=lmrks,
+                                                source_filename=filepath.name,
+                                                source_rect=rect,
+                                                source_landmarks=lmrks
+                                    )
+
+    io.log_info("Done.")
+
+#unused in end user workflow
 def extract_umd_csv(input_file_csv,
                     face_type='full_face',
                     device_args={} ):
@@ -464,7 +529,7 @@ def extract_umd_csv(input_file_csv,
     io.log_info ('Faces detected:      %d' % (faces_detected) )
     io.log_info ('-------------------------')
 
-def dev_test(input_dir):
+def dev_test1(input_dir):
     input_path = Path(input_dir)
 
     dir_names = pathex.get_all_dir_names(input_path)

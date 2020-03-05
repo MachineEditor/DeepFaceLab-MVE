@@ -4,7 +4,7 @@ from pathlib import Path
 import cv2
 
 from DFLIMG import *
-from facelib import LandmarksProcessor
+from facelib import LandmarksProcessor, FaceType
 from core.imagelib import IEPolys
 from core.interact import interact as io
 from core import pathex
@@ -167,11 +167,19 @@ def add_landmarks_debug_images(input_path):
         if dflimg is None:
             io.log_err ("%s is not a dfl image file" % (filepath.name) )
             continue
-
+        
         if img is not None:
             face_landmarks = dflimg.get_landmarks()
-            LandmarksProcessor.draw_landmarks(img, face_landmarks, transparent_mask=True, ie_polys=IEPolys.load(dflimg.get_ie_polys()) )
-
+            face_type = FaceType.fromString ( dflimg.get_face_type() )
+            
+            if face_type == FaceType.MARK_ONLY:
+                rect = dflimg.get_source_rect()
+                LandmarksProcessor.draw_rect_landmarks(img, rect, face_landmarks, FaceType.FULL )
+            else:
+                LandmarksProcessor.draw_landmarks(img, face_landmarks, transparent_mask=True, ie_polys=IEPolys.load(dflimg.get_ie_polys()) )
+            
+            
+            
             output_file = '{}{}'.format( str(Path(str(input_path)) / filepath.stem),  '_debug.jpg')
             cv2_imwrite(output_file, img, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )
 

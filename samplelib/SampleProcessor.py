@@ -51,6 +51,7 @@ class SampleProcessor(object):
 
         outputs = []
         for sample in samples:
+            sample_face_type = sample.face_type
             sample_bgr = sample.load_bgr()
             ct_sample_bgr = None
             h,w,c = sample_bgr.shape
@@ -59,8 +60,13 @@ class SampleProcessor(object):
 
             if debug and is_face_sample:
                 LandmarksProcessor.draw_landmarks (sample_bgr, sample.landmarks, (0, 1, 0))
-
-            params = imagelib.gen_warp_params(sample_bgr, sample_process_options.random_flip, rotation_range=sample_process_options.rotation_range, scale_range=sample_process_options.scale_range, tx_range=sample_process_options.tx_range, ty_range=sample_process_options.ty_range )
+        
+            if sample_face_type == FaceType.MARK_ONLY:
+                warp_resolution = np.max( [ opts.get('resolution', 0) for opts in output_sample_types ] )
+            else:
+                warp_resolution = w
+            
+            params = imagelib.gen_warp_params(warp_resolution, sample_process_options.random_flip, rotation_range=sample_process_options.rotation_range, scale_range=sample_process_options.scale_range, tx_range=sample_process_options.tx_range, ty_range=sample_process_options.ty_range )
 
             outputs_sample = []
             for opts in output_sample_types:
@@ -124,14 +130,15 @@ class SampleProcessor(object):
                         if sample.ie_polys is not None:
                             sample.ie_polys.overlay_mask(img)
 
-                        if sample.face_type == FaceType.MARK_ONLY:
-                            mat  = LandmarksProcessor.get_transform_mat (sample.landmarks, sample.shape[0], face_type)
-                            img = cv2.warpAffine( img, mat, (sample.shape[0],sample.shape[0]), flags=cv2.INTER_LINEAR )
+                        if sample_face_type == FaceType.MARK_ONLY:
+                            mat  = LandmarksProcessor.get_transform_mat (sample.landmarks, warp_resolution, face_type)
+                            img = cv2.warpAffine( img, mat, (warp_resolution, warp_resolution), flags=cv2.INTER_LINEAR )
+                            
                             img = imagelib.warp_by_params (params, img, warp, transform, can_flip=True, border_replicate=False, cv2_inter=cv2.INTER_LINEAR)
                             img = cv2.resize( img, (resolution,resolution), cv2.INTER_LINEAR )[...,None]
                         else:
-                            mat = LandmarksProcessor.get_transform_mat (sample.landmarks, resolution, face_type)
                             img = imagelib.warp_by_params (params, img, warp, transform, can_flip=True, border_replicate=False, cv2_inter=cv2.INTER_LINEAR)
+                            mat = LandmarksProcessor.get_transform_mat (sample.landmarks, resolution, face_type)                            
                             img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=cv2.BORDER_CONSTANT, flags=cv2.INTER_LINEAR )[...,None]
 
                         if channel_type == SPCT.G:
@@ -164,14 +171,14 @@ class SampleProcessor(object):
                             if gblur_rnd_chance < chance:
                                 img = cv2.GaussianBlur(img, (gblur_rnd_kernel,) *2 , 0)
 
-                        if sample.face_type == FaceType.MARK_ONLY:
-                            mat  = LandmarksProcessor.get_transform_mat (sample.landmarks, sample.shape[0], face_type)
-                            img  = cv2.warpAffine( img,  mat, (sample.shape[0],sample.shape[0]), flags=cv2.INTER_CUBIC )
+                        if sample_face_type == FaceType.MARK_ONLY:
+                            mat  = LandmarksProcessor.get_transform_mat (sample.landmarks, warp_resolution, face_type)
+                            img  = cv2.warpAffine( img,  mat, (warp_resolution,warp_resolution), flags=cv2.INTER_CUBIC )
                             img  = imagelib.warp_by_params (params, img,  warp, transform, can_flip=True, border_replicate=True)
                             img  = cv2.resize( img,  (resolution,resolution), cv2.INTER_CUBIC )
-                        else:
-                            mat = LandmarksProcessor.get_transform_mat (sample.landmarks, resolution, face_type)
+                        else:                            
                             img  = imagelib.warp_by_params (params, img,  warp, transform, can_flip=True, border_replicate=True)
+                            mat = LandmarksProcessor.get_transform_mat (sample.landmarks, resolution, face_type)
                             img  = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=cv2.BORDER_REPLICATE, flags=cv2.INTER_CUBIC )
 
                         img = np.clip(img.astype(np.float32), 0, 1)

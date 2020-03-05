@@ -248,7 +248,7 @@ class ExtractSubprocessor(Subprocessor):
                             continue
 
                         if output_debug_path is not None:
-                            LandmarksProcessor.draw_rect_landmarks (debug_image, rect, image_landmarks, image_size, face_type, transparent_mask=True)
+                            LandmarksProcessor.draw_rect_landmarks (debug_image, rect, image_landmarks, face_type, image_size, transparent_mask=True)
 
                     output_path = final_output_path
                     if data.force_output_path is not None:
@@ -601,7 +601,7 @@ class ExtractSubprocessor(Subprocessor):
                 view_landmarks = LandmarksProcessor.transform_points (view_landmarks, mat)
 
             landmarks_color = (255,255,0) if self.rect_locked else (0,255,0)
-            LandmarksProcessor.draw_rect_landmarks (image, view_rect, view_landmarks, self.image_size, self.face_type, landmarks_color=landmarks_color)
+            LandmarksProcessor.draw_rect_landmarks (image, view_rect, view_landmarks, self.face_type, self.image_size, landmarks_color=landmarks_color)
             self.extract_needed = False
 
             io.show_image (self.wnd_name, image)
