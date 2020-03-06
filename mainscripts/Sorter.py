@@ -425,7 +425,7 @@ class FinalLoaderSubprocessor(Subprocessor):
     class Cli(Subprocessor.Cli):
         #override
         def on_initialize(self, client_dict):
-            self.include_by_blur = client_dict['include_by_blur']
+            self.faster = client_dict['faster']
 
         #override
         def process_data(self, data):
@@ -443,7 +443,13 @@ class FinalLoaderSubprocessor(Subprocessor):
                     raise Exception ("Unable to load %s" % (filepath.name) )
 
                 gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-                sharpness = estimate_sharpness(gray) if self.include_by_blur else 0
+                
+                if self.faster:
+                    source_rect = dflimg.get_source_rect()
+                    sharpness = mathlib.polygon_area(np.array(source_rect[[0,2,2,0]]).astype(np.float32), np.array(source_rect[[1,1,3,3]]).astype(np.float32))
+                else:
+                    sharpness = estimate_sharpness(gray)
+                
                 pitch, yaw, roll = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks(), size=dflimg.get_shape()[1] )
 
                 hist = cv2.calcHist([gray], [0], None, [256], [0, 256])
@@ -459,10 +465,10 @@ class FinalLoaderSubprocessor(Subprocessor):
             return data[0]
 
     #override
-    def __init__(self, img_list, include_by_blur ):
+    def __init__(self, img_list, faster ):
         self.img_list = img_list
 
-        self.include_by_blur = include_by_blur
+        self.faster = faster
         self.result = []
         self.result_trash = []
 
@@ -482,7 +488,7 @@ class FinalLoaderSubprocessor(Subprocessor):
         io.log_info(f'Running on {cpu_count} CPUs')
 
         for i in range(cpu_count):
-            yield 'CPU%d' % (i), {}, {'include_by_blur': self.include_by_blur}
+            yield 'CPU%d' % (i), {}, {'faster': self.faster}
 
     #override
     def get_data(self, host_dict):
@@ -579,12 +585,17 @@ class FinalHistDissimSubprocessor(Subprocessor):
     def get_result(self):
         return self.result
 
-def sort_best(input_path, include_by_blur=True):
-    io.log_info ("Performing sort by best faces.")
-
+def sort_best_faster(input_path):    
+    return sort_best(input_path, faster=True)
+    
+def sort_best(input_path, faster=False):
     target_count = io.input_int ("Target number of faces?", 2000)
+    
+    io.log_info ("Performing sort by best faces.")
+    if faster:
+        io.log_info("Using faster algorithm. Faces will be sorted by source-rect-area instead of blur.")
 
-    img_list, trash_img_list = FinalLoaderSubprocessor( pathex.get_image_paths(input_path), include_by_blur ).run()
+    img_list, trash_img_list = FinalLoaderSubprocessor( pathex.get_image_paths(input_path), faster ).run()
     final_img_list = []
 
     grads = 128
@@ -618,20 +629,20 @@ def sort_best(input_path, include_by_blur=True):
 
     imgs_per_grad += total_lack // grads
 
-    if include_by_blur:
-        sharpned_imgs_per_grad = imgs_per_grad*10
-        for g in io.progress_bar_generator ( range (grads), "Sort by blur"):
-            img_list = yaws_sample_list[g]
-            if img_list is None:
-                continue
+    
+    sharpned_imgs_per_grad = imgs_per_grad*10
+    for g in io.progress_bar_generator ( range (grads), "Sort by blur"):
+        img_list = yaws_sample_list[g]
+        if img_list is None:
+            continue
 
-            img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)
+        img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)
 
-            if len(img_list) > sharpned_imgs_per_grad:
-                trash_img_list += img_list[sharpned_imgs_per_grad:]
-                img_list = img_list[0:sharpned_imgs_per_grad]
+        if len(img_list) > sharpned_imgs_per_grad:
+            trash_img_list += img_list[sharpned_imgs_per_grad:]
+            img_list = img_list[0:sharpned_imgs_per_grad]
 
-            yaws_sample_list[g] = img_list
+        yaws_sample_list[g] = img_list
 
 
     yaw_pitch_sample_list = [None]*grads
@@ -873,6 +884,7 @@ sort_func_methods = {
     'oneface':     ("one face in image", sort_by_oneface_in_image),
     'absdiff':     ("absolute pixel difference", sort_by_absdiff),
     'final':       ("best faces", sort_best),
+    'final-fast':  ("best faces faster", sort_best_faster),
 }
 
 def main (input_path, sort_by_method=None):
