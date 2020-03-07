@@ -28,10 +28,9 @@ class SampleProcessor(object):
 
     class FaceMaskType(IntEnum):
         NONE          = 0
-        ALL_HULL      = 1  #mask all hull as grayscale
-        EYES_HULL     = 2  #mask eyes hull as grayscale
-        ALL_EYES_HULL = 3  #combo all + eyes as grayscale
-        STRUCT        = 4  #mask structure as grayscale
+        FULL_FACE      = 1  #mask all hull as grayscale
+        EYES     = 2  #mask eyes hull as grayscale
+        FULL_FACE_EYES = 3  #combo all + eyes as grayscale
 
     class Options(object):
         def __init__(self, random_flip = True, rotation_range=[-10,10], scale_range=[-0.05, 0.05], tx_range=[-0.05, 0.05], ty_range=[-0.05, 0.05] ):
@@ -53,13 +52,25 @@ class SampleProcessor(object):
         for sample in samples:
             sample_face_type = sample.face_type
             sample_bgr = sample.load_bgr()
+            sample_landmarks = sample.landmarks
             ct_sample_bgr = None
             h,w,c = sample_bgr.shape
+            
+            def get_full_face_mask():
+                if sample.eyebrows_expand_mod is not None:
+                    full_face_mask = LandmarksProcessor.get_image_hull_mask (sample_bgr.shape, sample_landmarks, eyebrows_expand_mod=sample.eyebrows_expand_mod )
+                else:
+                    full_face_mask = LandmarksProcessor.get_image_hull_mask (sample_bgr.shape, sample_landmarks)
+                return np.clip(full_face_mask, 0, 1)
+                
+            def get_eyes_mask():
+                eyes_mask = LandmarksProcessor.get_image_eye_mask (sample_bgr.shape, sample_landmarks)
+                return np.clip(eyes_mask, 0, 1)
 
-            is_face_sample = sample.landmarks is not None
+            is_face_sample = sample_landmarks is not None
 
             if debug and is_face_sample:
-                LandmarksProcessor.draw_landmarks (sample_bgr, sample.landmarks, (0, 1, 0))
+                LandmarksProcessor.draw_landmarks (sample_bgr, sample_landmarks, (0, 1, 0))
         
             if sample_face_type == FaceType.MARK_ONLY:
                 warp_resolution = np.max( [ opts.get('resolution', 0) for opts in output_sample_types ] )
@@ -81,6 +92,15 @@ class SampleProcessor(object):
                 ct_mode        = opts.get('ct_mode', None)
                 data_format    = opts.get('data_format', 'NHWC')
                 
+                if sample_type == SPST.FACE_MASK: 
+                    border_replicate = False
+                elif sample_type == SPST.FACE_IMAGE:
+                    border_replicate = True
+                    
+                border_replicate = opts.get('border_replicate', border_replicate)
+                borderMode = cv2.BORDER_REPLICATE if border_replicate else cv2.BORDER_CONSTANT
+                
+                
                 if sample_type == SPST.FACE_IMAGE or sample_type == SPST.FACE_MASK:
                     if not is_face_sample:    
                         raise ValueError("face_samples should be provided for sample_type FACE_*")
@@ -97,49 +117,30 @@ class SampleProcessor(object):
 
                 if sample_type == SPST.FACE_IMAGE or sample_type == SPST.FACE_MASK:
 
-                    if sample_type == SPST.FACE_MASK:
-                        if face_mask_type == SPFMT.ALL_HULL or \
-                           face_mask_type == SPFMT.EYES_HULL or \
-                           face_mask_type == SPFMT.ALL_EYES_HULL:
-                            if face_mask_type == SPFMT.ALL_HULL or \
-                               face_mask_type == SPFMT.ALL_EYES_HULL:
-                                if sample.eyebrows_expand_mod is not None:
-                                    all_mask = LandmarksProcessor.get_image_hull_mask (sample_bgr.shape, sample.landmarks, eyebrows_expand_mod=sample.eyebrows_expand_mod )
-                                else:
-                                    all_mask = LandmarksProcessor.get_image_hull_mask (sample_bgr.shape, sample.landmarks)
-
-                                all_mask = np.clip(all_mask, 0, 1)
-
-                            if face_mask_type == SPFMT.EYES_HULL or \
-                               face_mask_type == SPFMT.ALL_EYES_HULL:
-                                eyes_mask = LandmarksProcessor.get_image_eye_mask (sample_bgr.shape, sample.landmarks)
-                                eyes_mask = np.clip(eyes_mask, 0, 1)
-
-                            if face_mask_type == SPFMT.ALL_HULL:
-                                img = all_mask
-                            elif face_mask_type == SPFMT.EYES_HULL:
-                                img = eyes_mask
-                            elif face_mask_type == SPFMT.ALL_EYES_HULL:
-                                img = all_mask + eyes_mask
-                        elif face_mask_type == SPFMT.STRUCT:
-                            if sample.eyebrows_expand_mod is not None:
-                                img = LandmarksProcessor.get_face_struct_mask (sample_bgr.shape, sample.landmarks, eyebrows_expand_mod=sample.eyebrows_expand_mod )
-                            else:
-                                img = LandmarksProcessor.get_face_struct_mask (sample_bgr.shape, sample.landmarks)
-
+                    if sample_type == SPST.FACE_MASK:                        
+     
+                        if face_mask_type == SPFMT.FULL_FACE:
+                            img = get_full_face_mask()
+                        elif face_mask_type == SPFMT.EYES:
+                            img = get_eyes_mask()
+                        elif face_mask_type == SPFMT.FULL_FACE_EYES:
+                            img = get_full_face_mask() + get_eyes_mask()
+                        else:
+                            img = np.zeros ( sample_bgr.shape[0:2]+(1,), dtype=np.float32)
+                            
                         if sample.ie_polys is not None:
                             sample.ie_polys.overlay_mask(img)
 
                         if sample_face_type == FaceType.MARK_ONLY:
-                            mat  = LandmarksProcessor.get_transform_mat (sample.landmarks, warp_resolution, face_type)
+                            mat  = LandmarksProcessor.get_transform_mat (sample_landmarks, warp_resolution, face_type)
                             img = cv2.warpAffine( img, mat, (warp_resolution, warp_resolution), flags=cv2.INTER_LINEAR )
                             
-                            img = imagelib.warp_by_params (params, img, warp, transform, can_flip=True, border_replicate=False, cv2_inter=cv2.INTER_LINEAR)
+                            img = imagelib.warp_by_params (params, img, warp, transform, can_flip=True, border_replicate=border_replicate, cv2_inter=cv2.INTER_LINEAR)
                             img = cv2.resize( img, (resolution,resolution), cv2.INTER_LINEAR )[...,None]
                         else:
-                            img = imagelib.warp_by_params (params, img, warp, transform, can_flip=True, border_replicate=False, cv2_inter=cv2.INTER_LINEAR)
-                            mat = LandmarksProcessor.get_transform_mat (sample.landmarks, resolution, face_type)                            
-                            img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=cv2.BORDER_CONSTANT, flags=cv2.INTER_LINEAR )[...,None]
+                            img = imagelib.warp_by_params (params, img, warp, transform, can_flip=True, border_replicate=border_replicate, cv2_inter=cv2.INTER_LINEAR)
+                            mat = LandmarksProcessor.get_transform_mat (sample_landmarks, resolution, face_type)                            
+                            img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_LINEAR )[...,None]
 
                         if channel_type == SPCT.G:
                             out_sample = img.astype(np.float32)
@@ -172,14 +173,14 @@ class SampleProcessor(object):
                                 img = cv2.GaussianBlur(img, (gblur_rnd_kernel,) *2 , 0)
 
                         if sample_face_type == FaceType.MARK_ONLY:
-                            mat  = LandmarksProcessor.get_transform_mat (sample.landmarks, warp_resolution, face_type)
+                            mat  = LandmarksProcessor.get_transform_mat (sample_landmarks, warp_resolution, face_type)
                             img  = cv2.warpAffine( img,  mat, (warp_resolution,warp_resolution), flags=cv2.INTER_CUBIC )
-                            img  = imagelib.warp_by_params (params, img,  warp, transform, can_flip=True, border_replicate=True)
+                            img  = imagelib.warp_by_params (params, img,  warp, transform, can_flip=True, border_replicate=border_replicate)
                             img  = cv2.resize( img,  (resolution,resolution), cv2.INTER_CUBIC )
                         else:                            
-                            img  = imagelib.warp_by_params (params, img,  warp, transform, can_flip=True, border_replicate=True)
-                            mat = LandmarksProcessor.get_transform_mat (sample.landmarks, resolution, face_type)
-                            img  = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=cv2.BORDER_REPLICATE, flags=cv2.INTER_CUBIC )
+                            img  = imagelib.warp_by_params (params, img,  warp, transform, can_flip=True, border_replicate=border_replicate)
+                            mat = LandmarksProcessor.get_transform_mat (sample_landmarks, resolution, face_type)
+                            img  = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_CUBIC )
 
                         img = np.clip(img.astype(np.float32), 0, 1)
 
@@ -230,7 +231,7 @@ class SampleProcessor(object):
                 #    img  = imagelib.warp_by_params (params, img,  warp, transform, can_flip=True, border_replicate=True)
                 #    img  = cv2.resize( img,  (resolution,resolution), cv2.INTER_CUBIC )
                 elif sample_type == SPST.LANDMARKS_ARRAY:
-                    l = sample.landmarks
+                    l = sample_landmarks
                     l = np.concatenate ( [ np.expand_dims(l[:,0] / w,-1), np.expand_dims(l[:,1] / h,-1) ], -1 )
                     l = np.clip(l, 0.0, 1.0)
                     out_sample = l
@@ -255,6 +256,16 @@ class SampleProcessor(object):
         return outputs
 
 """
+
+        STRUCT        = 4  #mask structure as grayscale
+                           elif face_mask_type == SPFMT.STRUCT:
+                            if sample.eyebrows_expand_mod is not None:
+                                img = LandmarksProcessor.get_face_struct_mask (sample_bgr.shape, sample_landmarks, eyebrows_expand_mod=sample.eyebrows_expand_mod )
+                            else:
+                                img = LandmarksProcessor.get_face_struct_mask (sample_bgr.shape, sample_landmarks)
+     
+        
+        
         close_sample = sample.close_target_list[ np.random.randint(0, len(sample.close_target_list)) ] if sample.close_target_list is not None else None
         close_sample_bgr = close_sample.load_bgr() if close_sample is not None else None
 
