@@ -177,7 +177,7 @@ class SAEHDModel(ModelBase):
             
         # Initializing model classes
         if archi == 'liaech':
-            lowest_dense_res, Encoder, Inter, Decoder = nn.get_ae_models_chervoniy(resolution)
+            lowest_dense_res, Encoder, Inter, Decoder = nn.get_ae_models_chervonij(resolution)
         else:
             lowest_dense_res, Encoder, Inter, Decoder = nn.get_ae_models(resolution)
   

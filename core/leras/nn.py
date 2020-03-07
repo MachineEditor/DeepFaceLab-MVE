@@ -90,7 +90,7 @@ class nn():
     
     # Arhis
     get_ae_models = None
-    get_ae_models_chervoniy = None
+    get_ae_models_chervonij = None
     
     @staticmethod
     def initialize(device_config=None, floatx="float32", data_format="NHWC"):

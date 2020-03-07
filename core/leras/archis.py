@@ -207,10 +207,10 @@ def initialize_archis(nn):
     
     nn.get_ae_models = get_ae_models
 
-    def get_ae_models_chervoniy(resolution):
+    def get_ae_models_chervonij(resolution):
         lowest_dense_res = resolution // 32
         """
-        by @chervoniy
+        by @chervonij
         """
         conv_kernel_initializer = nn.initializers.ca()
 
@@ -364,7 +364,7 @@ def initialize_archis(nn):
 
         return lowest_dense_res, Encoder, Inter, Decoder
         
-    nn.get_ae_models_chervoniy = get_ae_models_chervoniy
+    nn.get_ae_models_chervonij = get_ae_models_chervonij
     
 """
 def get_ae_models2():
