@@ -93,7 +93,7 @@ class SampleProcessor(object):
                         raise ValueError("face_type must be defined for face samples")
 
                     if face_type > sample.face_type:
-                        raise Exception ('sample %s type %s does not match model requirement %s. Consider extract necessary type of faces.' % (sample.filename, sample.face_type, target_ft) )
+                        raise Exception ('sample %s type %s does not match model requirement %s. Consider extract necessary type of faces.' % (sample.filename, sample.face_type, face_type) )
 
                 if sample_type == SPST.FACE_IMAGE or sample_type == SPST.FACE_MASK:
 
