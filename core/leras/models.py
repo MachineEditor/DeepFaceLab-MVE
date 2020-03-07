@@ -9,6 +9,7 @@ def initialize_models(nn):
         def __init__(self, *args, name=None, **kwargs):
             super().__init__(name=name)
             self.layers = []
+            self.layers_by_name = {}
             self.built = False
             self.args = args
             self.kwargs = kwargs
@@ -31,7 +32,8 @@ def initialize_models(nn):
                     layer.build()
 
                 self.layers.append (layer)
-
+                self.layers_by_name[layer.name] = layer
+                
         def xor_list(self, lst1, lst2):
             return  [value for value in lst1+lst2 if (value not in lst1) or (value not in lst2)  ]
 
@@ -76,6 +78,9 @@ def initialize_models(nn):
                 weights += layer.get_weights()
             return weights
 
+        def get_layer_by_name(self, name):
+            return self.layers_by_name.get(name, None)
+            
         def get_layers(self):
             if not self.built:
                 self.build()

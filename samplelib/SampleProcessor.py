@@ -148,7 +148,28 @@ class SampleProcessor(object):
                             raise ValueError("only channel_type.G supported for the mask")
 
                     elif sample_type == SPST.FACE_IMAGE:
-                        img = sample_bgr
+                        img = sample_bgr                        
+
+                        if sample_face_type == FaceType.MARK_ONLY:
+                            mat  = LandmarksProcessor.get_transform_mat (sample_landmarks, warp_resolution, face_type)
+                            img  = cv2.warpAffine( img,  mat, (warp_resolution,warp_resolution), flags=cv2.INTER_CUBIC )
+                            img  = imagelib.warp_by_params (params, img,  warp, transform, can_flip=True, border_replicate=border_replicate)
+                            img  = cv2.resize( img,  (resolution,resolution), cv2.INTER_CUBIC )
+                        else:                            
+                            img  = imagelib.warp_by_params (params, img,  warp, transform, can_flip=True, border_replicate=border_replicate)
+                            mat = LandmarksProcessor.get_transform_mat (sample_landmarks, resolution, face_type)
+                            img  = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_CUBIC )
+
+                        img = np.clip(img.astype(np.float32), 0, 1)
+                        
+                        
+
+                        # Apply random color transfer                        
+                        if ct_mode is not None and ct_sample is not None:
+                            if ct_sample_bgr is None:
+                               ct_sample_bgr = ct_sample.load_bgr()
+                            img = imagelib.color_transfer (ct_mode, img, cv2.resize( ct_sample_bgr, (resolution,resolution), cv2.INTER_LINEAR ) )
+
                         if motion_blur is not None:
                             chance, mb_max_size = motion_blur
                             chance = np.clip(chance, 0, 100)
@@ -171,25 +192,7 @@ class SampleProcessor(object):
 
                             if gblur_rnd_chance < chance:
                                 img = cv2.GaussianBlur(img, (gblur_rnd_kernel,) *2 , 0)
-
-                        if sample_face_type == FaceType.MARK_ONLY:
-                            mat  = LandmarksProcessor.get_transform_mat (sample_landmarks, warp_resolution, face_type)
-                            img  = cv2.warpAffine( img,  mat, (warp_resolution,warp_resolution), flags=cv2.INTER_CUBIC )
-                            img  = imagelib.warp_by_params (params, img,  warp, transform, can_flip=True, border_replicate=border_replicate)
-                            img  = cv2.resize( img,  (resolution,resolution), cv2.INTER_CUBIC )
-                        else:                            
-                            img  = imagelib.warp_by_params (params, img,  warp, transform, can_flip=True, border_replicate=border_replicate)
-                            mat = LandmarksProcessor.get_transform_mat (sample_landmarks, resolution, face_type)
-                            img  = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_CUBIC )
-
-                        img = np.clip(img.astype(np.float32), 0, 1)
-
-                        # Apply random color transfer                        
-                        if ct_mode is not None and ct_sample is not None:
-                            if ct_sample_bgr is None:
-                               ct_sample_bgr = ct_sample.load_bgr()
-                            img = imagelib.color_transfer (ct_mode, img, cv2.resize( ct_sample_bgr, (resolution,resolution), cv2.INTER_LINEAR ) )
-
+                                
                         # Transform from BGR to desired channel_type
                         if channel_type == SPCT.BGR:
                             out_sample = img
