@@ -92,26 +92,78 @@ def denoise_image_sequence( input_dir, ext=None, factor=None ):
         io.log_err("input_dir not found.")
         return
 
-    if ext is None:
-        ext = io.input_str ("Input image format (extension)", "png")
+    image_paths = [ Path(filepath) for filepath in pathex.get_image_paths(input_path) ]
+
+    # Check extension of all images
+    image_paths_suffix = None
+    for filepath in image_paths:
+        if image_paths_suffix is None:
+            image_paths_suffix = filepath.suffix
+        else:
+            if filepath.suffix != image_paths_suffix:
+                io.log_err(f"All images in {input_path.name} should be with the same extension.")
+                return
 
     if factor is None:
-        factor = np.clip ( io.input_int ("Denoise factor?", 5, add_info="1-20"), 1, 20 )
+        factor = np.clip ( io.input_int ("Denoise factor?", 7, add_info="1-20"), 1, 20 )
 
+    # Rename to temporary filenames
+    for i,filepath in io.progress_bar_generator( enumerate(image_paths), "Renaming", leave=False):
+        src = filepath
+        dst = filepath.parent / ( f'{i+1:06}_{filepath.name}' )
+        try:
+            src.rename (dst)
+        except:
+            io.log_error ('fail to rename %s' % (src.name) )
+            return
+
+    # Rename to sequental filenames
+    for i,filepath in io.progress_bar_generator( enumerate(image_paths), "Renaming", leave=False):
+
+        src = filepath.parent / ( f'{i+1:06}_{filepath.name}' )
+        dst = filepath.parent / ( f'{i+1:06}{filepath.suffix}' )
+        try:
+            src.rename (dst)
+        except:
+            io.log_error ('fail to rename %s' % (src.name) )
+            return
+
+    # Process image sequence in ffmpeg
     kwargs = {}
-    if ext == 'jpg':
+    if image_paths_suffix == '.jpg':
         kwargs.update ({'q:v':'2'})
 
     job = ( ffmpeg
-            .input(str ( input_path / ('%5d.'+ext) ) )
+            .input(str ( input_path / ('%6d'+image_paths_suffix) ) )
             .filter("hqdn3d", factor, factor, 5,5)
-            .output(str ( input_path / ('%5d.'+ext) ), **kwargs )
+            .output(str ( input_path / ('%6d'+image_paths_suffix) ), **kwargs )
            )
 
     try:
         job = job.run()
     except:
         io.log_err ("ffmpeg fail, job commandline:" + str(job.compile()) )
+
+    # Rename to temporary filenames
+    for i,filepath in io.progress_bar_generator( enumerate(image_paths), "Renaming", leave=False):
+        src = filepath.parent / ( f'{i+1:06}{filepath.suffix}' )
+        dst = filepath.parent / ( f'{i+1:06}_{filepath.name}' )
+        try:
+            src.rename (dst)
+        except:
+            io.log_error ('fail to rename %s' % (src.name) )
+            return
+
+    # Rename to initial filenames
+    for i,filepath in io.progress_bar_generator( enumerate(image_paths), "Renaming", leave=False):
+        src = filepath.parent / ( f'{i+1:06}_{filepath.name}' )
+        dst = filepath
+
+        try:
+            src.rename (dst)
+        except:
+            io.log_error ('fail to rename %s' % (src.name) )
+            return
 
 def video_from_sequence( input_dir, output_file, reference_file=None, ext=None, fps=None, bitrate=None, include_audio=False, lossless=None ):
     input_path = Path(input_dir)
@@ -194,7 +246,7 @@ def video_from_sequence( input_dir, output_file, reference_file=None, ext=None, 
                                "b:v": "%dM" %(bitrate),
                                "pix_fmt": "yuv420p",
                               })
-                              
+
     if include_audio and ref_in_a is not None:
         output_kwargs.update ({"c:a": "aac",
                                "b:a": "192k",

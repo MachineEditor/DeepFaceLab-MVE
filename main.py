@@ -258,10 +258,9 @@ if __name__ == "__main__":
     def process_videoed_denoise_image_sequence(arguments):
         osex.set_process_lowest_prio()
         from mainscripts import VideoEd
-        VideoEd.denoise_image_sequence (arguments.input_dir, arguments.ext, arguments.factor)
-    p = videoed_parser.add_parser( "denoise-image-sequence", help="Denoise sequence of images, keeping sharp edges. This allows you to make the final fake more believable, since the neural network is not able to make a detailed skin texture, but it makes the edges quite clear. Therefore, if the whole frame is more `blurred`, then a fake will seem more believable. Especially true for scenes of the film, which are usually very clear.")
-    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input file to be processed. Specify .*-extension to find first file.")
-    p.add_argument('--ext', dest="ext", default=None, help="Image format (extension) of input files.")
+        VideoEd.denoise_image_sequence (arguments.input_dir, arguments.factor)
+    p = videoed_parser.add_parser( "denoise-image-sequence", help="Denoise sequence of images, keeping sharp edges. Helps to remove pixel shake from the predicted face.")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory to be processed.")
     p.add_argument('--factor', type=int, dest="factor", default=None, help="Denoise factor (1-20).")
     p.set_defaults(func=process_videoed_denoise_image_sequence)
 
