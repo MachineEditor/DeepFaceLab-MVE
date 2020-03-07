@@ -86,6 +86,7 @@ class nn():
     # Models
     PatchDiscriminator = None
     IllumDiscriminator = None
+    CodeDiscriminator = None
     
     @staticmethod
     def initialize(device_config=None, floatx="float32", data_format="NHWC"):
@@ -147,13 +148,15 @@ class nn():
             from .initializers import initialize_initializers
             from .optimizers import initialize_optimizers
             from .models import initialize_models
-
+            from .archis import initialize_archis
+            
             initialize_tensor_ops(nn)
             initialize_layers(nn)
             initialize_initializers(nn)
             initialize_optimizers(nn)
             initialize_models(nn)
-
+            initialize_archis(nn)
+            
         if nn.tf_sess is None:
             nn.tf_sess = tf.Session(config=nn.tf_sess_config)
 
