@@ -96,6 +96,8 @@ deepfake quality progress
 |Last donation|50$ ( 8 march 2020 blanuk )
 ||||
 |Collect facesets|You can collect faceset of any celebrity that can be used in DeepFaceLab and share it [in the community](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|
+||||
+|Star this repo|Register github account and push "Star" button.
 </td></tr>
 
 <tr><td align="center" width="9999">
