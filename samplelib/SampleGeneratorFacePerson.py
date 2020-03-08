@@ -26,14 +26,14 @@ class SampleGeneratorFacePerson(SampleGeneratorBase):
                         person_id_mode=1,
                         **kwargs):
 
-        super().__init__(samples_path, debug, batch_size)
+        super().__init__(debug, batch_size)
         self.sample_process_options = sample_process_options
         self.output_sample_types = output_sample_types
         self.person_id_mode = person_id_mode
 
         raise NotImplementedError("Currently SampleGeneratorFacePerson is not implemented.")
 
-        samples_host = SampleLoader.mp_host (SampleType.FACE, self.samples_path)
+        samples_host = SampleLoader.mp_host (SampleType.FACE, samples_path)
         samples = samples_host.get_list()
         self.samples_len = len(samples)
 

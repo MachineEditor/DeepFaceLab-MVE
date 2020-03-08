@@ -30,7 +30,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
                         raise_on_no_data=True,
                         **kwargs):
 
-        super().__init__(samples_path, debug, batch_size)
+        super().__init__(debug, batch_size)
         self.sample_process_options = sample_process_options
         self.output_sample_types = output_sample_types
         self.add_sample_idx = add_sample_idx
@@ -40,7 +40,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
         else:
             self.generators_count = max(1, generators_count)
 
-        samples = SampleLoader.load (SampleType.FACE, self.samples_path)
+        samples = SampleLoader.load (SampleType.FACE, samples_path)
         self.samples_len = len(samples)
 
         self.initialized = False

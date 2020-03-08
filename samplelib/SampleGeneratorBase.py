@@ -6,11 +6,7 @@ You can implement your own SampleGenerator
 class SampleGeneratorBase(object):
 
 
-    def __init__ (self, samples_path, debug=False, batch_size=1):
-        if samples_path is None:
-            raise Exception('samples_path is None')
-
-        self.samples_path = Path(samples_path)
+    def __init__ (self, debug=False, batch_size=1):
         self.debug = debug
         self.batch_size = 1 if self.debug else batch_size
         self.last_generation = None
