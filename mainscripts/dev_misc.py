@@ -553,22 +553,19 @@ def dev_test1(input_dir):
             #import code
             #code.interact(local=dict(globals(), **locals()))
 
-#unused in end user workflow
-def dev_test(input_dir ):
+
+def dev_segmented_extract(input_dir, output_dir ):
     # extract and merge .json labelme files within the faces
       
-    
     device_config = nn.DeviceConfig.GPUIndexes( nn.ask_choose_device_idxs(suggest_all_gpu=True) )
-    
-    
     
     input_path = Path(input_dir)
     if not input_path.exists():
         raise ValueError('input_dir not found. Please ensure it exists.')
 
-    output_path = input_path.parent / (input_path.name+'_merged')
-    
-    io.log_info(f'Output dir is % {output_path}')
+    output_path = Path(output_dir)
+    io.log_info("Performing extract segmented faces.")
+    io.log_info(f'Output dir is {output_path}')
     
     if output_path.exists():
         output_images_paths = pathex.get_image_paths(output_path)
@@ -581,28 +578,35 @@ def dev_test(input_dir ):
 
     images_paths = pathex.get_image_paths(input_path)
 
-    extract_data = []
-    
+    extract_data = []    
     images_jsons = {}
+    images_processed = 0
+    
     
     for filepath in io.progress_bar_generator(images_paths, "Processing"):
         filepath = Path(filepath)
-
-
-        json_filepath = filepath.parent / (filepath.stem+'.json')
+        json_filepath = filepath.parent / (filepath.stem+'.json')        
         
-
         if json_filepath.exists():
-            json_dict = json.loads(json_filepath.read_text())
-            images_jsons[filepath] = json_dict
-            
-            total_points = [ [x,y] for shape in json_dict['shapes'] for x,y in shape['points'] ]
-            total_points = np.array(total_points)
-            
-            l,r = int(total_points[:,0].min()), int(total_points[:,0].max())
-            t,b = int(total_points[:,1].min()), int(total_points[:,1].max())
-            
-            extract_data.append ( ExtractSubprocessor.Data(filepath, rects=[ [l,t,r,b] ] ) ) 
+            try:
+                json_dict = json.loads(json_filepath.read_text())
+                images_jsons[filepath] = json_dict
+                
+                total_points = [ [x,y] for shape in json_dict['shapes'] for x,y in shape['points'] ]
+                total_points = np.array(total_points)
+
+                if len(total_points) == 0:
+                    io.log_info(f"No points found in {json_filepath}, skipping.")
+                    continue
+                
+                l,r = int(total_points[:,0].min()), int(total_points[:,0].max())
+                t,b = int(total_points[:,1].min()), int(total_points[:,1].max())
+                
+                extract_data.append ( ExtractSubprocessor.Data(filepath, rects=[ [l,t,r,b] ] ) ) 
+                images_processed += 1
+            except:                
+                io.log_err(f"err {filepath}")
+                return
             
     image_size = 1024
     face_type = FaceType.HEAD  
@@ -629,32 +633,35 @@ def dev_test(input_dir ):
 
         dflimg.embed_and_set (filepath, ie_polys=ie_polys)
                             
-    """
-    #mark only
-    for data in extract_data:
-        filepath = data.filepath
-        output_filepath = output_path / (filepath.stem+'.jpg')
+    io.log_info(f"Images found:     {len(images_paths)}")
+    io.log_info(f"Images processed: {images_processed}")
+    
+
+
+"""
+#mark only
+for data in extract_data:
+    filepath = data.filepath
+    output_filepath = output_path / (filepath.stem+'.jpg')
+    
+    img = cv2_imread(filepath)
+    img = imagelib.normalize_channels(img, 3)
+    cv2_imwrite(output_filepath, img, [int(cv2.IMWRITE_JPEG_QUALITY), 100] )
+    
+    json_dict = images_jsons[filepath]
+    
+    ie_polys = IEPolys()
+    for shape in json_dict['shapes']:                
+        ie_poly = ie_polys.add(1)               
+        for x,y in shape['points']:
+            ie_poly.add( int(x), int(y) )            
         
-        img = cv2_imread(filepath)
-        img = imagelib.normalize_channels(img, 3)
-        cv2_imwrite(output_filepath, img, [int(cv2.IMWRITE_JPEG_QUALITY), 100] )
         
-        json_dict = images_jsons[filepath]
-        
-        ie_polys = IEPolys()
-        for shape in json_dict['shapes']:                
-            ie_poly = ie_polys.add(1)               
-            for x,y in shape['points']:
-                ie_poly.add( int(x), int(y) )            
-            
-            
-        DFLJPG.embed_data(output_filepath, face_type=FaceType.toString(FaceType.MARK_ONLY),
-                                           landmarks=data.landmarks[0],
-                                           ie_polys=ie_polys,
-                                           source_filename=filepath.name,
-                                           source_rect=data.rects[0],
-                                           source_landmarks=data.landmarks[0]
-                            )
-    """
-                
-    io.log_info("Done.")
+    DFLJPG.embed_data(output_filepath, face_type=FaceType.toString(FaceType.MARK_ONLY),
+                                        landmarks=data.landmarks[0],
+                                        ie_polys=ie_polys,
+                                        source_filename=filepath.name,
+                                        source_rect=data.rects[0],
+                                        source_landmarks=data.landmarks[0]
+                        )
+"""

@@ -104,6 +104,17 @@ if __name__ == "__main__":
     p = subparsers.add_parser( "dev_test", help="")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
     p.set_defaults (func=process_dev_test)
+    
+    def process_dev_segmented_extract(arguments):
+        osex.set_process_lowest_prio()
+        from mainscripts import dev_misc
+        dev_misc.dev_segmented_extract(arguments.input_dir, arguments.output_dir)
+
+    p = subparsers.add_parser( "dev_segmented_extract", help="")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
+    p.add_argument('--output-dir', required=True, action=fixPathAction, dest="output_dir")
+
+    p.set_defaults (func=process_dev_segmented_extract)
 
     def process_sort(arguments):
         osex.set_process_lowest_prio()
