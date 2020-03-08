@@ -70,7 +70,7 @@ deepfake quality progress
 ||||
 |Supplementary material|||
 ||[Ready to work facesets](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|Celebrity facesets made by community|
-||[Pretrained models](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|Use pretrained models to speed up training|
+||[Pretrained models](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|Use pretrained models made by community to speed up training|
 ||||
 |Communication groups|||
 ||[telegram (English / Russian)](https://t.me/DeepFaceLab_official)|Don't forget to hide your phone number|
