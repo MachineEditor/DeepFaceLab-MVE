@@ -163,14 +163,15 @@ class FANSegModel(ModelBase):
         src_samples, dst_samples = samples        
         source_np, target_np = src_samples
 
-        S, T, SM, = [ np.clip(x, 0.0, 1.0) for x in ([source_np,target_np] + self.view (source_np) ) ]
-        T, SM, = [ np.repeat (x, (3,), -1) for x in [T, SM] ]
+        S, TM, SM, = [ np.clip(x, 0.0, 1.0) for x in ([source_np,target_np] + self.view (source_np) ) ]
+        TM, SM, = [ np.repeat (x, (3,), -1) for x in [TM, SM] ]
 
-        result = []
-        
+        green_bg = np.tile( np.array([0,1,0], dtype=np.float32)[None,None,...], (self.resolution,self.resolution,1) )
+
+        result = []        
         st = []
         for i in range(n_samples):
-            ar = S[i], T[i], SM[i], S[i]*SM[i]
+            ar = S[i]*TM[i]+ green_bg*(1-TM[i]), SM[i], S[i]*SM[i] + green_bg*(1-SM[i])
             #todo green bg
             st.append ( np.concatenate ( ar, axis=1) )
         result += [ ('FANSeg training faces', np.concatenate (st, axis=0 )), ]
@@ -183,7 +184,7 @@ class FANSegModel(ModelBase):
         
             st = []
             for i in range(n_samples):
-                ar = D[i], DM[i], D[i]*DM[i]
+                ar = D[i], DM[i], D[i]*DM[i]+ green_bg*(1-DM[i])
                 #todo green bg
                 st.append ( np.concatenate ( ar, axis=1) )
             
