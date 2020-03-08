@@ -5,7 +5,6 @@
 
 ![](doc/logo_cuda.png)
 ![](doc/logo_tensorflow.png)
-
 ![](doc/logo_python.png)
 </p>
   
