@@ -24,7 +24,6 @@ class FANSegModel(ModelBase):
         ask_override = self.ask_override()
         if self.is_first_run() or ask_override:
             self.ask_autobackup_hour()
-            self.ask_write_preview_history()
             self.ask_target_iter()
             self.ask_batch_size(4)
 
@@ -117,21 +116,30 @@ class FANSegModel(ModelBase):
 
             # initializing sample generators
             training_data_src_path = self.training_data_src_path
-            #training_data_dst_path = self.training_data_dst_path
+            training_data_dst_path = self.training_data_dst_path
 
             cpu_count = min(multiprocessing.cpu_count(), 8)
             src_generators_count = cpu_count // 2
             dst_generators_count = cpu_count // 2
             src_generators_count = int(src_generators_count * 1.5)
 
-            self.set_training_data_generators ([
-                    SampleGeneratorFace(training_data_src_path, random_ct_samples_path=training_data_src_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
-                        sample_process_options=SampleProcessor.Options(random_flip=True),
-                        output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'ct_mode':'idt', 'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                       'face_type':self.face_type, 'motion_blur':(25, 5),  'gaussian_blur':(25,5), 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK,                    'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.NONE, 'face_type':self.face_type,                                                 'data_format':nn.data_format, 'resolution': resolution},
-                                              ],
-                        generators_count=src_generators_count ),
-                             ])
+            src_generator = SampleGeneratorFace(training_data_src_path, random_ct_samples_path=training_data_src_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
+                                                sample_process_options=SampleProcessor.Options(random_flip=True),
+                                                output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'ct_mode':'idt', 'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                       'face_type':self.face_type, 'motion_blur':(25, 5),  'gaussian_blur':(25,5), 'data_format':nn.data_format, 'resolution': resolution},
+                                                                        {'sample_type': SampleProcessor.SampleType.FACE_MASK,                    'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.NONE, 'face_type':self.face_type,                                                 'data_format':nn.data_format, 'resolution': resolution},
+                                                                        ],
+                                                generators_count=src_generators_count )
+                                                
+            dst_generator = SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
+                                                sample_process_options=SampleProcessor.Options(random_flip=True),
+                                                output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'warp':False, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'face_type':self.face_type, 'motion_blur':(25, 5),  'gaussian_blur':(25,5), 'data_format':nn.data_format, 'resolution': resolution},
+                                                                    ],
+                                                generators_count=dst_generators_count,
+                                                raise_on_no_data=False )
+            if not dst_generator.is_initialized():
+                io.log_info(f"\nTo view the model on unseen faces, place any aligned faces in {training_data_dst_path}.\n")
+                
+            self.set_training_data_generators ([src_generator, dst_generator])
 
     #override
     def get_model_filename_list(self):
@@ -143,7 +151,7 @@ class FANSegModel(ModelBase):
         
     #override
     def onTrainOneIter(self):        
-        ( (source_np, target_np), ) = self.generate_next_samples()
+        source_np, target_np = self.generate_next_samples()[0]
         loss = self.train (source_np, target_np)       
 
         return ( ('loss', loss ), )
@@ -152,7 +160,8 @@ class FANSegModel(ModelBase):
     def onGetPreview(self, samples):
         n_samples = min(4, self.get_batch_size(), 800 // self.resolution )
 
-        ( (source_np, target_np), )  = samples
+        src_samples, dst_samples = samples        
+        source_np, target_np = src_samples
 
         S, T, SM, = [ np.clip(x, 0.0, 1.0) for x in ([source_np,target_np] + self.view (source_np) ) ]
         T, SM, = [ np.repeat (x, (3,), -1) for x in [T, SM] ]
@@ -164,8 +173,22 @@ class FANSegModel(ModelBase):
             ar = S[i], T[i], SM[i], S[i]*SM[i]
             #todo green bg
             st.append ( np.concatenate ( ar, axis=1) )
-        result += [ ('FANSeg', np.concatenate (st, axis=0 )), ]
-
+        result += [ ('FANSeg training faces', np.concatenate (st, axis=0 )), ]
+        
+        if len(dst_samples) != 0:
+            dst_np, = dst_samples
+            
+            D, DM, = [ np.clip(x, 0.0, 1.0) for x in ([dst_np] + self.view (dst_np) ) ]
+            DM, = [ np.repeat (x, (3,), -1) for x in [DM] ]
+        
+            st = []
+            for i in range(n_samples):
+                ar = D[i], DM[i], D[i]*DM[i]
+                #todo green bg
+                st.append ( np.concatenate ( ar, axis=1) )
+            
+            result += [ ('FANSeg unseen faces', np.concatenate (st, axis=0 )), ]
+            
         return result
 
 Model = FANSegModel

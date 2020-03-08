@@ -33,3 +33,7 @@ class SampleGeneratorBase(object):
     def __next__(self):
         #implement your own iterator
         return None
+    
+    #overridable
+    def is_initialized(self):
+        return True
