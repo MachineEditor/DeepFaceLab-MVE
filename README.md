@@ -6,6 +6,7 @@
 ![](doc/logo_cuda.png)
 ![](doc/logo_tensorflow.png)
 
+![](doc/logo_python.png)
 </p>
   
 # DeepFaceLab  
@@ -93,6 +94,7 @@ deepfake quality progress
 ||[Donate via Paypal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=lepersorium@gmail.com&lc=US&no_note=0&item_name=Support+DeepFaceLab&cn=&curency_code=USD&bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted)
 ||[Donate via Yandex.Money](https://money.yandex.ru/to/41001142318065)||
 ||bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr||
+|Last donation|8$ ( 20 february 2020 )
 ||||
 |Collect facesets|You can collect faceset of any celebrity that can be used in DeepFaceLab and share it [in the community](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|
 </td></tr>
