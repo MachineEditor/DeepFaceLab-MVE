@@ -19,7 +19,7 @@ class FANSegModel(ModelBase):
         yn_str = {True:'y',False:'n'}
 
         #default_resolution = 256
-        default_face_type = self.options['face_type'] = self.load_or_def_option('face_type', 'wf')
+        #default_face_type = self.options['face_type'] = self.load_or_def_option('face_type', 'f')
         
         ask_override = self.ask_override()
         if self.is_first_run() or ask_override:
@@ -27,12 +27,12 @@ class FANSegModel(ModelBase):
             self.ask_target_iter()
             self.ask_batch_size(4)
 
-        if self.is_first_run():
-            #resolution = io.input_int("Resolution", default_resolution, add_info="64-512")
-            #resolution = np.clip ( (resolution // 16) * 16, 64, 512)
-            #self.options['resolution'] = resolution
-            self.options['face_type'] = io.input_str ("Face type", default_face_type, ['h','mf','f','wf']).lower()
- 
+        #if self.is_first_run():
+        #resolution = io.input_int("Resolution", default_resolution, add_info="64-512")
+        #resolution = np.clip ( (resolution // 16) * 16, 64, 512)
+        #self.options['resolution'] = resolution
+        #self.options['face_type'] = io.input_str ("Face type", default_face_type, ['f']).lower()
+
     #override
     def on_initialize(self):
         device_config = nn.getCurrentDeviceConfig()
@@ -43,11 +43,12 @@ class FANSegModel(ModelBase):
         devices = device_config.devices
 
         self.resolution = resolution = 256#self.options['resolution']
-        self.face_type = {'h'  : FaceType.HALF,
-                          'mf' : FaceType.MID_FULL,
-                          'f'  : FaceType.FULL,
-                          'wf' : FaceType.WHOLE_FACE}[ self.options['face_type'] ]
-
+        #self.face_type = {'h'  : FaceType.HALF,
+        #                  'mf' : FaceType.MID_FULL,
+        #                  'f'  : FaceType.FULL,
+        #                  'wf' : FaceType.WHOLE_FACE}[ self.options['face_type'] ]
+        self.face_type = FaceType.FULL
+         
         place_model_on_cpu = len(devices) == 0
         models_opt_device = '/CPU:0' if place_model_on_cpu else '/GPU:0'
 
@@ -125,8 +126,8 @@ class FANSegModel(ModelBase):
 
             src_generator = SampleGeneratorFace(training_data_src_path, random_ct_samples_path=training_data_src_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                                                 sample_process_options=SampleProcessor.Options(random_flip=True),
-                                                output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'ct_mode':'idt', 'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                       'face_type':self.face_type, 'motion_blur':(25, 5),  'gaussian_blur':(25,5), 'data_format':nn.data_format, 'resolution': resolution},
-                                                                        {'sample_type': SampleProcessor.SampleType.FACE_MASK,                    'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.NONE, 'face_type':self.face_type,                                                 'data_format':nn.data_format, 'resolution': resolution},
+                                                output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'ct_mode':'idt', 'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                            'face_type':self.face_type, 'motion_blur':(25, 5),  'gaussian_blur':(25,5), 'data_format':nn.data_format, 'resolution': resolution},
+                                                                        {'sample_type': SampleProcessor.SampleType.FACE_MASK,                    'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type,                                                 'data_format':nn.data_format, 'resolution': resolution},
                                                                         ],
                                                 generators_count=src_generators_count )
                                                 
