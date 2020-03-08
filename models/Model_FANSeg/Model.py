@@ -25,7 +25,7 @@ class FANSegModel(ModelBase):
         if self.is_first_run() or ask_override:
             self.ask_autobackup_hour()
             self.ask_target_iter()
-            self.ask_batch_size(4)
+            self.ask_batch_size(24)
 
         #if self.is_first_run():
         #resolution = io.input_int("Resolution", default_resolution, add_info="64-512")
@@ -56,7 +56,7 @@ class FANSegModel(ModelBase):
         mask_shape = nn.get4Dshape(resolution,resolution,1)
  
         # Initializing model classes
-        self.model = TernausNet('FANSeg', 
+        self.model = TernausNet(f'{self.model_name}_FANSeg', 
                                  resolution, 
                                  FaceType.toString(self.face_type), 
                                  load_weights=not self.is_first_run(),
@@ -102,8 +102,7 @@ class FANSegModel(ModelBase):
                 loss = tf.reduce_mean(gpu_losses)
                 
                 loss_gv_op = self.model.opt.get_update_op (nn.tf_average_gv_list (gpu_loss_gvs))
-            
-            
+  
         
             # Initializing training and view functions
             def train(input_np, target_np):
@@ -126,7 +125,7 @@ class FANSegModel(ModelBase):
 
             src_generator = SampleGeneratorFace(training_data_src_path, random_ct_samples_path=training_data_src_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                                                 sample_process_options=SampleProcessor.Options(random_flip=True),
-                                                output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'ct_mode':'idt', 'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                            'face_type':self.face_type, 'motion_blur':(25, 5),  'gaussian_blur':(25,5), 'data_format':nn.data_format, 'resolution': resolution},
+                                                output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'ct_mode':'lct', 'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                            'face_type':self.face_type, 'motion_blur':(25, 5),  'gaussian_blur':(25,5), 'data_format':nn.data_format, 'resolution': resolution},
                                                                         {'sample_type': SampleProcessor.SampleType.FACE_MASK,                    'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type,                                                 'data_format':nn.data_format, 'resolution': resolution},
                                                                         ],
                                                 generators_count=src_generators_count )

@@ -21,7 +21,7 @@ def scantree(path):
         else:
             yield entry
 
-def get_image_paths(dir_path, image_extensions=image_extensions, subdirs=False):
+def get_image_paths(dir_path, image_extensions=image_extensions, subdirs=False, return_Path_class=False):
     dir_path = Path (dir_path)
 
     result = []
@@ -34,7 +34,7 @@ def get_image_paths(dir_path, image_extensions=image_extensions, subdirs=False):
 
         for x in list(gen):
             if any([x.name.lower().endswith(ext) for ext in image_extensions]):
-                result.append(x.path)
+                result.append( x.path if not return_Path_class else Path(x.path) )
     return sorted(result)
 
 def get_image_unique_filestem_paths(dir_path, verbose_print_func=None):
