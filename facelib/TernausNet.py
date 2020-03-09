@@ -161,7 +161,7 @@ class TernausNet(object):
                         io.log_err("Unable to load VGG11 pretrained weights from vgg11_enc_weights.npy")
 
     def save_weights(self):
-        for model, filename in io.progress_bar_generator(self.model_filename_list, "Saving"):
+        for model, filename in io.progress_bar_generator(self.model_filename_list, "Saving", leave=False):
             model.save_weights( self.weights_file_root / filename )
 
     def extract (self, input_image):
