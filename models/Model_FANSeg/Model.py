@@ -172,7 +172,6 @@ class FANSegModel(ModelBase):
         st = []
         for i in range(n_samples):
             ar = S[i]*TM[i]+ green_bg*(1-TM[i]), SM[i], S[i]*SM[i] + green_bg*(1-SM[i])
-            #todo green bg
             st.append ( np.concatenate ( ar, axis=1) )
         result += [ ('FANSeg training faces', np.concatenate (st, axis=0 )), ]
         
@@ -185,7 +184,6 @@ class FANSegModel(ModelBase):
             st = []
             for i in range(n_samples):
                 ar = D[i], DM[i], D[i]*DM[i]+ green_bg*(1-DM[i])
-                #todo green bg
                 st.append ( np.concatenate ( ar, axis=1) )
             
             result += [ ('FANSeg unseen faces', np.concatenate (st, axis=0 )), ]
