@@ -93,7 +93,8 @@ deepfake quality progress
 ||[Donate via Paypal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=lepersorium@gmail.com&lc=US&no_note=0&item_name=Support+DeepFaceLab&cn=&curency_code=USD&bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted)
 ||[Donate via Yandex.Money](https://money.yandex.ru/to/41001142318065)||
 ||bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr||
-|Last donations|300$ ( 12 march 2020 Thiago O. )
+|Last donations|200$ ( 12 march 2020 VFXChris Ume )
+||300$ ( 12 march 2020 Thiago O. )
 ||50$ ( 8 march 2020 blanuk )
 ||||
 |Collect facesets|You can collect faceset of any celebrity that can be used in DeepFaceLab and share it [in the community](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|
