@@ -454,7 +454,7 @@ class ModelBase(object):
         self.generate_next_samples()
 
     def finalize(self):
-        nn.tf_close_session()
+        nn.close_session()
 
     def is_first_run(self):
         return self.iter == 0

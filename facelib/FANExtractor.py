@@ -89,7 +89,7 @@ class FANExtractor(object):
                 low2 = self.b2_plus(low1)
                 low3 = self.b3(low2)
 
-                up2 = nn.tf_upsample2d(low3)
+                up2 = nn.upsample2d(low3)
 
                 return up1+up2
 

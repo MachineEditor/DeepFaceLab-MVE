@@ -152,15 +152,15 @@ class SampleGeneratorFaceCelebAMaskHQ(SampleGeneratorBase):
         file_ids = list(mask_file_id_hash.keys())
 
         shuffle_file_ids = []
-        shuffle_file_ids_random_ct = []
 
         resolution = 256
         random_flip = True
         rotation_range=[-15,15]
-        scale_range=[-0.25, 0.75]
+        scale_range=[-0.10, 0.95]
         tx_range=[-0.3, 0.3]
         ty_range=[-0.3, 0.3]
 
+        random_bilinear_resize = (25,75)
         motion_blur = (25, 5)
         gaussian_blur = (25, 5)
 
@@ -174,22 +174,15 @@ class SampleGeneratorFaceCelebAMaskHQ(SampleGeneratorBase):
                     if len(shuffle_file_ids) == 0:
                         shuffle_file_ids = file_ids.copy()
                         np.random.shuffle(shuffle_file_ids)
-                    if len(shuffle_file_ids_random_ct) == 0:
-                        shuffle_file_ids_random_ct = file_ids.copy()
-                        np.random.shuffle(shuffle_file_ids_random_ct)
 
                     file_id = shuffle_file_ids.pop()
-                    #file_id_random_ct = shuffle_file_ids_random_ct.pop()
-
                     masks = mask_file_id_hash[file_id]
-
                     image_path = images_path / f'{file_id}.jpg'
-                    #image_random_ct_path = images_path / f'{file_id_random_ct}.jpg'
 
                     skin_path = masks.get(MaskType.skin, None)
                     hair_path = masks.get(MaskType.hair, None)
                     hat_path = masks.get(MaskType.hat, None)
-                    neck_path = masks.get(MaskType.neck, None)
+                    #neck_path = masks.get(MaskType.neck, None)
 
                     img = cv2_imread(image_path).astype(np.float32) / 255.0
                     mask = cv2_imread(masks_path / skin_path)[...,0:1].astype(np.float32) / 255.0
@@ -205,7 +198,13 @@ class SampleGeneratorFaceCelebAMaskHQ(SampleGeneratorBase):
                         if hat_path.exists():
                             hat = cv2_imread(hat_path)[...,0:1].astype(np.float32) / 255.0
                             mask *= (1-hat)
-
+                    
+                    #if neck_path is not None:
+                    #    neck_path = masks_path / neck_path
+                    #    if neck_path.exists():
+                    #        neck = cv2_imread(neck_path)[...,0:1].astype(np.float32) / 255.0
+                    #        mask = np.clip(mask+neck, 0, 1)
+                            
                     warp_params = imagelib.gen_warp_params(resolution, random_flip, rotation_range=rotation_range, scale_range=scale_range, tx_range=tx_range, ty_range=ty_range )
   
                     img = cv2.resize( img, (resolution,resolution), cv2.INTER_LANCZOS4 )
@@ -215,9 +214,6 @@ class SampleGeneratorFaceCelebAMaskHQ(SampleGeneratorBase):
                     v = np.clip ( v + np.random.random()/2-0.25, 0, 1 )                    
                     img = np.clip( cv2.cvtColor(cv2.merge([h, s, v]), cv2.COLOR_HSV2BGR) , 0, 1 )
                             
-                    #img_random_ct = cv2.resize( cv2_imread(image_random_ct_path).astype(np.float32) / 255.0, (resolution,resolution), cv2.INTER_LANCZOS4 )
-                    #img = imagelib.color_transfer ('idt', img, img_random_ct )
-
                     if motion_blur is not None:
                         chance, mb_max_size = motion_blur
                         chance = np.clip(chance, 0, 100)
@@ -240,6 +236,15 @@ class SampleGeneratorFaceCelebAMaskHQ(SampleGeneratorBase):
 
                         if gblur_rnd_chance < chance:
                             img = cv2.GaussianBlur(img, (gblur_rnd_kernel,) *2 , 0)
+                            
+                    if random_bilinear_resize is not None:
+                        chance, max_size_per = random_bilinear_resize
+                        chance = np.clip(chance, 0, 100)                        
+                        pick_chance = np.random.randint(100)                        
+                        resize_to = resolution - int( np.random.rand()* int(resolution*(max_size_per/100.0)) )                        
+                        img = cv2.resize (img, (resize_to,resize_to), cv2.INTER_LINEAR )
+                        img = cv2.resize (img, (resolution,resolution), cv2.INTER_LINEAR )
+                        
                             
                     mask = cv2.resize( mask, (resolution,resolution), cv2.INTER_LANCZOS4 )[...,None]
                     mask = imagelib.warp_by_params (warp_params, mask, can_warp=True, can_transform=True, can_flip=True, border_replicate=False, cv2_inter=cv2.INTER_LANCZOS4)

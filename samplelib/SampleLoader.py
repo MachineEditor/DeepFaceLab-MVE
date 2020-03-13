@@ -32,7 +32,7 @@ class SampleLoader:
         return len(list(persons_name_idxs.keys()))
 
     @staticmethod
-    def load(sample_type, samples_path):
+    def load(sample_type, samples_path, subdirs=False):
         samples_cache = SampleLoader.samples_cache
 
         if str(samples_path) not in samples_cache.keys():
@@ -42,7 +42,7 @@ class SampleLoader:
 
         if            sample_type == SampleType.IMAGE:
             if  samples[sample_type] is None:
-                samples[sample_type] = [ Sample(filename=filename) for filename in io.progress_bar_generator( pathex.get_image_paths(samples_path), "Loading") ]
+                samples[sample_type] = [ Sample(filename=filename) for filename in io.progress_bar_generator( pathex.get_image_paths(samples_path, subdirs=subdirs), "Loading") ]
 
         elif          sample_type == SampleType.FACE:
             if  samples[sample_type] is None:
@@ -55,7 +55,7 @@ class SampleLoader:
                     io.log_info (f"Loaded {len(result)} packed faces from {samples_path}")
 
                 if result is None:
-                    result = SampleLoader.load_face_samples( pathex.get_image_paths(samples_path) )
+                    result = SampleLoader.load_face_samples( pathex.get_image_paths(samples_path, subdirs=subdirs) )
                 samples[sample_type] = result
 
         elif          sample_type == SampleType.FACE_TEMPORAL_SORTED:

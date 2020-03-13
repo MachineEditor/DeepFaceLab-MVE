@@ -5,7 +5,6 @@ if __name__ == "__main__":
 
     from core.leras import nn
     nn.initialize_main_env()
-
     import os
     import sys
     import time
@@ -116,6 +115,26 @@ if __name__ == "__main__":
 
     p.set_defaults (func=process_dev_segmented_extract)
 
+    def process_dev_segmented_trash(arguments):
+        osex.set_process_lowest_prio()
+        from mainscripts import dev_misc
+        dev_misc.dev_segmented_trash(arguments.input_dir)
+
+    p = subparsers.add_parser( "dev_segmented_trash", help="")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
+
+    p.set_defaults (func=process_dev_segmented_trash)
+    
+    def process_dev_resave_pngs(arguments):
+        osex.set_process_lowest_prio()
+        from mainscripts import dev_misc
+        dev_misc.dev_resave_pngs(arguments.input_dir)
+
+    p = subparsers.add_parser( "dev_resave_pngs", help="")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
+
+    p.set_defaults (func=process_dev_resave_pngs)
+    
     def process_sort(arguments):
         osex.set_process_lowest_prio()
         from mainscripts import Sorter
@@ -129,9 +148,6 @@ if __name__ == "__main__":
     def process_util(arguments):
         osex.set_process_lowest_prio()
         from mainscripts import Util
-
-        if arguments.convert_png_to_jpg:
-            Util.convert_png_to_jpg_folder (input_path=arguments.input_dir)
 
         if arguments.add_landmarks_debug_images:
             Util.add_landmarks_debug_images (input_path=arguments.input_dir)
@@ -163,7 +179,6 @@ if __name__ == "__main__":
 
     p = subparsers.add_parser( "util", help="Utilities.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
-    p.add_argument('--convert-png-to-jpg', action="store_true", dest="convert_png_to_jpg", default=False, help="Convert DeepFaceLAB PNG files to JPEG.")
     p.add_argument('--add-landmarks-debug-images', action="store_true", dest="add_landmarks_debug_images", default=False, help="Add landmarks debug image for aligned faces.")
     p.add_argument('--recover-original-aligned-filename', action="store_true", dest="recover_original_aligned_filename", default=False, help="Recover original aligned filename.")
     #p.add_argument('--remove-fanseg', action="store_true", dest="remove_fanseg", default=False, help="Remove fanseg mask from aligned faces.")
@@ -215,7 +230,6 @@ if __name__ == "__main__":
         from mainscripts import Merger
         Merger.main ( model_class_name       = arguments.model_name,
                       saved_models_path      = Path(arguments.model_dir),
-                      training_data_src_path = Path(arguments.training_data_src_dir) if arguments.training_data_src_dir is not None else None,
                       force_model_name       = arguments.force_model_name,
                       input_path             = Path(arguments.input_dir),
                       output_path            = Path(arguments.output_dir),
@@ -225,7 +239,6 @@ if __name__ == "__main__":
                       cpu_only               = arguments.cpu_only)
 
     p = subparsers.add_parser( "merge", help="Merger")
-    p.add_argument('--training-data-src-dir', action=fixPathAction, dest="training_data_src_dir", default=None, help="(optional, may be required by some models) Dir of extracted SRC faceset.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
     p.add_argument('--output-dir', required=True, action=fixPathAction, dest="output_dir", help="Output directory. This is where the merged files will be stored.")
     p.add_argument('--output-mask-dir', required=True, action=fixPathAction, dest="output_mask_dir", help="Output mask directory. This is where the mask files will be stored.")
@@ -360,7 +373,7 @@ if __name__ == "__main__":
     arguments.func(arguments)
 
     print ("Done.")
-
+    
 '''
 import code
 code.interact(local=dict(globals(), **locals()))

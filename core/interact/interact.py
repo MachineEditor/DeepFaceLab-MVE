@@ -1,13 +1,16 @@
 import multiprocessing
 import os
 import sys
+import threading
 import time
 import types
 
 import colorama
 import cv2
 from tqdm import tqdm
+
 from core import stdex
+
 try:
     import IPython #if success we are in colab
     from IPython.display import display, clear_output
@@ -37,6 +40,8 @@ class InteractBase(object):
         self.pg_bar = None
         self.focus_wnd_name = None
         self.error_log_line_prefix = '/!\\ '
+
+        self.process_messages_callbacks = {}
 
     def is_support_windows(self):
         return False
@@ -164,7 +169,21 @@ class InteractBase(object):
         self.pg_bar.close()
         self.pg_bar = None
 
+    def add_process_messages_callback(self, func ):
+        tid = threading.get_ident()
+        callbacks = self.process_messages_callbacks.get(tid, None)
+        if callbacks is None:
+            callbacks = []
+            self.process_messages_callbacks[tid] = callbacks
+
+        callbacks.append ( func )
+
     def process_messages(self, sleep_time=0):
+        callbacks = self.process_messages_callbacks.get(threading.get_ident(), None)
+        if callbacks is not None:
+            for func in callbacks:
+                func()
+
         self.on_process_messages(sleep_time)
 
     def wait_any_key(self):
@@ -359,11 +378,11 @@ class InteractBase(object):
     def input_process(self, stdin_fd, sq, str):
         sys.stdin = os.fdopen(stdin_fd)
         try:
-            inp = input (str)            
+            inp = input (str)
             sq.put (True)
         except:
-            sq.put (False)        
-    
+            sq.put (False)
+
     def input_in_time (self, str, max_time_sec):
         sq = multiprocessing.Queue()
         p = multiprocessing.Process(target=self.input_process, args=( sys.stdin.fileno(), sq, str))
@@ -377,14 +396,14 @@ class InteractBase(object):
                 break
             if time.time() - t > max_time_sec:
                 break
-            
-            
-        p.terminate()        
+
+
+        p.terminate()
         p.join()
-        
+
         old_stdin = sys.stdin
         sys.stdin = os.fdopen( os.dup(sys.stdin.fileno()) )
-        old_stdin.close()        
+        old_stdin.close()
         return inp
 
     def input_process_skip_pending(self, stdin_fd):

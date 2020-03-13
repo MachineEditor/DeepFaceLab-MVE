@@ -14,145 +14,10 @@ class QModel(ModelBase):
     #override
     def on_initialize(self):
         device_config = nn.getCurrentDeviceConfig()
-        self.model_data_format = "NCHW" if len(device_config.devices) != 0 and not self.is_debug()  else "NHWC"
+        devices = device_config.devices
+        self.model_data_format = "NCHW" if len(devices) != 0 and not self.is_debug() else "NHWC"
         nn.initialize(data_format=self.model_data_format)
         tf = nn.tf
-
-        conv_kernel_initializer = nn.initializers.ca()
-
-        class Downscale(nn.ModelBase):
-            def __init__(self, in_ch, out_ch, kernel_size=5, dilations=1, subpixel=True, use_activator=True, *kwargs ):
-                self.in_ch = in_ch
-                self.out_ch = out_ch
-                self.kernel_size = kernel_size
-                self.dilations = dilations
-                self.subpixel = subpixel
-                self.use_activator = use_activator
-                super().__init__(*kwargs)
-
-            def on_build(self, *args, **kwargs ):
-                self.conv1 = nn.Conv2D( self.in_ch,
-                                          self.out_ch // (4 if self.subpixel else 1),
-                                          kernel_size=self.kernel_size,
-                                          strides=1 if self.subpixel else 2,
-                                          padding='SAME', dilations=self.dilations, kernel_initializer=conv_kernel_initializer )
-
-            def forward(self, x):
-                x = self.conv1(x)
-
-                if self.subpixel:
-                    x = nn.tf_space_to_depth(x, 2)
-
-                if self.use_activator:
-                    x = nn.tf_gelu(x)
-                return x
-
-            def get_out_ch(self):
-                return (self.out_ch // 4) * 4
-
-        class DownscaleBlock(nn.ModelBase):
-            def on_build(self, in_ch, ch, n_downscales, kernel_size, dilations=1, subpixel=True):
-                self.downs = []
-
-                last_ch = in_ch
-                for i in range(n_downscales):
-                    cur_ch = ch*( min(2**i, 8)  )
-                    self.downs.append ( Downscale(last_ch, cur_ch, kernel_size=kernel_size, dilations=dilations, subpixel=subpixel) )
-                    last_ch = self.downs[-1].get_out_ch()
-
-            def forward(self, inp):
-                x = inp
-                for down in self.downs:
-                    x = down(x)
-                return x
-
-        class Upscale(nn.ModelBase):
-            def on_build(self, in_ch, out_ch, kernel_size=3 ):
-                self.conv1 = nn.Conv2D( in_ch, out_ch*4, kernel_size=kernel_size, padding='SAME', kernel_initializer=conv_kernel_initializer)
-
-            def forward(self, x):
-                x = self.conv1(x)
-                x = nn.tf_gelu(x)
-                x = nn.tf_depth_to_space(x, 2)
-                return x
-
-        class ResidualBlock(nn.ModelBase):
-            def on_build(self, ch, kernel_size=3 ):
-                self.conv1 = nn.Conv2D( ch, ch, kernel_size=kernel_size, padding='SAME', kernel_initializer=conv_kernel_initializer)
-                self.conv2 = nn.Conv2D( ch, ch, kernel_size=kernel_size, padding='SAME', kernel_initializer=conv_kernel_initializer)
-
-            def forward(self, inp):
-                x = self.conv1(inp)
-                x = nn.tf_gelu(x)
-                x = self.conv2(x)
-                x = inp + x
-                x = nn.tf_gelu(x)
-                return x
-
-        class Encoder(nn.ModelBase):
-            def on_build(self, in_ch, e_ch):
-                self.down1 = DownscaleBlock(in_ch, e_ch, n_downscales=4, kernel_size=5)
-            def forward(self, inp):
-                return nn.tf_flatten(self.down1(inp))
-
-        class Inter(nn.ModelBase):
-            def __init__(self, in_ch, lowest_dense_res, ae_ch, ae_out_ch, d_ch, **kwargs):
-                self.in_ch, self.lowest_dense_res, self.ae_ch, self.ae_out_ch, self.d_ch = in_ch, lowest_dense_res, ae_ch, ae_out_ch, d_ch
-                super().__init__(**kwargs)
-
-            def on_build(self):
-                in_ch, lowest_dense_res, ae_ch, ae_out_ch, d_ch = self.in_ch, self.lowest_dense_res, self.ae_ch, self.ae_out_ch, self.d_ch
-
-                self.dense1 = nn.Dense( in_ch, ae_ch, kernel_initializer=tf.initializers.orthogonal )
-                self.dense2 = nn.Dense( ae_ch, lowest_dense_res * lowest_dense_res * ae_out_ch, maxout_features=4, kernel_initializer=tf.initializers.orthogonal )
-                self.upscale1 = Upscale(ae_out_ch, d_ch*8)
-                self.res1 = ResidualBlock(d_ch*8)
-
-            def forward(self, inp):
-                x = self.dense1(inp)
-                x = self.dense2(x)
-                x = nn.tf_reshape_4D (x, lowest_dense_res, lowest_dense_res, self.ae_out_ch)
-                x = self.upscale1(x)
-                x = self.res1(x)
-                return x
-
-            def get_out_ch(self):
-                return self.ae_out_ch
-
-        class Decoder(nn.ModelBase):
-            def on_build(self, in_ch, d_ch):
-                self.upscale1 = Upscale(in_ch, d_ch*4)
-                self.res1     = ResidualBlock(d_ch*4)
-                self.upscale2 = Upscale(d_ch*4, d_ch*2)
-                self.res2     = ResidualBlock(d_ch*2)
-                self.upscale3 = Upscale(d_ch*2, d_ch*1)
-                self.res3     = ResidualBlock(d_ch*1)
-
-                self.upscalem1 = Upscale(in_ch, d_ch)
-                self.upscalem2 = Upscale(d_ch, d_ch//2)
-                self.upscalem3 = Upscale(d_ch//2, d_ch//2)
-
-                self.out_conv = nn.Conv2D( d_ch*1, 3, kernel_size=1, padding='SAME', kernel_initializer=conv_kernel_initializer)
-                self.out_convm = nn.Conv2D( d_ch//2, 1, kernel_size=1, padding='SAME', kernel_initializer=conv_kernel_initializer)
-
-            def forward(self, inp):
-                z = inp
-                x = self.upscale1 (z)
-                x = self.res1     (x)
-                x = self.upscale2 (x)
-                x = self.res2     (x)
-                x = self.upscale3 (x)
-                x = self.res3     (x)
-
-                y = self.upscalem1 (z)
-                y = self.upscalem2 (y)
-                y = self.upscalem3 (y)
-
-                return tf.nn.sigmoid(self.out_conv(x)), \
-                       tf.nn.sigmoid(self.out_convm(y))
-
-        device_config = nn.getCurrentDeviceConfig()
-        devices = device_config.devices
 
         resolution = self.resolution = 96
         self.face_type = FaceType.FULL
@@ -169,35 +34,34 @@ class QModel(ModelBase):
         optimizer_vars_on_cpu = models_opt_device=='/CPU:0'
 
         input_ch = 3
-        output_ch = 3
         bgr_shape = nn.get4Dshape(resolution,resolution,input_ch)
         mask_shape = nn.get4Dshape(resolution,resolution,1)
-        lowest_dense_res = resolution // 16
 
         self.model_filename_list = []
-
+        
+        model_archi = nn.DeepFakeArchi(resolution, mod='quick')
 
         with tf.device ('/CPU:0'):
             #Place holders on CPU
-            self.warped_src = tf.placeholder (nn.tf_floatx, bgr_shape)
-            self.warped_dst = tf.placeholder (nn.tf_floatx, bgr_shape)
+            self.warped_src = tf.placeholder (nn.floatx, bgr_shape)
+            self.warped_dst = tf.placeholder (nn.floatx, bgr_shape)
 
-            self.target_src = tf.placeholder (nn.tf_floatx, bgr_shape)
-            self.target_dst = tf.placeholder (nn.tf_floatx, bgr_shape)
+            self.target_src = tf.placeholder (nn.floatx, bgr_shape)
+            self.target_dst = tf.placeholder (nn.floatx, bgr_shape)
 
-            self.target_srcm = tf.placeholder (nn.tf_floatx, mask_shape)
-            self.target_dstm = tf.placeholder (nn.tf_floatx, mask_shape)
+            self.target_srcm = tf.placeholder (nn.floatx, mask_shape)
+            self.target_dstm = tf.placeholder (nn.floatx, mask_shape)
 
         # Initializing model classes
         with tf.device (models_opt_device):
-            self.encoder = Encoder(in_ch=input_ch, e_ch=e_dims, name='encoder')
-            encoder_out_ch = self.encoder.compute_output_channels ( (nn.tf_floatx, bgr_shape))
+            self.encoder = model_archi.Encoder(in_ch=input_ch, e_ch=e_dims, name='encoder')
+            encoder_out_ch = self.encoder.compute_output_channels ( (nn.floatx, bgr_shape))
 
-            self.inter = Inter (in_ch=encoder_out_ch, lowest_dense_res=lowest_dense_res, ae_ch=ae_dims, ae_out_ch=ae_dims, d_ch=d_dims, name='inter')
-            inter_out_ch = self.inter.compute_output_channels ( (nn.tf_floatx, (None,encoder_out_ch)))
+            self.inter = model_archi.Inter (in_ch=encoder_out_ch, ae_ch=ae_dims, ae_out_ch=ae_dims, d_ch=d_dims, name='inter')
+            inter_out_ch = self.inter.compute_output_channels ( (nn.floatx, (None,encoder_out_ch)))
 
-            self.decoder_src = Decoder(in_ch=inter_out_ch, d_ch=d_dims, name='decoder_src')
-            self.decoder_dst = Decoder(in_ch=inter_out_ch, d_ch=d_dims, name='decoder_dst')
+            self.decoder_src = model_archi.Decoder(in_ch=inter_out_ch, d_ch=d_dims, name='decoder_src')
+            self.decoder_dst = model_archi.Decoder(in_ch=inter_out_ch, d_ch=d_dims, name='decoder_dst')
 
             self.model_filename_list += [ [self.encoder,     'encoder.npy'    ],
                                           [self.inter,       'inter.npy'      ],
@@ -208,7 +72,7 @@ class QModel(ModelBase):
                 self.src_dst_trainable_weights = self.encoder.get_weights() + self.inter.get_weights() + self.decoder_src.get_weights() + self.decoder_dst.get_weights()
 
                 # Initialize optimizers
-                self.src_dst_opt = nn.TFRMSpropOptimizer(lr=2e-4, lr_dropout=0.3, name='src_dst_opt')
+                self.src_dst_opt = nn.RMSprop(lr=2e-4, lr_dropout=0.3, name='src_dst_opt')
                 self.src_dst_opt.initialize_variables(self.src_dst_trainable_weights, vars_on_cpu=optimizer_vars_on_cpu )
                 self.model_filename_list += [ (self.src_dst_opt, 'src_dst_opt.npy') ]
 
@@ -257,8 +121,8 @@ class QModel(ModelBase):
                     gpu_pred_dst_dstm_list.append(gpu_pred_dst_dstm)
                     gpu_pred_src_dstm_list.append(gpu_pred_src_dstm)
 
-                    gpu_target_srcm_blur = nn.tf_gaussian_blur(gpu_target_srcm,  max(1, resolution // 32) )
-                    gpu_target_dstm_blur = nn.tf_gaussian_blur(gpu_target_dstm,  max(1, resolution // 32) )
+                    gpu_target_srcm_blur = nn.gaussian_blur(gpu_target_srcm,  max(1, resolution // 32) )
+                    gpu_target_dstm_blur = nn.gaussian_blur(gpu_target_dstm,  max(1, resolution // 32) )
 
                     gpu_target_dst_masked      = gpu_target_dst*gpu_target_dstm_blur
                     gpu_target_dst_anti_masked = gpu_target_dst*(1.0 - gpu_target_dstm_blur)
@@ -272,11 +136,11 @@ class QModel(ModelBase):
                     gpu_psd_target_dst_masked = gpu_pred_src_dst*gpu_target_dstm_blur
                     gpu_psd_target_dst_anti_masked = gpu_pred_src_dst*(1.0 - gpu_target_dstm_blur)
 
-                    gpu_src_loss =  tf.reduce_mean ( 10*nn.tf_dssim(gpu_target_src_masked_opt, gpu_pred_src_src_masked_opt, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                    gpu_src_loss =  tf.reduce_mean ( 10*nn.dssim(gpu_target_src_masked_opt, gpu_pred_src_src_masked_opt, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
                     gpu_src_loss += tf.reduce_mean ( 10*tf.square ( gpu_target_src_masked_opt - gpu_pred_src_src_masked_opt ), axis=[1,2,3])
                     gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
 
-                    gpu_dst_loss  = tf.reduce_mean ( 10*nn.tf_dssim(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0, filter_size=int(resolution/11.6) ), axis=[1])
+                    gpu_dst_loss  = tf.reduce_mean ( 10*nn.dssim(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0, filter_size=int(resolution/11.6) ), axis=[1])
                     gpu_dst_loss += tf.reduce_mean ( 10*tf.square(  gpu_target_dst_masked_opt- gpu_pred_dst_dst_masked_opt ), axis=[1,2,3])
                     gpu_dst_loss += tf.reduce_mean ( 10*tf.square( gpu_target_dstm - gpu_pred_dst_dstm ),axis=[1,2,3] )
 
@@ -284,21 +148,21 @@ class QModel(ModelBase):
                     gpu_dst_losses += [gpu_dst_loss]
 
                     gpu_G_loss = gpu_src_loss + gpu_dst_loss
-                    gpu_src_dst_loss_gvs += [ nn.tf_gradients ( gpu_G_loss, self.src_dst_trainable_weights ) ]
+                    gpu_src_dst_loss_gvs += [ nn.gradients ( gpu_G_loss, self.src_dst_trainable_weights ) ]
 
 
             # Average losses and gradients, and create optimizer update ops
             with tf.device (models_opt_device):
-                pred_src_src  = nn.tf_concat(gpu_pred_src_src_list, 0)
-                pred_dst_dst  = nn.tf_concat(gpu_pred_dst_dst_list, 0)
-                pred_src_dst  = nn.tf_concat(gpu_pred_src_dst_list, 0)
-                pred_src_srcm = nn.tf_concat(gpu_pred_src_srcm_list, 0)
-                pred_dst_dstm = nn.tf_concat(gpu_pred_dst_dstm_list, 0)
-                pred_src_dstm = nn.tf_concat(gpu_pred_src_dstm_list, 0)
+                pred_src_src  = nn.concat(gpu_pred_src_src_list, 0)
+                pred_dst_dst  = nn.concat(gpu_pred_dst_dst_list, 0)
+                pred_src_dst  = nn.concat(gpu_pred_src_dst_list, 0)
+                pred_src_srcm = nn.concat(gpu_pred_src_srcm_list, 0)
+                pred_dst_dstm = nn.concat(gpu_pred_dst_dstm_list, 0)
+                pred_src_dstm = nn.concat(gpu_pred_src_dstm_list, 0)
 
-                src_loss = nn.tf_average_tensor_list(gpu_src_losses)
-                dst_loss = nn.tf_average_tensor_list(gpu_dst_losses)
-                src_dst_loss_gv = nn.tf_average_gv_list (gpu_src_dst_loss_gvs)
+                src_loss = nn.average_tensor_list(gpu_src_losses)
+                dst_loss = nn.average_tensor_list(gpu_dst_losses)
+                src_dst_loss_gv = nn.average_gv_list (gpu_src_dst_loss_gvs)
                 src_dst_loss_gv_op = self.src_dst_opt.get_update_op (src_dst_loss_gv)
 
             # Initializing training and view functions

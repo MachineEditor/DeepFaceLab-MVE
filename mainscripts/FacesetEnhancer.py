@@ -93,7 +93,7 @@ class FacesetEnhancerSubprocessor(Subprocessor):
             self.log_info (intro_str)
 
             from facelib import FaceEnhancer
-            self.fe = FaceEnhancer( place_model_on_cpu=(device_vram<=2) )
+            self.fe = FaceEnhancer( place_model_on_cpu=(device_vram<=2 or cpu_only), run_on_cpu=cpu_only )
 
         #override
         def process_data(self, filepath):

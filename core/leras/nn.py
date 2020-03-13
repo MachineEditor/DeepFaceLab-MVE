@@ -11,7 +11,7 @@ Provides:
 + convenient and understandable logic
 
 Reasons why we cannot import tensorflow or any tensorflow.sub modules right here:
-1) change env variables based on DeviceConfig before import tensorflow
+1) program is changing env variables based on DeviceConfig before import tensorflow
 2) multiprocesses will import tensorflow every spawn
 
 NCHW speed up training for 10-20%.
@@ -19,12 +19,11 @@ NCHW speed up training for 10-20%.
 
 import os
 import sys
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 from pathlib import Path
-
 import numpy as np
-
 from core.interact import interact as io
-
 from .device import Devices
 
 
@@ -40,57 +39,7 @@ class nn():
     conv2d_ch_axis = None
     conv2d_spatial_axes = None
 
-    tf_floatx = None
-    np_floatx = None
-
-    # Tensor ops
-    tf_get_value = None
-    tf_batch_set_value = None
-    tf_init_weights = None
-    tf_gradients = None
-    tf_average_gv_list = None
-    tf_average_tensor_list = None
-    tf_concat = None
-    tf_gelu = None
-    tf_upsample2d = None
-    tf_resize2d_bilinear = None
-    tf_flatten = None
-    tf_max_pool = None
-    tf_reshape_4D = None
-    tf_random_binomial = None
-    tf_gaussian_blur = None
-    tf_style_loss = None
-    tf_dssim = None
-    tf_space_to_depth = None
-    tf_depth_to_space = None
-
-    # Layers
-    Saveable = None
-    LayerBase = None
-    ModelBase = None
-    Conv2D = None
-    Conv2DTranspose = None
-    BlurPool = None
-    Dense = None
-    InstanceNorm2D = None
-    BatchNorm2D = None
-    AdaIN = None
-
-    # Initializers
-    initializers = None
-
-    # Optimizers
-    TFBaseOptimizer = None
-    TFRMSpropOptimizer = None
-    
-    # Models
-    PatchDiscriminator = None
-    IllumDiscriminator = None
-    CodeDiscriminator = None
-    
-    # Arhis
-    get_ae_models = None
-    get_ae_models_chervonij = None
+    floatx = None
     
     @staticmethod
     def initialize(device_config=None, floatx="float32", data_format="NHWC"):
@@ -98,15 +47,17 @@ class nn():
         if nn.tf is None:
             if device_config is None:
                 device_config = nn.getCurrentDeviceConfig()
-            else:
-                nn.setCurrentDeviceConfig(device_config)
+            nn.setCurrentDeviceConfig(device_config)
 
+            # Manipulate environment variables before import tensorflow
+            
             if 'CUDA_VISIBLE_DEVICES' in os.environ.keys():
                 os.environ.pop('CUDA_VISIBLE_DEVICES')
 
             first_run = False
             if len(device_config.devices) != 0:
                 if sys.platform[0:3] == 'win':
+                    # Windows specific env vars
                     if all( [ x.name == device_config.devices[0].name for x in device_config.devices ] ):
                         devices_str = "_" + device_config.devices[0].name.replace(' ','_')
                     else:
@@ -123,18 +74,25 @@ class nn():
             os.environ['TF_MIN_GPU_MULTIPROCESSOR_COUNT'] = '2'
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # tf log errors only
 
-            import warnings
-            warnings.simplefilter(action='ignore', category=FutureWarning)
-
             if first_run:
                 io.log_info("Caching GPU kernels...")
 
             import tensorflow as tf
+            nn.tf = tf
+            
             import logging
+            # Disable tensorflow warnings
             logging.getLogger('tensorflow').setLevel(logging.ERROR)
 
-            nn.tf = tf
-
+            # Initialize framework
+            import core.leras.ops
+            import core.leras.layers
+            import core.leras.initializers
+            import core.leras.optimizers
+            import core.leras.models
+            import core.leras.archis
+            
+            # Configure tensorflow session-config
             if len(device_config.devices) == 0:
                 nn.tf_default_device = "/CPU:0"
                 config = tf.ConfigProto(device_count={'GPU': 0})
@@ -146,20 +104,6 @@ class nn():
             config.gpu_options.force_gpu_compatible = True
             config.gpu_options.allow_growth = True
             nn.tf_sess_config = config
-
-            from .tensor_ops import initialize_tensor_ops
-            from .layers import initialize_layers
-            from .initializers import initialize_initializers
-            from .optimizers import initialize_optimizers
-            from .models import initialize_models
-            from .archis import initialize_archis
-            
-            initialize_tensor_ops(nn)
-            initialize_layers(nn)
-            initialize_initializers(nn)
-            initialize_optimizers(nn)
-            initialize_models(nn)
-            initialize_archis(nn)
             
         if nn.tf_sess is None:
             nn.tf_sess = tf.Session(config=nn.tf_sess_config)
@@ -182,8 +126,7 @@ class nn():
         """
         set default float type for all layers when dtype is None for them
         """
-        nn.tf_floatx = tf_dtype
-        nn.np_floatx = tf_dtype.as_numpy_dtype
+        nn.floatx = tf_dtype
 
     @staticmethod
     def set_data_format(data_format):
@@ -231,7 +174,7 @@ class nn():
         nn.current_DeviceConfig = device_config
 
     @staticmethod
-    def tf_reset_session():
+    def reset_session():
         if nn.tf is not None:
             if nn.tf_sess is not None:
                 nn.tf.reset_default_graph()
@@ -239,14 +182,14 @@ class nn():
                 nn.tf_sess = nn.tf.Session(config=nn.tf_sess_config)
 
     @staticmethod
-    def tf_close_session():
+    def close_session():
         if nn.tf_sess is not None:
             nn.tf.reset_default_graph()
             nn.tf_sess.close()
             nn.tf_sess = None
 
     @staticmethod
-    def tf_get_current_device():
+    def get_current_device():
         # Undocumented access to last tf.device(...)
         objs = nn.tf.get_default_graph()._device_function_stack.peek_objs()
         if len(objs) != 0:
@@ -254,7 +197,7 @@ class nn():
         return nn.tf_default_device
 
     @staticmethod
-    def ask_choose_device_idxs(choose_only_one=False, allow_cpu=True, suggest_best_multi_gpu=False, suggest_all_gpu=False, return_device_config=False):
+    def ask_choose_device_idxs(choose_only_one=False, allow_cpu=True, suggest_best_multi_gpu=False, suggest_all_gpu=False):
         devices = Devices.getDevices()
         if len(devices) == 0:
             return []
@@ -310,12 +253,13 @@ class nn():
                 pass
         io.log_info ("")
 
-        if return_device_config:
-            return nn.DeviceConfig.GPUIndexes(choosed_idxs)
-        else:
-            return choosed_idxs
+        return choosed_idxs
 
     class DeviceConfig():
+        @staticmethod
+        def ask_choose_device(*args, **kwargs):
+            return nn.DeviceConfig.GPUIndexes( nn.ask_choose_device_idxs(*args,**kwargs) )
+        
         def __init__ (self, devices=None):
             devices = devices or []
 

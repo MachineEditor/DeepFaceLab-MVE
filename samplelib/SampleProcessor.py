@@ -73,12 +73,19 @@ class SampleProcessor(object):
             if debug and is_face_sample:
                 LandmarksProcessor.draw_landmarks (sample_bgr, sample_landmarks, (0, 1, 0))
         
-            if sample_face_type == FaceType.MARK_ONLY:
-                warp_resolution = np.max( [ opts.get('resolution', 0) for opts in output_sample_types ] )
-            else:
-                warp_resolution = w
-            
-            params = imagelib.gen_warp_params(warp_resolution, sample_process_options.random_flip, rotation_range=sample_process_options.rotation_range, scale_range=sample_process_options.scale_range, tx_range=sample_process_options.tx_range, ty_range=sample_process_options.ty_range )
+            params_per_resolution = {}            
+            warp_rnd_state = np.random.RandomState (sample_rnd_seed-1)            
+            for opts in output_sample_types:
+                resolution = opts.get('resolution', None)
+                if resolution is None:
+                    continue
+                params_per_resolution[resolution] = imagelib.gen_warp_params(resolution, 
+                                                                             sample_process_options.random_flip, 
+                                                                             rotation_range=sample_process_options.rotation_range, 
+                                                                             scale_range=sample_process_options.scale_range, 
+                                                                             tx_range=sample_process_options.tx_range, 
+                                                                             ty_range=sample_process_options.ty_range, 
+                                                                             rnd_state=warp_rnd_state)
 
             outputs_sample = []
             for opts in output_sample_types:
@@ -89,6 +96,7 @@ class SampleProcessor(object):
                 transform      = opts.get('transform', False)
                 motion_blur    = opts.get('motion_blur', None)
                 gaussian_blur  = opts.get('gaussian_blur', None)
+                random_bilinear_resize = opts.get('random_bilinear_resize', None)
                 normalize_tanh = opts.get('normalize_tanh', False)
                 ct_mode        = opts.get('ct_mode', None)
                 data_format    = opts.get('data_format', 'NHWC')
@@ -137,31 +145,38 @@ class SampleProcessor(object):
                             mat  = LandmarksProcessor.get_transform_mat (sample_landmarks, warp_resolution, face_type)
                             img = cv2.warpAffine( img, mat, (warp_resolution, warp_resolution), flags=cv2.INTER_LINEAR )
                             
-                            img = imagelib.warp_by_params (params, img, warp, transform, can_flip=True, border_replicate=border_replicate, cv2_inter=cv2.INTER_LINEAR)
-                            img = cv2.resize( img, (resolution,resolution), cv2.INTER_LINEAR )[...,None]
+                            img = imagelib.warp_by_params (params_per_resolution[resolution], img, warp, transform, can_flip=True, border_replicate=border_replicate, cv2_inter=cv2.INTER_LINEAR)
+                            img = cv2.resize( img, (resolution,resolution), cv2.INTER_LINEAR )
                         else:
-                            img = imagelib.warp_by_params (params, img, warp, transform, can_flip=True, border_replicate=border_replicate, cv2_inter=cv2.INTER_LINEAR)
-                            mat = LandmarksProcessor.get_transform_mat (sample_landmarks, resolution, face_type)                            
-                            img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_LINEAR )[...,None]
-
+                            if face_type != sample_face_type:
+                                mat = LandmarksProcessor.get_transform_mat (sample_landmarks, resolution, face_type)                            
+                                img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_LINEAR )
+                            else:
+                                if w != resolution:
+                                    img = cv2.resize( img, (resolution, resolution), cv2.INTER_CUBIC )
+                                
+                            img = imagelib.warp_by_params (params_per_resolution[resolution], img, warp, transform, can_flip=True, border_replicate=border_replicate, cv2_inter=cv2.INTER_LINEAR)
+                                
+                        if len(img.shape) == 2:
+                            img = img[...,None]
+                            
                         if channel_type == SPCT.G:
                             out_sample = img.astype(np.float32)
                         else:
                             raise ValueError("only channel_type.G supported for the mask")
 
                     elif sample_type == SPST.FACE_IMAGE:
-                        img = sample_bgr                        
+                        img = sample_bgr                      
 
-                        if sample_face_type == FaceType.MARK_ONLY:
-                            mat  = LandmarksProcessor.get_transform_mat (sample_landmarks, warp_resolution, face_type)
-                            img  = cv2.warpAffine( img,  mat, (warp_resolution,warp_resolution), flags=cv2.INTER_CUBIC )
-                            img  = imagelib.warp_by_params (params, img,  warp, transform, can_flip=True, border_replicate=border_replicate)
-                            img  = cv2.resize( img,  (resolution,resolution), cv2.INTER_CUBIC )
-                        else:                            
-                            img  = imagelib.warp_by_params (params, img,  warp, transform, can_flip=True, border_replicate=border_replicate)
+                    
+                        if face_type != sample_face_type:
                             mat = LandmarksProcessor.get_transform_mat (sample_landmarks, resolution, face_type)
-                            img  = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_CUBIC )
-
+                            img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_CUBIC )
+                        else:
+                            if w != resolution:
+                                img = cv2.resize( img, (resolution, resolution), cv2.INTER_CUBIC )
+                        img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=border_replicate)
+                        
                         img = np.clip(img.astype(np.float32), 0, 1)
                         
                         
@@ -195,6 +210,16 @@ class SampleProcessor(object):
                             if gblur_rnd_chance < chance:
                                 img = cv2.GaussianBlur(img, (gblur_rnd_kernel,) *2 , 0)
                                 
+                        if random_bilinear_resize is not None:
+                            l_rnd_state = np.random.RandomState (sample_rnd_seed+2)
+                            
+                            chance, max_size_per = random_bilinear_resize
+                            chance = np.clip(chance, 0, 100)                        
+                            pick_chance = l_rnd_state.randint(100)                        
+                            resize_to = resolution - int( l_rnd_state.rand()* int(resolution*(max_size_per/100.0)) )                        
+                            img = cv2.resize (img, (resize_to,resize_to), cv2.INTER_LINEAR )
+                            img = cv2.resize (img, (resolution,resolution), cv2.INTER_LINEAR )
+                            
                         # Transform from BGR to desired channel_type
                         if channel_type == SPCT.BGR:
                             out_sample = img
@@ -207,7 +232,7 @@ class SampleProcessor(object):
                             h, s, v = cv2.split(hsv)
                             h = (h + l_rnd_state.randint(360) ) % 360
                             s = np.clip ( s + l_rnd_state.random()-0.5, 0, 1 )
-                            v = np.clip ( v + l_rnd_state.random()-0.5, 0, 1 )
+                            v = np.clip ( v + l_rnd_state.random()/2-0.25, 0, 1 ) 
                             hsv = cv2.merge([h, s, v])
                             out_sample = np.clip( cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR) , 0, 1 )
                         elif channel_type == SPCT.BGR_RANDOM_RGB_LEVELS:
@@ -234,7 +259,7 @@ class SampleProcessor(object):
                         out_sample = np.transpose(out_sample, (2,0,1) )
                 elif sample_type == SPST.IMAGE:
                     img = sample_bgr      
-                    img  = imagelib.warp_by_params (params, img,  warp, transform, can_flip=True, border_replicate=True)
+                    img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=True)
                     img  = cv2.resize( img,  (resolution, resolution), cv2.INTER_CUBIC )
                     out_sample = img
                     

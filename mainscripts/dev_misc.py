@@ -552,8 +552,42 @@ def dev_test1(input_dir):
 
             #import code
             #code.interact(local=dict(globals(), **locals()))
+            
+def dev_resave_pngs(input_dir):    
+    input_path = Path(input_dir)
+    if not input_path.exists():
+        raise ValueError('input_dir not found. Please ensure it exists.')
 
+    images_paths = pathex.get_image_paths(input_path, image_extensions=['.png'], subdirs=True, return_Path_class=True)
 
+    for filepath in io.progress_bar_generator(images_paths,"Processing"):
+        cv2_imwrite(filepath, cv2_imread(filepath))
+        
+
+def dev_segmented_trash(input_dir):    
+    input_path = Path(input_dir)
+    if not input_path.exists():
+        raise ValueError('input_dir not found. Please ensure it exists.')
+    
+    output_path = input_path.parent / (input_path.name+'_trash')
+    output_path.mkdir(parents=True, exist_ok=True)
+    
+    images_paths = pathex.get_image_paths(input_path, return_Path_class=True)
+    
+    trash_paths = []
+    for filepath in images_paths:
+        json_file = filepath.parent / (filepath.stem +'.json')
+        if not json_file.exists():
+            trash_paths.append(filepath)
+    
+    for filepath in trash_paths:
+        
+        try:
+            filepath.rename ( output_path / filepath.name )
+        except:
+            io.log_info ('fail to trashing %s' % (src.name) )
+
+    
 def dev_segmented_extract(input_dir, output_dir ):
     # extract and merge .json labelme files within the faces
       

@@ -21,7 +21,7 @@ class S3FDExtractor(object):
                 super().__init__(**kwargs)
 
             def build_weights(self):
-                self.weight = tf.get_variable ("weight", (1, 1, 1, self.n_channels), dtype=nn.tf_floatx, initializer=tf.initializers.ones )
+                self.weight = tf.get_variable ("weight", (1, 1, 1, self.n_channels), dtype=nn.floatx, initializer=tf.initializers.ones )
 
             def get_weights(self):
                 return [self.weight]
@@ -36,7 +36,7 @@ class S3FDExtractor(object):
                 super().__init__(name='S3FD')
 
             def on_build(self):
-                self.minus = tf.constant([104,117,123], dtype=nn.tf_floatx )
+                self.minus = tf.constant([104,117,123], dtype=nn.floatx )
                 self.conv1_1 = nn.Conv2D(3, 64, kernel_size=3, strides=1, padding='SAME')
                 self.conv1_2 = nn.Conv2D(64, 64, kernel_size=3, strides=1, padding='SAME')
 

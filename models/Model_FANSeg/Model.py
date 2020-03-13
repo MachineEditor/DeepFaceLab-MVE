@@ -18,21 +18,17 @@ class FANSegModel(ModelBase):
         device_config = nn.getCurrentDeviceConfig()
         yn_str = {True:'y',False:'n'}
 
-        #default_resolution = 256
-        #default_face_type = self.options['face_type'] = self.load_or_def_option('face_type', 'f')
-        
         ask_override = self.ask_override()
         if self.is_first_run() or ask_override:
             self.ask_autobackup_hour()
             self.ask_target_iter()
             self.ask_batch_size(24)
 
-        #if self.is_first_run():
-        #resolution = io.input_int("Resolution", default_resolution, add_info="64-512")
-        #resolution = np.clip ( (resolution // 16) * 16, 64, 512)
-        #self.options['resolution'] = resolution
-        #self.options['face_type'] = io.input_str ("Face type", default_face_type, ['f']).lower()
-
+        default_lr_dropout         = self.options['lr_dropout']         = self.load_or_def_option('lr_dropout', False)
+        
+        if self.is_first_run() or ask_override:
+            self.options['lr_dropout']  = io.input_bool ("Use learning rate dropout", default_lr_dropout, help_message="When the face is trained enough, you can enable this option to get extra sharpness and reduce subpixel shake for less amount of iterations.")
+         
     #override
     def on_initialize(self):
         device_config = nn.getCurrentDeviceConfig()
@@ -42,11 +38,7 @@ class FANSegModel(ModelBase):
         device_config = nn.getCurrentDeviceConfig()
         devices = device_config.devices
 
-        self.resolution = resolution = 256#self.options['resolution']
-        #self.face_type = {'h'  : FaceType.HALF,
-        #                  'mf' : FaceType.MID_FULL,
-        #                  'f'  : FaceType.FULL,
-        #                  'wf' : FaceType.WHOLE_FACE}[ self.options['face_type'] ]
+        self.resolution = resolution = 256
         self.face_type = FaceType.FULL
          
         place_model_on_cpu = len(devices) == 0
@@ -56,13 +48,13 @@ class FANSegModel(ModelBase):
         mask_shape = nn.get4Dshape(resolution,resolution,1)
  
         # Initializing model classes
-        self.model = TernausNet(f'{self.model_name}_FANSeg', 
+        self.model = TernausNet(f'{self.model_name}_FANSeg_{FaceType.toString(self.face_type)}', 
                                  resolution, 
-                                 FaceType.toString(self.face_type), 
                                  load_weights=not self.is_first_run(),
                                  weights_file_root=self.get_model_root_path(),
                                  training=True,
-                                 place_model_on_cpu=place_model_on_cpu)
+                                 place_model_on_cpu=place_model_on_cpu,
+                                 optimizer=nn.RMSprop(lr=0.0001, lr_dropout=0.3 if self.options['lr_dropout'] else 1.0,name='opt') )
                                  
         if self.is_training:
             # Adjust batch size for multiple GPU
@@ -93,15 +85,15 @@ class FANSegModel(ModelBase):
                     gpu_loss = tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(labels=gpu_target_t, logits=gpu_pred_logits_t), axis=[1,2,3])
                     gpu_losses += [gpu_loss]
 
-                    gpu_loss_gvs += [ nn.tf_gradients ( gpu_loss, self.model.net_weights ) ]
+                    gpu_loss_gvs += [ nn.gradients ( gpu_loss, self.model.net_weights ) ]
 
 
             # Average losses and gradients, and create optimizer update ops
             with tf.device (models_opt_device):
-                pred = nn.tf_concat(gpu_pred_list, 0)                
+                pred = nn.concat(gpu_pred_list, 0)                
                 loss = tf.reduce_mean(gpu_losses)
                 
-                loss_gv_op = self.model.opt.get_update_op (nn.tf_average_gv_list (gpu_loss_gvs))
+                loss_gv_op = self.model.opt.get_update_op (nn.average_gv_list (gpu_loss_gvs))
   
         
             # Initializing training and view functions
@@ -171,7 +163,7 @@ class FANSegModel(ModelBase):
         result = []        
         st = []
         for i in range(n_samples):
-            ar = S[i]*TM[i]+ green_bg*(1-TM[i]), SM[i], S[i]*SM[i] + green_bg*(1-SM[i])
+            ar = S[i]*TM[i] + 0.5*S[i]*(1-TM[i]) + 0.5*green_bg*(1-TM[i]), SM[i], S[i]*SM[i] + green_bg*(1-SM[i])
             st.append ( np.concatenate ( ar, axis=1) )
         result += [ ('FANSeg training faces', np.concatenate (st, axis=0 )), ]
         

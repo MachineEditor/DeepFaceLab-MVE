@@ -21,11 +21,6 @@ class MergerConfig(object):
                        ):
         self.type = type
 
-        self.superres_func = None
-        self.blursharpen_func = None
-        self.fanseg_input_size = None
-        self.fanseg_extract_func = None
-
         self.sharpen_dict = {0:"None", 1:'box', 2:'gaussian'}
 
         #default changeable params
@@ -88,6 +83,19 @@ mode_str_dict = {}
 for key in mode_dict.keys():
     mode_str_dict[ mode_dict[key] ] = key
 
+whole_face_mask_mode_dict = {1:'learned',
+                             2:'dst',
+                             3:'FAN-prd',
+                             4:'FAN-dst',
+                             5:'FAN-prd*FAN-dst',
+                             6:'learned*FAN-prd*FAN-dst'                                  
+                             }
+"""
+8:'SkinSeg-prd',
+9:'SkinSeg-dst',
+10:'SkinSeg-prd*SkinSeg-dst',
+11:'learned*SkinSeg-prd*SkinSeg-dst'
+"""                                   
 full_face_mask_mode_dict = {1:'learned',
                                     2:'dst',
                                     3:'FAN-prd',
@@ -164,7 +172,9 @@ class MergerConfigMasked(MergerConfig):
             self.hist_match_threshold = np.clip ( self.hist_match_threshold+diff , 0, 255)
 
     def toggle_mask_mode(self):
-        if self.face_type == FaceType.FULL:
+        if self.face_type == FaceType.WHOLE_FACE:
+            a = list( whole_face_mask_mode_dict.keys() )
+        elif self.face_type == FaceType.FULL:
             a = list( full_face_mask_mode_dict.keys() )
         else:
             a = list( half_face_mask_mode_dict.keys() )
@@ -213,7 +223,14 @@ class MergerConfigMasked(MergerConfig):
             if self.mode == 'hist-match' or self.mode == 'seamless-hist-match':
                 self.hist_match_threshold = np.clip ( io.input_int("Hist match threshold", 255, add_info="0..255"), 0, 255)
 
-        if self.face_type == FaceType.FULL:
+        if self.face_type == FaceType.WHOLE_FACE:
+            s = """Choose mask mode: \n"""
+            for key in whole_face_mask_mode_dict.keys():
+                s += f"""({key}) {whole_face_mask_mode_dict[key]}\n"""
+            io.log_info(s)
+
+            self.mask_mode = io.input_int ("", 1, valid_list=whole_face_mask_mode_dict.keys() )
+        elif self.face_type == FaceType.FULL:
             s = """Choose mask mode: \n"""
             for key in full_face_mask_mode_dict.keys():
                 s += f"""({key}) {full_face_mask_mode_dict[key]}\n"""
@@ -282,7 +299,9 @@ class MergerConfigMasked(MergerConfig):
         if self.mode == 'hist-match' or self.mode == 'seamless-hist-match':
             r += f"""hist_match_threshold: {self.hist_match_threshold}\n"""
 
-        if self.face_type == FaceType.FULL:
+        if self.face_type == FaceType.WHOLE_FACE:
+            r += f"""mask_mode: { whole_face_mask_mode_dict[self.mask_mode] }\n"""
+        elif self.face_type == FaceType.FULL:
             r += f"""mask_mode: { full_face_mask_mode_dict[self.mask_mode] }\n"""
         else:
             r += f"""mask_mode: { half_face_mask_mode_dict[self.mask_mode] }\n"""

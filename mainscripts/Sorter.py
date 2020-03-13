@@ -754,7 +754,7 @@ def sort_by_absdiff(input_path):
 
     from core.leras import nn
 
-    device_config = nn.ask_choose_device_idxs(choose_only_one=True, return_device_config=True)
+    device_config = nn.DeviceConfig.ask_choose_device(choose_only_one=True)
     nn.initialize( device_config=device_config, data_format="NHWC" )
     tf = nn.tf
 
