@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 
 from core import imagelib, mplib, pathex
+from core.imagelib import sd
 from core.cv2ex import *
 from core.interact import interact as io
 from core.joblib import SubprocessGenerator, ThisThreadGenerator
@@ -69,7 +70,7 @@ class SampleGeneratorFaceSkinSegDataset(SampleGeneratorBase):
         super().__init__(debug, batch_size)
         self.initialized = False
 
-        
+
         dataset_path = root_path / 'XSegDataset'
         if not dataset_path.exists():
             raise ValueError(f'Unable to find {dataset_path}')
@@ -79,12 +80,12 @@ class SampleGeneratorFaceSkinSegDataset(SampleGeneratorBase):
             raise ValueError(f'Unable to find {aligned_path}')
 
         obstructions_path = dataset_path / 'obstructions'
-        
+
         obstructions_images_paths = pathex.get_image_paths(obstructions_path, image_extensions=['.png'], subdirs=True)
-        
+
         samples = SampleLoader.load (SampleType.FACE, aligned_path, subdirs=True)
         self.samples_len = len(samples)
-        
+
         pickled_samples = pickle.dumps(samples, 4)
 
         if self.debug:
@@ -120,9 +121,10 @@ class SampleGeneratorFaceSkinSegDataset(SampleGeneratorBase):
         pickled_samples, obstructions_images_paths, resolution, face_type, data_format = param
 
         samples = pickle.loads(pickled_samples)
-        
+
+        obstructions_images_paths_len = len(obstructions_images_paths)
         shuffle_o_idxs = []
-        o_idxs = [*range(len(obstructions_images_paths))]
+        o_idxs = [*range(obstructions_images_paths_len)]
 
         shuffle_idxs = []
         idxs = [*range(len(samples))]
@@ -132,17 +134,17 @@ class SampleGeneratorFaceSkinSegDataset(SampleGeneratorBase):
         scale_range=[-0.05, 0.05]
         tx_range=[-0.05, 0.05]
         ty_range=[-0.05, 0.05]
-        
+
         o_random_flip = True
         o_rotation_range=[-180,180]
         o_scale_range=[-0.5, 0.05]
         o_tx_range=[-0.5, 0.5]
         o_ty_range=[-0.5, 0.5]
-                
-        random_bilinear_resize_chance, random_bilinear_resize_max_size_per = 25,75                
-        motion_blur_chance, motion_blur_mb_max_size = 25, 5        
+
+        random_bilinear_resize_chance, random_bilinear_resize_max_size_per = 25,75
+        motion_blur_chance, motion_blur_mb_max_size = 25, 5
         gaussian_blur_chance, gaussian_blur_kernel_max_size = 25, 5
-    
+
         bs = self.batch_size
         while True:
             batches = [ [], [] ]
@@ -155,17 +157,17 @@ class SampleGeneratorFaceSkinSegDataset(SampleGeneratorBase):
                         np.random.shuffle(shuffle_idxs)
 
                     idx = shuffle_idxs.pop()
-                    
+
                     sample = samples[idx]
 
                     img = sample.load_bgr()
                     h,w,c = img.shape
-                    
-                    mask = np.zeros ((h,w,1), dtype=np.float32)                            
+
+                    mask = np.zeros ((h,w,1), dtype=np.float32)
                     sample.ie_polys.overlay_mask(mask)
-     
+
                     warp_params = imagelib.gen_warp_params(resolution, random_flip, rotation_range=rotation_range, scale_range=scale_range, tx_range=tx_range, ty_range=ty_range )
-                    
+
                     if face_type == sample.face_type:
                         if w != resolution:
                             img = cv2.resize( img, (resolution, resolution), cv2.INTER_LANCZOS4 )
@@ -177,78 +179,77 @@ class SampleGeneratorFaceSkinSegDataset(SampleGeneratorBase):
 
                     if len(mask.shape) == 2:
                         mask = mask[...,None]
-                            
-                    # apply obstruction
-                    if len(shuffle_o_idxs) == 0:
-                        shuffle_o_idxs = o_idxs.copy()
-                        np.random.shuffle(shuffle_o_idxs)                    
-                    o_idx = shuffle_o_idxs.pop()
-                    o_img = cv2_imread (obstructions_images_paths[o_idx]).astype(np.float32) / 255.0
-                    oh,ow,oc = o_img.shape
-                    if oc == 4:
-                        ohw = max(oh,ow)
-                        scale = resolution / ohw
-                        
-                        #o_img = cv2.resize (o_img, ( int(ow*rate), int(oh*rate),  ), cv2.INTER_CUBIC)
-                        
-                        
-                       
 
-    
-                        mat = cv2.getRotationMatrix2D( (ow/2,oh/2), 
-                                                       np.random.uniform( o_rotation_range[0], o_rotation_range[1] ),
-                                                       1.0 )                        
-                                                       
-                        mat += np.float32( [[0,0, -ow/2 ],
-                                            [0,0, -oh/2 ]])
-                        mat *= scale * np.random.uniform(1 +o_scale_range[0], 1 +o_scale_range[1])
-                        mat += np.float32( [[0, 0, resolution/2 + resolution*np.random.uniform( o_tx_range[0], o_tx_range[1] ) ],
-                                            [0, 0, resolution/2 + resolution*np.random.uniform( o_ty_range[0], o_ty_range[1] ) ] ])
-                                   
-                       
-                        o_img  = cv2.warpAffine( o_img,  mat, (resolution,resolution), borderMode=cv2.BORDER_CONSTANT, flags=cv2.INTER_LANCZOS4 )
-                        
-                        if o_random_flip and np.random.randint(10) < 4:
-                            o_img = o_img[:,::-1,...]
-                            
-                        o_mask = o_img[...,3:4]
-                        o_mask[o_mask>0] = 1.0
-                        
-                        
-                        o_mask = cv2.erode (o_mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5)), iterations = 1 )
-                        o_mask = cv2.GaussianBlur(o_mask, (5, 5) , 0)[...,None]
-                        
-                        img = img*(1-o_mask) + o_img[...,0:3]*o_mask 
-                        
-                        o_mask[o_mask<0.5] = 0.0
-                        
-                        
-                        #import code
-                        #code.interact(local=dict(globals(), **locals()))
-                        mask *= (1-o_mask)
+                    if obstructions_images_paths_len != 0:
+                        # apply obstruction
+                        if len(shuffle_o_idxs) == 0:
+                            shuffle_o_idxs = o_idxs.copy()
+                            np.random.shuffle(shuffle_o_idxs)
+                        o_idx = shuffle_o_idxs.pop()
+                        o_img = cv2_imread (obstructions_images_paths[o_idx]).astype(np.float32) / 255.0
+                        oh,ow,oc = o_img.shape
+                        if oc == 4:
+                            ohw = max(oh,ow)
+                            scale = resolution / ohw
 
-                        
-                        #cv2.imshow ("", np.clip(o_img*255, 0,255).astype(np.uint8) )
-                        #cv2.waitKey(0)
-                        
-                        
+                            #o_img = cv2.resize (o_img, ( int(ow*rate), int(oh*rate),  ), cv2.INTER_CUBIC)
+
+
+
+
+
+                            mat = cv2.getRotationMatrix2D( (ow/2,oh/2),
+                                                        np.random.uniform( o_rotation_range[0], o_rotation_range[1] ),
+                                                        1.0 )
+
+                            mat += np.float32( [[0,0, -ow/2 ],
+                                                [0,0, -oh/2 ]])
+                            mat *= scale * np.random.uniform(1 +o_scale_range[0], 1 +o_scale_range[1])
+                            mat += np.float32( [[0, 0, resolution/2 + resolution*np.random.uniform( o_tx_range[0], o_tx_range[1] ) ],
+                                                [0, 0, resolution/2 + resolution*np.random.uniform( o_ty_range[0], o_ty_range[1] ) ] ])
+
+
+                            o_img  = cv2.warpAffine( o_img,  mat, (resolution,resolution), borderMode=cv2.BORDER_CONSTANT, flags=cv2.INTER_LANCZOS4 )
+
+                            if o_random_flip and np.random.randint(10) < 4:
+                                o_img = o_img[:,::-1,...]
+
+                            o_mask = o_img[...,3:4]
+                            o_mask[o_mask>0] = 1.0
+
+
+                            o_mask = cv2.erode (o_mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5,5)), iterations = 1 )
+                            o_mask = cv2.GaussianBlur(o_mask, (5, 5) , 0)[...,None]
+
+                            img = img*(1-o_mask) + o_img[...,0:3]*o_mask
+
+                            o_mask[o_mask<0.5] = 0.0
+
+
+                            #import code
+                            #code.interact(local=dict(globals(), **locals()))
+                            mask *= (1-o_mask)
+
+
+                            #cv2.imshow ("", np.clip(o_img*255, 0,255).astype(np.uint8) )
+                            #cv2.waitKey(0)
+
+
                     img   = imagelib.warp_by_params (warp_params, img,  can_warp=True, can_transform=True, can_flip=True, border_replicate=False)
                     mask  = imagelib.warp_by_params (warp_params, mask, can_warp=True, can_transform=True, can_flip=True, border_replicate=False)
 
-                    
+
                     img = np.clip(img.astype(np.float32), 0, 1)
                     mask[mask < 0.5] = 0.0
                     mask[mask >= 0.5] = 1.0
                     mask = np.clip(mask, 0, 1)
-                    
-                    img = imagelib.apply_random_hsv_shift(img)                    
-                    
-                    #todo random mask for blur
-                    
-                    img = imagelib.apply_random_motion_blur( img, motion_blur_chance, motion_blur_mb_max_size )
-                    img = imagelib.apply_random_gaussian_blur( img, gaussian_blur_chance, gaussian_blur_kernel_max_size )
-                    img = imagelib.apply_random_bilinear_resize( img, random_bilinear_resize_chance, random_bilinear_resize_max_size_per  )
-                        
+
+
+                    img = imagelib.apply_random_hsv_shift(img, mask=sd.random_circle_faded ([resolution,resolution]))
+                    img = imagelib.apply_random_motion_blur( img, motion_blur_chance, motion_blur_mb_max_size, mask=sd.random_circle_faded ([resolution,resolution]))
+                    img = imagelib.apply_random_gaussian_blur( img, gaussian_blur_chance, gaussian_blur_kernel_max_size, mask=sd.random_circle_faded ([resolution,resolution]))
+                    img = imagelib.apply_random_bilinear_resize( img, random_bilinear_resize_chance, random_bilinear_resize_max_size_per, mask=sd.random_circle_faded ([resolution,resolution]))
+
                     if data_format == "NCHW":
                         img = np.transpose(img, (2,0,1) )
                         mask = np.transpose(mask, (2,0,1) )
