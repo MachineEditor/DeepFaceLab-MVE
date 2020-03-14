@@ -40,7 +40,7 @@ class DFLJPG(object):
                 data_counter += 2
 
                 if chunk_m_l != 0xFF:
-                    raise ValueError("No Valid JPG info")
+                    raise ValueError(f"No Valid JPG info in {filename}")
 
                 chunk_name = None
                 chunk_size = None
@@ -87,8 +87,9 @@ class DFLJPG(object):
                 else:
                     is_unk_chunk = True
 
-                if is_unk_chunk:
-                    raise ValueError("Unknown chunk %X" % (chunk_m_h) )
+                #if is_unk_chunk:
+                #    #raise ValueError(f"Unknown chunk {chunk_m_h} in {filename}")
+                #    io.log_info(f"Unknown chunk {chunk_m_h} in {filename}")
 
                 if chunk_size == None: #variable size
                     chunk_size, = struct.unpack (">H", data[data_counter:data_counter+2])
@@ -116,7 +117,7 @@ class DFLJPG(object):
 
             return inst
         except Exception as e:
-            raise Exception ("Corrupted JPG file: %s" % (str(e)))
+            raise Exception (f"Corrupted JPG file {filename} {e}")
 
     @staticmethod
     def load(filename, loader_func=None):

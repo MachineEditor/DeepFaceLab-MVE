@@ -1,8 +1,8 @@
+import traceback
 import json
 import multiprocessing
 import shutil
 from pathlib import Path
-
 import cv2
 import numpy as np
 
@@ -602,15 +602,16 @@ def dev_segmented_extract(input_dir, output_dir ):
     io.log_info(f'Output dir is {output_path}')
     
     if output_path.exists():
-        output_images_paths = pathex.get_image_paths(output_path)
+        output_images_paths = pathex.get_image_paths(output_path, subdirs=True)
         if len(output_images_paths) > 0:
             io.input_bool("WARNING !!! \n %s contains files! \n They will be deleted. \n Press enter to continue." % (str(output_path)), False )
             for filename in output_images_paths:
                 Path(filename).unlink()
+            shutil.rmtree(str(output_path))
     else:
         output_path.mkdir(parents=True, exist_ok=True)
 
-    images_paths = pathex.get_image_paths(input_path)
+    images_paths = pathex.get_image_paths(input_path, subdirs=True, return_Path_class=True)
 
     extract_data = []    
     images_jsons = {}
@@ -618,9 +619,8 @@ def dev_segmented_extract(input_dir, output_dir ):
     
     
     for filepath in io.progress_bar_generator(images_paths, "Processing"):
-        filepath = Path(filepath)
         json_filepath = filepath.parent / (filepath.stem+'.json')        
-        
+
         if json_filepath.exists():
             try:
                 json_dict = json.loads(json_filepath.read_text())
@@ -636,19 +636,27 @@ def dev_segmented_extract(input_dir, output_dir ):
                 l,r = int(total_points[:,0].min()), int(total_points[:,0].max())
                 t,b = int(total_points[:,1].min()), int(total_points[:,1].max())
                 
-                extract_data.append ( ExtractSubprocessor.Data(filepath, rects=[ [l,t,r,b] ] ) ) 
+                force_output_path=output_path / filepath.relative_to(input_path).parent
+                force_output_path.mkdir(exist_ok=True, parents=True)
+                
+                extract_data.append ( ExtractSubprocessor.Data(filepath, 
+                                                               rects=[ [l,t,r,b] ],
+                                                               force_output_path=force_output_path ) )
                 images_processed += 1
             except:                
-                io.log_err(f"err {filepath}")
+                io.log_err(f"err {filepath}, {traceback.format_exc()}")
                 return
-            
+        else:
+            io.log_info(f"No .json file for {filepath.relative_to(input_path)}, skipping.")
+            continue
+                
     image_size = 1024
     face_type = FaceType.HEAD  
     extract_data = ExtractSubprocessor (extract_data, 'landmarks', image_size, face_type, device_config=device_config).run()
-    extract_data = ExtractSubprocessor (extract_data, 'final', image_size, face_type, final_output_path=output_path, device_config=device_config).run()
+    extract_data = ExtractSubprocessor (extract_data, 'final', image_size, face_type, device_config=device_config).run()
                 
     for data in extract_data:
-        filepath = output_path / (data.filepath.stem+'_0.jpg')
+        filepath = data.force_output_path / (data.filepath.stem+'_0.jpg')
 
         dflimg = DFLIMG.load(filepath)
         image_to_face_mat = dflimg.get_image_to_face_mat()

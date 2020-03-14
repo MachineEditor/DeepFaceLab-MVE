@@ -71,15 +71,11 @@ class SampleGeneratorFaceSkinSegDataset(SampleGeneratorBase):
         self.initialized = False
 
 
-        dataset_path = root_path / 'XSegDataset'
-        if not dataset_path.exists():
-            raise ValueError(f'Unable to find {dataset_path}')
-
-        aligned_path = dataset_path /'aligned'
+        aligned_path = root_path /'aligned'
         if not aligned_path.exists():
             raise ValueError(f'Unable to find {aligned_path}')
 
-        obstructions_path = dataset_path / 'obstructions'
+        obstructions_path = root_path / 'obstructions'
 
         obstructions_images_paths = pathex.get_image_paths(obstructions_path, image_extensions=['.png'], subdirs=True)
 
