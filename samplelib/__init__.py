@@ -9,5 +9,5 @@ from .SampleGeneratorFaceTemporal import SampleGeneratorFaceTemporal
 from .SampleGeneratorImage import SampleGeneratorImage
 from .SampleGeneratorImageTemporal import SampleGeneratorImageTemporal
 from .SampleGeneratorFaceCelebAMaskHQ import SampleGeneratorFaceCelebAMaskHQ
-from .SampleGeneratorFaceSkinSegDataset import SampleGeneratorFaceSkinSegDataset
+from .SampleGeneratorFaceXSeg import SampleGeneratorFaceXSeg
 from .PackedFaceset import PackedFaceset

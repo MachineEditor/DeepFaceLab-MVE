@@ -9,12 +9,12 @@ from core.interact import interact as io
 from core.cv2ex import *
 
 fanseg_input_size = 256
-skinseg_input_size = 256
+xseg_input_size = 256
 
 def MergeMaskedFace (predictor_func, predictor_input_shape, 
                      face_enhancer_func,
                      fanseg_full_face_256_extract_func, 
-                     skinseg_256_extract_func,
+                     xseg_256_extract_func,
                      cfg, frame_info, img_bgr_uint8, img_bgr, img_face_landmarks):
     img_size = img_bgr.shape[1], img_bgr.shape[0]
     img_face_mask_a = LandmarksProcessor.get_image_hull_mask (img_bgr.shape, img_face_landmarks)
@@ -111,23 +111,23 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
             
     elif cfg.mask_mode >= 8 and cfg.mask_mode <= 11:        
         if cfg.mask_mode == 8 or cfg.mask_mode == 10 or cfg.mask_mode == 11:
-            prd_face_skinseg_bgr = cv2.resize (prd_face_bgr, (skinseg_input_size,)*2 )
-            prd_face_skinseg_mask = skinseg_256_extract_func(prd_face_skinseg_bgr)
-            X_prd_face_mask_a_0 = cv2.resize ( prd_face_skinseg_mask, (output_size, output_size), cv2.INTER_CUBIC)
+            prd_face_xseg_bgr = cv2.resize (prd_face_bgr, (xseg_input_size,)*2, cv2.INTER_CUBIC)
+            prd_face_xseg_mask = xseg_256_extract_func(prd_face_xseg_bgr)
+            X_prd_face_mask_a_0 = cv2.resize ( prd_face_xseg_mask, (output_size, output_size), cv2.INTER_CUBIC)
 
         if cfg.mask_mode >= 9 and cfg.mask_mode <= 11:            
-            whole_face_mat       = LandmarksProcessor.get_transform_mat (img_face_landmarks, skinseg_input_size, face_type=FaceType.WHOLE_FACE)
-            dst_face_skinseg_bgr  = cv2.warpAffine(img_bgr, whole_face_mat, (skinseg_input_size,)*2, flags=cv2.INTER_CUBIC )
-            dst_face_skinseg_mask = skinseg_256_extract_func(dst_face_skinseg_bgr)
-            X_dst_face_mask_a_0 = cv2.resize (dst_face_skinseg_mask, (output_size,output_size), cv2.INTER_CUBIC)
+            whole_face_mat      = LandmarksProcessor.get_transform_mat (img_face_landmarks, xseg_input_size, face_type=FaceType.WHOLE_FACE)
+            dst_face_xseg_bgr   = cv2.warpAffine(img_bgr, whole_face_mat, (xseg_input_size,)*2, flags=cv2.INTER_CUBIC )
+            dst_face_xseg_mask  = xseg_256_extract_func(dst_face_xseg_bgr)
+            X_dst_face_mask_a_0 = cv2.resize (dst_face_xseg_mask, (output_size,output_size), cv2.INTER_CUBIC)
 
-        if cfg.mask_mode == 8:   #'SkinSeg-prd',
+        if cfg.mask_mode == 8:   #'XSeg-prd',
             prd_face_mask_a_0 = X_prd_face_mask_a_0
-        elif cfg.mask_mode == 9: #'SkinSeg-dst',
+        elif cfg.mask_mode == 9: #'XSeg-dst',
             prd_face_mask_a_0 = X_dst_face_mask_a_0
-        elif cfg.mask_mode == 10: #'SkinSeg-prd*SkinSeg-dst',
+        elif cfg.mask_mode == 10: #'XSeg-prd*XSeg-dst',
             prd_face_mask_a_0 = X_prd_face_mask_a_0 * X_dst_face_mask_a_0
-        elif cfg.mask_mode == 11: #learned*SkinSeg-prd*SkinSeg-dst'
+        elif cfg.mask_mode == 11: #learned*XSeg-prd*XSeg-dst'
             prd_face_mask_a_0 = prd_face_mask_a_0 * X_prd_face_mask_a_0 * X_dst_face_mask_a_0
         
     prd_face_mask_a_0[ prd_face_mask_a_0 < (1.0/255.0) ] = 0.0 # get rid of noise
@@ -347,7 +347,7 @@ def MergeMasked (predictor_func,
                  predictor_input_shape,
                  face_enhancer_func,
                  fanseg_full_face_256_extract_func, 
-                 skinseg_256_extract_func, 
+                 xseg_256_extract_func, 
                  cfg, 
                  frame_info):
     img_bgr_uint8 = cv2_imread(frame_info.filepath)
@@ -356,7 +356,7 @@ def MergeMasked (predictor_func,
 
     outs = []
     for face_num, img_landmarks in enumerate( frame_info.landmarks_list ):
-        out_img, out_img_merging_mask = MergeMaskedFace (predictor_func, predictor_input_shape, face_enhancer_func, fanseg_full_face_256_extract_func, skinseg_256_extract_func, cfg, frame_info, img_bgr_uint8, img_bgr, img_landmarks)
+        out_img, out_img_merging_mask = MergeMaskedFace (predictor_func, predictor_input_shape, face_enhancer_func, fanseg_full_face_256_extract_func, xseg_256_extract_func, cfg, frame_info, img_bgr_uint8, img_bgr, img_landmarks)
         outs += [ (out_img, out_img_merging_mask) ]
 
     #Combining multiple face outputs

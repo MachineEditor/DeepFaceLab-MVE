@@ -7,29 +7,19 @@ import numpy as np
 from core import mathlib
 from core.interact import interact as io
 from core.leras import nn
-from facelib import FaceType, TernausNet, DFLSegNet
+from facelib import FaceType, TernausNet, XSegNet
 from models import ModelBase
 from samplelib import *
 
-class SkinSegModel(ModelBase):
+class XSegModel(ModelBase):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, force_model_class_name='XSeg', **kwargs)
+        
     #override
     def on_initialize_options(self):
-        device_config = nn.getCurrentDeviceConfig()
-        yn_str = {True:'y',False:'n'}
-
-        ask_override = self.ask_override()
-        if self.is_first_run() or ask_override:
-            self.ask_autobackup_hour()
-            self.ask_write_preview_history()
-            self.ask_target_iter()
-            self.ask_batch_size(8)
-            
-        default_lr_dropout         = self.options['lr_dropout']         = self.load_or_def_option('lr_dropout', False)
+        self.set_batch_size(4)   
         
-        if self.is_first_run() or ask_override:
-            self.options['lr_dropout']  = io.input_bool ("Use learning rate dropout", default_lr_dropout, help_message="When the face is trained enough, you can enable this option to get extra sharpness and reduce subpixel shake for less amount of iterations.")
-         
     #override
     def on_initialize(self):
         device_config = nn.getCurrentDeviceConfig()
@@ -43,20 +33,20 @@ class SkinSegModel(ModelBase):
         self.resolution = resolution = 256
         self.face_type = FaceType.WHOLE_FACE
         
-        place_model_on_cpu = True #len(devices) == 0
+        place_model_on_cpu = len(devices) == 0
         models_opt_device = '/CPU:0' if place_model_on_cpu else '/GPU:0'
 
         bgr_shape = nn.get4Dshape(resolution,resolution,3)
         mask_shape = nn.get4Dshape(resolution,resolution,1)
  
         # Initializing model classes
-        self.model = DFLSegNet(name=f'{self.model_name}_SkinSeg', 
+        self.model = XSegNet(name=f'XSeg', 
                                resolution=resolution, 
                                load_weights=not self.is_first_run(),
                                weights_file_root=self.get_model_root_path(),
                                training=True,
                                place_model_on_cpu=place_model_on_cpu,
-                               optimizer=nn.RMSprop(lr=0.0001, lr_dropout=0.3 if self.options['lr_dropout'] else 1.0, name='opt'),
+                               optimizer=nn.RMSprop(lr=0.0001, lr_dropout=0.3, name='opt'),
                                data_format=nn.data_format)
                                  
         if self.is_training:
@@ -111,38 +101,33 @@ class SkinSegModel(ModelBase):
 
             # initializing sample generators
             cpu_count = min(multiprocessing.cpu_count(), 8)
+            src_dst_generators_count = cpu_count // 2
             src_generators_count = cpu_count // 2
             dst_generators_count = cpu_count // 2
-            src_generators_count = int(src_generators_count * 1.5)
             
-            """
-            src_generator = SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
-                                                sample_process_options=SampleProcessor.Options(random_flip=True),
-                                                output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR_RANDOM_HSV_SHIFT,  'border_replicate':False,           'face_type':self.face_type, 'motion_blur':(25, 5),  'gaussian_blur':(25,5), 'random_bilinear_resize':(25,75), 'data_format':nn.data_format, 'resolution': resolution},
-                                                                        {'sample_type': SampleProcessor.SampleType.FACE_MASK,   'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.NONE, 'face_type':self.face_type,                                                 'data_format':nn.data_format, 'resolution': resolution},
-                                                                        ],
-                                                generators_count=src_generators_count )
-            """                                    
-            src_generator = SampleGeneratorFaceSkinSegDataset(self.training_data_src_path, 
-                                                           debug=self.is_debug(),
-                                                           batch_size=self.get_batch_size(),
-                                                           resolution=resolution,
-                                                           face_type=self.face_type,
-                                                           generators_count=src_generators_count, 
-                                                           data_format=nn.data_format)
+            
+            srcdst_generator = SampleGeneratorFaceXSeg([self.training_data_src_path, self.training_data_dst_path],
+                                                        debug=self.is_debug(),
+                                                        batch_size=self.get_batch_size(),
+                                                        resolution=resolution,
+                                                        face_type=self.face_type,
+                                                        generators_count=src_dst_generators_count, 
+                                                        data_format=nn.data_format)
                                                                                     
+            src_generator = SampleGeneratorFace(self.training_data_src_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
+                                                sample_process_options=SampleProcessor.Options(random_flip=False),
+                                                output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'warp':False, 'transform':False, 'channel_type' : SampleProcessor.ChannelType.BGR, 'border_replicate':False, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                                      ],
+                                                generators_count=src_generators_count,
+                                                raise_on_no_data=False )                                                     
             dst_generator = SampleGeneratorFace(self.training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
-                                                sample_process_options=SampleProcessor.Options(random_flip=True),
-                                                output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'warp':False, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'border_replicate':False, 'face_type':self.face_type, 'motion_blur':(25, 5),  'gaussian_blur':(25,5), 'random_bilinear_resize':(25,75), 'data_format':nn.data_format, 'resolution': resolution},
+                                                sample_process_options=SampleProcessor.Options(random_flip=False),
+                                                output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'warp':False, 'transform':False, 'channel_type' : SampleProcessor.ChannelType.BGR, 'border_replicate':False, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                                       ],
                                                 generators_count=dst_generators_count,
                                                 raise_on_no_data=False )
                                                 
-                                                                                    
-            if not dst_generator.is_initialized():
-                io.log_info(f"\nTo view the model on unseen faces, place any image faces in {self.training_data_dst_path}.\n")
-                
-            self.set_training_data_generators ([src_generator, dst_generator])
+            self.set_training_data_generators ([srcdst_generator, src_generator, dst_generator])
 
     #override
     def get_model_filename_list(self):
@@ -154,6 +139,8 @@ class SkinSegModel(ModelBase):
         
     #override
     def onTrainOneIter(self):        
+        
+        
         image_np, mask_np = self.generate_next_samples()[0]
         loss = self.train (image_np, mask_np)       
 
@@ -163,8 +150,8 @@ class SkinSegModel(ModelBase):
     def onGetPreview(self, samples):
         n_samples = min(4, self.get_batch_size(), 800 // self.resolution )
 
-        src_samples, dst_samples = samples        
-        image_np, mask_np = src_samples
+        srcdst_samples, src_samples, dst_samples = samples        
+        image_np, mask_np = srcdst_samples
 
         I, M, IM, = [ np.clip( nn.to_data_format(x,"NHWC", self.model_data_format), 0.0, 1.0) for x in ([image_np,mask_np] + self.view (image_np) ) ]
         M, IM, = [ np.repeat (x, (3,), -1) for x in [M, IM] ]
@@ -174,10 +161,24 @@ class SkinSegModel(ModelBase):
         result = []        
         st = []
         for i in range(n_samples):
-            ar = I[i]*M[i]+0.5*I[i]*(1-M[i])+0.5*green_bg*(1-M[i]), IM[i], I[i]*IM[i] + green_bg*(1-IM[i])
+            ar = I[i]*M[i]+0.5*I[i]*(1-M[i])+0.5*green_bg*(1-M[i]), IM[i], I[i]*IM[i]+0.5*I[i]*(1-IM[i]) + 0.5*green_bg*(1-IM[i])
             st.append ( np.concatenate ( ar, axis=1) )
-        result += [ ('SkinSeg training faces', np.concatenate (st, axis=0 )), ]
+        result += [ ('XSeg training faces', np.concatenate (st, axis=0 )), ]
         
+        if len(src_samples) != 0:
+            src_np, = src_samples
+            
+
+            D, DM, = [ np.clip(nn.to_data_format(x,"NHWC", self.model_data_format), 0.0, 1.0) for x in ([src_np] + self.view (src_np) ) ]
+            DM, = [ np.repeat (x, (3,), -1) for x in [DM] ]
+        
+            st = []
+            for i in range(n_samples):
+                ar = D[i], DM[i], D[i]*DM[i] + 0.5*D[i]*(1-DM[i]) + 0.5*green_bg*(1-DM[i])
+                st.append ( np.concatenate ( ar, axis=1) )
+            
+            result += [ ('XSeg src faces', np.concatenate (st, axis=0 )), ]
+            
         if len(dst_samples) != 0:
             dst_np, = dst_samples
             
@@ -187,11 +188,11 @@ class SkinSegModel(ModelBase):
         
             st = []
             for i in range(n_samples):
-                ar = D[i], DM[i], D[i]*DM[i]+ green_bg*(1-DM[i])
+                ar = D[i], DM[i], D[i]*DM[i]  + 0.5*D[i]*(1-DM[i]) + 0.5*green_bg*(1-DM[i])
                 st.append ( np.concatenate ( ar, axis=1) )
             
-            result += [ ('SkinSeg unseen faces', np.concatenate (st, axis=0 )), ]
+            result += [ ('XSeg dst faces', np.concatenate (st, axis=0 )), ]
             
         return result
 
-Model = SkinSegModel
+Model = XSegModel

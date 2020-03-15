@@ -27,6 +27,7 @@ class Sample(object):
                  'shape',
                  'landmarks',
                  'ie_polys',
+                 'seg_ie_polys',
                  'eyebrows_expand_mod',
                  'source_filename',
                  'person_name',
@@ -40,6 +41,7 @@ class Sample(object):
                        shape=None,
                        landmarks=None,
                        ie_polys=None,
+                       seg_ie_polys=None,
                        eyebrows_expand_mod=None,
                        source_filename=None,
                        person_name=None,
@@ -52,6 +54,7 @@ class Sample(object):
         self.shape = shape
         self.landmarks = np.array(landmarks) if landmarks is not None else None
         self.ie_polys = IEPolys.load(ie_polys)
+        self.seg_ie_polys = IEPolys.load(seg_ie_polys)
         self.eyebrows_expand_mod = eyebrows_expand_mod
         self.source_filename = source_filename
         self.person_name = person_name
@@ -88,6 +91,7 @@ class Sample(object):
                 'shape': self.shape,
                 'landmarks': self.landmarks.tolist(),
                 'ie_polys': self.ie_polys.dump(),
+                'seg_ie_polys': self.seg_ie_polys.dump(),
                 'eyebrows_expand_mod': self.eyebrows_expand_mod,
                 'source_filename': self.source_filename,
                 'person_name': self.person_name

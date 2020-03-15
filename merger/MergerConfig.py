@@ -83,6 +83,7 @@ mode_str_dict = {}
 for key in mode_dict.keys():
     mode_str_dict[ mode_dict[key] ] = key
 
+"""
 whole_face_mask_mode_dict = {1:'learned',
                              2:'dst',
                              3:'FAN-prd',
@@ -91,11 +92,14 @@ whole_face_mask_mode_dict = {1:'learned',
                              6:'learned*FAN-prd*FAN-dst'                                  
                              }
 """
-8:'SkinSeg-prd',
-9:'SkinSeg-dst',
-10:'SkinSeg-prd*SkinSeg-dst',
-11:'learned*SkinSeg-prd*SkinSeg-dst'
-"""                                   
+whole_face_mask_mode_dict = {1:'learned',
+                             2:'dst',
+                             8:'XSeg-prd',
+                             9:'XSeg-dst',
+                             10:'XSeg-prd*XSeg-dst',
+                             11:'learned*XSeg-prd*XSeg-dst'                             
+                             }
+                               
 full_face_mask_mode_dict = {1:'learned',
                                     2:'dst',
                                     3:'FAN-prd',

@@ -22,7 +22,11 @@ def circle_faded( hw, center, fade_dists ):
 
     pts_dists = np.abs ( npla.norm(pts-center, axis=-1) )
     
+    if fade_dists[1] == 0:
+        fade_dists[1] = 1
+        
     pts_dists = ( pts_dists - fade_dists[0] ) / fade_dists[1]
+        
     pts_dists = np.clip( 1-pts_dists, 0, 1)
     
     return pts_dists.reshape ( (h,w,1) ).astype(np.float32)

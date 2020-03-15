@@ -67,7 +67,7 @@ class InteractiveMergerSubprocessor(Subprocessor):
             self.predictor_input_shape = client_dict['predictor_input_shape']
             self.face_enhancer_func = client_dict['face_enhancer_func']
             self.fanseg_full_face_256_extract_func = client_dict['fanseg_full_face_256_extract_func']
-            self.skinseg_256_extract_func = client_dict['skinseg_256_extract_func']
+            self.xseg_256_extract_func = client_dict['xseg_256_extract_func']
 
 
             #transfer and set stdin in order to work code.interact in debug subprocess
@@ -104,7 +104,7 @@ class InteractiveMergerSubprocessor(Subprocessor):
                         final_img = MergeMasked (self.predictor_func, self.predictor_input_shape,
                                                  face_enhancer_func=self.face_enhancer_func,
                                                  fanseg_full_face_256_extract_func=self.fanseg_full_face_256_extract_func,
-                                                 skinseg_256_extract_func=self.skinseg_256_extract_func,
+                                                 xseg_256_extract_func=self.xseg_256_extract_func,
                                                  cfg=cfg,
                                                  frame_info=frame_info)
                     except Exception as e:
@@ -137,7 +137,7 @@ class InteractiveMergerSubprocessor(Subprocessor):
 
 
     #override
-    def __init__(self, is_interactive, merger_session_filepath, predictor_func, predictor_input_shape, face_enhancer_func, fanseg_full_face_256_extract_func, skinseg_256_extract_func, merger_config, frames, frames_root_path, output_path, output_mask_path, model_iter):
+    def __init__(self, is_interactive, merger_session_filepath, predictor_func, predictor_input_shape, face_enhancer_func, fanseg_full_face_256_extract_func, xseg_256_extract_func, merger_config, frames, frames_root_path, output_path, output_mask_path, model_iter):
         if len (frames) == 0:
             raise ValueError ("len (frames) == 0")
 
@@ -152,7 +152,7 @@ class InteractiveMergerSubprocessor(Subprocessor):
 
         self.face_enhancer_func = face_enhancer_func
         self.fanseg_full_face_256_extract_func = fanseg_full_face_256_extract_func
-        self.skinseg_256_extract_func = skinseg_256_extract_func
+        self.xseg_256_extract_func = xseg_256_extract_func
 
         self.frames_root_path = frames_root_path
         self.output_path = output_path
@@ -274,7 +274,7 @@ class InteractiveMergerSubprocessor(Subprocessor):
                                       'predictor_input_shape' : self.predictor_input_shape,
                                       'face_enhancer_func': self.face_enhancer_func,
                                       'fanseg_full_face_256_extract_func' : self.fanseg_full_face_256_extract_func,
-                                      'skinseg_256_extract_func' : self.skinseg_256_extract_func,
+                                      'xseg_256_extract_func' : self.xseg_256_extract_func,
                                       'stdin_fd': sys.stdin.fileno() if MERGER_DEBUG else None
                                       }
 

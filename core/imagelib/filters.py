@@ -2,6 +2,27 @@ import numpy as np
 from .blursharpen import LinearMotionBlur
 import cv2
 
+def apply_random_rgb_levels(img, mask=None, rnd_state=None):
+    if rnd_state is None:
+        rnd_state = np.random
+    np_rnd = rnd_state.rand
+    
+    inBlack  = np.array([np_rnd()*0.25    , np_rnd()*0.25    , np_rnd()*0.25], dtype=np.float32)
+    inWhite  = np.array([1.0-np_rnd()*0.25, 1.0-np_rnd()*0.25, 1.0-np_rnd()*0.25], dtype=np.float32)
+    inGamma  = np.array([0.5+np_rnd(), 0.5+np_rnd(), 0.5+np_rnd()], dtype=np.float32)
+    
+    outBlack  = np.array([np_rnd()*0.25    , np_rnd()*0.25    , np_rnd()*0.25], dtype=np.float32)
+    outWhite  = np.array([1.0-np_rnd()*0.25, 1.0-np_rnd()*0.25, 1.0-np_rnd()*0.25], dtype=np.float32)
+
+    result = np.clip( (img - inBlack) / (inWhite - inBlack), 0, 1 )
+    result = ( result ** (1/inGamma) ) *  (outWhite - outBlack) + outBlack
+    result = np.clip(result, 0, 1)
+    
+    if mask is not None:
+        result = img*(1-mask) + result*mask
+        
+    return result
+    
 def apply_random_hsv_shift(img, mask=None, rnd_state=None):
     if rnd_state is None:
         rnd_state = np.random

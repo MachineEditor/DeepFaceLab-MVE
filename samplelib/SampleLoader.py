@@ -75,6 +75,7 @@ class SampleLoader:
                   shape,
                   landmarks,
                   ie_polys,
+                  seg_ie_polys,
                   eyebrows_expand_mod,
                   source_filename,
                 ) in result:
@@ -84,6 +85,7 @@ class SampleLoader:
                                         shape=shape,
                                         landmarks=landmarks,
                                         ie_polys=ie_polys,
+                                        seg_ie_polys=seg_ie_polys,
                                         eyebrows_expand_mod=eyebrows_expand_mod,
                                         source_filename=source_filename,
                                     ))
@@ -177,6 +179,7 @@ class FaceSamplesLoaderSubprocessor(Subprocessor):
                         dflimg.get_shape(),
                         dflimg.get_landmarks(),
                         dflimg.get_ie_polys(),
+                        dflimg.get_seg_ie_polys(),
                         dflimg.get_eyebrows_expand_mod(),
                         dflimg.get_source_filename() )
 

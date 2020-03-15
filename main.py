@@ -55,86 +55,6 @@ if __name__ == "__main__":
 
     p.set_defaults (func=process_extract)
 
-    def process_dev_extract_vggface2_dataset(arguments):
-        osex.set_process_lowest_prio()
-        from mainscripts import dev_misc
-        dev_misc.extract_vggface2_dataset( arguments.input_dir,
-                                            device_args={'cpu_only'  : arguments.cpu_only,
-                                                        'multi_gpu' : arguments.multi_gpu,
-                                                        }
-                                            )
-
-    p = subparsers.add_parser( "dev_extract_vggface2_dataset", help="")
-    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
-    p.add_argument('--multi-gpu', action="store_true", dest="multi_gpu", default=False, help="Enables multi GPU.")
-    p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Extract on CPU.")
-    p.set_defaults (func=process_dev_extract_vggface2_dataset)
-
-    def process_dev_extract_umd_csv(arguments):
-        osex.set_process_lowest_prio()
-        from mainscripts import dev_misc
-        dev_misc.extract_umd_csv( arguments.input_csv_file,
-                                  device_args={'cpu_only'  : arguments.cpu_only,
-                                               'multi_gpu' : arguments.multi_gpu,
-                                              }
-                                )
-
-    p = subparsers.add_parser( "dev_extract_umd_csv", help="")
-    p.add_argument('--input-csv-file', required=True, action=fixPathAction, dest="input_csv_file", help="input_csv_file")
-    p.add_argument('--multi-gpu', action="store_true", dest="multi_gpu", default=False, help="Enables multi GPU.")
-    p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Extract on CPU.")
-    p.set_defaults (func=process_dev_extract_umd_csv)
-
-
-    def process_dev_apply_celebamaskhq(arguments):
-        osex.set_process_lowest_prio()
-        from mainscripts import dev_misc
-        dev_misc.apply_celebamaskhq( arguments.input_dir )
-
-    p = subparsers.add_parser( "dev_apply_celebamaskhq", help="")
-    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
-    p.set_defaults (func=process_dev_apply_celebamaskhq)
-
-    def process_dev_test(arguments):
-        osex.set_process_lowest_prio()
-        from mainscripts import dev_misc
-        dev_misc.dev_test( arguments.input_dir )
-
-    p = subparsers.add_parser( "dev_test", help="")
-    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
-    p.set_defaults (func=process_dev_test)
-    
-    def process_dev_segmented_extract(arguments):
-        osex.set_process_lowest_prio()
-        from mainscripts import dev_misc
-        dev_misc.dev_segmented_extract(arguments.input_dir, arguments.output_dir)
-
-    p = subparsers.add_parser( "dev_segmented_extract", help="")
-    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
-    p.add_argument('--output-dir', required=True, action=fixPathAction, dest="output_dir")
-
-    p.set_defaults (func=process_dev_segmented_extract)
-
-    def process_dev_segmented_trash(arguments):
-        osex.set_process_lowest_prio()
-        from mainscripts import dev_misc
-        dev_misc.dev_segmented_trash(arguments.input_dir)
-
-    p = subparsers.add_parser( "dev_segmented_trash", help="")
-    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
-
-    p.set_defaults (func=process_dev_segmented_trash)
-    
-    def process_dev_resave_pngs(arguments):
-        osex.set_process_lowest_prio()
-        from mainscripts import dev_misc
-        dev_misc.dev_resave_pngs(arguments.input_dir)
-
-    p = subparsers.add_parser( "dev_resave_pngs", help="")
-    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
-
-    p.set_defaults (func=process_dev_resave_pngs)
-    
     def process_sort(arguments):
         osex.set_process_lowest_prio()
         from mainscripts import Sorter
@@ -341,28 +261,37 @@ if __name__ == "__main__":
     p.add_argument('--force-gpu-idxs', dest="force_gpu_idxs", default=None, help="Force to choose GPU indexes separated by comma.")
 
     p.set_defaults(func=process_faceset_enhancer)
-
-    """
-    def process_relight_faceset(arguments):
+    
+    def process_dev_test(arguments):
         osex.set_process_lowest_prio()
-        from mainscripts import FacesetRelighter
-        FacesetRelighter.relight (arguments.input_dir, arguments.lighten, arguments.random_one)
+        from mainscripts import dev_misc
+        dev_misc.dev_test( arguments.input_dir )
 
-    def process_delete_relighted(arguments):
+    p = subparsers.add_parser( "dev_test", help="")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
+    p.set_defaults (func=process_dev_test)
+    
+    # ========== XSeg util
+    xseg_parser = subparsers.add_parser( "xseg", help="XSeg utils.").add_subparsers()
+
+    def process_xseg_merge(arguments):
         osex.set_process_lowest_prio()
-        from mainscripts import FacesetRelighter
-        FacesetRelighter.delete_relighted (arguments.input_dir)
+        from mainscripts import XSegUtil
+        XSegUtil.merge(arguments.input_dir)
+    p = xseg_parser.add_parser( "merge", help="")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
 
-    p = facesettool_parser.add_parser ("relight", help="Synthesize new faces from existing ones by relighting them. With the relighted faces neural network will better reproduce face shadows.")
-    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory of aligned faces.")
-    p.add_argument('--lighten', action="store_true", dest="lighten", default=None, help="Lighten the faces.")
-    p.add_argument('--random-one', action="store_true", dest="random_one", default=None, help="Relight the faces only with one random direction, otherwise relight with all directions.")
-    p.set_defaults(func=process_relight_faceset)
+    p.set_defaults (func=process_xseg_merge)
+    
+    def process_xseg_split(arguments):
+        osex.set_process_lowest_prio()
+        from mainscripts import XSegUtil
+        XSegUtil.split(arguments.input_dir)
 
-    p = facesettool_parser.add_parser ("delete_relighted", help="Delete relighted faces.")
-    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory of aligned faces.")
-    p.set_defaults(func=process_delete_relighted)
-    """
+    p = xseg_parser.add_parser( "split", help="")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
+
+    p.set_defaults (func=process_xseg_split)
 
     def bad_args(arguments):
         parser.print_help()

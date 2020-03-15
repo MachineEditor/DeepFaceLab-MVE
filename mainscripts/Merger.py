@@ -12,7 +12,7 @@ from core.interact import interact as io
 from core.joblib import MPClassFuncOnDemand, MPFunc
 from core.leras import nn
 from DFLIMG import DFLIMG
-from facelib import FaceEnhancer, FaceType, LandmarksProcessor, TernausNet, DFLSegNet
+from facelib import FaceEnhancer, FaceType, LandmarksProcessor, TernausNet, XSegNet
 from merger import FrameInfo, MergerConfig, InteractiveMergerSubprocessor
 
 def main (model_class_name=None,
@@ -61,10 +61,11 @@ def main (model_class_name=None,
                                                     place_model_on_cpu=True,
                                                     run_on_cpu=run_on_cpu)
 
-        skinseg_256_extract_func = MPClassFuncOnDemand(DFLSegNet, 'extract',
-                                                    name='SkinSeg',
+        xseg_256_extract_func = MPClassFuncOnDemand(XSegNet, 'extract',
+                                                    name='XSeg',
                                                     resolution=256,
-                                                    place_model_on_cpu=True,
+                                                    weights_file_root=saved_models_path,
+                                                    place_model_on_cpu=True,                                                    
                                                     run_on_cpu=run_on_cpu)
 
         face_enhancer_func = MPClassFuncOnDemand(FaceEnhancer, 'enhance',
@@ -199,7 +200,7 @@ def main (model_class_name=None,
                             predictor_input_shape  = predictor_input_shape,
                             face_enhancer_func     = face_enhancer_func,
                             fanseg_full_face_256_extract_func = fanseg_full_face_256_extract_func,
-                            skinseg_256_extract_func = skinseg_256_extract_func,
+                            xseg_256_extract_func = xseg_256_extract_func,
                             merger_config          = cfg,
                             frames                 = frames,
                             frames_root_path       = input_path,

@@ -10,7 +10,7 @@ from core.interact import interact as io
 from core.leras import nn
 
 
-class DFLSegNet(object):
+class XSegNet(object):
     VERSION = 1
 
     def __init__ (self, name, 
@@ -34,28 +34,24 @@ class DFLSegNet(object):
             self.target_t = tf.placeholder (nn.floatx, nn.get4Dshape(resolution,resolution,1) )
 
         # Initializing model classes
-        archi = nn.DFLSegnetArchi()
         with tf.device ('/CPU:0' if place_model_on_cpu else '/GPU:0'):
-            self.enc = archi.Encoder(3, 64, name='Encoder')
-            self.dec = archi.Decoder(64, 1, name='Decoder')
-            self.enc_dec_weights = self.enc.get_weights()+self.dec.get_weights()
+            self.model = nn.XSeg(3, 32, 1, name=name)
+            self.model_weights = self.model.get_weights()
 
         model_name = f'{name}_{resolution}'
 
-        self.model_filename_list = [ [self.enc, f'{model_name}_enc.npy'],
-                                     [self.dec, f'{model_name}_dec.npy'],
-                                    ]
+        self.model_filename_list = [ [self.model, f'{model_name}.npy'] ]
 
         if training:
             if optimizer is None:
                 raise ValueError("Optimizer should be provided for training mode.")
 
             self.opt = optimizer
-            self.opt.initialize_variables (self.enc_dec_weights, vars_on_cpu=place_model_on_cpu)
+            self.opt.initialize_variables (self.model_weights, vars_on_cpu=place_model_on_cpu)
             self.model_filename_list += [ [self.opt, f'{model_name}_opt.npy' ] ]
         else:
             with tf.device ('/CPU:0' if run_on_cpu else '/GPU:0'):
-                _, pred = self.dec(self.enc(self.input_t))
+                _, pred = self.model(self.input_t)
 
             def net_run(input_np):
                 return nn.tf_sess.run ( [pred], feed_dict={self.input_t :input_np})[0]
@@ -72,10 +68,10 @@ class DFLSegNet(object):
                 model.init_weights()
 
     def flow(self, x):
-        return self.dec(self.enc(x))
+        return self.model(x)
 
     def get_weights(self):
-        return self.enc_dec_weights
+        return self.model_weights
 
     def save_weights(self):
         for model, filename in io.progress_bar_generator(self.model_filename_list, "Saving", leave=False):

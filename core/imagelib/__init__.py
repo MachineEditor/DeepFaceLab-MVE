@@ -19,4 +19,8 @@ from .IEPolys import IEPolys
 
 from .blursharpen import LinearMotionBlur, blursharpen
 
-from .filters import apply_random_hsv_shift, apply_random_motion_blur, apply_random_gaussian_blur, apply_random_bilinear_resize
+from .filters import apply_random_rgb_levels, \
+                     apply_random_hsv_shift, \
+                     apply_random_motion_blur, \
+                     apply_random_gaussian_blur, \
+                     apply_random_bilinear_resize

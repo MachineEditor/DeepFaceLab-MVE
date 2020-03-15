@@ -13,6 +13,9 @@ from samplelib import *
 
 class FANSegModel(ModelBase):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, force_model_class_name='FANSeg', **kwargs)
+        
     #override
     def on_initialize_options(self):
         device_config = nn.getCurrentDeviceConfig()
@@ -48,7 +51,7 @@ class FANSegModel(ModelBase):
         mask_shape = nn.get4Dshape(resolution,resolution,1)
  
         # Initializing model classes
-        self.model = TernausNet(f'{self.model_name}_FANSeg_{FaceType.toString(self.face_type)}', 
+        self.model = TernausNet(f'FANSeg_{FaceType.toString(self.face_type)}', 
                                  resolution, 
                                  load_weights=not self.is_first_run(),
                                  weights_file_root=self.get_model_root_path(),
@@ -117,14 +120,14 @@ class FANSegModel(ModelBase):
 
             src_generator = SampleGeneratorFace(training_data_src_path, random_ct_samples_path=training_data_src_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                                                 sample_process_options=SampleProcessor.Options(random_flip=True),
-                                                output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'ct_mode':'lct', 'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                            'face_type':self.face_type, 'motion_blur':(25, 5),  'gaussian_blur':(25,5), 'data_format':nn.data_format, 'resolution': resolution},
-                                                                        {'sample_type': SampleProcessor.SampleType.FACE_MASK,                    'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type,                                                 'data_format':nn.data_format, 'resolution': resolution},
+                                                output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'ct_mode':'lct', 'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                            'face_type':self.face_type, 'random_motion_blur':(25, 5),  'random_gaussian_blur':(25,5), 'data_format':nn.data_format, 'resolution': resolution},
+                                                                        {'sample_type': SampleProcessor.SampleType.FACE_MASK,                    'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type,                                                               'data_format':nn.data_format, 'resolution': resolution},
                                                                         ],
                                                 generators_count=src_generators_count )
                                                 
             dst_generator = SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                                                 sample_process_options=SampleProcessor.Options(random_flip=True),
-                                                output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'warp':False, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'face_type':self.face_type, 'motion_blur':(25, 5),  'gaussian_blur':(25,5), 'data_format':nn.data_format, 'resolution': resolution},
+                                                output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'warp':False, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                                     ],
                                                 generators_count=dst_generators_count,
                                                 raise_on_no_data=False )

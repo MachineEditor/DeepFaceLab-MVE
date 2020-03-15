@@ -89,6 +89,9 @@ class IEPolys:
             if poly.n > 0:
                 cv2.fillPoly(mask, [poly.points_to_n()], white if poly.type == 1 else black )
 
+    def get_total_points(self):
+        return sum([self.list[n].n for n in range(self.n)])
+        
     def dump(self):
         result = []
         for n in range(self.n):
