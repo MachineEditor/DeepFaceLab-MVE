@@ -26,19 +26,16 @@ DeepFaceLab is used by such popular youtube channels as
 </td></tr>
 <tr><td align="center" width="9999">
 
-# DeepFaceLab quality progress
+# Quality progress
 
 </td></tr>
 <tr><td align="center" width="9999">
 
-# 2018 
+|2018|![](doc/progress_2018.png) |
+|---|---|
 
-![](doc/progress_2018.png)
-
-
-# 2020 
-
-![](doc/progress_2020.png)
+|2020|![](doc/progress_2020.png)|
+|---|---|
 
 </td></tr>
 <tr><td align="center" width="9999">
