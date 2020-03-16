@@ -64,7 +64,7 @@ class Sample(object):
 
     def get_pitch_yaw_roll(self):
         if self.pitch_yaw_roll is None:
-            self.pitch_yaw_roll = LandmarksProcessor.estimate_pitch_yaw_roll(landmarks, size=self.shape[1])
+            self.pitch_yaw_roll = LandmarksProcessor.estimate_pitch_yaw_roll(self.landmarks, size=self.shape[1])
         return self.pitch_yaw_roll
 
     def set_filename_offset_size(self, filename, offset, size):
