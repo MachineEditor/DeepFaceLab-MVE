@@ -281,15 +281,15 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
     
     # calc 3 points in global space to estimate 2d affine transform 
     if not remove_align:
-        l_t = np.array( [ np.round( g_c - tb_diag_vec*mod ),
-                          np.round( g_c + bt_diag_vec*mod ),
-                          np.round( g_c + tb_diag_vec*mod ) ] )
+        l_t = np.array( [ g_c - tb_diag_vec*mod,
+                          g_c + bt_diag_vec*mod,
+                          g_c + tb_diag_vec*mod ] )
     else:
         # remove_align - face will be centered in the frame but not aligned
-        l_t = np.array( [ np.round( g_c - tb_diag_vec*mod ),
-                          np.round( g_c + bt_diag_vec*mod ),
-                          np.round( g_c + tb_diag_vec*mod ),
-                          np.round( g_c - bt_diag_vec*mod ),
+        l_t = np.array( [ g_c - tb_diag_vec*mod,
+                          g_c + bt_diag_vec*mod,
+                          g_c + tb_diag_vec*mod,
+                          g_c - bt_diag_vec*mod,
                          ] )
 
         # get area of face square in global space
@@ -299,9 +299,9 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
         side = np.float32(math.sqrt(area) / 2)
         
         # calc 3 points with unrotated square
-        l_t = np.array( [ np.round( g_c + [-side,-side] ),
-                          np.round( g_c + [ side,-side] ),
-                          np.round( g_c + [ side, side] ) ] )
+        l_t = np.array( [ g_c + [-side,-side],
+                          g_c + [ side,-side],
+                          g_c + [ side, side] ] )
 
     # calc affine transform from 3 global space points to 3 local space points size of 'output_size'
     pts2 = np.float32(( (0,0),(output_size,0),(output_size,output_size) ))
