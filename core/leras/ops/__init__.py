@@ -56,7 +56,7 @@ def tf_gradients ( loss, vars ):
     gv = [*zip(grads,vars)]
     for g,v in gv:
         if g is None:
-            raise Exception(f"No gradient for variable {v.name}")
+            raise Exception(f"Variable {v.name} is declared as trainable, but no tensors flow through it.")
     return gv
 nn.gradients = tf_gradients
 
