@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 
 from core import imagelib
+from core.imagelib import sd
 from facelib import FaceType, LandmarksProcessor
 
 
@@ -24,10 +25,6 @@ class SampleProcessor(object):
         BGR                   = 1  #BGR
         G                     = 2  #Grayscale
         GGG                   = 3  #3xGrayscale
-        BGR_SHUFFLE           = 4  #BGR shuffle
-        BGR_RANDOM_HSV_SHIFT  = 5
-        BGR_RANDOM_RGB_LEVELS = 6
-        G_MASK                = 7
 
     class FaceMaskType(IntEnum):
         NONE          = 0
@@ -99,6 +96,9 @@ class SampleProcessor(object):
                 motion_blur    = opts.get('motion_blur', None)
                 gaussian_blur  = opts.get('gaussian_blur', None)
                 random_bilinear_resize = opts.get('random_bilinear_resize', None)
+                random_rgb_levels = opts.get('random_rgb_levels', False)
+                random_hsv_shift = opts.get('random_hsv_shift', False)
+                random_circle_mask = opts.get('random_circle_mask', False)
                 normalize_tanh = opts.get('normalize_tanh', False)
                 ct_mode        = opts.get('ct_mode', None)
                 data_format    = opts.get('data_format', 'NHWC')
@@ -168,85 +168,54 @@ class SampleProcessor(object):
 
                     elif sample_type == SPST.FACE_IMAGE:
                         img = sample_bgr                      
+                        
+                        if random_rgb_levels:
+                            random_mask = sd.random_circle_faded ([w,w], rnd_state=np.random.RandomState (sample_rnd_seed) ) if random_circle_mask else None
+                            img = imagelib.apply_random_rgb_levels(img, mask=random_mask, rnd_state=np.random.RandomState (sample_rnd_seed) )
 
-                    
+                        if random_hsv_shift:
+                            random_mask = sd.random_circle_faded ([w,w], rnd_state=np.random.RandomState (sample_rnd_seed+1) ) if random_circle_mask else None
+                            img = imagelib.apply_random_hsv_shift(img, mask=random_mask, rnd_state=np.random.RandomState (sample_rnd_seed+1) )
+
+                            
                         if face_type != sample_face_type:
                             mat = LandmarksProcessor.get_transform_mat (sample_landmarks, resolution, face_type)
                             img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_CUBIC )
                         else:
                             if w != resolution:
                                 img = cv2.resize( img, (resolution, resolution), cv2.INTER_CUBIC )
-                        
-                        img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=border_replicate)
-  
-                        img = np.clip(img.astype(np.float32), 0, 1)
-   
-
+                                
                         # Apply random color transfer                        
                         if ct_mode is not None and ct_sample is not None:
                             if ct_sample_bgr is None:
                                ct_sample_bgr = ct_sample.load_bgr()
                             img = imagelib.color_transfer (ct_mode, img, cv2.resize( ct_sample_bgr, (resolution,resolution), cv2.INTER_LINEAR ) )
 
-                        if motion_blur is not None:
-                            chance, mb_max_size = motion_blur
-                            chance = np.clip(chance, 0, 100)
+                        
+                        img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=border_replicate)
+  
+                        img = np.clip(img.astype(np.float32), 0, 1)
+   
 
-                            l_rnd_state = np.random.RandomState (sample_rnd_seed)
-                            mblur_rnd_chance = l_rnd_state.randint(100)
-                            mblur_rnd_kernel = l_rnd_state.randint(mb_max_size)+1
-                            mblur_rnd_deg    = l_rnd_state.randint(360)
-
-                            if mblur_rnd_chance < chance:
-                                img = imagelib.LinearMotionBlur (img, mblur_rnd_kernel, mblur_rnd_deg )
+                        
+                        
+                        if motion_blur is not None:                            
+                            random_mask = sd.random_circle_faded ([resolution,resolution], rnd_state=np.random.RandomState (sample_rnd_seed+2)) if random_circle_mask else None
+                            img = imagelib.apply_random_motion_blur(img, *motion_blur, mask=random_mask,rnd_state=np.random.RandomState (sample_rnd_seed+2) )
 
                         if gaussian_blur is not None:
-                            chance, kernel_max_size = gaussian_blur
-                            chance = np.clip(chance, 0, 100)
-
-                            l_rnd_state = np.random.RandomState (sample_rnd_seed+1)
-                            gblur_rnd_chance = l_rnd_state.randint(100)
-                            gblur_rnd_kernel = l_rnd_state.randint(kernel_max_size)*2+1
-
-                            if gblur_rnd_chance < chance:
-                                img = cv2.GaussianBlur(img, (gblur_rnd_kernel,) *2 , 0)
+                            random_mask = sd.random_circle_faded ([resolution,resolution], rnd_state=np.random.RandomState (sample_rnd_seed+3)) if random_circle_mask else None
+                            img = imagelib.apply_random_gaussian_blur(img, *gaussian_blur, mask=random_mask,rnd_state=np.random.RandomState (sample_rnd_seed+3) )
                                 
                         if random_bilinear_resize is not None:
-                            l_rnd_state = np.random.RandomState (sample_rnd_seed+2)
+                            random_mask = sd.random_circle_faded ([resolution,resolution], rnd_state=np.random.RandomState (sample_rnd_seed+4)) if random_circle_mask else None
+                            img = imagelib.apply_random_bilinear_resize(img, *random_bilinear_resize, mask=random_mask,rnd_state=np.random.RandomState (sample_rnd_seed+4) )
                             
-                            chance, max_size_per = random_bilinear_resize
-                            chance = np.clip(chance, 0, 100)                        
-                            pick_chance = l_rnd_state.randint(100)                        
-                            resize_to = resolution - int( l_rnd_state.rand()* int(resolution*(max_size_per/100.0)) )                        
-                            img = cv2.resize (img, (resize_to,resize_to), cv2.INTER_LINEAR )
-                            img = cv2.resize (img, (resolution,resolution), cv2.INTER_LINEAR )
+                             
                             
                         # Transform from BGR to desired channel_type
                         if channel_type == SPCT.BGR:
                             out_sample = img
-                        elif channel_type == SPCT.BGR_SHUFFLE:
-                            l_rnd_state = np.random.RandomState (sample_rnd_seed)
-                            out_sample = np.take (img, l_rnd_state.permutation(img.shape[-1]), axis=-1)
-                        elif channel_type == SPCT.BGR_RANDOM_HSV_SHIFT:
-                            l_rnd_state = np.random.RandomState (sample_rnd_seed)
-                            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-                            h, s, v = cv2.split(hsv)
-                            h = (h + l_rnd_state.randint(360) ) % 360
-                            s = np.clip ( s + l_rnd_state.random()-0.5, 0, 1 )
-                            v = np.clip ( v + l_rnd_state.random()/2-0.25, 0, 1 ) 
-                            hsv = cv2.merge([h, s, v])
-                            out_sample = np.clip( cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR) , 0, 1 )
-                        elif channel_type == SPCT.BGR_RANDOM_RGB_LEVELS:
-                            l_rnd_state = np.random.RandomState (sample_rnd_seed)
-                            np_rnd = l_rnd_state.rand
-                            inBlack  = np.array([np_rnd()*0.25    , np_rnd()*0.25    , np_rnd()*0.25], dtype=np.float32)
-                            inWhite  = np.array([1.0-np_rnd()*0.25, 1.0-np_rnd()*0.25, 1.0-np_rnd()*0.25], dtype=np.float32)
-                            inGamma  = np.array([0.5+np_rnd(), 0.5+np_rnd(), 0.5+np_rnd()], dtype=np.float32)
-                            outBlack = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-                            outWhite = np.array([1.0, 1.0, 1.0], dtype=np.float32)
-                            out_sample = np.clip( (img - inBlack) / (inWhite - inBlack), 0, 1 )
-                            out_sample = ( out_sample ** (1/inGamma) ) *  (outWhite - outBlack) + outBlack
-                            out_sample = np.clip(out_sample, 0, 1)
                         elif channel_type == SPCT.G:
                             out_sample = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)[...,None]
                         elif channel_type == SPCT.GGG:
