@@ -1,20 +1,25 @@
 import numpy as np
 import numpy.linalg as npla
 
-def dist_to_edges(pts, p):
-    a = pts[:-1,:]
-    b = pts[1:,:]
-    edges = np.concatenate( ( pts[:-1,None,:], pts[1:,None,:] ), axis=-2)
-    
-    pa = p-a
-    ba = b-a
-       
-    h = np.clip( np.einsum('ij,ij->i', pa, ba) / np.einsum('ij,ij->i', ba, ba), 0, 1 )
+def dist_to_edges(pts, pt, is_closed=False):
+    """
+    returns array of dist from pt to edge and projection pt to edges
+    """
+    if is_closed:
+        a = pts
+        b = np.concatenate( (pts[1:,:], pts[0:1,:]), axis=0 )
+    else:
+        a = pts[:-1,:]
+        b = pts[1:,:]
 
-    return npla.norm ( pa - ba*h[...,None], axis=1 )
+    pa = pt-a
+    ba = b-a
     
-def nearest_edge_id_and_dist(pts, p):
-    x = dist_to_edges(pts, p)
-    if len(x) != 0:
-        return np.argmin(x), np.min(x)
-    return None, None
+    div = np.einsum('ij,ij->i', ba, ba)
+    div[div==0]=1
+    h = np.clip( np.einsum('ij,ij->i', pa, ba) / div, 0, 1 )
+    
+    x = npla.norm ( pa - ba*h[...,None], axis=1 )
+    
+    return x, a+ba*h[...,None]
+    
