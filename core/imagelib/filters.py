@@ -30,7 +30,7 @@ def apply_random_hsv_shift(img, mask=None, rnd_state=None):
     h, s, v = cv2.split(cv2.cvtColor(img, cv2.COLOR_BGR2HSV))
     h = ( h + rnd_state.randint(360) ) % 360
     s = np.clip ( s + rnd_state.random()-0.5, 0, 1 )
-    v = np.clip ( v + rnd_state.random()/2-0.25, 0, 1 )                    
+    v = np.clip ( v + rnd_state.random()-0.5, 0, 1 )                    
     
     result = np.clip( cv2.cvtColor(cv2.merge([h, s, v]), cv2.COLOR_HSV2BGR) , 0, 1 )
     if mask is not None:
