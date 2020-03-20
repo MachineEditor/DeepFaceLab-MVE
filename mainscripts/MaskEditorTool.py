@@ -398,26 +398,23 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None, no_default
         if filepath is not None:
             dflimg = DFLIMG.load (filepath)
 
-            if dflimg is None:
+            if dflimg is None or not dflimg.has_data():
                 io.log_err ("%s is not a dfl image file" % (filepath.name) )
                 continue
             else:
                 lmrks = dflimg.get_landmarks()
                 ie_polys = IEPolys.load(dflimg.get_ie_polys())
-                fanseg_mask = dflimg.get_fanseg_mask()
 
                 if filepath.name in cached_images:
                     img = cached_images[filepath.name]
                 else:
                     img = cached_images[filepath.name] = cv2_imread(str(filepath)) / 255.0
 
-                if fanseg_mask is not None:
-                    mask = fanseg_mask
+
+                if no_default_mask:
+                    mask = np.zeros ( (target_wh,target_wh,3) )
                 else:
-                    if no_default_mask:
-                        mask = np.zeros ( (target_wh,target_wh,3) )
-                    else:
-                        mask = LandmarksProcessor.get_image_hull_mask( img.shape, lmrks, eyebrows_expand_mod=eyebrows_expand_mod)
+                    mask = LandmarksProcessor.get_image_hull_mask( img.shape, lmrks, eyebrows_expand_mod=eyebrows_expand_mod)
         else:
             img = np.zeros ( (target_wh,target_wh,3) )
             mask = np.ones ( (target_wh,target_wh,3) )
@@ -521,8 +518,10 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None, no_default
                     do_save_move_count -= 1
 
                     ed.mask_finish()
-                    dflimg.embed_and_set (str(filepath), ie_polys=ed.get_ie_polys(), eyebrows_expand_mod=eyebrows_expand_mod )
-
+                    dflimg.set_ie_polys(ed.get_ie_polys())
+                    dflimg.set_eyebrows_expand_mod(eyebrows_expand_mod)
+                    dflimg.save()
+                    
                     done_paths += [ confirmed_path / filepath.name ]
                     done_images_types[filepath.name] = 2
                     filepath.rename(done_paths[-1])
@@ -532,8 +531,10 @@ def mask_editor_main(input_dir, confirmed_dir=None, skipped_dir=None, no_default
                     do_save_count -= 1
 
                     ed.mask_finish()
-                    dflimg.embed_and_set (str(filepath), ie_polys=ed.get_ie_polys(), eyebrows_expand_mod=eyebrows_expand_mod )
-
+                    dflimg.set_ie_polys(ed.get_ie_polys())
+                    dflimg.set_eyebrows_expand_mod(eyebrows_expand_mod)
+                    dflimg.save()
+                    
                     done_paths += [ filepath ]
                     done_images_types[filepath.name] = 2
 

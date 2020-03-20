@@ -171,7 +171,7 @@ class FaceSamplesLoaderSubprocessor(Subprocessor):
             idx, filename = data
             dflimg = DFLIMG.load (Path(filename))
 
-            if dflimg is None:
+            if dflimg is None or not dflimg.has_data():
                 self.log_err (f"FaceSamplesLoader: {filename} is not a dfl image file.")
                 data = None
             else:

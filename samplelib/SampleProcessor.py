@@ -57,10 +57,7 @@ class SampleProcessor(object):
             h,w,c = sample_bgr.shape
             
             def get_full_face_mask():
-                if sample.eyebrows_expand_mod is not None:
-                    full_face_mask = LandmarksProcessor.get_image_hull_mask (sample_bgr.shape, sample_landmarks, eyebrows_expand_mod=sample.eyebrows_expand_mod )
-                else:
-                    full_face_mask = LandmarksProcessor.get_image_hull_mask (sample_bgr.shape, sample_landmarks)
+                full_face_mask = LandmarksProcessor.get_image_hull_mask (sample_bgr.shape, sample_landmarks, eyebrows_expand_mod=sample.eyebrows_expand_mod )
                 return np.clip(full_face_mask, 0, 1)
                 
             def get_eyes_mask():

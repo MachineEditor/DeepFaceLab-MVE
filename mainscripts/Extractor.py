@@ -92,7 +92,9 @@ class ExtractSubprocessor(Subprocessor):
                 self.cached_image = ( filepath, image )
 
             h, w, c = image.shape
-            extract_from_dflimg = (h == w and DFLIMG.load (filepath) is not None)
+            
+            dflimg = DFLIMG.load (filepath)
+            extract_from_dflimg = (h == w and (dflimg is not None and dflimg.has_data()) )
 
             if 'rects' in self.type or self.type == 'all':
                 data = ExtractSubprocessor.Cli.rects_stage (data=data,
@@ -263,13 +265,14 @@ class ExtractSubprocessor(Subprocessor):
                         output_filepath = output_path / f"{filepath.stem}_{face_idx}.jpg"
                         cv2_imwrite(output_filepath, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 90] )
 
-                    DFLJPG.embed_data(output_filepath, face_type=FaceType.toString(face_type),
-                                                    landmarks=face_image_landmarks.tolist(),
-                                                    source_filename=filepath.name,
-                                                    source_rect=rect,
-                                                    source_landmarks=image_landmarks.tolist(),
-                                                    image_to_face_mat=image_to_face_mat
-                                        )
+                    dflimg = DFLJPG.load(output_filepath)
+                    dflimg.set_face_type(FaceType.toString(face_type))
+                    dflimg.set_landmarks(face_image_landmarks.tolist())
+                    dflimg.set_source_filename(filepath.name)
+                    dflimg.set_source_rect(rect)
+                    dflimg.set_source_landmarks(image_landmarks.tolist())
+                    dflimg.set_image_to_face_mat(image_to_face_mat)
+                    dflimg.save()
 
                     data.final_output_files.append (output_filepath)
                     face_idx += 1

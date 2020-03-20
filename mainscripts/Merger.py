@@ -52,8 +52,8 @@ def main (model_class_name=None,
         predictor_func, predictor_input_shape, cfg = model.get_MergerConfig()
 
         # Preparing MP functions
-        predictor_func = MPFunc(predictor_func)        
-        
+        predictor_func = MPFunc(predictor_func)
+
         run_on_cpu = len(nn.getCurrentDeviceConfig().devices) == 0
         fanseg_full_face_256_extract_func = MPClassFuncOnDemand(TernausNet, 'extract',
                                                     name=f'FANSeg_{FaceType.toString(FaceType.FULL)}',
@@ -65,7 +65,7 @@ def main (model_class_name=None,
                                                     name='XSeg',
                                                     resolution=256,
                                                     weights_file_root=saved_models_path,
-                                                    place_model_on_cpu=True,                                                    
+                                                    place_model_on_cpu=True,
                                                     run_on_cpu=run_on_cpu)
 
         face_enhancer_func = MPClassFuncOnDemand(FaceEnhancer, 'enhance',
@@ -101,14 +101,14 @@ def main (model_class_name=None,
                 def generator():
                     for filepath in io.progress_bar_generator( pathex.get_image_paths(aligned_path), "Collecting alignments"):
                         filepath = Path(filepath)
-                        yield filepath,  DFLIMG.load(filepath)
+                        yield filepath, DFLIMG.load(filepath)
 
             alignments = {}
             multiple_faces_detected = False
 
             for filepath, dflimg in generator():
-                if dflimg is None:
-                    io.log_err ("%s is not a dfl image file" % (filepath.name) )
+                if dflimg is None or not dflimg.has_data():
+                    io.log_err (f"{filepath.name} is not a dfl image file")
                     continue
 
                 source_filename = dflimg.get_source_filename()
@@ -192,7 +192,7 @@ def main (model_class_name=None,
         else:
             if False:
                 pass
-            else:            
+            else:
                 InteractiveMergerSubprocessor (
                             is_interactive         = is_interactive,
                             merger_session_filepath = model.get_strpath_storage_for_file('merger_session.dat'),
@@ -221,7 +221,7 @@ filesdata = []
 for filepath in io.progress_bar_generator(input_path_image_paths, "Collecting info"):
     filepath = Path(filepath)
 
-    dflimg = DFLIMG.load(filepath)
+    dflimg = DFLIMG.x(filepath)
     if dflimg is None:
         io.log_err ("%s is not a dfl image file" % (filepath.name) )
         continue

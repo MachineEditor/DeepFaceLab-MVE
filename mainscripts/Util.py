@@ -22,8 +22,11 @@ def save_faceset_metadata_folder(input_path):
     for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path), "Processing"):
         filepath = Path(filepath)
         dflimg = DFLIMG.load (filepath)
-
-        dfl_dict = dflimg.getDFLDictData()
+        if dflimg is None or not dflimg.has_data():
+            io.log_info(f"{filepath} is not a dfl image file")
+            continue
+            
+        dfl_dict = dflimg.get_dict()
         d[filepath.name] = ( dflimg.get_shape(), dfl_dict )
 
     try:
@@ -52,69 +55,28 @@ def restore_faceset_metadata_folder(input_path):
     except:
         raise FileNotFoundError(filename)
 
-    for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path), "Processing"):
-        filepath = Path(filepath)
+    for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path, image_extensions=['.jpg'], return_Path_class=True), "Processing"):
+        saved_data = d.get(filepath.name, None)
+        if saved_data is None:
+            io.log_info(f"No saved metadata for {filepath}")
+            continue
+        
+        shape, dfl_dict = saved_data
 
-        shape, dfl_dict = d.get(filepath.name, None)
-
-        img = cv2_imread (str(filepath))
+        img = cv2_imread (filepath)
         if img.shape != shape:
             img = cv2.resize (img, (shape[1], shape[0]), cv2.INTER_LANCZOS4 )
 
-            if filepath.suffix == '.png':
-                cv2_imwrite (str(filepath), img)
-            elif filepath.suffix == '.jpg':
-                cv2_imwrite (str(filepath), img, [int(cv2.IMWRITE_JPEG_QUALITY), 100] )
+            cv2_imwrite (str(filepath), img, [int(cv2.IMWRITE_JPEG_QUALITY), 100] )
 
         if filepath.suffix == '.jpg':
-            DFLJPG.embed_dfldict( str(filepath), dfl_dict )
+            dflimg = DFLJPG.load(filepath)
+            dflimg.set_dict(dfl_dict)
+            dflimg.save()
         else:
             continue
 
     metadata_filepath.unlink()
-
-def remove_ie_polys_file (filepath):
-    filepath = Path(filepath)
-
-    dflimg = DFLIMG.load (filepath)
-    if dflimg is None:
-        io.log_err ("%s is not a dfl image file" % (filepath.name) )
-        return
-
-    dflimg.remove_ie_polys()
-    dflimg.embed_and_set( str(filepath) )
-
-
-def remove_ie_polys_folder(input_path):
-    input_path = Path(input_path)
-
-    io.log_info ("Removing ie_polys...\r\n")
-
-    for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path), "Removing"):
-        filepath = Path(filepath)
-        remove_ie_polys_file(filepath)
-
-def remove_fanseg_file (filepath):
-    filepath = Path(filepath)
-
-    dflimg = DFLIMG.load (filepath)
-
-    if dflimg is None:
-        io.log_err ("%s is not a dfl image file" % (filepath.name) )
-        return
-
-    dflimg.remove_fanseg_mask()
-    dflimg.embed_and_set( str(filepath) )
-
-
-def remove_fanseg_folder(input_path):
-    input_path = Path(input_path)
-
-    io.log_info ("Removing fanseg mask...\r\n")
-
-    for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path), "Removing"):
-        filepath = Path(filepath)
-        remove_fanseg_file(filepath)
 
 def add_landmarks_debug_images(input_path):
     io.log_info ("Adding landmarks debug images...")
@@ -126,8 +88,8 @@ def add_landmarks_debug_images(input_path):
 
         dflimg = DFLIMG.load (filepath)
 
-        if dflimg is None:
-            io.log_err ("%s is not a dfl image file" % (filepath.name) )
+        if dflimg is None or not dflimg.has_data():
+            io.log_err (f"{filepath.name} is not a dfl image file")
             continue
         
         if img is not None:
@@ -154,8 +116,8 @@ def recover_original_aligned_filename(input_path):
 
         dflimg = DFLIMG.load (filepath)
 
-        if dflimg is None:
-            io.log_err ("%s is not a dfl image file" % (filepath.name) )
+        if dflimg is None or not dflimg.has_data():
+            io.log_err (f"{filepath.name} is not a dfl image file")
             continue
 
         files += [ [filepath, None, dflimg.get_source_filename(), False] ]
@@ -212,13 +174,13 @@ def convert_png_to_jpg_file (filepath):
         io.log_err ("%s is not a dfl png image file" % (filepath.name) )
         return
 
-    dfl_dict = dflpng.getDFLDictData()
+    dfl_dict = dflpng.get_dict()
 
     img = cv2_imread (str(filepath))
     new_filepath = str(filepath.parent / (filepath.stem + '.jpg'))
     cv2_imwrite ( new_filepath, img, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
 
-    DFLJPG.embed_data( new_filepath,
+    DFLJPG.x( new_filepath,
                        face_type=dfl_dict.get('face_type', None),
                        landmarks=dfl_dict.get('landmarks', None),
                        ie_polys=dfl_dict.get('ie_polys', None),

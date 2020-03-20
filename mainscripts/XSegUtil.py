@@ -21,7 +21,7 @@ def merge(input_dir):
         json_filepath = filepath.parent / (filepath.stem+'.json')
         if json_filepath.exists():
             dflimg = DFLIMG.load(filepath)
-            if dflimg is not None:
+            if dflimg is not None and dflimg.has_data():
                 try:
                     json_dict = json.loads(json_filepath.read_text())
 
@@ -52,7 +52,8 @@ def merge(input_dir):
                         io.log_info(f"No points found in {json_filepath}, skipping.")
                         continue
 
-                    dflimg.embed_and_set (filepath, seg_ie_polys=seg_ie_polys)
+                    dflimg.set_seg_ie_polys (seg_ie_polys)
+                    dflimg.save()
 
                     json_filepath.unlink()
 
@@ -76,7 +77,7 @@ def split(input_dir ):
  
             
         dflimg = DFLIMG.load(filepath)
-        if dflimg is not None:
+        if dflimg is not None and dflimg.has_data():
             try:
                 seg_ie_polys = dflimg.get_seg_ie_polys()
                 if seg_ie_polys is not None:                    
@@ -98,8 +99,8 @@ def split(input_dir ):
 
                     json_filepath.write_text( json.dumps (json_dict,indent=4) )
 
-                    dflimg.remove_seg_ie_polys()
-                    dflimg.embed_and_set (filepath)
+                    dflimg.set_seg_ie_polys(None)
+                    dflimg.save()
                     images_processed += 1
             except:
                 io.log_err(f"err {filepath}, {traceback.format_exc()}")

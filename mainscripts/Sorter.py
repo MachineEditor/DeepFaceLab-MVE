@@ -29,12 +29,13 @@ class BlurEstimatorSubprocessor(Subprocessor):
             filepath = Path( data[0] )
             dflimg = DFLIMG.load (filepath)
 
-            if dflimg is not None:
+            if dflimg is None or not dflimg.has_data():
+                self.log_err (f"{filepath.name} is not a dfl image file")
+                return [ str(filepath), 0 ]
+            else:
                 image = cv2_imread( str(filepath) )
                 return [ str(filepath), estimate_sharpness(image) ]
-            else:
-                self.log_err ("%s is not a dfl image file" % (filepath.name) )
-                return [ str(filepath), 0 ]
+                
 
         #override
         def get_data_name (self, data):
@@ -109,8 +110,8 @@ def sort_by_face_yaw(input_path):
 
         dflimg = DFLIMG.load (filepath)
 
-        if dflimg is None:
-            io.log_err ("%s is not a dfl image file" % (filepath.name) )
+        if dflimg is None or not dflimg.has_data():
+            io.log_err (f"{filepath.name} is not a dfl image file")
             trash_img_list.append ( [str(filepath)] )
             continue
 
@@ -132,8 +133,8 @@ def sort_by_face_pitch(input_path):
 
         dflimg = DFLIMG.load (filepath)
 
-        if dflimg is None:
-            io.log_err ("%s is not a dfl image file" % (filepath.name) )
+        if dflimg is None or not dflimg.has_data():
+            io.log_err (f"{filepath.name} is not a dfl image file")
             trash_img_list.append ( [str(filepath)] )
             continue
 
@@ -155,8 +156,8 @@ def sort_by_face_source_rect_size(input_path):
 
         dflimg = DFLIMG.load (filepath)
 
-        if dflimg is None:
-            io.log_err ("%s is not a dfl image file" % (filepath.name) )
+        if dflimg is None or not dflimg.has_data():
+            io.log_err (f"{filepath.name} is not a dfl image file")
             trash_img_list.append ( [str(filepath)] )
             continue
 
@@ -341,7 +342,7 @@ def sort_by_hist_dissim(input_path):
 
         image = cv2_imread(str(filepath))
 
-        if dflimg is not None:
+        if dflimg is not None and dflimg.has_data():
             face_mask = LandmarksProcessor.get_image_hull_mask (image.shape, dflimg.get_landmarks())
             image = (image*face_mask).astype(np.uint8)
 
@@ -391,8 +392,8 @@ def sort_by_origname(input_path):
 
         dflimg = DFLIMG.load (filepath)
 
-        if dflimg is None:
-            io.log_err ("%s is not a dfl image file" % (filepath.name) )
+        if dflimg is None or not dflimg.has_data():
+            io.log_err (f"{filepath.name} is not a dfl image file")
             trash_img_list.append( [str(filepath)] )
             continue
 
@@ -434,8 +435,8 @@ class FinalLoaderSubprocessor(Subprocessor):
             try:
                 dflimg = DFLIMG.load (filepath)
 
-                if dflimg is None:
-                    self.log_err("%s is not a dfl image file" % (filepath.name))
+                if dflimg is None or not dflimg.has_data():
+                    self.log_err (f"{filepath.name} is not a dfl image file")
                     return [ 1, [str(filepath)] ]
 
                 bgr = cv2_imread(str(filepath))

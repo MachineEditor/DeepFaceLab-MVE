@@ -10,7 +10,8 @@ from facelib import FaceType
 
 
 class DFLJPG(object):
-    def __init__(self):
+    def __init__(self, filename):
+        self.filename = filename
         self.data = b""
         self.length = 0
         self.chunks = []
@@ -29,7 +30,7 @@ class DFLJPG(object):
             raise FileNotFoundError(filename)
 
         try:
-            inst = DFLJPG()
+            inst = DFLJPG(filename)
             inst.data = data
             inst.length = len(data)
             inst_length = inst.length
@@ -123,7 +124,7 @@ class DFLJPG(object):
     def load(filename, loader_func=None):
         try:
             inst = DFLJPG.load_raw (filename, loader_func=loader_func)
-            inst.dfl_dict = None
+            inst.dfl_dict = {}
 
             for chunk in inst.chunks:
                 if chunk['name'] == 'APP0':
@@ -145,19 +146,6 @@ class DFLJPG(object):
                     if type(chunk['data']) == bytes:
                         inst.dfl_dict = pickle.loads(chunk['data'])
 
-            if (inst.dfl_dict is not None):
-                if 'face_type' not in inst.dfl_dict:
-                    inst.dfl_dict['face_type'] = FaceType.toString (FaceType.FULL)
-
-                if 'fanseg_mask' in inst.dfl_dict:
-                    fanseg_mask = inst.dfl_dict['fanseg_mask']
-                    if fanseg_mask is not None:
-                        numpyarray = np.asarray( inst.dfl_dict['fanseg_mask'], dtype=np.uint8)
-                        inst.dfl_dict['fanseg_mask'] = cv2.imdecode(numpyarray, cv2.IMREAD_UNCHANGED)
-
-            if inst.dfl_dict == None:
-                return None
-
             return inst
         except Exception as e:
             print (e)
@@ -166,7 +154,7 @@ class DFLJPG(object):
     @staticmethod
     def embed_dfldict(filename, dfl_dict):
         inst = DFLJPG.load_raw (filename)
-        inst.setDFLDictData (dfl_dict)
+        inst.set_dict (dfl_dict)
 
         try:
             with open(filename, "wb") as f:
@@ -174,103 +162,41 @@ class DFLJPG(object):
         except:
             raise Exception( 'cannot save %s' % (filename) )
 
-    @staticmethod
-    def embed_data(filename, face_type=None,
-                             landmarks=None,
-                             ie_polys=None,
-                             seg_ie_polys=None,
-                             source_filename=None,
-                             source_rect=None,
-                             source_landmarks=None,
-                             image_to_face_mat=None,
-                             fanseg_mask=None,
-                             eyebrows_expand_mod=None,
-                             relighted=None,
-                             **kwargs
-                   ):
+    def has_data(self):
+        return len(self.dfl_dict.keys()) != 0
 
-        if fanseg_mask is not None:
-            fanseg_mask = np.clip ( (fanseg_mask*255).astype(np.uint8), 0, 255 )
-
-            ret, buf = cv2.imencode( '.jpg', fanseg_mask, [int(cv2.IMWRITE_JPEG_QUALITY), 85] )
-
-            if ret and len(buf) < 60000:
-                fanseg_mask = buf
-            else:
-                io.log_err("Unable to encode fanseg_mask for %s" % (filename) )
-                fanseg_mask = None
-
-        if ie_polys is not None:
-            if not isinstance(ie_polys, list):
-                ie_polys = ie_polys.dump()
-        
-        if seg_ie_polys is not None:
-            if not isinstance(seg_ie_polys, list):
-                seg_ie_polys = seg_ie_polys.dump()
-                
-        DFLJPG.embed_dfldict (filename, {'face_type': face_type,
-                                         'landmarks': landmarks,
-                                         'ie_polys' : ie_polys,
-                                         'seg_ie_polys' : seg_ie_polys,
-                                         'source_filename': source_filename,
-                                         'source_rect': source_rect,
-                                         'source_landmarks': source_landmarks,
-                                         'image_to_face_mat': image_to_face_mat,
-                                         'fanseg_mask' : fanseg_mask,
-                                         'eyebrows_expand_mod' : eyebrows_expand_mod,
-                                         'relighted' : relighted
-                                        })
-
-    def embed_and_set(self, filename, face_type=None,
-                                landmarks=None,
-                                ie_polys=None,
-                                seg_ie_polys=None,
-                                source_filename=None,
-                                source_rect=None,
-                                source_landmarks=None,
-                                image_to_face_mat=None,
-                                fanseg_mask=None,
-                                eyebrows_expand_mod=None,
-                                relighted=None,
-                                **kwargs
-                    ):
-        if face_type is None: face_type = self.get_face_type()
-        if landmarks is None: landmarks = self.get_landmarks()
-        if ie_polys is None: ie_polys = self.get_ie_polys()
-        if seg_ie_polys is None: seg_ie_polys = self.get_seg_ie_polys()
-        if source_filename is None: source_filename = self.get_source_filename()
-        if source_rect is None: source_rect = self.get_source_rect()
-        if source_landmarks is None: source_landmarks = self.get_source_landmarks()
-        if image_to_face_mat is None: image_to_face_mat = self.get_image_to_face_mat()
-        if fanseg_mask is None: fanseg_mask = self.get_fanseg_mask()
-        if eyebrows_expand_mod is None: eyebrows_expand_mod = self.get_eyebrows_expand_mod()
-        if relighted is None: relighted = self.get_relighted()
-        DFLJPG.embed_data (filename, face_type=face_type,
-                                     landmarks=landmarks,
-                                     ie_polys=ie_polys,
-                                     seg_ie_polys=seg_ie_polys,
-                                     source_filename=source_filename,
-                                     source_rect=source_rect,
-                                     source_landmarks=source_landmarks,
-                                     image_to_face_mat=image_to_face_mat,
-                                     fanseg_mask=fanseg_mask,
-                                     eyebrows_expand_mod=eyebrows_expand_mod,
-                                     relighted=relighted)
-
-    def remove_ie_polys(self):
-        self.dfl_dict['ie_polys'] = None
-    
-    def remove_seg_ie_polys(self):
-        self.dfl_dict['seg_ie_polys'] = None
-        
-    def remove_fanseg_mask(self):
-        self.dfl_dict['fanseg_mask'] = None
-
-    def remove_source_filename(self):
-        self.dfl_dict['source_filename'] = None
+    def save(self):
+        try:
+            with open(self.filename, "wb") as f:
+                f.write ( self.dump() )
+        except:
+            raise Exception( f'cannot save {self.filename}' )
 
     def dump(self):
         data = b""
+
+        dict_data = self.dfl_dict
+        for key in list(dict_data.keys()):
+            if dict_data[key] is None:
+                dict_data.pop(key)
+
+        for chunk in self.chunks:
+            if chunk['name'] == 'APP15':
+                self.chunks.remove(chunk)
+                break
+
+        last_app_chunk = 0
+        for i, chunk in enumerate (self.chunks):
+            if chunk['m_h'] & 0xF0 == 0xE0:
+                last_app_chunk = i
+
+        dflchunk = {'name' : 'APP15',
+                    'm_h' : 0xEF,
+                    'data' : pickle.dumps(dict_data),
+                    'ex_data' : None,
+                    }
+        self.chunks.insert (last_app_chunk+1, dflchunk)
+
 
         for chunk in self.chunks:
             data += struct.pack ("BB", 0xFF, chunk['m_h'] )
@@ -294,47 +220,55 @@ class DFLJPG(object):
                 return chunk.height
         return 0
 
-    def getDFLDictData(self):
+    def get_dict(self):
         return self.dfl_dict
 
-    def setDFLDictData (self, dict_data=None):
+    def set_dict (self, dict_data=None):
         self.dfl_dict = dict_data
 
-        for chunk in self.chunks:
-            if chunk['name'] == 'APP15':
-                self.chunks.remove(chunk)
-                break
+    def get_face_type(self):            return self.dfl_dict.get('face_type', FaceType.toString (FaceType.FULL) )
+    def set_face_type(self, face_type): self.dfl_dict['face_type'] = face_type
 
-        last_app_chunk = 0
-        for i, chunk in enumerate (self.chunks):
-            if chunk['m_h'] & 0xF0 == 0xE0:
-                last_app_chunk = i
+    def get_landmarks(self):            return np.array ( self.dfl_dict['landmarks'] )
+    def set_landmarks(self, landmarks): self.dfl_dict['landmarks'] = landmarks
 
-        dflchunk = {'name' : 'APP15',
-                    'm_h' : 0xEF,
-                    'data' : pickle.dumps(dict_data),
-                    'ex_data' : None,
-                    }
-        self.chunks.insert (last_app_chunk+1, dflchunk)
+    def get_eyebrows_expand_mod(self):                      return self.dfl_dict.get ('eyebrows_expand_mod', 1.0)
+    def set_eyebrows_expand_mod(self, eyebrows_expand_mod): self.dfl_dict['eyebrows_expand_mod'] = eyebrows_expand_mod
 
-    def get_face_type(self): return self.dfl_dict['face_type']
-    def get_landmarks(self): return np.array ( self.dfl_dict['landmarks'] )
-    def get_ie_polys(self): return self.dfl_dict.get('ie_polys',None)
-    def get_seg_ie_polys(self): return self.dfl_dict.get('seg_ie_polys',None)
-    def get_source_filename(self): return self.dfl_dict['source_filename']
-    def get_source_rect(self): return self.dfl_dict['source_rect']
-    def get_source_landmarks(self): return np.array ( self.dfl_dict['source_landmarks'] )
+    def get_source_filename(self):                  return self.dfl_dict.get ('source_filename', None)
+    def set_source_filename(self, source_filename): self.dfl_dict['source_filename'] = source_filename
+
+    def get_source_rect(self):              return self.dfl_dict.get ('source_rect', None)
+    def set_source_rect(self, source_rect): self.dfl_dict['source_rect'] = source_rect
+
+    def get_source_landmarks(self):                     return np.array ( self.dfl_dict.get('source_landmarks', None) )
+    def set_source_landmarks(self, source_landmarks):   self.dfl_dict['source_landmarks'] = source_landmarks
+
     def get_image_to_face_mat(self):
         mat = self.dfl_dict.get ('image_to_face_mat', None)
         if mat is not None:
             return np.array (mat)
         return None
-    def get_fanseg_mask(self):
-        fanseg_mask = self.dfl_dict.get ('fanseg_mask', None)
-        if fanseg_mask is not None:
-            return np.clip ( np.array (fanseg_mask) / 255.0, 0.0, 1.0 )[...,np.newaxis]
-        return None
-    def get_eyebrows_expand_mod(self):
-        return self.dfl_dict.get ('eyebrows_expand_mod', None)
-    def get_relighted(self):
-        return self.dfl_dict.get ('relighted', False)
+    def set_image_to_face_mat(self, image_to_face_mat):   self.dfl_dict['image_to_face_mat'] = image_to_face_mat
+
+    def get_ie_polys(self):             return self.dfl_dict.get('ie_polys',None)
+    def set_ie_polys(self, ie_polys):
+        if ie_polys is not None and \
+           not isinstance(ie_polys, list):
+            ie_polys = ie_polys.dump()
+
+        self.dfl_dict['ie_polys'] = ie_polys
+
+    def get_seg_ie_polys(self):                 return self.dfl_dict.get('seg_ie_polys',None)
+    def set_seg_ie_polys(self, seg_ie_polys):
+        if seg_ie_polys is not None and \
+            not isinstance(seg_ie_polys, dict):
+            seg_ie_polys = seg_ie_polys.dump()
+
+        self.dfl_dict['seg_ie_polys'] = seg_ie_polys
+
+
+
+
+
+
