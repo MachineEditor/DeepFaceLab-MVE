@@ -55,7 +55,7 @@ class Sample(object):
         self.landmarks = np.array(landmarks) if landmarks is not None else None
         self.ie_polys = IEPolys.load(ie_polys)
         self.seg_ie_polys = IEPolys.load(seg_ie_polys)
-        self.eyebrows_expand_mod = eyebrows_expand_mod
+        self.eyebrows_expand_mod = eyebrows_expand_mod if eyebrows_expand_mod is not None else 1.0
         self.source_filename = source_filename
         self.person_name = person_name
         self.pitch_yaw_roll = pitch_yaw_roll
