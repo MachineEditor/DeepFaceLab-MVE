@@ -84,22 +84,23 @@ DeepFaceLab is used by such popular youtube channels as
   
 ## How I can help the project?
 
-||||
-|---|---|---|
-|Donate|Sponsor deepfake research and DeepFaceLab development.||
+|||
+|---|---|
+|Donate|Sponsor deepfake research and DeepFaceLab development.|
 ||[Donate via Paypal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=lepersorium@gmail.com&lc=US&no_note=0&item_name=Support+DeepFaceLab&cn=&curency_code=USD&bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted)
-||[Donate via Yandex.Money](https://money.yandex.ru/to/41001142318065)||
-||bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr||
-||||
-|Last donations|10$ ( 14 march 2020 Amien Phillips )
-||20$ ( 12 march 2020 Maria D. )
-||200$ ( 12 march 2020 VFXChris Ume )
-||300$ ( 12 march 2020 Thiago O. )
-||50$ ( 8 march 2020 blanuk )
-||||
+||[Donate via Yandex.Money](https://money.yandex.ru/to/41001142318065)|
+||bitcoin:31mPd6DxPCzbpCMZk4k1koWAbErSyqkAXr|
+|QQ 捐款|![](doc/QQ_donation.jpg)|
+|||
+|Last donations|10$ ( 14 march 2020 Amien Phillips )|
+||20$ ( 12 march 2020 Maria D. )|
+||200$ ( 12 march 2020 VFXChris Ume )|
+||300$ ( 12 march 2020 Thiago O. )|
+||50$ ( 8 march 2020 blanuk )|
+|||
 |Collect facesets|You can collect faceset of any celebrity that can be used in DeepFaceLab and share it [in the community](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|
-||||
-|Star this repo|Register github account and push "Star" button.
+|||
+|Star this repo|Register github account and push "Star" button.|
 </td></tr>
 
 <tr><td align="center" width="9999">
