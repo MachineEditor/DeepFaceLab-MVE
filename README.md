@@ -1,4 +1,4 @@
-﻿<table align="center"><tr><td align="center" width="9999">
+﻿<table align="center" border="0"><tr><td align="center" width="9999">
 <img src="doc/DFL_welcome.jpg" align="center">
 
 <p align="center">
@@ -51,10 +51,11 @@ DeepFaceLab is used by such popular youtube channels as
 </td></tr>
 <tr><td align="center" width="9999">
 
-# Face resolution progress
+# Native resolution progress
 
 </td></tr>
 <tr><td align="center" width="9999">
+
 
 |2018|![](doc/progress_2018.png) |2020|![](doc/progress_2020.png)|
 |---|---|---|---|
@@ -63,6 +64,9 @@ DeepFaceLab is used by such popular youtube channels as
 <tr><td align="center" width="9999">
 
 ## Magic button
+
+</td></tr>
+<tr><td align="center" width="9999">
 
 <img src="doc/make_everything_ok.jpg" align="center">
 
