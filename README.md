@@ -26,19 +26,47 @@ DeepFaceLab is used by such popular youtube channels as
 
 |![](doc/youtube_icon.png) [iFake](https://www.youtube.com/channel/UCC0lK2Zo2BMXX-k1Ks0r7dg/videos)|![](doc/youtube_icon.png) [NextFace](https://www.youtube.com/channel/UCFh3gL0a8BS21g-DHvXZEeQ/videos)|
 |---|---|
-</td></tr>
-<tr><td align="center" width="9999">
-
-# Quality progress
 
 </td></tr>
 <tr><td align="center" width="9999">
 
-|2018|![](doc/progress_2018.png) |
-|---|---|
+# What can I do using DeepFaceLab?
 
-|2020|![](doc/progress_2020.png)|
-|---|---|
+</td></tr>
+<tr><td align="center" width="9999">
+
+## Replace the face
+
+<img src="doc/replace_the_face.jpg" align="center">
+
+</td></tr>
+<tr><td align="center" width="9999">
+
+## Change political speech using DeepFaceLab
+
+<img src="doc/political_speech.jpg" align="center">
+
+![https://www.youtube.com/watch?v=2Z1oA3GYPaY](doc/youtube_icon.png) https://www.youtube.com/watch?v=2Z1oA3GYPaY
+
+</td></tr>
+<tr><td align="center" width="9999">
+
+# Face resolution progress
+
+</td></tr>
+<tr><td align="center" width="9999">
+
+|2018|![](doc/progress_2018.png) |2020|![](doc/progress_2020.png)|
+|---|---|---|---|
+
+</td></tr>
+<tr><td align="center" width="9999">
+
+## Magic button
+
+<img src="doc/make_everything_ok.jpg" align="center">
+
+Unfortunately, there is no "make everything ok" button in DeepFaceLab. You should spend time studying the workflow and growing your skills. A skill in programs such as *AfterEffects* or *Davince Resolve* is also desirable.
 
 </td></tr>
 <tr><td align="center" width="9999">
