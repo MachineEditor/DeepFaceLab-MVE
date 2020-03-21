@@ -51,7 +51,7 @@ DeepFaceLab is used by such popular youtube channels as
 </td></tr>
 <tr><td align="center" width="9999">
 
-# Native resolution progress
+# Deepfake native resolution progress
 
 </td></tr>
 <tr><td align="center" width="9999">
@@ -61,12 +61,7 @@ DeepFaceLab is used by such popular youtube channels as
 </td></tr>
 <tr><td align="center" width="9999">
 
-## Magic button
-
-</td></tr>
-<tr><td align="center" width="9999">
-
-<img src="doc/make_everything_ok.jpg" align="center">
+<img src="doc/make_everything_ok.png" align="center">
 
 Unfortunately, there is no "make everything ok" button in DeepFaceLab. You should spend time studying the workflow and growing your skills. A skill in programs such as *AfterEffects* or *Davince Resolve* is also desirable.
 
