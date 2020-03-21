@@ -42,12 +42,13 @@ DeepFaceLab is used by such popular youtube channels as
 </td></tr>
 <tr><td align="center" width="9999">
 
-## Change political speech using DeepFaceLab
+## Change political speech*
 
 <img src="doc/political_speech.jpg" align="center">
 
 ![https://www.youtube.com/watch?v=2Z1oA3GYPaY](doc/youtube_icon.png) https://www.youtube.com/watch?v=2Z1oA3GYPaY
 
+\* requires a skill in video editors such as *Adobe After Effects* or *Davinci Resolve*
 </td></tr>
 <tr><td align="center" width="9999">
 
@@ -56,9 +57,7 @@ DeepFaceLab is used by such popular youtube channels as
 </td></tr>
 <tr><td align="center" width="9999">
 
-
-|2018|![](doc/progress_2018.png) |2020|![](doc/progress_2020.png)|
-|---|---|---|---|
+<img src="doc/deepfake_progress.png" align="center">
 
 </td></tr>
 <tr><td align="center" width="9999">
