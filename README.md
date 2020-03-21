@@ -75,8 +75,6 @@ DeepFaceLab is used by such popular youtube channels as
 ||[telegram (English / Russian)](https://t.me/DeepFaceLab_official)|Don't forget to hide your phone number|
 ||[telegram (English only)](https://t.me/DeepFaceLab_official_en)|Don't forget to hide your phone number|
 ||[mrdeepfakes](https://mrdeepfakes.com/forums/)|the biggest NSFW English community|
-||QQ 951138799| 中文 Chinese QQ group for ML/AI experts||
-||[deepfaker.xyz](https://www.deepfaker.xyz)|中文 Chinese guys are localizing DeepFaceLab|
 ||[reddit r/GifFakes/](https://www.reddit.com/r/GifFakes/new/)|Post your deepfakes there !|
 ||[reddit r/SFWdeepfakes/](https://www.reddit.com/r/SFWdeepfakes/new/)|Post your deepfakes there !|
 
