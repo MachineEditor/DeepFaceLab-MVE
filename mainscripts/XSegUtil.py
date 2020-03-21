@@ -52,7 +52,7 @@ def merge(input_dir):
                         io.log_info(f"No points found in {json_filepath}, skipping.")
                         continue
 
-                    dflimg.set_seg_ie_polys (seg_ie_polys)
+                    dflimg.set_seg_ie_polys ( seg_ie_polys.dump() )
                     dflimg.save()
 
                     json_filepath.unlink()

@@ -259,12 +259,8 @@ class DFLJPG(object):
 
         self.dfl_dict['ie_polys'] = ie_polys
 
-    def get_seg_ie_polys(self):                 return self.dfl_dict.get('seg_ie_polys',None)
+    def get_seg_ie_polys(self): return self.dfl_dict.get('seg_ie_polys',None)
     def set_seg_ie_polys(self, seg_ie_polys):
-        if seg_ie_polys is not None and \
-            not isinstance(seg_ie_polys, dict):
-            seg_ie_polys = seg_ie_polys.dump()
-
         self.dfl_dict['seg_ie_polys'] = seg_ie_polys
 
 
