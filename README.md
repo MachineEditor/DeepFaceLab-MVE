@@ -47,7 +47,7 @@ DeepFaceLab is used by such popular youtube channels as
 
 ![](doc/youtube_icon.png) https://www.youtube.com/watch?v=2Z1oA3GYPaY
 
-\* requires a skill in video editors such as *Adobe After Effects* or *Davinci Resolve*
+\* also requires a skill in video editors such as *Adobe After Effects* or *Davinci Resolve*
 </td></tr>
 <tr><td align="center" width="9999">
 
