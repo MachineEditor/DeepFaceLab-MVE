@@ -118,7 +118,7 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 ||[Donate via Paypal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=lepersorium@gmail.com&lc=US&no_note=0&item_name=Support+DeepFaceLab&cn=&curency_code=USD&bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted)
 ||[Donate via Yandex.Money](https://money.yandex.ru/to/41001142318065)|
 ||bitcoin:bc1qkhh7h0gwwhxgg6h6gpllfgstkd645fefrd5s6z|
-|QQ 捐款|![](doc/QQ_donation.jpg)|
+|Alipay 捐款|![](doc/Alipay_donation.jpg)|
 |||
 |Last donations|24$ ( 22 march 2020 NextFace )|
 ||10$ ( 14 march 2020 Amien Phillips )|
