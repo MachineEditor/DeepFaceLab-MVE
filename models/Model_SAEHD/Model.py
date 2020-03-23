@@ -61,7 +61,7 @@ class SAEHDModel(ModelBase):
             resolution = np.clip ( (resolution // 16) * 16, 64, 512)
             self.options['resolution'] = resolution
             self.options['face_type'] = io.input_str ("Face type", default_face_type, ['h','mf','f','wf'], help_message="Half / mid face / full face / whole face. Half face has better resolution, but covers less area of cheeks. Mid face is 30% wider than half face. 'Whole face' covers full area of face include forehead, but requires manual merge in Adobe After Effects.").lower()
-            self.options['archi'] = io.input_str ("AE architecture", default_archi, ['df','liae','dfhd','liaehd'], help_message="'df' keeps faces more natural.\n'liae' can fix overly different face shapes.\n'hd' are experimental versions.").lower()
+            self.options['archi'] = io.input_str ("AE architecture", default_archi, ['df','liae','dfhd','liaehd','dfuhd','liaeuhd'], help_message="'df' keeps faces more natural.\n'liae' can fix overly different face shapes.\n'hd' are experimental versions.").lower()
 
         default_d_dims             = 48 if self.options['archi'] == 'dfhd' else 64
         default_d_dims             = self.options['d_dims']             = self.load_or_def_option('d_dims', default_d_dims)
@@ -169,7 +169,7 @@ class SAEHDModel(ModelBase):
             self.target_dstm_all = tf.placeholder (nn.floatx, mask_shape)
             
         # Initializing model classes
-        model_archi = nn.DeepFakeArchi(resolution)  
+        model_archi = nn.DeepFakeArchi(resolution, mod='uhd' if 'uhd' in archi else None)  
         
         with tf.device (models_opt_device):
             if 'df' in archi:

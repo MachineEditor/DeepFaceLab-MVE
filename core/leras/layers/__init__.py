@@ -10,3 +10,5 @@ from .BatchNorm2D import *
 from .FRNorm2D import *
 
 from .TLU import *
+from .ScaleAdd import *
+from .DenseNorm import *
