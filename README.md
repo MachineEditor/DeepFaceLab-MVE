@@ -120,11 +120,9 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 ||bitcoin:bc1qkhh7h0gwwhxgg6h6gpllfgstkd645fefrd5s6z|
 |Alipay 捐款|![](doc/Alipay_donation.jpg)|
 |||
-|Last donations|24$ ( 22 march 2020 NextFace )|
-||10$ ( 14 march 2020 Amien Phillips )|
-||20$ ( 12 march 2020 Maria D. )|
-||200$ ( 12 march 2020 VFXChris Ume )|
-||300$ ( 12 march 2020 Thiago O. )|
+|Last donations|10$ ( 朱 阳阳 )|
+||24$ ( NextFace )|
+||10$ ( Amien Phillips )|
 |||
 |Collect facesets|You can collect faceset of any celebrity that can be used in DeepFaceLab and share it [in the community](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|
 |||
