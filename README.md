@@ -1,18 +1,20 @@
 ﻿<table align="center" border="0"><tr><td align="center" width="9999">
-<img src="doc/DFL_welcome.jpg" align="center">
+
+# DeepFaceLab  
+### the leading software for creating deepfakes
+
+<img src="doc/DFL_welcome.png" align="center">
+
+</td></tr>
+<tr><td align="center" width="9999">
 
 <p align="center">
 
 ![](doc/logo_cuda.png)
 ![](doc/logo_tensorflow.png)
 ![](doc/logo_python.png)
-</p>
-  
-# DeepFaceLab  
-### the leading software for creating deepfakes
 
-</td></tr>
-<tr><td align="center" width="9999">
+</p>
 
 More than 95% of deepfake videos are created with DeepFaceLab.
 
