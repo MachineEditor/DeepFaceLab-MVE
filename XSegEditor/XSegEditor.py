@@ -1243,9 +1243,6 @@ def start(input_dirpath):
 
     QFontDatabase.addApplicationFont( str(root_path / 'gfx' / 'fonts' / 'NotoSans-Medium.ttf') )
 
-    font = QFont({'en' : 'Verdana',
-                  'ru' : 'Verdana',
-                  'zn' : 'SimSun'}[system_language])
     app.setFont( QFont('NotoSans'))
 
     QUIConfig.initialize()
