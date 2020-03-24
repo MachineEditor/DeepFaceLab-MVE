@@ -7,7 +7,7 @@ import numpy as np
 from core.cv2ex import *
 from DFLIMG import *
 from facelib import LandmarksProcessor
-from core.imagelib import IEPolys
+from core.imagelib import IEPolys, SegIEPolys
 
 class SampleType(IntEnum):
     IMAGE = 0 #raw image
@@ -54,7 +54,7 @@ class Sample(object):
         self.shape = shape
         self.landmarks = np.array(landmarks) if landmarks is not None else None
         self.ie_polys = IEPolys.load(ie_polys)
-        self.seg_ie_polys = IEPolys.load(seg_ie_polys)
+        self.seg_ie_polys = SegIEPolys.load(seg_ie_polys)
         self.eyebrows_expand_mod = eyebrows_expand_mod if eyebrows_expand_mod is not None else 1.0
         self.source_filename = source_filename
         self.person_name = person_name

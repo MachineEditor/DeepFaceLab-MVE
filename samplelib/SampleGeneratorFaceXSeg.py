@@ -26,8 +26,8 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
         samples = []
         for path in paths:
             samples += SampleLoader.load (SampleType.FACE, path)
-        
-        seg_samples = [ sample for sample in samples if sample.seg_ie_polys.get_total_points() != 0]
+
+        seg_samples = [ sample for sample in samples if sample.seg_ie_polys.get_pts_count() != 0]
         seg_samples_len = len(seg_samples)
         if seg_samples_len == 0:
             raise Exception(f"No segmented faces found.")

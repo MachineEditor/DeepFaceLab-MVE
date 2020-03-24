@@ -264,26 +264,16 @@ if __name__ == "__main__":
     p.set_defaults (func=process_dev_test)
     
     # ========== XSeg util
-    xseg_parser = subparsers.add_parser( "xseg", help="XSeg utils.").add_subparsers()
+    p = subparsers.add_parser( "xsegeditor", help="XSegEditor.")
 
-    def process_xseg_merge(arguments):
+    def process_xsegeditor(arguments):
         osex.set_process_lowest_prio()
-        from mainscripts import XSegUtil
-        XSegUtil.merge(arguments.input_dir)
-    p = xseg_parser.add_parser( "merge", help="")
+        from XSegEditor import XSegEditor
+        XSegEditor.start (Path(arguments.input_dir))
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
 
-    p.set_defaults (func=process_xseg_merge)
-    
-    def process_xseg_split(arguments):
-        osex.set_process_lowest_prio()
-        from mainscripts import XSegUtil
-        XSegUtil.split(arguments.input_dir)
-
-    p = xseg_parser.add_parser( "split", help="")
-    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
-
-    p.set_defaults (func=process_xseg_split)
+    p.set_defaults (func=process_xsegeditor)
+  
 
     def bad_args(arguments):
         parser.print_help()

@@ -8,3 +8,4 @@ scipy==1.4.1
 colorama
 labelme==4.2.9
 tensorflow-gpu==1.13.2
+pyqt5
