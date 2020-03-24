@@ -84,6 +84,9 @@ class Devices(object):
 
     @staticmethod
     def initialize_main_env():
+        os.environ['NN_DEVICES_INITIALIZED'] = '1'
+        os.environ['NN_DEVICES_COUNT'] = '0'
+        
         min_cc = int(os.environ.get("TF_MIN_REQ_CAP", 35))
         libnames = ('libcuda.so', 'libcuda.dylib', 'nvcuda.dll')
         for libname in libnames:
@@ -129,7 +132,6 @@ class Devices(object):
                                               })
                     cuda.cuCtxDetach(context)
 
-        os.environ['NN_DEVICES_INITIALIZED'] = '1'
         os.environ['NN_DEVICES_COUNT'] = str(len(devices))
         for i, device in enumerate(devices):
             os.environ[f'NN_DEVICE_{i}_NAME'] = device['name']
