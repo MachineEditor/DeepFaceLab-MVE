@@ -7,6 +7,7 @@ import tempfile
 import time
 import traceback
 from enum import IntEnum
+from types import SimpleNamespace as sn
 
 import cv2
 import numpy as np
@@ -23,8 +24,9 @@ from DFLIMG import *
 from localization import StringsDB, system_language
 
 from .QCursorDB import QCursorDB
-from .QStringDB import QStringDB
 from .QIconDB import QIconDB
+from .QStringDB import QStringDB
+
 
 class OpMode(IntEnum):
     NONE = 0
@@ -144,37 +146,10 @@ class CanvasConfig():
                     ]
         self.color_schemes = color_schemes
 
-class QCanvasControlsBar(QFrame):
+class QCanvasControlsLeftBar(QFrame):
 
     def __init__(self):
         super().__init__()
-        #==============================================
-        btn_poly_color_red = QToolButton()
-        self.btn_poly_color_red_act = QActionEx( QIconDB.poly_color_red, QStringDB.btn_poly_color_red_tip, shortcut='1', shortcut_in_tooltip=True, is_checkable=True)
-        btn_poly_color_red.setDefaultAction(self.btn_poly_color_red_act)
-        btn_poly_color_red.setIconSize(QUIConfig.icon_q_size)
-
-        btn_poly_color_green = QToolButton()
-        self.btn_poly_color_green_act = QActionEx( QIconDB.poly_color_green, QStringDB.btn_poly_color_green_tip, shortcut='2', shortcut_in_tooltip=True, is_checkable=True)
-        btn_poly_color_green.setDefaultAction(self.btn_poly_color_green_act)
-        btn_poly_color_green.setIconSize(QUIConfig.icon_q_size)
-
-        btn_poly_color_blue = QToolButton()
-        self.btn_poly_color_blue_act = QActionEx( QIconDB.poly_color_blue, QStringDB.btn_poly_color_blue_tip, shortcut='3', shortcut_in_tooltip=True, is_checkable=True)
-        btn_poly_color_blue.setDefaultAction(self.btn_poly_color_blue_act)
-        btn_poly_color_blue.setIconSize(QUIConfig.icon_q_size)
-
-        btn_view_baked_mask = QToolButton()
-        self.btn_view_baked_mask_act = QActionEx( QIconDB.view_baked, QStringDB.btn_view_baked_mask_tip, shortcut='4', shortcut_in_tooltip=True, is_checkable=True)
-        btn_view_baked_mask.setDefaultAction(self.btn_view_baked_mask_act)
-        btn_view_baked_mask.setIconSize(QUIConfig.icon_q_size)
-
-        self.btn_poly_color_act_grp = QActionGroup (self)
-        self.btn_poly_color_act_grp.addAction(self.btn_poly_color_red_act)
-        self.btn_poly_color_act_grp.addAction(self.btn_poly_color_green_act)
-        self.btn_poly_color_act_grp.addAction(self.btn_poly_color_blue_act)
-        self.btn_poly_color_act_grp.addAction(self.btn_view_baked_mask_act)
-        self.btn_poly_color_act_grp.setExclusive(True)
         #==============================================
         btn_poly_type_include = QToolButton()
         self.btn_poly_type_include_act = QActionEx( QIconDB.poly_type_include, QStringDB.btn_poly_type_include_tip, shortcut='Q', shortcut_in_tooltip=True, is_checkable=True)
@@ -211,16 +186,6 @@ class QCanvasControlsBar(QFrame):
         btn_pt_edit_mode.setDefaultAction(self.btn_pt_edit_mode_act)
         btn_pt_edit_mode.setIconSize(QUIConfig.icon_q_size)
 
-        controls_bar_frame1_l = QVBoxLayout()
-        controls_bar_frame1_l.addWidget ( btn_poly_color_red )
-        controls_bar_frame1_l.addWidget ( btn_poly_color_green )
-        controls_bar_frame1_l.addWidget ( btn_poly_color_blue )
-        controls_bar_frame1_l.addWidget ( btn_view_baked_mask )
-        controls_bar_frame1 = QFrame()
-        controls_bar_frame1.setFrameShape(QFrame.StyledPanel)
-        controls_bar_frame1.setSizePolicy (QSizePolicy.Fixed, QSizePolicy.Fixed)
-        controls_bar_frame1.setLayout(controls_bar_frame1_l)
-
         controls_bar_frame2_l = QVBoxLayout()
         controls_bar_frame2_l.addWidget ( btn_poly_type_include )
         controls_bar_frame2_l.addWidget ( btn_poly_type_exclude )
@@ -247,7 +212,6 @@ class QCanvasControlsBar(QFrame):
 
         controls_bar_l = QVBoxLayout()
         controls_bar_l.setContentsMargins(0,0,0,0)
-        controls_bar_l.addWidget(controls_bar_frame1)
         controls_bar_l.addWidget(controls_bar_frame2)
         controls_bar_l.addWidget(controls_bar_frame3)
         controls_bar_l.addWidget(controls_bar_frame4)
@@ -255,6 +219,55 @@ class QCanvasControlsBar(QFrame):
         self.setSizePolicy ( QSizePolicy.Fixed, QSizePolicy.Expanding )
         self.setLayout(controls_bar_l)
 
+class QCanvasControlsRightBar(QFrame):
+
+    def __init__(self):
+        super().__init__()
+        #==============================================
+        btn_poly_color_red = QToolButton()
+        self.btn_poly_color_red_act = QActionEx( QIconDB.poly_color_red, QStringDB.btn_poly_color_red_tip, shortcut='1', shortcut_in_tooltip=True, is_checkable=True)
+        btn_poly_color_red.setDefaultAction(self.btn_poly_color_red_act)
+        btn_poly_color_red.setIconSize(QUIConfig.icon_q_size)
+
+        btn_poly_color_green = QToolButton()
+        self.btn_poly_color_green_act = QActionEx( QIconDB.poly_color_green, QStringDB.btn_poly_color_green_tip, shortcut='2', shortcut_in_tooltip=True, is_checkable=True)
+        btn_poly_color_green.setDefaultAction(self.btn_poly_color_green_act)
+        btn_poly_color_green.setIconSize(QUIConfig.icon_q_size)
+
+        btn_poly_color_blue = QToolButton()
+        self.btn_poly_color_blue_act = QActionEx( QIconDB.poly_color_blue, QStringDB.btn_poly_color_blue_tip, shortcut='3', shortcut_in_tooltip=True, is_checkable=True)
+        btn_poly_color_blue.setDefaultAction(self.btn_poly_color_blue_act)
+        btn_poly_color_blue.setIconSize(QUIConfig.icon_q_size)
+
+        btn_view_baked_mask = QToolButton()
+        self.btn_view_baked_mask_act = QActionEx( QIconDB.view_baked, QStringDB.btn_view_baked_mask_tip, shortcut='4', shortcut_in_tooltip=True, is_checkable=True)
+        btn_view_baked_mask.setDefaultAction(self.btn_view_baked_mask_act)
+        btn_view_baked_mask.setIconSize(QUIConfig.icon_q_size)
+
+        self.btn_poly_color_act_grp = QActionGroup (self)
+        self.btn_poly_color_act_grp.addAction(self.btn_poly_color_red_act)
+        self.btn_poly_color_act_grp.addAction(self.btn_poly_color_green_act)
+        self.btn_poly_color_act_grp.addAction(self.btn_poly_color_blue_act)
+        self.btn_poly_color_act_grp.addAction(self.btn_view_baked_mask_act)
+        self.btn_poly_color_act_grp.setExclusive(True)
+        #==============================================
+
+        controls_bar_frame1_l = QVBoxLayout()
+        controls_bar_frame1_l.addWidget ( btn_poly_color_red )
+        controls_bar_frame1_l.addWidget ( btn_poly_color_green )
+        controls_bar_frame1_l.addWidget ( btn_poly_color_blue )
+        controls_bar_frame1_l.addWidget ( btn_view_baked_mask )
+        controls_bar_frame1 = QFrame()
+        controls_bar_frame1.setFrameShape(QFrame.StyledPanel)
+        controls_bar_frame1.setSizePolicy (QSizePolicy.Fixed, QSizePolicy.Fixed)
+        controls_bar_frame1.setLayout(controls_bar_frame1_l)
+
+        controls_bar_l = QVBoxLayout()
+        controls_bar_l.setContentsMargins(0,0,0,0)
+        controls_bar_l.addWidget(controls_bar_frame1)
+
+        self.setSizePolicy ( QSizePolicy.Fixed, QSizePolicy.Expanding )
+        self.setLayout(controls_bar_l)
 
 class QCanvasOperator(QWidget):
     def __init__(self, cbar):
@@ -262,11 +275,6 @@ class QCanvasOperator(QWidget):
         self.cbar = cbar
 
         self.set_cbar_disabled(initialize=False)
-
-        self.cbar.btn_delete_poly_act.triggered.connect ( lambda : self.action_delete_poly() )
-
-        self.cbar.btn_undo_pt_act.triggered.connect ( lambda : self.action_undo_pt() )
-        self.cbar.btn_redo_pt_act.triggered.connect ( lambda : self.action_redo_pt() )
 
         self.cbar.btn_poly_color_red_act.triggered.connect ( lambda : self.set_color_scheme_id(0) )
         self.cbar.btn_poly_color_green_act.triggered.connect ( lambda : self.set_color_scheme_id(1) )
@@ -276,10 +284,15 @@ class QCanvasOperator(QWidget):
         self.cbar.btn_poly_type_include_act.triggered.connect ( lambda : self.set_poly_include_type(SegIEPolyType.INCLUDE) )
         self.cbar.btn_poly_type_exclude_act.triggered.connect ( lambda : self.set_poly_include_type(SegIEPolyType.EXCLUDE) )
 
+        self.cbar.btn_undo_pt_act.triggered.connect ( lambda : self.action_undo_pt() )
+        self.cbar.btn_redo_pt_act.triggered.connect ( lambda : self.action_redo_pt() )
+
+        self.cbar.btn_delete_poly_act.triggered.connect ( lambda : self.action_delete_poly() )
+
         self.cbar.btn_pt_edit_mode_act.toggled.connect ( lambda is_checked: self.set_pt_edit_mode( PTEditMode.ADD_DEL if is_checked else PTEditMode.MOVE ) )
 
         self.mouse_in_widget = False
-        
+
         QXMainWindow.inst.add_keyPressEvent_listener ( self.on_keyPressEvent )
         QXMainWindow.inst.add_keyReleaseEvent_listener ( self.on_keyReleaseEvent )
 
@@ -315,7 +328,7 @@ class QCanvasOperator(QWidget):
         if not hasattr(self, 'color_scheme_id' ):
             self.color_scheme_id = 1
         self.set_color_scheme_id(self.color_scheme_id)
-        
+
         self.set_op_mode(OpMode.NONE)
 
         self.set_pt_edit_mode(PTEditMode.MOVE)
@@ -435,13 +448,13 @@ class QCanvasOperator(QWidget):
 
     def set_op_mode(self, op_mode, op_poly=None):
         if op_mode != self.op_mode:
-            
+
             if self.op_mode == OpMode.NONE:
-                self.cbar.btn_poly_type_act_grp.setDisabled(True)                
+                self.cbar.btn_poly_type_act_grp.setDisabled(True)
             elif self.op_mode == OpMode.DRAW_PTS:
                 self.cbar.btn_undo_pt_act.setDisabled(True)
                 self.cbar.btn_redo_pt_act.setDisabled(True)
-                
+
                 if self.op_poly.get_pts_count() < 3:
                     # Remove unfinished poly
                     self.ie_polys.remove_poly(self.op_poly)
@@ -450,18 +463,18 @@ class QCanvasOperator(QWidget):
                 self.cbar.btn_delete_poly_act.setDisabled(True)
                 # Reset pt_edit_move when exit from EDIT_PTS
                 self.set_pt_edit_mode(PTEditMode.MOVE)
-                
+
             self.op_mode = op_mode
-            
+
             if self.op_mode == OpMode.NONE:
-                self.cbar.btn_poly_type_act_grp.setDisabled(False)     
+                self.cbar.btn_poly_type_act_grp.setDisabled(False)
             elif self.op_mode == OpMode.DRAW_PTS:
                 self.cbar.btn_undo_pt_act.setDisabled(False)
                 self.cbar.btn_redo_pt_act.setDisabled(False)
             elif self.op_mode == OpMode.EDIT_PTS:
-                self.cbar.btn_pt_edit_mode_act.setDisabled(False)                
+                self.cbar.btn_pt_edit_mode_act.setDisabled(False)
                 self.cbar.btn_delete_poly_act.setDisabled(False)
-                
+
             if self.op_mode in [OpMode.DRAW_PTS, OpMode.EDIT_PTS]:
                 self.mouse_op_poly_pt_id = None
                 self.mouse_op_poly_edge_id = None
@@ -490,11 +503,11 @@ class QCanvasOperator(QWidget):
         self.cbar.btn_undo_pt_act.setDisabled(True)
         self.cbar.btn_redo_pt_act.setDisabled(True)
         self.cbar.btn_pt_edit_mode_act.setDisabled(True)
-            
-        if initialize:            
+
+        if initialize:
             self.cbar.btn_poly_color_act_grp.setDisabled(False)
             self.cbar.btn_poly_type_act_grp.setDisabled(False)
-        else: 
+        else:
             self.cbar.btn_poly_color_act_grp.setDisabled(True)
             self.cbar.btn_poly_type_act_grp.setDisabled(True)
 
@@ -959,23 +972,44 @@ class QCanvasOperator(QWidget):
 class QCanvas(QFrame):
     def __init__(self):
         super().__init__()
-        self.canvas_control_bar = QCanvasControlsBar()
-        self.op = QCanvasOperator(self.canvas_control_bar)
+
+        self.canvas_control_left_bar = QCanvasControlsLeftBar()
+        self.canvas_control_right_bar = QCanvasControlsRightBar()
+
+        cbar = sn( btn_poly_color_red_act   = self.canvas_control_right_bar.btn_poly_color_red_act,
+                   btn_poly_color_green_act = self.canvas_control_right_bar.btn_poly_color_green_act,
+                   btn_poly_color_blue_act  = self.canvas_control_right_bar.btn_poly_color_blue_act,
+                   btn_view_baked_mask_act  = self.canvas_control_right_bar.btn_view_baked_mask_act,
+                   btn_poly_color_act_grp = self.canvas_control_right_bar.btn_poly_color_act_grp,
+
+                   btn_poly_type_include_act = self.canvas_control_left_bar.btn_poly_type_include_act,
+                   btn_poly_type_exclude_act = self.canvas_control_left_bar.btn_poly_type_exclude_act,
+                   btn_poly_type_act_grp = self.canvas_control_left_bar.btn_poly_type_act_grp,
+
+                   btn_undo_pt_act = self.canvas_control_left_bar.btn_undo_pt_act,
+                   btn_redo_pt_act = self.canvas_control_left_bar.btn_redo_pt_act,
+
+                   btn_delete_poly_act = self.canvas_control_left_bar.btn_delete_poly_act,
+
+                   btn_pt_edit_mode_act = self.canvas_control_left_bar.btn_pt_edit_mode_act )
+
+        self.op = QCanvasOperator(cbar)
         self.l = QHBoxLayout()
         self.l.setContentsMargins(0,0,0,0)
-        self.l.addWidget(self.canvas_control_bar)
+        self.l.addWidget(self.canvas_control_left_bar)
         self.l.addWidget(self.op)
+        self.l.addWidget(self.canvas_control_right_bar)
         self.setLayout(self.l)
 
 class LoaderQSubprocessor(QSubprocessor):
     def __init__(self, image_paths, q_label, q_progressbar, on_finish_func ):
-        
+
         self.image_paths = image_paths
         self.image_paths_len = len(image_paths)
         self.idxs = [*range(self.image_paths_len)]
-        
+
         self.filtered_image_paths = self.image_paths.copy()
-        
+
         self.image_paths_has_ie_polys = { image_path : False for image_path in self.image_paths }
 
         self.q_label = q_label
@@ -992,7 +1026,7 @@ class LoaderQSubprocessor(QSubprocessor):
             idx = self.idxs.pop(0)
             image_path = self.image_paths[idx]
             self.q_label.setText(f'{image_path.name}')
-            
+
             return idx, image_path
 
         return None
@@ -1020,9 +1054,9 @@ class LoaderQSubprocessor(QSubprocessor):
             dflimg = DFLIMG.load(filename)
             if dflimg is not None and dflimg.has_data():
                 ie_polys = SegIEPolys.load( dflimg.get_seg_ie_polys() )
-                
+
                 return idx, True, ie_polys.has_polys()
-            return idx, False, False 
+            return idx, False, False
 
 
 class MainWindow(QXMainWindow):
@@ -1037,9 +1071,9 @@ class MainWindow(QXMainWindow):
 
         self.cached_QImages = {}
         self.cached_has_ie_polys = {}
-        
+
         self.initialize_ui()
-        
+
         # Loader
         self.loading_frame = QFrame(self.main_canvas_frame)
         self.loading_frame.setAutoFillBackground(True)
@@ -1063,14 +1097,14 @@ class MainWindow(QXMainWindow):
         self.image_paths_has_ie_polys = image_paths_has_ie_polys
         self.loading_frame.hide()
         self.loading_frame = None
-        
+
         self.process_next_image(first_initialization=True)
 
     def closeEvent(self, ev):
         self.cfg_dict['geometry'] = self.saveGeometry().data()
         self.cfg_path.write_bytes( pickle.dumps(self.cfg_dict) )
 
-                    
+
     def update_cached_images (self, count=5):
         d = self.cached_QImages
 
@@ -1104,30 +1138,33 @@ class MainWindow(QXMainWindow):
         self.image_bar.update_images(prev_q_imgs, next_q_imgs)
 
 
-    def canvas_initialize(self, image_path, only_has_polys=False):        
+    def canvas_initialize(self, image_path, only_has_polys=False):
         if only_has_polys and not self.image_paths_has_ie_polys[image_path]:
             return False
-        
+
         dflimg = DFLIMG.load(image_path)
         ie_polys = SegIEPolys.load( dflimg.get_seg_ie_polys() )
         q_img = self.load_QImage(image_path)
 
         self.canvas.op.initialize ( q_img,  ie_polys=ie_polys )
+
+        self.filename_label.setText(str(image_path.name))
+
         return True
 
     def canvas_finalize(self, image_path):
         dflimg = DFLIMG.load(image_path)
-        
+
         ie_polys = SegIEPolys.load( dflimg.get_seg_ie_polys() )
         new_ie_polys = self.canvas.op.get_ie_polys()
-        
-        if not new_ie_polys.identical(ie_polys):            
-            self.image_paths_has_ie_polys[image_path] = new_ie_polys.has_polys()            
+
+        if not new_ie_polys.identical(ie_polys):
+            self.image_paths_has_ie_polys[image_path] = new_ie_polys.has_polys()
             dflimg.set_seg_ie_polys( new_ie_polys.dump() )
             dflimg.save()
-            
-        self.canvas.op.finalize()
 
+        self.canvas.op.finalize()
+        self.filename_label.setText("")
 
     def process_prev_image(self):
         key_mods = QApplication.keyboardModifiers()
@@ -1147,13 +1184,13 @@ class MainWindow(QXMainWindow):
                 break
             if self.canvas_initialize(self.image_paths[0], only_has_polys):
                 break
-            
+
         self.update_cached_images()
         self.update_preview_bar()
-        
+
     def process_next_image(self, first_initialization=False):
         key_mods = QApplication.keyboardModifiers()
-        
+
         step = 0 if first_initialization else 5 if key_mods == Qt.ShiftModifier else 1
         only_has_polys = False if first_initialization else key_mods == Qt.ControlModifier
 
@@ -1173,7 +1210,7 @@ class MainWindow(QXMainWindow):
 
         self.update_cached_images()
         self.update_preview_bar()
-            
+
     def initialize_ui(self):
 
         self.canvas = QCanvas()
@@ -1207,10 +1244,16 @@ class MainWindow(QXMainWindow):
         preview_image_bar.setSizePolicy ( QSizePolicy.Expanding, QSizePolicy.Fixed )
         preview_image_bar.setLayout(preview_image_bar_l)
 
+        self.filename_label = QLabel()
+        f = QFont('Courier New')
+        self.filename_label.setFont(f)
+
         main_canvas_l = QVBoxLayout()
         main_canvas_l.setContentsMargins(0,0,0,0)
         main_canvas_l.addWidget (self.canvas)
+        main_canvas_l.addWidget (self.filename_label, alignment=Qt.AlignCenter)
         main_canvas_l.addWidget (preview_image_bar)
+
         self.main_canvas_frame = QFrame()
         self.main_canvas_frame.setLayout(main_canvas_l)
 
