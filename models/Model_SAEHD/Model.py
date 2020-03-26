@@ -483,7 +483,7 @@ class SAEHDModel(ModelBase):
                     if model == self.inter:
                         do_init = True
                 elif 'liae' in archi:
-                    if model == self.inter_AB:
+                    if model == self.inter_AB or model == self.inter_B:
                         do_init = True
             else:
                 do_init = self.is_first_run()
