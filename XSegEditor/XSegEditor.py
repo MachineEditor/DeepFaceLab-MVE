@@ -1182,7 +1182,9 @@ class MainWindow(QXMainWindow):
                     break
             if len(self.image_paths) == 0:
                 break
-            if self.canvas_initialize(self.image_paths[0], only_has_polys):
+            
+            
+            if self.canvas_initialize(self.image_paths[0], len(self.image_paths_done) != 0 and only_has_polys):
                 break
 
         self.update_cached_images()
