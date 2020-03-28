@@ -2,6 +2,7 @@ from enum import IntEnum
 
 class FaceType(IntEnum):
     #enumerating in order "next contains prev"
+    MOUTH = -1
     HALF = 0
     MID_FULL = 1
     FULL = 2
@@ -23,7 +24,8 @@ class FaceType(IntEnum):
     def toString (face_type):
         return to_string_dict[face_type]
 
-from_string_dict = {'half_face': FaceType.HALF,
+from_string_dict = {'mouth': FaceType.MOUTH,
+                    'half_face': FaceType.HALF,
                     'midfull_face': FaceType.MID_FULL,
                     'full_face': FaceType.FULL,
                     'whole_face': FaceType.WHOLE_FACE,
@@ -32,7 +34,8 @@ from_string_dict = {'half_face': FaceType.HALF,
                     'full_face_no_align' : FaceType.FULL_NO_ALIGN,
                     'head_no_align' : FaceType.HEAD_NO_ALIGN,
                     }
-to_string_dict = { FaceType.HALF : 'half_face',
+to_string_dict = { FaceType.MOUTH : 'mouth',
+                   FaceType.HALF : 'half_face',
                    FaceType.MID_FULL : 'midfull_face',
                    FaceType.FULL : 'full_face',
                    FaceType.WHOLE_FACE : 'whole_face',

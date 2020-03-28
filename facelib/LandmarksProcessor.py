@@ -103,6 +103,29 @@ landmarks_2D_new = np.array([
 [ 0.726104,     0.780233  ], #54
 ], dtype=np.float32)
 
+mouth_center_landmarks_2D = np.array([
+    [-4.4202591e-07,  4.4916576e-01],  #48
+    [ 1.8399176e-01,  3.7537053e-01],  #49
+    [ 3.7018123e-01,  3.3719531e-01],  #50
+    [ 5.0000089e-01,  3.6938059e-01],  #51
+    [ 6.2981832e-01,  3.3719531e-01],  #52
+    [ 8.1600773e-01,  3.7537053e-01],  #53
+    [ 1.0000000e+00,  4.4916576e-01],  #54
+    [ 8.2213330e-01,  6.2836081e-01],  #55
+    [ 6.4110327e-01,  7.0757812e-01],  #56
+    [ 5.0000089e-01,  7.2259867e-01],  #57
+    [ 3.5889623e-01,  7.0757812e-01],  #58
+    [ 1.7786618e-01,  6.2836081e-01],  #59
+    [ 7.6765373e-02,  4.5882553e-01],  #60
+    [ 3.6856663e-01,  4.4601500e-01],  #61
+    [ 5.0000089e-01,  4.5999300e-01],  #62
+    [ 6.3143289e-01,  4.4601500e-01],  #63
+    [ 9.2323411e-01,  4.5882553e-01],  #64
+    [ 6.3399029e-01,  5.4228687e-01],  #65
+    [ 5.0000089e-01,  5.5843467e-01],  #66
+    [ 3.6601129e-01,  5.4228687e-01]   #67
+], dtype=np.float32)
+
 # 68 point landmark definitions
 landmarks_68_pt = { "mouth": (48,68),
                     "right_eyebrow": (17, 22),
@@ -184,6 +207,7 @@ landmarks_68_3D = np.array( [
 [-7.198266   , 30.844876    , -20.328022  ] ], dtype=np.float32)
 
 FaceType_to_padding_remove_align = {
+    FaceType.MOUTH: (0.25, False),
     FaceType.HALF: (0.0, False),
     FaceType.MID_FULL: (0.0675, False),
     FaceType.FULL: (0.2109375, False),
@@ -254,8 +278,12 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
     if not isinstance(image_landmarks, np.ndarray):
         image_landmarks = np.array (image_landmarks)
 
+
     # estimate landmarks transform from global space to local aligned space with bounds [0..1]
-    mat = umeyama( np.concatenate ( [ image_landmarks[17:49] , image_landmarks[54:55] ] ) , landmarks_2D_new, True)[0:2]
+    if face_type == FaceType.MOUTH:
+        mat = umeyama(image_landmarks[48:68], mouth_center_landmarks_2D, True)[0:2]
+    else:
+        mat = umeyama( np.concatenate ( [ image_landmarks[17:49] , image_landmarks[54:55] ] ) , landmarks_2D_new, True)[0:2]
     
     # get corner points in global space
     g_p = transform_points (  np.float32([(0,0),(1,0),(1,1),(0,1),(0.5,0.5) ]) , mat, True)
