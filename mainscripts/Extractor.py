@@ -14,7 +14,7 @@ import numpy as np
 import facelib
 from core import imagelib
 from core import mathlib
-from facelib import FaceType, LandmarksProcessor, TernausNet
+from facelib import FaceType, LandmarksProcessor
 from core.interact import interact as io
 from core.joblib import Subprocessor
 from core.leras import nn

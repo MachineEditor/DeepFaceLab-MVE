@@ -7,7 +7,7 @@ import numpy as np
 from core.interact import interact as io
 from core.structex import *
 from facelib import FaceType
-
+from core.imagelib import SegIEPolys
 
 class DFLJPG(object):
     def __init__(self, filename):
@@ -151,17 +151,6 @@ class DFLJPG(object):
             print (e)
             return None
 
-    @staticmethod
-    def embed_dfldict(filename, dfl_dict):
-        inst = DFLJPG.load_raw (filename)
-        inst.set_dict (dfl_dict)
-
-        try:
-            with open(filename, "wb") as f:
-                f.write ( inst.dump() )
-        except:
-            raise Exception( 'cannot save %s' % (filename) )
-
     def has_data(self):
         return len(self.dfl_dict.keys()) != 0
 
@@ -176,8 +165,10 @@ class DFLJPG(object):
         data = b""
 
         dict_data = self.dfl_dict
+        
+        # Remove None keys
         for key in list(dict_data.keys()):
-            if dict_data[key] is None:
+            if dict_data[key] is None:                
                 dict_data.pop(key)
 
         for chunk in self.chunks:
@@ -251,18 +242,50 @@ class DFLJPG(object):
         return None
     def set_image_to_face_mat(self, image_to_face_mat):   self.dfl_dict['image_to_face_mat'] = image_to_face_mat
 
-    def get_ie_polys(self):             return self.dfl_dict.get('ie_polys',None)
-    def set_ie_polys(self, ie_polys):
-        if ie_polys is not None and \
-           not isinstance(ie_polys, list):
-            ie_polys = ie_polys.dump()
-
-        self.dfl_dict['ie_polys'] = ie_polys
-
-    def get_seg_ie_polys(self): return self.dfl_dict.get('seg_ie_polys',None)
+    def get_seg_ie_polys(self): 
+        d = self.dfl_dict.get('seg_ie_polys',None)
+        if d is not None:
+            d = SegIEPolys.load(d)
+        else:
+            d = SegIEPolys()
+            
+        return d
+        
     def set_seg_ie_polys(self, seg_ie_polys):
+        if seg_ie_polys is not None:        
+            if not isinstance(seg_ie_polys, SegIEPolys):
+                raise ValueError('seg_ie_polys should be instance of SegIEPolys')
+            
+            if seg_ie_polys.has_polys():
+                seg_ie_polys = seg_ie_polys.dump()
+            else:
+                seg_ie_polys = None
+        
         self.dfl_dict['seg_ie_polys'] = seg_ie_polys
 
+    def get_xseg_mask(self): 
+        mask_buf = self.dfl_dict.get('xseg_mask',None)
+        if mask_buf is None:
+            return None
+            
+        img = cv2.imdecode(mask_buf, cv2.IMREAD_UNCHANGED)
+        if len(img.shape) == 2:
+            img = img[...,None]
+            
+        
+        return img.astype(np.float32) / 255.0
+        
+        
+    def set_xseg_mask(self, mask_a):
+        if mask_a is None:
+            self.dfl_dict['xseg_mask'] = None
+            return
+            
+        ret, buf = cv2.imencode( '.png', np.clip( mask_a*255, 0, 255 ).astype(np.uint8) )
+        if not ret:
+            raise Exception("unable to generate PNG data for set_xseg_mask")
+        
+        self.dfl_dict['xseg_mask'] = buf
 
 
 

@@ -83,34 +83,14 @@ mode_str_dict = {}
 for key in mode_dict.keys():
     mode_str_dict[ mode_dict[key] ] = key
 
-"""
-whole_face_mask_mode_dict = {1:'learned',
-                             2:'dst',
-                             3:'FAN-prd',
-                             4:'FAN-dst',
-                             5:'FAN-prd*FAN-dst',
-                             6:'learned*FAN-prd*FAN-dst'                                  
-                             }
-"""
-whole_face_mask_mode_dict = {1:'learned',
-                             2:'dst',
-                             8:'XSeg-prd',
-                             9:'XSeg-dst',
-                             10:'XSeg-prd*XSeg-dst',
-                             11:'learned*XSeg-prd*XSeg-dst'                             
-                             }
+mask_mode_dict = {1:'learned',
+                  2:'dst',
+                  3:'XSeg-prd',
+                  4:'XSeg-dst',
+                  5:'XSeg-prd*XSeg-dst',
+                  6:'learned*XSeg-prd*XSeg-dst'                             
+                  }
                                
-full_face_mask_mode_dict = {1:'learned',
-                                    2:'dst',
-                                    3:'FAN-prd',
-                                    4:'FAN-dst',
-                                    5:'FAN-prd*FAN-dst',
-                                    6:'learned*FAN-prd*FAN-dst'}
-
-half_face_mask_mode_dict = {1:'learned',
-                                    2:'dst',
-                                    4:'FAN-dst',
-                                    7:'learned*FAN-dst'}
 
 ctm_dict = { 0: "None", 1:"rct", 2:"lct", 3:"mkl", 4:"mkl-m", 5:"idt", 6:"idt-m", 7:"sot-m", 8:"mix-m" }
 ctm_str_dict = {None:0, "rct":1, "lct":2, "mkl":3, "mkl-m":4, "idt":5, "idt-m":6, "sot-m":7, "mix-m":8 }
@@ -176,12 +156,7 @@ class MergerConfigMasked(MergerConfig):
             self.hist_match_threshold = np.clip ( self.hist_match_threshold+diff , 0, 255)
 
     def toggle_mask_mode(self):
-        if self.face_type == FaceType.WHOLE_FACE:
-            a = list( whole_face_mask_mode_dict.keys() )
-        elif self.face_type == FaceType.FULL:
-            a = list( full_face_mask_mode_dict.keys() )
-        else:
-            a = list( half_face_mask_mode_dict.keys() )
+        a = list( mask_mode_dict.keys() )
         self.mask_mode = a[ (a.index(self.mask_mode)+1) % len(a) ]
 
     def add_erode_mask_modifier(self, diff):
@@ -227,26 +202,11 @@ class MergerConfigMasked(MergerConfig):
             if self.mode == 'hist-match' or self.mode == 'seamless-hist-match':
                 self.hist_match_threshold = np.clip ( io.input_int("Hist match threshold", 255, add_info="0..255"), 0, 255)
 
-        if self.face_type == FaceType.WHOLE_FACE:
-            s = """Choose mask mode: \n"""
-            for key in whole_face_mask_mode_dict.keys():
-                s += f"""({key}) {whole_face_mask_mode_dict[key]}\n"""
-            io.log_info(s)
-
-            self.mask_mode = io.input_int ("", 1, valid_list=whole_face_mask_mode_dict.keys() )
-        elif self.face_type == FaceType.FULL:
-            s = """Choose mask mode: \n"""
-            for key in full_face_mask_mode_dict.keys():
-                s += f"""({key}) {full_face_mask_mode_dict[key]}\n"""
-            io.log_info(s)
-
-            self.mask_mode = io.input_int ("", 1, valid_list=full_face_mask_mode_dict.keys(), help_message="If you learned the mask, then option 1 should be choosed. 'dst' mask is raw shaky mask from dst aligned images. 'FAN-prd' - using super smooth mask by pretrained FAN-model from predicted face. 'FAN-dst' - using super smooth mask by pretrained FAN-model from dst face. 'FAN-prd*FAN-dst' or 'learned*FAN-prd*FAN-dst' - using multiplied masks.")
-        else:
-            s = """Choose mask mode: \n"""
-            for key in half_face_mask_mode_dict.keys():
-                s += f"""({key}) {half_face_mask_mode_dict[key]}\n"""
-            io.log_info(s)
-            self.mask_mode = io.input_int ("", 1, valid_list=half_face_mask_mode_dict.keys(), help_message="If you learned the mask, then option 1 should be choosed. 'dst' mask is raw shaky mask from dst aligned images.")
+        s = """Choose mask mode: \n"""
+        for key in mask_mode_dict.keys():
+            s += f"""({key}) {mask_mode_dict[key]}\n"""
+        io.log_info(s)
+        self.mask_mode = io.input_int ("", 1, valid_list=mask_mode_dict.keys() )
 
         if 'raw' not in self.mode:
             self.erode_mask_modifier = np.clip ( io.input_int ("Choose erode mask modifier", 0, add_info="-400..400"), -400, 400)
@@ -302,14 +262,9 @@ class MergerConfigMasked(MergerConfig):
 
         if self.mode == 'hist-match' or self.mode == 'seamless-hist-match':
             r += f"""hist_match_threshold: {self.hist_match_threshold}\n"""
-
-        if self.face_type == FaceType.WHOLE_FACE:
-            r += f"""mask_mode: { whole_face_mask_mode_dict[self.mask_mode] }\n"""
-        elif self.face_type == FaceType.FULL:
-            r += f"""mask_mode: { full_face_mask_mode_dict[self.mask_mode] }\n"""
-        else:
-            r += f"""mask_mode: { half_face_mask_mode_dict[self.mask_mode] }\n"""
-
+        
+        r += f"""mask_mode: { mask_mode_dict[self.mask_mode] }\n"""
+        
         if 'raw' not in self.mode:
             r += (f"""erode_mask_modifier: {self.erode_mask_modifier}\n"""
                   f"""blur_mask_modifier: {self.blur_mask_modifier}\n"""

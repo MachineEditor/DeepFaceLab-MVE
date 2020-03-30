@@ -224,19 +224,6 @@ if __name__ == "__main__":
 
     p.set_defaults(func=process_videoed_video_from_sequence)
 
-    def process_labelingtool_edit_mask(arguments):
-        from mainscripts import MaskEditorTool
-        MaskEditorTool.mask_editor_main (arguments.input_dir, arguments.confirmed_dir, arguments.skipped_dir, no_default_mask=arguments.no_default_mask)
-
-    labeling_parser = subparsers.add_parser( "labelingtool", help="Labeling tool.").add_subparsers()
-    p = labeling_parser.add_parser ( "edit_mask", help="")
-    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory of aligned faces.")
-    p.add_argument('--confirmed-dir', required=True, action=fixPathAction, dest="confirmed_dir", help="This is where the labeled faces will be stored.")
-    p.add_argument('--skipped-dir', required=True, action=fixPathAction, dest="skipped_dir", help="This is where the labeled faces will be stored.")
-    p.add_argument('--no-default-mask', action="store_true", dest="no_default_mask", default=False, help="Don't use default mask.")
-
-    p.set_defaults(func=process_labelingtool_edit_mask)
-
     facesettool_parser = subparsers.add_parser( "facesettool", help="Faceset tools.").add_subparsers()
 
     def process_faceset_enhancer(arguments):
@@ -263,8 +250,10 @@ if __name__ == "__main__":
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
     p.set_defaults (func=process_dev_test)
     
-    # ========== XSeg util
-    p = subparsers.add_parser( "xsegeditor", help="XSegEditor.")
+    # ========== XSeg
+    xseg_parser = subparsers.add_parser( "xseg", help="XSeg tools.").add_subparsers()
+    
+    p = xseg_parser.add_parser( "editor", help="XSeg editor.")
 
     def process_xsegeditor(arguments):
         osex.set_process_lowest_prio()
@@ -274,7 +263,36 @@ if __name__ == "__main__":
 
     p.set_defaults (func=process_xsegeditor)
   
+    p = xseg_parser.add_parser( "apply", help="Apply trained XSeg model to the extracted faces.")
 
+    def process_xsegapply(arguments):
+        osex.set_process_lowest_prio()
+        from mainscripts import XSegUtil
+        XSegUtil.apply_xseg (Path(arguments.input_dir), Path(arguments.model_dir))
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
+    p.add_argument('--model-dir', required=True, action=fixPathAction, dest="model_dir")
+    p.set_defaults (func=process_xsegapply)
+    
+    
+    p = xseg_parser.add_parser( "remove", help="Remove XSeg from the extracted faces.")
+
+    def process_xsegremove(arguments):
+        osex.set_process_lowest_prio()
+        from mainscripts import XSegUtil
+        XSegUtil.remove_xseg (Path(arguments.input_dir) )
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
+    p.set_defaults (func=process_xsegremove)
+    
+    
+    p = xseg_parser.add_parser( "fetch", help="Copies faces containing XSeg polygons in <input_dir>_xseg dir.")
+
+    def process_xsegfetch(arguments):
+        osex.set_process_lowest_prio()
+        from mainscripts import XSegUtil
+        XSegUtil.fetch_xseg (Path(arguments.input_dir) )
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
+    p.set_defaults (func=process_xsegfetch)
+    
     def bad_args(arguments):
         parser.print_help()
         exit(0)

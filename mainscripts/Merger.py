@@ -12,7 +12,7 @@ from core.interact import interact as io
 from core.joblib import MPClassFuncOnDemand, MPFunc
 from core.leras import nn
 from DFLIMG import DFLIMG
-from facelib import FaceEnhancer, FaceType, LandmarksProcessor, TernausNet, XSegNet
+from facelib import FaceEnhancer, FaceType, LandmarksProcessor, XSegNet
 from merger import FrameInfo, MergerConfig, InteractiveMergerSubprocessor
 
 def main (model_class_name=None,
@@ -55,12 +55,6 @@ def main (model_class_name=None,
         predictor_func = MPFunc(predictor_func)
 
         run_on_cpu = len(nn.getCurrentDeviceConfig().devices) == 0
-        fanseg_full_face_256_extract_func = MPClassFuncOnDemand(TernausNet, 'extract',
-                                                    name=f'FANSeg_{FaceType.toString(FaceType.FULL)}',
-                                                    resolution=256,
-                                                    place_model_on_cpu=True,
-                                                    run_on_cpu=run_on_cpu)
-
         xseg_256_extract_func = MPClassFuncOnDemand(XSegNet, 'extract',
                                                     name='XSeg',
                                                     resolution=256,
@@ -199,7 +193,6 @@ def main (model_class_name=None,
                             predictor_func         = predictor_func,
                             predictor_input_shape  = predictor_input_shape,
                             face_enhancer_func     = face_enhancer_func,
-                            fanseg_full_face_256_extract_func = fanseg_full_face_256_extract_func,
                             xseg_256_extract_func = xseg_256_extract_func,
                             merger_config          = cfg,
                             frames                 = frames,

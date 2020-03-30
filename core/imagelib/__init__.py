@@ -15,7 +15,6 @@ from .color_transfer import color_transfer, color_transfer_mix, color_transfer_s
 
 from .common import normalize_channels, cut_odd_image, overlay_alpha_image
 
-from .IEPolys import IEPolys
 from .SegIEPolys import *
 
 from .blursharpen import LinearMotionBlur, blursharpen

@@ -74,8 +74,8 @@ class SampleLoader:
                 ( face_type,
                   shape,
                   landmarks,
-                  ie_polys,
                   seg_ie_polys,
+                  xseg_mask,
                   eyebrows_expand_mod,
                   source_filename,
                 ) in result:
@@ -84,34 +84,12 @@ class SampleLoader:
                                         face_type=FaceType.fromString (face_type),
                                         shape=shape,
                                         landmarks=landmarks,
-                                        ie_polys=ie_polys,
                                         seg_ie_polys=seg_ie_polys,
+                                        xseg_mask=xseg_mask,
                                         eyebrows_expand_mod=eyebrows_expand_mod,
                                         source_filename=source_filename,
                                     ))
         return sample_list
-
-    """
-    @staticmethod
-    def load_face_samples ( image_paths):
-        sample_list = []
-
-        for filename in io.progress_bar_generator (image_paths, desc="Loading"):
-            dflimg = DFLIMG.load (Path(filename))
-            if dflimg is None:
-                io.log_err (f"{filename} is not a dfl image file.")
-            else:
-                sample_list.append( Sample(filename=filename,
-                                           sample_type=SampleType.FACE,
-                                           face_type=FaceType.fromString ( dflimg.get_face_type() ),
-                                           shape=dflimg.get_shape(),
-                                           landmarks=dflimg.get_landmarks(),
-                                           ie_polys=dflimg.get_ie_polys(),
-                                           eyebrows_expand_mod=dflimg.get_eyebrows_expand_mod(),
-                                           source_filename=dflimg.get_source_filename(),
-                                    ))
-        return sample_list
-    """
 
     @staticmethod
     def upgradeToFaceTemporalSortedSamples( samples ):
@@ -178,8 +156,8 @@ class FaceSamplesLoaderSubprocessor(Subprocessor):
                 data = (dflimg.get_face_type(),
                         dflimg.get_shape(),
                         dflimg.get_landmarks(),
-                        dflimg.get_ie_polys(),
                         dflimg.get_seg_ie_polys(),
+                        dflimg.get_xseg_mask(),
                         dflimg.get_eyebrows_expand_mod(),
                         dflimg.get_source_filename() )
 

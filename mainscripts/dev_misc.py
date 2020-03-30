@@ -8,7 +8,6 @@ import numpy as np
 
 from core import imagelib, pathex
 from core.cv2ex import *
-from core.imagelib import IEPolys
 from core.interact import interact as io
 from core.joblib import Subprocessor
 from core.leras import nn
@@ -412,31 +411,3 @@ def dev_segmented_trash(input_dir):
         except:
             io.log_info ('fail to trashing %s' % (src.name) )
 
-
-"""
-#mark only
-for data in extract_data:
-    filepath = data.filepath
-    output_filepath = output_path / (filepath.stem+'.jpg')
-
-    img = cv2_imread(filepath)
-    img = imagelib.normalize_channels(img, 3)
-    cv2_imwrite(output_filepath, img, [int(cv2.IMWRITE_JPEG_QUALITY), 100] )
-
-    json_dict = images_jsons[filepath]
-
-    ie_polys = IEPolys()
-    for shape in json_dict['shapes']:
-        ie_poly = ie_polys.add(1)
-        for x,y in shape['points']:
-            ie_poly.add( int(x), int(y) )
-
-
-    DFLJPG.x(output_filepath, face_type=FaceType.toString(FaceType.MARK_ONLY),
-                                        landmarks=data.landmarks[0],
-                                        ie_polys=ie_polys,
-                                        source_filename=filepath.name,
-                                        source_rect=data.rects[0],
-                                        source_landmarks=data.landmarks[0]
-                        )
-"""

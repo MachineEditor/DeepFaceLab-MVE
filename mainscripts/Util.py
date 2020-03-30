@@ -5,7 +5,6 @@ import cv2
 
 from DFLIMG import *
 from facelib import LandmarksProcessor, FaceType
-from core.imagelib import IEPolys
 from core.interact import interact as io
 from core import pathex
 from core.cv2ex import *
@@ -100,7 +99,7 @@ def add_landmarks_debug_images(input_path):
                 rect = dflimg.get_source_rect()
                 LandmarksProcessor.draw_rect_landmarks(img, rect, face_landmarks, FaceType.FULL )
             else:
-                LandmarksProcessor.draw_landmarks(img, face_landmarks, transparent_mask=True, ie_polys=IEPolys.load(dflimg.get_ie_polys()) )
+                LandmarksProcessor.draw_landmarks(img, face_landmarks, transparent_mask=True )
             
             
             
@@ -160,42 +159,3 @@ def recover_original_aligned_filename(input_path):
             fs.rename (fd)
         except:
             io.log_err ('fail to rename %s' % (fs.name) )
-
-
-"""
-def convert_png_to_jpg_file (filepath):
-    filepath = Path(filepath)
-
-    if filepath.suffix != '.png':
-        return
-
-    dflpng = DFLPNG.load (str(filepath) )
-    if dflpng is None:
-        io.log_err ("%s is not a dfl png image file" % (filepath.name) )
-        return
-
-    dfl_dict = dflpng.get_dict()
-
-    img = cv2_imread (str(filepath))
-    new_filepath = str(filepath.parent / (filepath.stem + '.jpg'))
-    cv2_imwrite ( new_filepath, img, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
-
-    DFLJPG.x( new_filepath,
-                       face_type=dfl_dict.get('face_type', None),
-                       landmarks=dfl_dict.get('landmarks', None),
-                       ie_polys=dfl_dict.get('ie_polys', None),
-                       source_filename=dfl_dict.get('source_filename', None),
-                       source_rect=dfl_dict.get('source_rect', None),
-                       source_landmarks=dfl_dict.get('source_landmarks', None) )
-
-    filepath.unlink()
-
-def convert_png_to_jpg_folder (input_path):
-    input_path = Path(input_path)
-
-    io.log_info ("Converting PNG to JPG...\r\n")
-
-    for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path), "Converting"):
-        filepath = Path(filepath)
-        convert_png_to_jpg_file(filepath)
-"""

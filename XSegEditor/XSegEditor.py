@@ -1053,7 +1053,7 @@ class LoaderQSubprocessor(QSubprocessor):
             idx, filename = data
             dflimg = DFLIMG.load(filename)
             if dflimg is not None and dflimg.has_data():
-                ie_polys = SegIEPolys.load( dflimg.get_seg_ie_polys() )
+                ie_polys = dflimg.get_seg_ie_polys()
 
                 return idx, True, ie_polys.has_polys()
             return idx, False, False
@@ -1143,7 +1143,7 @@ class MainWindow(QXMainWindow):
             return False
 
         dflimg = DFLIMG.load(image_path)
-        ie_polys = SegIEPolys.load( dflimg.get_seg_ie_polys() )
+        ie_polys = dflimg.get_seg_ie_polys()
         q_img = self.load_QImage(image_path)
 
         self.canvas.op.initialize ( q_img,  ie_polys=ie_polys )
@@ -1155,12 +1155,12 @@ class MainWindow(QXMainWindow):
     def canvas_finalize(self, image_path):
         dflimg = DFLIMG.load(image_path)
 
-        ie_polys = SegIEPolys.load( dflimg.get_seg_ie_polys() )
+        ie_polys = dflimg.get_seg_ie_polys()
         new_ie_polys = self.canvas.op.get_ie_polys()
 
         if not new_ie_polys.identical(ie_polys):
             self.image_paths_has_ie_polys[image_path] = new_ie_polys.has_polys()
-            dflimg.set_seg_ie_polys( new_ie_polys.dump() )
+            dflimg.set_seg_ie_polys( new_ie_polys )
             dflimg.save()
 
         self.canvas.op.finalize()

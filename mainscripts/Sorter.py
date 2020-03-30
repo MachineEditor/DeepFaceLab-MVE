@@ -6,7 +6,6 @@ import sys
 import tempfile
 from functools import cmp_to_key
 from pathlib import Path
-from shutil import copyfile
 
 import cv2
 import numpy as np
@@ -35,7 +34,7 @@ class BlurEstimatorSubprocessor(Subprocessor):
             else:
                 image = cv2_imread( str(filepath) )
                 return [ str(filepath), estimate_sharpness(image) ]
-                
+
 
         #override
         def get_data_name (self, data):
@@ -146,7 +145,7 @@ def sort_by_face_pitch(input_path):
     img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)
 
     return img_list, trash_img_list
-    
+
 def sort_by_face_source_rect_size(input_path):
     io.log_info ("Sorting by face rect size...")
     img_list = []
@@ -163,15 +162,15 @@ def sort_by_face_source_rect_size(input_path):
 
         source_rect = dflimg.get_source_rect()
         rect_area = mathlib.polygon_area(np.array(source_rect[[0,2,2,0]]).astype(np.float32), np.array(source_rect[[1,1,3,3]]).astype(np.float32))
-                        
+
         img_list.append( [str(filepath), rect_area ] )
 
     io.log_info ("Sorting...")
     img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)
 
-    return img_list, trash_img_list   
-    
-    
+    return img_list, trash_img_list
+
+
 
 class HistSsimSubprocessor(Subprocessor):
     class Cli(Subprocessor.Cli):
@@ -444,13 +443,13 @@ class FinalLoaderSubprocessor(Subprocessor):
                     raise Exception ("Unable to load %s" % (filepath.name) )
 
                 gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-                
+
                 if self.faster:
                     source_rect = dflimg.get_source_rect()
                     sharpness = mathlib.polygon_area(np.array(source_rect[[0,2,2,0]]).astype(np.float32), np.array(source_rect[[1,1,3,3]]).astype(np.float32))
                 else:
                     sharpness = estimate_sharpness(gray)
-                
+
                 pitch, yaw, roll = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks(), size=dflimg.get_shape()[1] )
 
                 hist = cv2.calcHist([gray], [0], None, [256], [0, 256])
@@ -586,12 +585,12 @@ class FinalHistDissimSubprocessor(Subprocessor):
     def get_result(self):
         return self.result
 
-def sort_best_faster(input_path):    
+def sort_best_faster(input_path):
     return sort_best(input_path, faster=True)
-    
+
 def sort_best(input_path, faster=False):
     target_count = io.input_int ("Target number of faces?", 2000)
-    
+
     io.log_info ("Performing sort by best faces.")
     if faster:
         io.log_info("Using faster algorithm. Faces will be sorted by source-rect-area instead of blur.")
@@ -630,7 +629,7 @@ def sort_best(input_path, faster=False):
 
     imgs_per_grad += total_lack // grads
 
-    
+
     sharpned_imgs_per_grad = imgs_per_grad*10
     for g in io.progress_bar_generator ( range (grads), "Sort by blur"):
         img_list = yaws_sample_list[g]
@@ -770,7 +769,7 @@ def sort_by_absdiff(input_path):
 
     outputs_full = []
     outputs_remain = []
-    
+
     for i in range(batch_size):
         diff_t = tf.reduce_sum( tf.abs(i_t-j_t[i]), axis=[1,2,3] )
         outputs_full.append(diff_t)

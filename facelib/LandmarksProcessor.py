@@ -9,7 +9,6 @@ import numpy.linalg as npla
 from core import imagelib
 from core import mathlib
 from facelib import FaceType
-from core.imagelib import IEPolys
 from core.mathlib.umeyama import umeyama
 
 landmarks_2D = np.array([
@@ -374,7 +373,7 @@ def expand_eyebrows(lmrks, eyebrows_expand_mod=1.0):
 
 
 
-def get_image_hull_mask (image_shape, image_landmarks, eyebrows_expand_mod=1.0, ie_polys=None ):
+def get_image_hull_mask (image_shape, image_landmarks, eyebrows_expand_mod=1.0 ):
     hull_mask = np.zeros(image_shape[0:2]+(1,),dtype=np.float32)
 
     lmrks = expand_eyebrows(image_landmarks, eyebrows_expand_mod)
@@ -392,9 +391,6 @@ def get_image_hull_mask (image_shape, image_landmarks, eyebrows_expand_mod=1.0, 
     for item in parts:
         merged = np.concatenate(item)
         cv2.fillConvexPoly(hull_mask, cv2.convexHull(merged), (1,) )
-
-    if ie_polys is not None:
-        ie_polys.overlay_mask(hull_mask)
 
     return hull_mask
     
@@ -647,13 +643,13 @@ def mirror_landmarks (landmarks, val):
     result[:,0] = val - result[:,0] - 1
     return result
 
-def get_face_struct_mask (image_shape, image_landmarks, eyebrows_expand_mod=1.0, ie_polys=None, color=(1,) ):
+def get_face_struct_mask (image_shape, image_landmarks, eyebrows_expand_mod=1.0, color=(1,) ):
     mask = np.zeros(image_shape[0:2]+( len(color),),dtype=np.float32)
     lmrks = expand_eyebrows(image_landmarks, eyebrows_expand_mod)
-    draw_landmarks (mask, image_landmarks, color=color, draw_circles=False, thickness=2, ie_polys=ie_polys)    
+    draw_landmarks (mask, image_landmarks, color=color, draw_circles=False, thickness=2)    
     return mask
     
-def draw_landmarks (image, image_landmarks, color=(0,255,0), draw_circles=True, thickness=1, transparent_mask=False, ie_polys=None):
+def draw_landmarks (image, image_landmarks, color=(0,255,0), draw_circles=True, thickness=1, transparent_mask=False):
     if len(image_landmarks) != 68:
         raise Exception('get_image_eye_mask works only with 68 landmarks')
 
@@ -683,11 +679,11 @@ def draw_landmarks (image, image_landmarks, color=(0,255,0), draw_circles=True, 
             cv2.circle(image, (x, y), 2, color, lineType=cv2.LINE_AA)
 
     if transparent_mask:
-        mask = get_image_hull_mask (image.shape, image_landmarks, ie_polys=ie_polys)
+        mask = get_image_hull_mask (image.shape, image_landmarks)
         image[...] = ( image * (1-mask) + image * mask / 2 )[...]
 
-def draw_rect_landmarks (image, rect, image_landmarks, face_type, face_size=256, transparent_mask=False, ie_polys=None, landmarks_color=(0,255,0)):
-    draw_landmarks(image, image_landmarks, color=landmarks_color, transparent_mask=transparent_mask, ie_polys=ie_polys)
+def draw_rect_landmarks (image, rect, image_landmarks, face_type, face_size=256, transparent_mask=False, landmarks_color=(0,255,0)):
+    draw_landmarks(image, image_landmarks, color=landmarks_color, transparent_mask=transparent_mask)
     imagelib.draw_rect (image, rect, (255,0,0), 2 )
 
     image_to_face_mat = get_transform_mat (image_landmarks, face_size, face_type)
