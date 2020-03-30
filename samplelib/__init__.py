@@ -10,5 +10,4 @@ from .SampleGeneratorImage import SampleGeneratorImage
 from .SampleGeneratorImageTemporal import SampleGeneratorImageTemporal
 from .SampleGeneratorFaceCelebAMaskHQ import SampleGeneratorFaceCelebAMaskHQ
 from .SampleGeneratorFaceXSeg import SampleGeneratorFaceXSeg
-from .SampleGeneratorFaceAvatarOperator import SampleGeneratorFaceAvatarOperator
 from .PackedFaceset import PackedFaceset
