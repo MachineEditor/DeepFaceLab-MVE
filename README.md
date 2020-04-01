@@ -36,9 +36,7 @@ DeepFaceLab is used by such popular youtube channels as
 
 ## Replace the face
 
-<img src="doc/replace_the_face.jpg" align="center">
-
-![](doc/youtube_icon.png) https://www.youtube.com/watch?v=aau8qa3xgFs
+<img src="doc/replace_the_face.png" align="center">
 
 </td></tr>
 <tr><td align="center" width="9999">
