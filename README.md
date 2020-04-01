@@ -104,11 +104,12 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 |Communication groups|||
 ||[telegram (English / Russian)](https://t.me/DeepFaceLab_official)|Don't forget to hide your phone number|
 ||[telegram (English only)](https://t.me/DeepFaceLab_official_en)|Don't forget to hide your phone number|
-||QQ 951138799|中文 Chinese QQ group for ML/AI experts|
-||[deepfaker.xyz](https://www.deepfaker.xyz/)|中文学习站（非官方|
+||[Русское сообщество](https://mrdeepfakes.com/forums/forum-russian-community)||
 ||[mrdeepfakes](https://mrdeepfakes.com/forums/)|the biggest NSFW English community|
 ||[reddit r/GifFakes/](https://www.reddit.com/r/GifFakes/new/)|Post your deepfakes there !|
 ||[reddit r/SFWdeepfakes/](https://www.reddit.com/r/SFWdeepfakes/new/)|Post your deepfakes there !|
+||QQ 951138799|中文 Chinese QQ group for ML/AI experts|
+||[deepfaker.xyz](https://www.deepfaker.xyz/)|中文学习站（非官方|
 
 </td></tr>
 
@@ -124,9 +125,9 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 ||bitcoin:bc1qkhh7h0gwwhxgg6h6gpllfgstkd645fefrd5s6z|
 |Alipay 捐款|![](doc/Alipay_donation.jpg)|
 |||
-|Last donations|50$ ( Tomas Hajka )|
-||10$ ( 朱 阳阳 )|
-||24$ ( NextFace )|
+|Last donations|50$ ( John Lee )|
+||100$ ( The Mister Network )|
+||50$ ( Tomas Hajka )|
 |||
 |Collect facesets|You can collect faceset of any celebrity that can be used in DeepFaceLab and share it [in the community](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|
 |||
