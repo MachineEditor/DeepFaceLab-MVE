@@ -33,6 +33,7 @@ class ModelBase(object):
                        cpu_only=False,
                        debug=False,
                        force_model_class_name=None,
+                       silent_start=False,
                        **kwargs):
         self.is_training = is_training
         self.saved_models_path = saved_models_path
@@ -60,59 +61,64 @@ class ModelBase(object):
                     # sort by modified datetime
                     saved_models_names = sorted(saved_models_names, key=operator.itemgetter(1), reverse=True )
                     saved_models_names = [ x[0] for x in saved_models_names ]
+                    
 
                     if len(saved_models_names) != 0:
-                        io.log_info ("Choose one of saved models, or enter a name to create a new model.")
-                        io.log_info ("[r] : rename")
-                        io.log_info ("[d] : delete")
-                        io.log_info ("")
-                        for i, model_name in enumerate(saved_models_names):
-                            s = f"[{i}] : {model_name} "
-                            if i == 0:
-                                s += "- latest"
-                            io.log_info (s)
+                        if silent_start:
+                            self.model_name = saved_models_names[0]
+                            io.log_info(f'Silent start: choosed model "{self.model_name}"')
+                        else:
+                            io.log_info ("Choose one of saved models, or enter a name to create a new model.")
+                            io.log_info ("[r] : rename")
+                            io.log_info ("[d] : delete")
+                            io.log_info ("")
+                            for i, model_name in enumerate(saved_models_names):
+                                s = f"[{i}] : {model_name} "
+                                if i == 0:
+                                    s += "- latest"
+                                io.log_info (s)
 
-                        inp = io.input_str(f"", "0", show_default_value=False )
-                        model_idx = -1
-                        try:
-                            model_idx = np.clip ( int(inp), 0, len(saved_models_names)-1 )
-                        except:
-                            pass
+                            inp = io.input_str(f"", "0", show_default_value=False )
+                            model_idx = -1
+                            try:
+                                model_idx = np.clip ( int(inp), 0, len(saved_models_names)-1 )
+                            except:
+                                pass
 
-                        if model_idx == -1:
-                            if len(inp) == 1:
-                                is_rename = inp[0] == 'r'
-                                is_delete = inp[0] == 'd'
+                            if model_idx == -1:
+                                if len(inp) == 1:
+                                    is_rename = inp[0] == 'r'
+                                    is_delete = inp[0] == 'd'
 
-                                if is_rename or is_delete:
-                                    if len(saved_models_names) != 0:
-
-                                        if is_rename:
-                                            name = io.input_str(f"Enter the name of the model you want to rename")
-                                        elif is_delete:
-                                            name = io.input_str(f"Enter the name of the model you want to delete")
-
-                                        if name in saved_models_names:
+                                    if is_rename or is_delete:
+                                        if len(saved_models_names) != 0:
 
                                             if is_rename:
-                                                new_model_name = io.input_str(f"Enter new name of the model")
+                                                name = io.input_str(f"Enter the name of the model you want to rename")
+                                            elif is_delete:
+                                                name = io.input_str(f"Enter the name of the model you want to delete")
 
-                                            for filepath in pathex.get_paths(saved_models_path):
-                                                filepath_name = filepath.name
+                                            if name in saved_models_names:
 
-                                                model_filename, remain_filename = filepath_name.split('_', 1)
-                                                if model_filename == name:
+                                                if is_rename:
+                                                    new_model_name = io.input_str(f"Enter new name of the model")
 
-                                                    if is_rename:
-                                                        new_filepath = filepath.parent / ( new_model_name + '_' + remain_filename )
-                                                        filepath.rename (new_filepath)
-                                                    elif is_delete:
-                                                        filepath.unlink()
-                                    continue
+                                                for filepath in pathex.get_paths(saved_models_path):
+                                                    filepath_name = filepath.name
 
-                            self.model_name = inp
-                        else:
-                            self.model_name = saved_models_names[model_idx]
+                                                    model_filename, remain_filename = filepath_name.split('_', 1)
+                                                    if model_filename == name:
+
+                                                        if is_rename:
+                                                            new_filepath = filepath.parent / ( new_model_name + '_' + remain_filename )
+                                                            filepath.rename (new_filepath)
+                                                        elif is_delete:
+                                                            filepath.unlink()
+                                        continue
+
+                                self.model_name = inp
+                            else:
+                                self.model_name = saved_models_names[model_idx]
 
                     else:
                         self.model_name = io.input_str(f"No saved models found. Enter a name of a new model", "new")
@@ -144,9 +150,13 @@ class ModelBase(object):
 
         if self.is_first_run():
             io.log_info ("\nModel first run.")
-
-        self.device_config = nn.DeviceConfig.GPUIndexes( force_gpu_idxs or nn.ask_choose_device_idxs(suggest_best_multi_gpu=True)) \
-                             if not cpu_only else nn.DeviceConfig.CPU()
+            
+        if silent_start:
+            self.device_config = nn.DeviceConfig.BestGPU()
+            io.log_info (f"Silent start: choosed device {'CPU' if self.device_config.cpu_only else self.device_config.devices[0].name}")            
+        else:
+            self.device_config = nn.DeviceConfig.GPUIndexes( force_gpu_idxs or nn.ask_choose_device_idxs(suggest_best_multi_gpu=True)) \
+                                if not cpu_only else nn.DeviceConfig.CPU()
 
         nn.initialize(self.device_config)
 
