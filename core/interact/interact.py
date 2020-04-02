@@ -427,6 +427,7 @@ class InteractBase(object):
         p.start()
         time.sleep(0.5)
         p.terminate()
+        p.join()
         sys.stdin = os.fdopen( sys.stdin.fileno() )
 
 
