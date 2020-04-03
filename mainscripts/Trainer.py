@@ -23,6 +23,7 @@ def trainerThread (s2c, c2s, e,
                     force_model_name=None,
                     force_gpu_idxs=None,
                     cpu_only=None,
+                    silent_start=False,
                     execute_programs = None,
                     debug=False,
                     **kwargs):
@@ -52,6 +53,7 @@ def trainerThread (s2c, c2s, e,
                         force_model_name=force_model_name,
                         force_gpu_idxs=force_gpu_idxs,
                         cpu_only=cpu_only,
+                        silent_start=silent_start,
                         debug=debug,
                         )
 
