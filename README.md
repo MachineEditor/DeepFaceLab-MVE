@@ -44,6 +44,21 @@ DeepFaceLab is used by such popular youtube channels as
 ## Replace the head
 
 
+<table align="center" border="0"><tr>
+
+<td align="center" width="9999">
+
+<img src="doc/head_replace_1.jpg" align="center">
+
+</td>
+
+<td align="center" width="9999">
+
+<img src="doc/head_replace_2.jpg" align="center">
+
+</td>
+
+</table>
 
 </td></tr>
 <tr><td align="center" width="9999">
