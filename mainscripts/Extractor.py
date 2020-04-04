@@ -690,13 +690,29 @@ def main(detector=None,
          cpu_only = False,
          force_gpu_idxs = None,
          ):
-    face_type = FaceType.fromString(face_type)
-
-    image_size = 512 if face_type < FaceType.HEAD else 768
-    
+         
     if not input_path.exists():
         io.log_err ('Input directory not found. Please ensure it exists.')
         return
+
+    if face_type is not None:
+        face_type = FaceType.fromString(face_type)
+        
+    if face_type is None:
+        if manual_output_debug_fix and output_path.exists():
+            files = pathex.get_image_paths(output_path)
+            if len(files) != 0:
+                dflimg = DFLIMG.load(Path(files[0]))
+                if dflimg is not None and dflimg.has_data():
+                     face_type = FaceType.fromString ( dflimg.get_face_type() )
+                
+    if face_type is None:
+        face_type = io.input_str ("Face type", 'wf', ['f','wf','head'], help_message="Full face / whole face / head. 'Whole face' covers full area of face include forehead. 'head' covers full head, but requires XSeg for src and dst faceset.").lower()
+        face_type = {'f'  : FaceType.FULL,
+                     'wf' : FaceType.WHOLE_FACE,
+                     'head' : FaceType.HEAD}[face_type]
+
+    image_size = 512 if face_type < FaceType.HEAD else 768    
 
     if detector is None:
         io.log_info ("Choose detector type.")
