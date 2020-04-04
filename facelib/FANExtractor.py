@@ -13,8 +13,9 @@ from core.leras import nn
 ported from https://github.com/1adrianb/face-alignment
 """
 class FANExtractor(object):
-    def __init__ (self, place_model_on_cpu=False):
-        model_path = Path(__file__).parent / "FAN.npy"
+    def __init__ (self, landmarks_3D=False, place_model_on_cpu=False):
+        
+        model_path = Path(__file__).parent / ( "2DFAN.npy" if not landmarks_3D else "3DFAN.npy")
         if not model_path.exists():
             raise Exception("Unable to load FANExtractor model")
 

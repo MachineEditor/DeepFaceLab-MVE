@@ -134,86 +134,85 @@ landmarks_68_pt = { "mouth": (48,68),
                     "nose": (27, 36), # missed one point
                     "jaw": (0, 17) }
 
-
 landmarks_68_3D = np.array( [
-[-73.393523  , -29.801432   , 47.667532   ],
-[-72.775014  , -10.949766   , 45.909403   ],
-[-70.533638  , 7.929818     , 44.842580   ],
-[-66.850058  , 26.074280    , 43.141114   ],
-[-59.790187  , 42.564390    , 38.635298   ],
-[-48.368973  , 56.481080    , 30.750622   ],
-[-34.121101  , 67.246992    , 18.456453   ],
-[-17.875411  , 75.056892    , 3.609035    ],
-[0.098749    , 77.061286    , -0.881698   ],
-[17.477031   , 74.758448    , 5.181201    ],
-[32.648966   , 66.929021    , 19.176563   ],
-[46.372358   , 56.311389    , 30.770570   ],
-[57.343480   , 42.419126    , 37.628629   ],
-[64.388482   , 25.455880    , 40.886309   ],
-[68.212038   , 6.990805     , 42.281449   ],
-[70.486405   , -11.666193   , 44.142567   ],
-[71.375822   , -30.365191   , 47.140426   ],
-[-61.119406  , -49.361602   , 14.254422   ],
-[-51.287588  , -58.769795   , 7.268147    ],
-[-37.804800  , -61.996155   , 0.442051    ],
-[-24.022754  , -61.033399   , -6.606501   ],
-[-11.635713  , -56.686759   , -11.967398  ],
-[12.056636   , -57.391033   , -12.051204  ],
-[25.106256   , -61.902186   , -7.315098   ],
-[38.338588   , -62.777713   , -1.022953   ],
-[51.191007   , -59.302347   , 5.349435    ],
-[60.053851   , -50.190255   , 11.615746   ],
-[0.653940    , -42.193790   , -13.380835  ],
-[0.804809    , -30.993721   , -21.150853  ],
-[0.992204    , -19.944596   , -29.284036  ],
-[1.226783    , -8.414541    , -36.948060  ],
-[-14.772472  , 2.598255     , -20.132003  ],
-[-7.180239   , 4.751589     , -23.536684  ],
-[0.555920    , 6.562900     , -25.944448  ],
-[8.272499    , 4.661005     , -23.695741  ],
-[15.214351   , 2.643046     , -20.858157  ],
-[-46.047290  , -37.471411   , 7.037989    ],
-[-37.674688  , -42.730510   , 3.021217    ],
-[-27.883856  , -42.711517   , 1.353629    ],
-[-19.648268  , -36.754742   , -0.111088   ],
-[-28.272965  , -35.134493   , -0.147273   ],
-[-38.082418  , -34.919043   , 1.476612    ],
-[19.265868   , -37.032306   , -0.665746   ],
-[27.894191   , -43.342445   , 0.247660    ],
-[37.437529   , -43.110822   , 1.696435    ],
-[45.170805   , -38.086515   , 4.894163    ],
-[38.196454   , -35.532024   , 0.282961    ],
-[28.764989   , -35.484289   , -1.172675   ],
-[-28.916267  , 28.612716    , -2.240310   ],
-[-17.533194  , 22.172187    , -15.934335  ],
-[-6.684590   , 19.029051    , -22.611355  ],
-[0.381001    , 20.721118    , -23.748437  ],
-[8.375443    , 19.035460    , -22.721995  ],
-[18.876618   , 22.394109    , -15.610679  ],
-[28.794412   , 28.079924    , -3.217393   ],
-[19.057574   , 36.298248    , -14.987997  ],
-[8.956375    , 39.634575    , -22.554245  ],
-[0.381549    , 40.395647    , -23.591626  ],
-[-7.428895   , 39.836405    , -22.406106  ],
-[-18.160634  , 36.677899    , -15.121907  ],
-[-24.377490  , 28.677771    , -4.785684   ],
-[-6.897633   , 25.475976    , -20.893742  ],
-[0.340663    , 26.014269    , -22.220479  ],
-[8.444722    , 25.326198    , -21.025520  ],
-[24.474473   , 28.323008    , -5.712776   ],
-[8.449166    , 30.596216    , -20.671489  ],
-[0.205322    , 31.408738    , -21.903670  ],
-[-7.198266   , 30.844876    , -20.328022  ] ], dtype=np.float32)
+[-73.393523  , -29.801432   , 47.667532   ], #00
+[-72.775014  , -10.949766   , 45.909403   ], #01
+[-70.533638  , 7.929818     , 44.842580   ], #02
+[-66.850058  , 26.074280    , 43.141114   ], #03
+[-59.790187  , 42.564390    , 38.635298   ], #04
+[-48.368973  , 56.481080    , 30.750622   ], #05
+[-34.121101  , 67.246992    , 18.456453   ], #06
+[-17.875411  , 75.056892    , 3.609035    ], #07
+[0.098749    , 77.061286    , -0.881698   ], #08
+[17.477031   , 74.758448    , 5.181201    ], #09
+[32.648966   , 66.929021    , 19.176563   ], #10
+[46.372358   , 56.311389    , 30.770570   ], #11
+[57.343480   , 42.419126    , 37.628629   ], #12
+[64.388482   , 25.455880    , 40.886309   ], #13
+[68.212038   , 6.990805     , 42.281449   ], #14
+[70.486405   , -11.666193   , 44.142567   ], #15
+[71.375822   , -30.365191   , 47.140426   ], #16
+[-61.119406  , -49.361602   , 14.254422   ], #17
+[-51.287588  , -58.769795   , 7.268147    ], #18
+[-37.804800  , -61.996155   , 0.442051    ], #19
+[-24.022754  , -61.033399   , -6.606501   ], #20
+[-11.635713  , -56.686759   , -11.967398  ], #21
+[12.056636   , -57.391033   , -12.051204  ], #22
+[25.106256   , -61.902186   , -7.315098   ], #23
+[38.338588   , -62.777713   , -1.022953   ], #24
+[51.191007   , -59.302347   , 5.349435    ], #25
+[60.053851   , -50.190255   , 11.615746   ], #26
+[0.653940    , -42.193790   , -13.380835  ], #27
+[0.804809    , -30.993721   , -21.150853  ], #28
+[0.992204    , -19.944596   , -29.284036  ], #29
+[1.226783    , -8.414541    , -36.948060  ], #00
+[-14.772472  , 2.598255     , -20.132003  ], #01
+[-7.180239   , 4.751589     , -23.536684  ], #02
+[0.555920    , 6.562900     , -25.944448  ], #03
+[8.272499    , 4.661005     , -23.695741  ], #04
+[15.214351   , 2.643046     , -20.858157  ], #05
+[-46.047290  , -37.471411   , 7.037989    ], #06
+[-37.674688  , -42.730510   , 3.021217    ], #07
+[-27.883856  , -42.711517   , 1.353629    ], #08
+[-19.648268  , -36.754742   , -0.111088   ], #09
+[-28.272965  , -35.134493   , -0.147273   ], #10
+[-38.082418  , -34.919043   , 1.476612    ], #11
+[19.265868   , -37.032306   , -0.665746   ], #12
+[27.894191   , -43.342445   , 0.247660    ], #13
+[37.437529   , -43.110822   , 1.696435    ], #14
+[45.170805   , -38.086515   , 4.894163    ], #15
+[38.196454   , -35.532024   , 0.282961    ], #16
+[28.764989   , -35.484289   , -1.172675   ], #17
+[-28.916267  , 28.612716    , -2.240310   ], #18
+[-17.533194  , 22.172187    , -15.934335  ], #19
+[-6.684590   , 19.029051    , -22.611355  ], #20
+[0.381001    , 20.721118    , -23.748437  ], #21
+[8.375443    , 19.035460    , -22.721995  ], #22
+[18.876618   , 22.394109    , -15.610679  ], #23
+[28.794412   , 28.079924    , -3.217393   ], #24
+[19.057574   , 36.298248    , -14.987997  ], #25
+[8.956375    , 39.634575    , -22.554245  ], #26
+[0.381549    , 40.395647    , -23.591626  ], #27
+[-7.428895   , 39.836405    , -22.406106  ], #28
+[-18.160634  , 36.677899    , -15.121907  ], #29
+[-24.377490  , 28.677771    , -4.785684   ], #30
+[-6.897633   , 25.475976    , -20.893742  ], #31
+[0.340663    , 26.014269    , -22.220479  ], #32
+[8.444722    , 25.326198    , -21.025520  ], #33
+[24.474473   , 28.323008    , -5.712776   ], #34
+[8.449166    , 30.596216    , -20.671489  ], #35
+[0.205322    , 31.408738    , -21.903670  ], #36 
+[-7.198266   , 30.844876    , -20.328022  ]  #37
+], dtype=np.float32)
 
 FaceType_to_padding_remove_align = {
-    FaceType.MOUTH: (0.25, False),
     FaceType.HALF: (0.0, False),
     FaceType.MID_FULL: (0.0675, False),
     FaceType.FULL: (0.2109375, False),
     FaceType.FULL_NO_ALIGN: (0.2109375, True),
     FaceType.WHOLE_FACE: (0.40, False),
-    FaceType.HEAD: (1.0, False),
-    FaceType.HEAD_NO_ALIGN: (1.0, True),
+    FaceType.HEAD: (0.70, False),
+    FaceType.HEAD_NO_ALIGN: (0.70, True),
 }
 
 def convert_98_to_68(lmrks):
@@ -279,11 +278,8 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
 
 
     # estimate landmarks transform from global space to local aligned space with bounds [0..1]
-    if face_type == FaceType.MOUTH:
-        mat = umeyama(image_landmarks[48:68], mouth_center_landmarks_2D, True)[0:2]
-    else:
-        mat = umeyama( np.concatenate ( [ image_landmarks[17:49] , image_landmarks[54:55] ] ) , landmarks_2D_new, True)[0:2]
-    
+    mat = umeyama( np.concatenate ( [ image_landmarks[17:49] , image_landmarks[54:55] ] ) , landmarks_2D_new, True)[0:2]
+
     # get corner points in global space
     g_p = transform_points (  np.float32([(0,0),(1,0),(1,1),(0,1),(0.5,0.5) ]) , mat, True)
     g_c = g_p[4]
@@ -297,16 +293,36 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
     # calc modifier of diagonal vectors for scale and padding value
     padding, remove_align = FaceType_to_padding_remove_align.get(face_type, 0.0)
     mod = (1.0 / scale)* ( npla.norm(g_p[0]-g_p[2])*(padding*np.sqrt(2.0) + 0.5) )
-    
+
     if face_type == FaceType.WHOLE_FACE:
-        # adjust center for WHOLE_FACE, 7% below in order to cover more forehead
+        # adjust vertical offset for WHOLE_FACE, 7% below in order to cover more forehead
         vec = (g_p[0]-g_p[3]).astype(np.float32)
         vec_len = npla.norm(vec)
         vec /= vec_len
-        
         g_c += vec*vec_len*0.07
-    
-    # calc 3 points in global space to estimate 2d affine transform 
+
+    elif face_type == FaceType.HEAD:
+        mat = umeyama( np.concatenate ( [ image_landmarks[17:49] , image_landmarks[54:55] ] ) , landmarks_2D_new, True)[0:2]
+        
+        # assuming image_landmarks are 3D_Landmarks extracted for HEAD,
+        # adjust horizontal offset according to estimated yaw        
+        yaw = estimate_averaged_yaw(transform_points (image_landmarks, mat, False))
+        
+        hvec = (g_p[0]-g_p[1]).astype(np.float32)
+        hvec_len = npla.norm(hvec)
+        hvec /= hvec_len        
+
+        yaw *= np.abs(math.tanh(yaw*2)) # Damp near zero
+        
+        g_c -= hvec * (yaw * hvec_len / 2.0)                     
+
+        # adjust vertical offset for HEAD, 50% below
+        vvec = (g_p[0]-g_p[3]).astype(np.float32)
+        vvec_len = npla.norm(vvec)
+        vvec /= vvec_len
+        g_c += vvec*vvec_len*0.50
+
+    # calc 3 points in global space to estimate 2d affine transform
     if not remove_align:
         l_t = np.array( [ g_c - tb_diag_vec*mod,
                           g_c + bt_diag_vec*mod,
@@ -321,10 +337,10 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
 
         # get area of face square in global space
         area = mathlib.polygon_area(l_t[:,0], l_t[:,1] )
-        
+
         # calc side of square
         side = np.float32(math.sqrt(area) / 2)
-        
+
         # calc 3 points with unrotated square
         l_t = np.array( [ g_c + [-side,-side],
                           g_c + [ side,-side],
@@ -334,14 +350,14 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
     pts2 = np.float32(( (0,0),(output_size,0),(output_size,output_size) ))
     mat = cv2.getAffineTransform(l_t,pts2)
     return mat
-  
+
 def get_rect_from_landmarks(image_landmarks):
     mat = get_transform_mat(image_landmarks, 256, FaceType.FULL_NO_ALIGN)
-    
+
     g_p = transform_points (  np.float32([(0,0),(255,255) ]) , mat, True)
-    
+
     (l,t,r,b) = g_p[0][0], g_p[0][1], g_p[1][0], g_p[1][1]
-    
+
     return (l,t,r,b)
 
 def expand_eyebrows(lmrks, eyebrows_expand_mod=1.0):
@@ -393,15 +409,15 @@ def get_image_hull_mask (image_shape, image_landmarks, eyebrows_expand_mod=1.0 )
         cv2.fillConvexPoly(hull_mask, cv2.convexHull(merged), (1,) )
 
     return hull_mask
-    
+
 def get_image_eye_mask (image_shape, image_landmarks):
     if len(image_landmarks) != 68:
         raise Exception('get_image_eye_mask works only with 68 landmarks')
-    
+
     h,w,c = image_shape
 
     hull_mask = np.zeros( (h,w,1),dtype=np.float32)
-    
+
     image_landmarks = image_landmarks.astype(np.int)
 
     cv2.fillConvexPoly( hull_mask, cv2.convexHull( image_landmarks[36:42]), (1,) )
@@ -409,7 +425,7 @@ def get_image_eye_mask (image_shape, image_landmarks):
 
     dilate = h // 32
     hull_mask = cv2.dilate(hull_mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(dilate,dilate)), iterations = 1 )
-    
+
     blur = h // 16
     blur = blur + (1-blur % 2)
     hull_mask = cv2.GaussianBlur(hull_mask, (blur, blur) , 0)
@@ -646,9 +662,9 @@ def mirror_landmarks (landmarks, val):
 def get_face_struct_mask (image_shape, image_landmarks, eyebrows_expand_mod=1.0, color=(1,) ):
     mask = np.zeros(image_shape[0:2]+( len(color),),dtype=np.float32)
     lmrks = expand_eyebrows(image_landmarks, eyebrows_expand_mod)
-    draw_landmarks (mask, image_landmarks, color=color, draw_circles=False, thickness=2)    
+    draw_landmarks (mask, image_landmarks, color=color, draw_circles=False, thickness=2)
     return mask
-    
+
 def draw_landmarks (image, image_landmarks, color=(0,255,0), draw_circles=True, thickness=1, transparent_mask=False):
     if len(image_landmarks) != 68:
         raise Exception('get_image_eye_mask works only with 68 landmarks')
@@ -669,7 +685,7 @@ def draw_landmarks (image, image_landmarks, color=(0,255,0), draw_circles=True, 
     # closed shapes
     cv2.polylines(image, tuple(np.array([v]) for v in (right_eye, left_eye, mouth)),
                   True, color, thickness=thickness, lineType=cv2.LINE_AA)
-                  
+
     if draw_circles:
         # the rest of the cicles
         for x, y in np.concatenate((right_eyebrow, left_eyebrow, mouth, right_eye, left_eye, nose), axis=0):
@@ -692,17 +708,25 @@ def draw_rect_landmarks (image, rect, image_landmarks, face_type, face_size=256,
 
     points = transform_points ( [ ( int(face_size*0.05), 0), ( int(face_size*0.1), int(face_size*0.1) ), ( 0, int(face_size*0.1) ) ], image_to_face_mat, True)
     imagelib.draw_polygon (image, points, (0,0,255), 2)
-    
+
 def calc_face_pitch(landmarks):
     if not isinstance(landmarks, np.ndarray):
         landmarks = np.array (landmarks)
     t = ( (landmarks[6][1]-landmarks[8][1]) + (landmarks[10][1]-landmarks[8][1]) ) / 2.0
     b = landmarks[8][1]
     return float(b-t)
+
+def estimate_averaged_yaw(landmarks):
+    # Works much better than solvePnP if landmarks from "3DFAN"
+    if not isinstance(landmarks, np.ndarray):
+        landmarks = np.array (landmarks)
+    l = ( (landmarks[27][0]-landmarks[0][0]) + (landmarks[28][0]-landmarks[1][0]) + (landmarks[29][0]-landmarks[2][0]) ) / 3.0   
+    r = ( (landmarks[16][0]-landmarks[27][0]) + (landmarks[15][0]-landmarks[28][0]) + (landmarks[14][0]-landmarks[29][0]) ) / 3.0
+    return float(r-l)
     
 def estimate_pitch_yaw_roll(aligned_landmarks, size=256):
     """
-    returns pitch,yaw,roll [-pi...+pi]
+    returns pitch,yaw,roll [-pi/2...+pi/2]
     """
     shape = (size,size)
     focal_length = shape[1]
@@ -712,19 +736,21 @@ def estimate_pitch_yaw_roll(aligned_landmarks, size=256):
          [0, focal_length, camera_center[1]],
          [0, 0, 1]], dtype=np.float32)
 
-    (_, rotation_vector, translation_vector) = cv2.solvePnP(
-        landmarks_68_3D,
-        aligned_landmarks.astype(np.float32),
+    (_, rotation_vector, _) = cv2.solvePnP(
+        np.concatenate( (landmarks_68_3D[:27],   landmarks_68_3D[30:36]) , axis=0) ,
+        np.concatenate( (aligned_landmarks[:27], aligned_landmarks[30:36]) , axis=0).astype(np.float32),
         camera_matrix,
         np.zeros((4, 1)) )
 
     pitch, yaw, roll = mathlib.rotationMatrixToEulerAngles( cv2.Rodrigues(rotation_vector)[0] )
-    pitch = np.clip ( pitch, -math.pi, math.pi )
-    yaw = np.clip ( yaw , -math.pi, math.pi )
-    roll = np.clip ( roll, -math.pi, math.pi )
+   
+    half_pi = math.pi / 2.0
+    pitch = np.clip ( pitch, -half_pi, half_pi )
+    yaw   = np.clip ( yaw ,  -half_pi, half_pi )
+    roll  = np.clip ( roll,  -half_pi, half_pi )
 
     return -pitch, yaw, roll
-    
+
 #if remove_align:
 #    bbox = transform_points ( [ (0,0), (0,output_size), (output_size, output_size), (output_size,0) ], mat, True)
 #    #import code
@@ -758,48 +784,48 @@ def estimate_pitch_yaw_roll(aligned_landmarks, size=256):
 
 
 """
-def get_averaged_transform_mat (img_landmarks, 
-                                img_landmarks_prev, 
-                                img_landmarks_next, 
-                                average_frame_count, 
+def get_averaged_transform_mat (img_landmarks,
+                                img_landmarks_prev,
+                                img_landmarks_next,
+                                average_frame_count,
                                 average_center_frame_count,
                                 output_size, face_type, scale=1.0):
-    
+
     l_c_list = []
     tb_diag_vec_list = []
     bt_diag_vec_list = []
     mod_list = []
-    
+
     count = max(average_frame_count,average_center_frame_count)
-    for i in range ( -count, count+1, 1 ):        
+    for i in range ( -count, count+1, 1 ):
         if i < 0:
             lmrks = img_landmarks_prev[i] if -i < len(img_landmarks_prev) else None
         elif i > 0:
             lmrks = img_landmarks_next[i] if i < len(img_landmarks_next) else None
         else:
             lmrks = img_landmarks
-        
+
         if lmrks is None:
             continue
-        
+
         l_c, tb_diag_vec, bt_diag_vec, mod = get_transform_mat_data (lmrks, face_type, scale=scale)
-        
+
         if i >= -average_frame_count and i <= average_frame_count:
             tb_diag_vec_list.append(tb_diag_vec)
             bt_diag_vec_list.append(bt_diag_vec)
             mod_list.append(mod)
-            
+
         if i >= -average_center_frame_count and i <= average_center_frame_count:
             l_c_list.append(l_c)
-    
+
     tb_diag_vec = np.mean( np.array(tb_diag_vec_list), axis=0 )
     bt_diag_vec = np.mean( np.array(bt_diag_vec_list), axis=0 )
-    mod         = np.mean( np.array(mod_list), axis=0 )    
+    mod         = np.mean( np.array(mod_list), axis=0 )
     l_c         = np.mean( np.array(l_c_list), axis=0 )
 
     return get_transform_mat_by_data (l_c, tb_diag_vec, bt_diag_vec, mod, output_size, face_type)
-    
-    
+
+
 def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
     if not isinstance(image_landmarks, np.ndarray):
         image_landmarks = np.array (image_landmarks)
@@ -809,7 +835,7 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
 
     # estimate landmarks transform from global space to local aligned space with bounds [0..1]
     mat = umeyama( np.concatenate ( [ image_landmarks[17:49] , image_landmarks[54:55] ] ) , landmarks_2D_new, True)[0:2]
-    
+
     # get corner points in global space
     l_p = transform_points (  np.float32([(0,0),(1,0),(1,1),(0,1),(0.5,0.5)]) , mat, True)
     l_c = l_p[4]
@@ -823,7 +849,7 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
     # calc modifier of diagonal vectors for scale and padding value
     mod = (1.0 / scale)* ( npla.norm(l_p[0]-l_p[2])*(padding*np.sqrt(2.0) + 0.5) )
 
-    # calc 3 points in global space to estimate 2d affine transform 
+    # calc 3 points in global space to estimate 2d affine transform
     if not remove_align:
         l_t = np.array( [ np.round( l_c - tb_diag_vec*mod ),
                           np.round( l_c + bt_diag_vec*mod ),
@@ -838,10 +864,10 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
 
         # get area of face square in global space
         area = mathlib.polygon_area(l_t[:,0], l_t[:,1] )
-        
+
         # calc side of square
         side = np.float32(math.sqrt(area) / 2)
-        
+
         # calc 3 points with unrotated square
         l_t = np.array( [ np.round( l_c + [-side,-side] ),
                           np.round( l_c + [ side,-side] ),
@@ -850,6 +876,6 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
     # calc affine transform from 3 global space points to 3 local space points size of 'output_size'
     pts2 = np.float32(( (0,0),(output_size,0),(output_size,output_size) ))
     mat = cv2.getAffineTransform(l_t,pts2)
-    
+
     return mat
 """

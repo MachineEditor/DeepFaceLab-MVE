@@ -127,13 +127,7 @@ class SampleProcessor(object):
                     if face_type is None:
                         raise ValueError("face_type must be defined for face samples")
 
-                    if face_type > sample.face_type:
-                        raise Exception ('sample %s type %s does not match model requirement %s. Consider extract necessary type of faces.' % (sample.filename, sample.face_type, face_type) )
-
-
-                    if sample_type == SPST.FACE_MASK:     
-       
-     
+                    if sample_type == SPST.FACE_MASK: 
                         if face_mask_type == SPFMT.FULL_FACE:
                             img = get_full_face_mask()
                         elif face_mask_type == SPFMT.EYES:

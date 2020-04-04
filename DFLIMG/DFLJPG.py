@@ -1,13 +1,16 @@
 import pickle
 import struct
+import traceback
 
 import cv2
 import numpy as np
 
+from core import imagelib
+from core.imagelib import SegIEPolys
 from core.interact import interact as io
 from core.structex import *
 from facelib import FaceType
-from core.imagelib import SegIEPolys
+
 
 class DFLJPG(object):
     def __init__(self, filename):
@@ -148,7 +151,7 @@ class DFLJPG(object):
 
             return inst
         except Exception as e:
-            print (e)
+            io.log_err (f'Exception occured while DFLJPG.load : {traceback.format_exc()}')
             return None
 
     def has_data(self):
@@ -165,10 +168,10 @@ class DFLJPG(object):
         data = b""
 
         dict_data = self.dfl_dict
-        
+
         # Remove None keys
         for key in list(dict_data.keys()):
-            if dict_data[key] is None:                
+            if dict_data[key] is None:
                 dict_data.pop(key)
 
         for chunk in self.chunks:
@@ -242,52 +245,58 @@ class DFLJPG(object):
         return None
     def set_image_to_face_mat(self, image_to_face_mat):   self.dfl_dict['image_to_face_mat'] = image_to_face_mat
 
-    def get_seg_ie_polys(self): 
+    def get_seg_ie_polys(self):
         d = self.dfl_dict.get('seg_ie_polys',None)
         if d is not None:
             d = SegIEPolys.load(d)
         else:
             d = SegIEPolys()
-            
+
         return d
-        
+
     def set_seg_ie_polys(self, seg_ie_polys):
-        if seg_ie_polys is not None:        
+        if seg_ie_polys is not None:
             if not isinstance(seg_ie_polys, SegIEPolys):
                 raise ValueError('seg_ie_polys should be instance of SegIEPolys')
-            
+
             if seg_ie_polys.has_polys():
                 seg_ie_polys = seg_ie_polys.dump()
             else:
                 seg_ie_polys = None
-        
+
         self.dfl_dict['seg_ie_polys'] = seg_ie_polys
 
-    def get_xseg_mask(self): 
+    def get_xseg_mask(self):
         mask_buf = self.dfl_dict.get('xseg_mask',None)
         if mask_buf is None:
             return None
-            
+
         img = cv2.imdecode(mask_buf, cv2.IMREAD_UNCHANGED)
         if len(img.shape) == 2:
             img = img[...,None]
-            
-        
+
         return img.astype(np.float32) / 255.0
-        
-        
+
+
     def set_xseg_mask(self, mask_a):
         if mask_a is None:
             self.dfl_dict['xseg_mask'] = None
             return
-            
-        ret, buf = cv2.imencode( '.png', np.clip( mask_a*255, 0, 255 ).astype(np.uint8) )
+
+        mask_a = imagelib.normalize_channels(mask_a, 1)
+        img_data = np.clip( mask_a*255, 0, 255 ).astype(np.uint8)
+
+        data_max_len = 4096
+
+        ret, buf = cv2.imencode('.png', img_data)
+
+        if not ret or len(buf) > data_max_len:
+            for jpeg_quality in range(100,-1,-1):
+                ret, buf = cv2.imencode( '.jpg', img_data, [int(cv2.IMWRITE_JPEG_QUALITY), jpeg_quality] )
+                if ret and len(buf) <= data_max_len:
+                    break
+
         if not ret:
-            raise Exception("unable to generate PNG data for set_xseg_mask")
-        
+            raise Exception("set_xseg_mask: unable to generate image data for set_xseg_mask")
+
         self.dfl_dict['xseg_mask'] = buf
-
-
-
-
-

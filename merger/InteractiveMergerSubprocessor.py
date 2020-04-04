@@ -84,14 +84,19 @@ class InteractiveMergerSubprocessor(Subprocessor):
             filepath = frame_info.filepath
 
             if len(frame_info.landmarks_list) == 0:
-                self.log_info (f'no faces found for {filepath.name}, copying without faces')
-
-                img_bgr = cv2_imread(filepath)
-                imagelib.normalize_channels(img_bgr, 3)
+                
+                if cfg.mode == 'raw-predict':        
+                    h,w,c = self.predictor_input_shape
+                    img_bgr = np.zeros( (h,w,3), dtype=np.uint8)
+                    img_mask = np.zeros( (h,w,1), dtype=np.uint8)               
+                else:                
+                    self.log_info (f'no faces found for {filepath.name}, copying without faces')
+                    img_bgr = cv2_imread(filepath)
+                    imagelib.normalize_channels(img_bgr, 3)                    
+                    h,w,c = img_bgr.shape
+                    img_mask = np.zeros( (h,w,1), dtype=img_bgr.dtype)
+                    
                 cv2_imwrite (pf.output_filepath, img_bgr)
-                h,w,c = img_bgr.shape
-
-                img_mask = np.zeros( (h,w,1), dtype=img_bgr.dtype)
                 cv2_imwrite (pf.output_mask_filepath, img_mask)
 
                 if pf.need_return_image:
@@ -300,6 +305,7 @@ class InteractiveMergerSubprocessor(Subprocessor):
                     '3' : lambda cfg,shift_pressed: cfg.set_mode(3),
                     '4' : lambda cfg,shift_pressed: cfg.set_mode(4),
                     '5' : lambda cfg,shift_pressed: cfg.set_mode(5),
+                    '6' : lambda cfg,shift_pressed: cfg.set_mode(6),
                     'q' : lambda cfg,shift_pressed: cfg.add_hist_match_threshold(1 if not shift_pressed else 5),
                     'a' : lambda cfg,shift_pressed: cfg.add_hist_match_threshold(-1 if not shift_pressed else -5),
                     'w' : lambda cfg,shift_pressed: cfg.add_erode_mask_modifier(1 if not shift_pressed else 5),

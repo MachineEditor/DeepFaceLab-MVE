@@ -76,21 +76,21 @@ mode_dict = {0:'original',
              2:'hist-match',
              3:'seamless',
              4:'seamless-hist-match',
-             5:'raw-rgb',}
+             5:'raw-rgb',
+             6:'raw-predict'}
 
-mode_str_dict = {}
+mode_str_dict = { mode_dict[key] : key for key in mode_dict.keys() }
 
-for key in mode_dict.keys():
-    mode_str_dict[ mode_dict[key] ] = key
-
-mask_mode_dict = {1:'learned',
-                  2:'dst',
-                  3:'XSeg-prd',
-                  4:'XSeg-dst',
-                  5:'XSeg-prd*XSeg-dst',
-                  6:'learned*XSeg-prd*XSeg-dst'                             
+mask_mode_dict = {1:'dst',
+                  2:'learned-prd',
+                  3:'learned-dst',
+                  4:'learned-prd*learned-dst',
+                  5:'XSeg-prd',
+                  6:'XSeg-dst',
+                  7:'XSeg-prd*XSeg-dst',
+                  8:'learned-prd*learned-dst*XSeg-prd*XSeg-dst'
                   }
-                               
+
 
 ctm_dict = { 0: "None", 1:"rct", 2:"lct", 3:"mkl", 4:"mkl-m", 5:"idt", 6:"idt-m", 7:"sot-m", 8:"mix-m" }
 ctm_str_dict = {None:0, "rct":1, "lct":2, "mkl":3, "mkl-m":4, "idt":5, "idt-m":6, "sot-m":7, "mix-m":8 }
@@ -102,7 +102,7 @@ class MergerConfigMasked(MergerConfig):
                        mode='overlay',
                        masked_hist_match=True,
                        hist_match_threshold = 238,
-                       mask_mode = 1,
+                       mask_mode = 4,
                        erode_mask_modifier = 0,
                        blur_mask_modifier = 0,
                        motion_blur_power = 0,
@@ -118,7 +118,7 @@ class MergerConfigMasked(MergerConfig):
         super().__init__(type=MergerConfig.TYPE_MASKED, **kwargs)
 
         self.face_type = face_type
-        if self.face_type not in [FaceType.HALF, FaceType.MID_FULL, FaceType.FULL, FaceType.WHOLE_FACE ]:
+        if self.face_type not in [FaceType.HALF, FaceType.MID_FULL, FaceType.FULL, FaceType.WHOLE_FACE, FaceType.HEAD ]:
             raise ValueError("MergerConfigMasked does not support this type of face.")
 
         self.default_mode = default_mode
@@ -262,9 +262,9 @@ class MergerConfigMasked(MergerConfig):
 
         if self.mode == 'hist-match' or self.mode == 'seamless-hist-match':
             r += f"""hist_match_threshold: {self.hist_match_threshold}\n"""
-        
+
         r += f"""mask_mode: { mask_mode_dict[self.mask_mode] }\n"""
-        
+
         if 'raw' not in self.mode:
             r += (f"""erode_mask_modifier: {self.erode_mask_modifier}\n"""
                   f"""blur_mask_modifier: {self.blur_mask_modifier}\n"""
@@ -274,8 +274,8 @@ class MergerConfigMasked(MergerConfig):
 
         if 'raw' not in self.mode:
             r += f"""color_transfer_mode: {ctm_dict[self.color_transfer_mode]}\n"""
+            r += super().to_string(filename)
 
-        r += super().to_string(filename)
         r += f"""super_resolution_power: {self.super_resolution_power}\n"""
 
         if 'raw' not in self.mode:

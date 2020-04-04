@@ -60,7 +60,7 @@ class SAEHDModel(ModelBase):
             resolution = io.input_int("Resolution", default_resolution, add_info="64-512", help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 16.")
             resolution = np.clip ( (resolution // 16) * 16, 64, 512)
             self.options['resolution'] = resolution
-            self.options['face_type'] = io.input_str ("Face type", default_face_type, ['h','mf','f','wf'], help_message="Half / mid face / full face / whole face. Half face has better resolution, but covers less area of cheeks. Mid face is 30% wider than half face. 'Whole face' covers full area of face include forehead, but requires manual merge in Adobe After Effects.").lower()
+            self.options['face_type'] = io.input_str ("Face type", default_face_type, ['h','mf','f','wf','head'], help_message="Half / mid face / full face / whole face / head. Half face has better resolution, but covers less area of cheeks. Mid face is 30% wider than half face. 'Whole face' covers full area of face include forehead. 'head' covers full head, but requires XSeg for src and dst faceset.").lower()
             self.options['archi'] = io.input_str ("AE architecture", default_archi, ['df','liae','dfhd','liaehd','dfuhd','liaeuhd'], help_message="'df' keeps faces more natural.\n'liae' can fix overly different face shapes.\n'hd' are experimental versions.").lower()
 
         default_d_dims             = 48 if self.options['archi'] == 'dfhd' else 64
@@ -84,11 +84,11 @@ class SAEHDModel(ModelBase):
             self.options['d_mask_dims'] = d_mask_dims + d_mask_dims % 2
 
         if self.is_first_run() or ask_override:
-            if self.options['face_type'] == 'wf':
+            if self.options['face_type'] == 'wf' or self.options['face_type'] == 'head':
                 self.options['masked_training']  = io.input_bool ("Masked training", default_masked_training, help_message="This option is available only for 'whole_face' type. Masked training clips training area to full_face mask, thus network will train the faces properly.  When the face is trained enough, disable this option to train all area of the frame. Merge with 'raw-rgb' mode, then use Adobe After Effects to manually mask and compose whole face include forehead.")
-            
+
             self.options['eyes_prio']  = io.input_bool ("Eyes priority", default_eyes_prio, help_message='Helps to fix eye problems during training like "alien eyes" and wrong eyes direction ( especially on HD architectures ) by forcing the neural network to train eyes with higher priority. before/after https://i.imgur.com/YQHOuSR.jpg ')
-      
+
         if self.is_first_run() or ask_override:
             self.options['models_opt_on_gpu'] = io.input_bool ("Place models and optimizer on GPU", default_models_opt_on_gpu, help_message="When you train on one GPU, by default model and optimizer weights are placed on GPU to accelerate the process. You can place they on CPU to free up extra VRAM, thus set bigger dimensions.")
 
@@ -104,10 +104,10 @@ class SAEHDModel(ModelBase):
 
             self.options['face_style_power'] = np.clip ( io.input_number("Face style power", default_face_style_power, add_info="0.0..100.0", help_message="Learn the color of the predicted face to be the same as dst inside mask. If you want to use this option with 'whole_face' you have to use XSeg trained mask. Warning: Enable it only after 10k iters, when predicted face is clear enough to start learn style. Start from 0.001 value and check history changes. Enabling this option increases the chance of model collapse."), 0.0, 100.0 )
             self.options['bg_style_power'] = np.clip ( io.input_number("Background style power", default_bg_style_power, add_info="0.0..100.0", help_message="Learn the area outside mask of the predicted face to be the same as dst. If you want to use this option with 'whole_face' you have to use XSeg trained mask. For whole_face you have to use XSeg trained mask. This can make face more like dst. Enabling this option increases the chance of model collapse. Typical value is 2.0"), 0.0, 100.0 )
-                
+
             self.options['ct_mode'] = io.input_str (f"Color transfer for src faceset", default_ct_mode, ['none','rct','lct','mkl','idt','sot'], help_message="Change color distribution of src samples close to dst samples. Try all modes to find the best.")
             self.options['clipgrad'] = io.input_bool ("Enable gradient clipping", default_clipgrad, help_message="Gradient clipping reduces chance of model collapse, sacrificing speed of training.")
-            
+
             self.options['pretrain'] = io.input_bool ("Enable pretraining mode", default_pretrain, help_message="Pretrain the model with large amount of various faces. After that, model can be used to train the fakes more quickly.")
 
         if self.options['pretrain'] and self.get_pretraining_data_path() is None:
@@ -127,7 +127,8 @@ class SAEHDModel(ModelBase):
         self.face_type = {'h'  : FaceType.HALF,
                           'mf' : FaceType.MID_FULL,
                           'f'  : FaceType.FULL,
-                          'wf' : FaceType.WHOLE_FACE}[ self.options['face_type'] ]
+                          'wf' : FaceType.WHOLE_FACE,
+                          'head' : FaceType.HEAD}[ self.options['face_type'] ]
 
         eyes_prio = self.options['eyes_prio']
         archi = self.options['archi']
@@ -166,10 +167,10 @@ class SAEHDModel(ModelBase):
 
             self.target_srcm_all = tf.placeholder (nn.floatx, mask_shape)
             self.target_dstm_all = tf.placeholder (nn.floatx, mask_shape)
-            
+
         # Initializing model classes
-        model_archi = nn.DeepFakeArchi(resolution, mod='uhd' if 'uhd' in archi else None)  
-        
+        model_archi = nn.DeepFakeArchi(resolution, mod='uhd' if 'uhd' in archi else None)
+
         with tf.device (models_opt_device):
             if 'df' in archi:
                 self.encoder = model_archi.Encoder(in_ch=input_ch, e_ch=e_dims, is_hd=is_hd, name='encoder')
@@ -270,7 +271,7 @@ class SAEHDModel(ModelBase):
                         gpu_target_dst      = self.target_dst [batch_slice,:,:,:]
                         gpu_target_srcm_all = self.target_srcm_all[batch_slice,:,:,:]
                         gpu_target_dstm_all = self.target_dstm_all[batch_slice,:,:,:]
-                        
+
                     # process model tensors
                     if 'df' in archi:
                         gpu_src_code     = self.inter(self.encoder(gpu_warped_src))
@@ -300,11 +301,11 @@ class SAEHDModel(ModelBase):
                     gpu_pred_src_srcm_list.append(gpu_pred_src_srcm)
                     gpu_pred_dst_dstm_list.append(gpu_pred_dst_dstm)
                     gpu_pred_src_dstm_list.append(gpu_pred_src_dstm)
-                    
+
                     # unpack masks from one combined mask
-                    gpu_target_srcm      = tf.clip_by_value (gpu_target_srcm_all, 0, 1)                                   
-                    gpu_target_dstm      = tf.clip_by_value (gpu_target_dstm_all, 0, 1)                    
-                    gpu_target_srcm_eyes = tf.clip_by_value (gpu_target_srcm_all-1, 0, 1)   
+                    gpu_target_srcm      = tf.clip_by_value (gpu_target_srcm_all, 0, 1)
+                    gpu_target_dstm      = tf.clip_by_value (gpu_target_dstm_all, 0, 1)
+                    gpu_target_srcm_eyes = tf.clip_by_value (gpu_target_srcm_all-1, 0, 1)
                     gpu_target_dstm_eyes = tf.clip_by_value (gpu_target_dstm_all-1, 0, 1)
 
                     gpu_target_srcm_blur = nn.gaussian_blur(gpu_target_srcm,  max(1, resolution // 32) )
@@ -315,7 +316,7 @@ class SAEHDModel(ModelBase):
 
                     gpu_target_src_masked_opt  = gpu_target_src*gpu_target_srcm_blur if masked_training else gpu_target_src
                     gpu_target_dst_masked_opt  = gpu_target_dst_masked if masked_training else gpu_target_dst
-                    
+
                     gpu_pred_src_src_masked_opt = gpu_pred_src_src*gpu_target_srcm_blur if masked_training else gpu_pred_src_src
                     gpu_pred_dst_dst_masked_opt = gpu_pred_dst_dst*gpu_target_dstm_blur if masked_training else gpu_pred_dst_dst
 
@@ -324,10 +325,10 @@ class SAEHDModel(ModelBase):
 
                     gpu_src_loss =  tf.reduce_mean ( 10*nn.dssim(gpu_target_src_masked_opt, gpu_pred_src_src_masked_opt, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
                     gpu_src_loss += tf.reduce_mean ( 10*tf.square ( gpu_target_src_masked_opt - gpu_pred_src_src_masked_opt ), axis=[1,2,3])
-                    
+
                     if eyes_prio:
                         gpu_src_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_src*gpu_target_srcm_eyes - gpu_pred_src_src*gpu_target_srcm_eyes ), axis=[1,2,3])
-                    
+
                     gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
 
                     face_style_power = self.options['face_style_power'] / 100.0
@@ -341,10 +342,10 @@ class SAEHDModel(ModelBase):
 
                     gpu_dst_loss = tf.reduce_mean ( 10*nn.dssim(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0, filter_size=int(resolution/11.6) ), axis=[1])
                     gpu_dst_loss += tf.reduce_mean ( 10*tf.square(  gpu_target_dst_masked_opt- gpu_pred_dst_dst_masked_opt ), axis=[1,2,3])
-                    
+
                     if eyes_prio:
                         gpu_dst_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_dst*gpu_target_dstm_eyes - gpu_pred_dst_dst*gpu_target_dstm_eyes ), axis=[1,2,3])
-                    
+
                     gpu_dst_loss += tf.reduce_mean ( 10*tf.square( gpu_target_dstm - gpu_pred_dst_dstm ),axis=[1,2,3] )
 
                     gpu_src_losses += [gpu_src_loss]
@@ -444,7 +445,7 @@ class SAEHDModel(ModelBase):
                                                                            self.target_dstm_all:target_dstm_all})
                 self.D_src_dst_train = D_src_dst_train
 
-            
+
             def AE_view(warped_src, warped_dst):
                 return nn.tf_sess.run ( [pred_src_src, pred_dst_dst, pred_dst_dstm, pred_src_dst, pred_src_dstm],
                                             feed_dict={self.warped_src:warped_src,
@@ -468,7 +469,7 @@ class SAEHDModel(ModelBase):
                     gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder(gpu_src_dst_code)
                     _, gpu_pred_dst_dstm = self.decoder(gpu_dst_code)
 
-            
+
             def AE_merge( warped_dst):
                 return nn.tf_sess.run ( [gpu_pred_src_dst, gpu_pred_dst_dstm, gpu_pred_src_dstm], feed_dict={self.warped_dst:warped_dst})
 
@@ -523,10 +524,10 @@ class SAEHDModel(ModelBase):
                                               ],
                         generators_count=dst_generators_count )
                              ])
-            
+
             self.last_src_samples_loss = []
             self.last_dst_samples_loss = []
-            
+
             if self.pretrain_just_disabled:
                 self.update_sample_for_preview(force_new=True)
 
@@ -543,25 +544,25 @@ class SAEHDModel(ModelBase):
     #override
     def onTrainOneIter(self):
         bs = self.get_batch_size()
-        
+
         ( (warped_src, target_src, target_srcm_all), \
           (warped_dst, target_dst, target_dstm_all) ) = self.generate_next_samples()
 
         src_loss, dst_loss = self.src_dst_train (warped_src, target_src, target_srcm_all, warped_dst, target_dst, target_dstm_all)
-                
-        for i in range(bs):     
+
+        for i in range(bs):
             self.last_src_samples_loss.append (  (target_src[i], target_srcm_all[i], src_loss[i] )  )
             self.last_dst_samples_loss.append (  (target_dst[i], target_dstm_all[i], dst_loss[i] )  )
-            
+
         if len(self.last_src_samples_loss) >= bs*16:
             src_samples_loss = sorted(self.last_src_samples_loss, key=operator.itemgetter(2), reverse=True)
             dst_samples_loss = sorted(self.last_dst_samples_loss, key=operator.itemgetter(2), reverse=True)
-            
+
             target_src      = np.stack( [ x[0] for x in src_samples_loss[:bs] ] )
             target_srcm_all = np.stack( [ x[1] for x in src_samples_loss[:bs] ] )
-            
+
             target_dst      = np.stack( [ x[0] for x in dst_samples_loss[:bs] ] )
-            target_dstm_all = np.stack( [ x[1] for x in dst_samples_loss[:bs] ] ) 
+            target_dstm_all = np.stack( [ x[1] for x in dst_samples_loss[:bs] ] )
 
             src_loss, dst_loss = self.src_dst_train (target_src, target_src, target_srcm_all, target_dst, target_dst, target_dstm_all)
             self.last_src_samples_loss = []
@@ -584,68 +585,71 @@ class SAEHDModel(ModelBase):
         DDM, SDM, = [ np.repeat (x, (3,), -1) for x in [DDM, SDM] ]
 
         target_srcm_all, target_dstm_all = [ nn.to_data_format(x,"NHWC", self.model_data_format) for x in ([target_srcm_all, target_dstm_all] )]
-        
+
         target_srcm = np.clip(target_srcm_all, 0, 1)
         target_dstm = np.clip(target_dstm_all, 0, 1)
-        
+
         n_samples = min(4, self.get_batch_size(), 800 // self.resolution )
 
         if self.resolution <= 256:
             result = []
-            
+
             st = []
             for i in range(n_samples):
                 ar = S[i], SS[i], D[i], DD[i], SD[i]
                 st.append ( np.concatenate ( ar, axis=1) )
             result += [ ('SAEHD', np.concatenate (st, axis=0 )), ]
 
-            
+
             st_m = []
             for i in range(n_samples):
-                ar = S[i]*target_srcm[i], SS[i], D[i]*target_dstm[i], DD[i]*DDM[i], SD[i]*(DDM[i]*SDM[i])
+                SD_mask = DDM[i]*SDM[i] if self.face_type < FaceType.HEAD else SDM[i]
+
+                ar = S[i]*target_srcm[i], SS[i], D[i]*target_dstm[i], DD[i]*DDM[i], SD[i]*SD_mask
                 st_m.append ( np.concatenate ( ar, axis=1) )
 
             result += [ ('SAEHD masked', np.concatenate (st_m, axis=0 )), ]
         else:
             result = []
-            
+
             st = []
             for i in range(n_samples):
                 ar = S[i], SS[i]
                 st.append ( np.concatenate ( ar, axis=1) )
             result += [ ('SAEHD src-src', np.concatenate (st, axis=0 )), ]
-            
+
             st = []
             for i in range(n_samples):
                 ar = D[i], DD[i]
                 st.append ( np.concatenate ( ar, axis=1) )
             result += [ ('SAEHD dst-dst', np.concatenate (st, axis=0 )), ]
-            
+
             st = []
             for i in range(n_samples):
                 ar = D[i], SD[i]
                 st.append ( np.concatenate ( ar, axis=1) )
             result += [ ('SAEHD pred', np.concatenate (st, axis=0 )), ]
 
-            
+
             st_m = []
             for i in range(n_samples):
                 ar = S[i]*target_srcm[i], SS[i]
-                st_m.append ( np.concatenate ( ar, axis=1) )                    
+                st_m.append ( np.concatenate ( ar, axis=1) )
             result += [ ('SAEHD masked src-src', np.concatenate (st_m, axis=0 )), ]
-        
+
             st_m = []
             for i in range(n_samples):
                 ar = D[i]*target_dstm[i], DD[i]*DDM[i]
-                st_m.append ( np.concatenate ( ar, axis=1) )                    
+                st_m.append ( np.concatenate ( ar, axis=1) )
             result += [ ('SAEHD masked dst-dst', np.concatenate (st_m, axis=0 )), ]
-            
+
             st_m = []
             for i in range(n_samples):
-                ar = D[i]*target_dstm[i], SD[i]*(DDM[i]*SDM[i])
-                st_m.append ( np.concatenate ( ar, axis=1) )                    
+                SD_mask = DDM[i]*SDM[i] if self.face_type < FaceType.HEAD else SDM[i]
+                ar = D[i]*target_dstm[i], SD[i]*SD_mask
+                st_m.append ( np.concatenate ( ar, axis=1) )
             result += [ ('SAEHD masked pred', np.concatenate (st_m, axis=0 )), ]
-            
+
         return result
 
     def predictor_func (self, face=None):
@@ -653,8 +657,7 @@ class SAEHDModel(ModelBase):
 
         bgr, mask_dst_dstm, mask_src_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format).astype(np.float32) for x in self.AE_merge (face) ]
 
-        mask = mask_dst_dstm[0] * mask_src_dstm[0]
-        return bgr[0], mask[...,0]
+        return bgr[0], mask_src_dstm[0][...,0], mask_dst_dstm[0][...,0]
 
     #override
     def get_MergerConfig(self):

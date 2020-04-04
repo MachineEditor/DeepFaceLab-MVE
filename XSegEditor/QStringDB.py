@@ -30,6 +30,11 @@ class QStringDB():
                                                 'zh' : '查看遮罩通道',
                                            }[lang]
                                            
+        QStringDB.btn_view_xseg_mask_tip =  {   'en' : 'View trained XSeg mask',
+                                                'ru' : 'Посмотреть тренированную XSeg маску',
+                                                'zh' : '查看导入后的XSeg遮罩',
+                                            }[lang]
+                                           
         QStringDB.btn_poly_type_include_tip = { 'en' : 'Poly include mode',
                                                 'ru' : 'Режим полигонов - включение',
                                                 'zh' : '包含选区模式',
