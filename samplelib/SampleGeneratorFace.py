@@ -1,5 +1,4 @@
 import multiprocessing
-import pickle
 import time
 import traceback
 
@@ -11,7 +10,6 @@ from core.joblib import SubprocessGenerator, ThisThreadGenerator
 from facelib import LandmarksProcessor
 from samplelib import (SampleGeneratorBase, SampleLoader, SampleProcessor,
                        SampleType)
-
 
 '''
 arg
@@ -59,13 +57,10 @@ class SampleGeneratorFace(SampleGeneratorBase):
             ct_samples = None
             ct_index_host = None
 
-        pickled_samples = pickle.dumps(samples, 4)
-        ct_pickled_samples = pickle.dumps(ct_samples, 4) if ct_samples is not None else None
-
         if self.debug:
-            self.generators = [ThisThreadGenerator ( self.batch_func, (pickled_samples, index_host.create_cli(), ct_pickled_samples, ct_index_host.create_cli() if ct_index_host is not None else None) )]
+            self.generators = [ThisThreadGenerator ( self.batch_func, (samples, index_host.create_cli(), ct_samples, ct_index_host.create_cli() if ct_index_host is not None else None) )]
         else:
-            self.generators = [SubprocessGenerator ( self.batch_func, (pickled_samples, index_host.create_cli(), ct_pickled_samples, ct_index_host.create_cli() if ct_index_host is not None else None), start_now=False ) \
+            self.generators = [SubprocessGenerator ( self.batch_func, (samples, index_host.create_cli(), ct_samples, ct_index_host.create_cli() if ct_index_host is not None else None), start_now=False ) \
                                for i in range(self.generators_count) ]
                                
             SubprocessGenerator.start_in_parallel( self.generators )
@@ -90,11 +85,8 @@ class SampleGeneratorFace(SampleGeneratorBase):
         return next(generator)
 
     def batch_func(self, param ):
-        pickled_samples, index_host, ct_pickled_samples, ct_index_host = param
-        
-        samples = pickle.loads(pickled_samples)
-        ct_samples = pickle.loads(ct_pickled_samples) if ct_pickled_samples is not None else None
-
+        samples, index_host, ct_samples, ct_index_host = param
+ 
         bs = self.batch_size
         while True:
             batches = None

@@ -1,3 +1,4 @@
+from .MPSharedList import MPSharedList
 import multiprocessing
 import threading
 import time
