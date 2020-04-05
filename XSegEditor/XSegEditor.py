@@ -366,7 +366,9 @@ class QCanvasOperator(QWidget):
 
     def finalize(self):
         if self.initialized:
-            
+            if self.op_mode == OpMode.DRAW_PTS:
+                self.set_op_mode(OpMode.EDIT_PTS)
+                
             self.last_state = sn(op_mode = self.op_mode if self.op_mode in [OpMode.VIEW_BAKED, OpMode.VIEW_XSEG_MASK] else None,
                                  color_scheme_id = self.color_scheme_id,
                                )
@@ -1200,6 +1202,7 @@ class MainWindow(QXMainWindow):
         return True
 
     def canvas_finalize(self, image_path):
+        self.canvas.op.finalize()
         
         if image_path.exists():
             dflimg = DFLIMG.load(image_path)        
@@ -1210,8 +1213,7 @@ class MainWindow(QXMainWindow):
                 self.image_paths_has_ie_polys[image_path] = new_ie_polys.has_polys()
                 dflimg.set_seg_ie_polys( new_ie_polys )
                 dflimg.save()
-
-        self.canvas.op.finalize()
+        
         self.filename_label.setText("")
 
     def process_prev_image(self):
