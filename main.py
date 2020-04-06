@@ -278,14 +278,22 @@ if __name__ == "__main__":
     p.set_defaults (func=process_xsegapply)
     
     
-    p = xseg_parser.add_parser( "remove", help="Remove XSeg from the extracted faces.")
-
+    p = xseg_parser.add_parser( "remove", help="Remove applied XSeg masks from the extracted faces.")
     def process_xsegremove(arguments):
         osex.set_process_lowest_prio()
         from mainscripts import XSegUtil
         XSegUtil.remove_xseg (Path(arguments.input_dir) )
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
     p.set_defaults (func=process_xsegremove)
+    
+    
+    p = xseg_parser.add_parser( "remove_labels", help="Remove XSeg labels from the extracted faces.")
+    def process_xsegremovelabels(arguments):
+        osex.set_process_lowest_prio()
+        from mainscripts import XSegUtil
+        XSegUtil.remove_xseg_labels (Path(arguments.input_dir) )
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
+    p.set_defaults (func=process_xsegremovelabels)
     
     
     p = xseg_parser.add_parser( "fetch", help="Copies faces containing XSeg polygons in <input_dir>_xseg dir.")

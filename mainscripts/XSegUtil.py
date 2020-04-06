@@ -54,20 +54,7 @@ def apply_xseg(input_path, model_path):
         dflimg.set_xseg_mask(mask)
         dflimg.save()
 
-def remove_xseg(input_path):
-    if not input_path.exists():
-        raise ValueError(f'{input_path} not found. Please ensure it exists.')
-                               
-    images_paths = pathex.get_image_paths(input_path, return_Path_class=True)
-    
-    for filepath in io.progress_bar_generator(images_paths, "Processing"):
-        dflimg = DFLIMG.load(filepath)
-        if dflimg is None or not dflimg.has_data():
-            io.log_info(f'{filepath} is not a DFLIMG')
-            continue
-        
-        dflimg.set_xseg_mask(None)
-        dflimg.save()
+
         
 def fetch_xseg(input_path):
     if not input_path.exists():
@@ -94,3 +81,54 @@ def fetch_xseg(input_path):
             shutil.copy ( str(filepath), str(output_path / filepath.name) )
     
     io.log_info(f'Files copied: {files_copied}')
+    
+def remove_xseg(input_path):
+    if not input_path.exists():
+        raise ValueError(f'{input_path} not found. Please ensure it exists.')
+    
+    io.log_info(f'Processing folder {input_path}')
+    io.log_info('!!! WARNING : APPLIED XSEG MASKS WILL BE REMOVED FROM THE FRAMES !!!')
+    io.log_info('!!! WARNING : APPLIED XSEG MASKS WILL BE REMOVED FROM THE FRAMES !!!')
+    io.log_info('!!! WARNING : APPLIED XSEG MASKS WILL BE REMOVED FROM THE FRAMES !!!')
+    io.input_str('Press enter to continue.')
+                               
+    images_paths = pathex.get_image_paths(input_path, return_Path_class=True)
+    
+    files_processed = 0
+    for filepath in io.progress_bar_generator(images_paths, "Processing"):
+        dflimg = DFLIMG.load(filepath)
+        if dflimg is None or not dflimg.has_data():
+            io.log_info(f'{filepath} is not a DFLIMG')
+            continue
+        
+        if dflimg.has_xseg_mask():
+            dflimg.set_xseg_mask(None)
+            dflimg.save()
+            files_processed += 1
+    io.log_info(f'Files processed: {files_processed}')
+    
+def remove_xseg_labels(input_path):
+    if not input_path.exists():
+        raise ValueError(f'{input_path} not found. Please ensure it exists.')
+    
+    io.log_info(f'Processing folder {input_path}')
+    io.log_info('!!! WARNING : LABELED XSEG POLYGONS WILL BE REMOVED FROM THE FRAMES !!!')
+    io.log_info('!!! WARNING : LABELED XSEG POLYGONS WILL BE REMOVED FROM THE FRAMES !!!')
+    io.log_info('!!! WARNING : LABELED XSEG POLYGONS WILL BE REMOVED FROM THE FRAMES !!!')
+    io.input_str('Press enter to continue.')
+    
+    images_paths = pathex.get_image_paths(input_path, return_Path_class=True)
+    
+    files_processed = 0
+    for filepath in io.progress_bar_generator(images_paths, "Processing"):
+        dflimg = DFLIMG.load(filepath)
+        if dflimg is None or not dflimg.has_data():
+            io.log_info(f'{filepath} is not a DFLIMG')
+            continue
+
+        if dflimg.has_seg_ie_polys():
+            dflimg.set_seg_ie_polys(None)
+            dflimg.save()            
+            files_processed += 1
+            
+    io.log_info(f'Files processed: {files_processed}')

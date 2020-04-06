@@ -245,6 +245,9 @@ class DFLJPG(object):
         return None
     def set_image_to_face_mat(self, image_to_face_mat):   self.dfl_dict['image_to_face_mat'] = image_to_face_mat
 
+    def has_seg_ie_polys(self):
+        return self.dfl_dict.get('seg_ie_polys',None) is not None
+        
     def get_seg_ie_polys(self):
         d = self.dfl_dict.get('seg_ie_polys',None)
         if d is not None:
@@ -265,6 +268,9 @@ class DFLJPG(object):
                 seg_ie_polys = None
 
         self.dfl_dict['seg_ie_polys'] = seg_ie_polys
+
+    def has_xseg_mask(self):
+        return self.dfl_dict.get('xseg_mask',None) is not None
 
     def get_xseg_mask(self):
         mask_buf = self.dfl_dict.get('xseg_mask',None)
