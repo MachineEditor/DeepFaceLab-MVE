@@ -101,7 +101,8 @@ class MPSharedList():
 
             ArrayFillerSubprocessor(sh_b, [ (data_offset+offsets[i], obj_pickled_ar[i] ) for i in range(obj_count) ] ).run()
            
-        return obj_count, table_offset, data_offset, sh_b
+            return obj_count, table_offset, data_offset, sh_b
+        return 0, 0, 0, None
         
         
 
