@@ -161,7 +161,9 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 ## Meme zone
 <p align="center">
 
-![](doc/DeepFaceLab_is_working.png)
+![](doc/meme1.jpg)
+
+![](doc/meme2.jpg)
 
 </p>
 
