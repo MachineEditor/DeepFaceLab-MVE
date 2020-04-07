@@ -39,7 +39,7 @@ class DeepFakeArchi(nn.ArchiBase):
                     return x
 
                 def get_out_ch(self):
-                    return (self.out_ch // 4) * 4
+                    return (self.out_ch // 4) * 4 if self.subpixel else self.out_ch
 
             class DownscaleBlock(nn.ModelBase):
                 def on_build(self, in_ch, ch, n_downscales, kernel_size, dilations=1, subpixel=True):
@@ -227,7 +227,7 @@ class DeepFakeArchi(nn.ArchiBase):
                     return x
 
                 def get_out_ch(self):
-                    return (self.out_ch // 4) * 4
+                    return (self.out_ch // 4) * 4 if self.subpixel else self.out_ch
 
             class DownscaleBlock(nn.ModelBase):
                 def on_build(self, in_ch, ch, n_downscales, kernel_size, dilations=1, subpixel=True):
@@ -359,7 +359,7 @@ class DeepFakeArchi(nn.ArchiBase):
                     return x
 
                 def get_out_ch(self):
-                    return (self.out_ch // 4) * 4
+                    return (self.out_ch // 4) * 4 if self.subpixel else self.out_ch
 
             class DownscaleBlock(nn.ModelBase):
                 def on_build(self, in_ch, ch, n_downscales, kernel_size, dilations=1, subpixel=True):
