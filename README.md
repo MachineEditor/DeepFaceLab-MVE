@@ -65,7 +65,7 @@ DeepFaceLab is used by such popular youtube channels as
 </td></tr>
 <tr><td align="center" width="9999">
 
-## Change political speech*
+## Change the lip movement of politicians*
 
 <img src="doc/political_speech.jpg" align="center">
 
