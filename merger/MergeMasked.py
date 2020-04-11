@@ -182,7 +182,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
                 elif cfg.color_transfer_mode == 6: #idt-m
                     prd_face_bgr = imagelib.color_transfer_idt (prd_face_bgr*wrk_face_mask_area_a, dst_face_bgr*wrk_face_mask_area_a)
                 elif cfg.color_transfer_mode == 7: #sot-m
-                    prd_face_bgr = imagelib.color_transfer_sot (prd_face_bgr*wrk_face_mask_area_a, dst_face_bgr*wrk_face_mask_area_a, batch_size=15)
+                    prd_face_bgr = imagelib.color_transfer_sot (prd_face_bgr*wrk_face_mask_area_a, dst_face_bgr*wrk_face_mask_area_a, batch_size=30)
                     prd_face_bgr = np.clip (prd_face_bgr, 0.0, 1.0)
                 elif cfg.color_transfer_mode == 8: #mix-m
                     prd_face_bgr = imagelib.color_transfer_mix (prd_face_bgr*wrk_face_mask_area_a, dst_face_bgr*wrk_face_mask_area_a)
@@ -256,7 +256,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
                 elif cfg.color_transfer_mode == 6: #idt-m
                     out_face_bgr = imagelib.color_transfer_idt (out_face_bgr*wrk_face_mask_area_a, dst_face_bgr*wrk_face_mask_area_a)
                 elif cfg.color_transfer_mode == 7: #sot-m
-                    out_face_bgr = imagelib.color_transfer_sot (out_face_bgr*wrk_face_mask_area_a, dst_face_bgr*wrk_face_mask_area_a, batch_size=15)
+                    out_face_bgr = imagelib.color_transfer_sot (out_face_bgr*wrk_face_mask_area_a, dst_face_bgr*wrk_face_mask_area_a, batch_size=30)
                     out_face_bgr = np.clip (out_face_bgr, 0.0, 1.0)
                 elif cfg.color_transfer_mode == 8: #mix-m
                     out_face_bgr = imagelib.color_transfer_mix (out_face_bgr*wrk_face_mask_area_a, dst_face_bgr*wrk_face_mask_area_a)
