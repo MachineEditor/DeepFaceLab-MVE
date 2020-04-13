@@ -85,10 +85,11 @@ mask_mode_dict = {1:'dst',
                   2:'learned-prd',
                   3:'learned-dst',
                   4:'learned-prd*learned-dst',
-                  5:'XSeg-prd',
-                  6:'XSeg-dst',
-                  7:'XSeg-prd*XSeg-dst',
-                  8:'learned-prd*learned-dst*XSeg-prd*XSeg-dst'
+                  5:'learned-prd+learned-dst',
+                  6:'XSeg-prd',
+                  7:'XSeg-dst',
+                  8:'XSeg-prd*XSeg-dst',
+                  9:'learned-prd*learned-dst*XSeg-prd*XSeg-dst'
                   }
 
 
