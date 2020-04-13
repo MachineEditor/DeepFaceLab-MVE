@@ -995,9 +995,9 @@ class QCanvasOperator(QWidget):
                 if op_mode == OpMode.NONE:
                     if poly == self.mouse_wire_poly:
                         qp.setBrush(color_scheme.poly_selected_brush)
-                else:
-                    if poly == op_poly:
-                        qp.setBrush(color_scheme.poly_selected_brush)
+                #else:
+                #    if poly == op_poly:
+                #        qp.setBrush(color_scheme.poly_selected_brush)
 
                 qp.drawPath(poly_line_path)
 
