@@ -107,8 +107,11 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 
 <tr><td align="center" width="9999">
 
-## Links
+## Mini tutorial
 
+<a href="https://www.youtube.com/watch?v=1smpMsfC3ls"><img src="doc/mini_tutorial.jpg" align="center"></a>
+
+## Links
 
 ||||
 |---|---|---|
