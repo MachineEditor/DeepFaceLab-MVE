@@ -35,8 +35,9 @@ def color_transfer_sot(src,trg, steps=10, batch_size=5, reg_sigmaXY=16.0, reg_si
     h,w,c = src.shape
     new_src = src.copy()
 
+    advect = np.empty ( (h*w,c), dtype=src_dtype )
     for step in range (steps):
-        advect = np.zeros ( (h*w,c), dtype=src_dtype )
+        advect.fill(0)
         for batch in range (batch_size):
             dir = np.random.normal(size=c).astype(src_dtype)
             dir /= npla.norm(dir)
