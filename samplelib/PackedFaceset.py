@@ -121,6 +121,11 @@ class PackedFaceset():
         samples_dat_path.unlink()
 
     @staticmethod
+    def path_contains(samples_path):
+        samples_dat_path = samples_path / packed_faceset_filename
+        return samples_dat_path.exists()
+    
+    @staticmethod
     def load(samples_path):
         samples_dat_path = samples_path / packed_faceset_filename
         if not samples_dat_path.exists():

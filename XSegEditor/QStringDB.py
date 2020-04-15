@@ -60,10 +60,16 @@ class QStringDB():
                                             'zh' : '删除选区',
                                            }[lang]     
                                               
-        QStringDB.btn_pt_edit_mode_tip = {  'en' : 'Edit point mode ( HOLD CTRL )',
-                                            'ru' : 'Режим правки точек',
-                                            'zh' : '编辑点模式 ( 按住CTRL )',
+        QStringDB.btn_pt_edit_mode_tip = {  'en' : 'Add/delete point mode ( HOLD CTRL )',
+                                            'ru' : 'Режим добавления/удаления точек ( удерживайте CTRL )',
+                                            'zh' : '点加/删除模式 ( 按住CTRL )',
                                            }[lang]    
+                                           
+        QStringDB.btn_view_lock_center_tip = { 'en' : 'Lock cursor at the center ( HOLD SHIFT )',
+                                               'ru' : 'Заблокировать курсор в центре ( удерживайте SHIFT )',
+                                               'zh' : '将光标锁定在中心 ( 按住SHIFT )',
+                                             }[lang]                    
+                                        
                                            
         QStringDB.btn_prev_image_tip = {    'en' : 'Save and Prev image\nHold SHIFT : accelerate\nHold CTRL : skip non masked\n',
                                             'ru' : 'Сохранить и предыдущее изображение\nУдерживать SHIFT : ускорить\nУдерживать CTRL : пропустить неразмеченные\n',
