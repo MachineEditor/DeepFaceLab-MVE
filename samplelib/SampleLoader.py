@@ -74,15 +74,17 @@ class SampleLoader:
         result = FaceSamplesLoaderSubprocessor(image_paths).run()
         sample_list = []
 
-        for filename, \
-                ( face_type,
-                  shape,
-                  landmarks,
-                  seg_ie_polys,
-                  xseg_mask,
-                  eyebrows_expand_mod,
-                  source_filename,
-                ) in result:
+        for filename, data in result:
+            if data is None:
+                continue
+            ( face_type,
+              shape,
+              landmarks,
+              seg_ie_polys,
+              xseg_mask,
+              eyebrows_expand_mod,
+              source_filename ) = data
+              
             sample_list.append( Sample(filename=filename,
                                         sample_type=SampleType.FACE,
                                         face_type=FaceType.fromString (face_type),
