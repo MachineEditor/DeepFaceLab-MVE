@@ -1327,6 +1327,8 @@ class MainWindow(QXMainWindow):
             self.loading_frame.resize( ev.size() )
 
 def start(input_dirpath):
+    io.log_info("Running XSeg editor.")
+    
     root_path = Path(__file__).parent
     cfg_root_path = Path(tempfile.gettempdir())
 
