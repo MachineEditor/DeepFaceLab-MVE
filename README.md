@@ -96,7 +96,7 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 
 ||||
 |---|---|---|
-|Windows|[Google drive](https://drive.google.com/open?id=1BCFK_L7lPNwMbEQ_kFPqPpDdFEOd_Dci)|if the download quota is exceeded, add the file to your own google drive and download from it|
+|Windows|[Mega.nz](https://mega.nz/folder/Po0nGQrA#dbbttiNWojCt8jzD4xYaPw)||
 |Google Colab|[github](https://github.com/chervonij/DFL-Colab)|by @chervonij . You can train fakes for free using Google Colab.|
 |CentOS Linux|[github](https://github.com/elemantalcode/dfl)|by @elemantalcode|
 |Linux|[github](https://github.com/lbfs/DeepFaceLab_Linux)|by @lbfs |
