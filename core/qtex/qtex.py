@@ -38,8 +38,8 @@ def QImage_from_np(img):
     
     return QImage(img.data, w, h, c*w, fmt )
         
-def QImage_to_np(q_img):
-    q_img = q_img.convertToFormat(QImage.Format_BGR888)
+def QImage_to_np(q_img, fmt=QImage.Format_BGR888):
+    q_img = q_img.convertToFormat(fmt)
 
     width = q_img.width()
     height = q_img.height()
