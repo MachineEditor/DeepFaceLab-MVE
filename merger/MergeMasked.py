@@ -305,7 +305,9 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
                     else:
                         alpha = cfg.color_degrade_power / 100.0
                         out_img = (out_img*(1.0-alpha) + out_img_reduced*alpha)
-
+        else:
+            out_img = img_bgr.copy()
+            
         out_merging_mask_a = img_face_mask_a
 
     return out_img, out_merging_mask_a
