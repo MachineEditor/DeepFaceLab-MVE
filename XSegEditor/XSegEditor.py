@@ -1141,7 +1141,10 @@ class LoaderQSubprocessor(QSubprocessor):
 class MainWindow(QXMainWindow):
 
     def __init__(self, input_dirpath, cfg_root_path):
+        self.loading_frame = None
+
         super().__init__()
+
         self.input_dirpath = input_dirpath
         self.cfg_root_path = cfg_root_path
 
@@ -1367,7 +1370,7 @@ def start(input_dirpath):
     returns exit_code
     """
     io.log_info("Running XSeg editor.")
-    
+
     if PackedFaceset.path_contains(input_dirpath):
         io.log_info (f'\n{input_dirpath} contains packed faceset! Unpack it first.\n')
         return 1
