@@ -153,9 +153,9 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 ||bitcoin:bc1qkhh7h0gwwhxgg6h6gpllfgstkd645fefrd5s6z|
 |Alipay 捐款|![](doc/Alipay_donation.jpg)|
 |||
-|Last donations|200$ ( Alejandro B. )|
-||10$ ( Mattia R. )|
-||10$ ( Mélio Mascort )|
+|Last donations|20$ ( Michael V. )| 
+||5$ ( Boris H. )|
+||10$ ( John R. )|
 |||
 |Collect facesets|You can collect faceset of any celebrity that can be used in DeepFaceLab and share it [in the community](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|
 |||
