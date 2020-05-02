@@ -393,6 +393,7 @@ class InteractiveMergerSubprocessor(Subprocessor):
                                     # unable to read? recompute then
                                     cur_frame.is_done = False
                                 else:
+                                    image = imagelib.normalize_channels(image, 3)
                                     image_mask = imagelib.normalize_channels(image_mask, 1)
                                     cur_frame.image = np.concatenate([image, image_mask], -1)
 
