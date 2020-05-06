@@ -389,16 +389,14 @@ class DeepFakeArchi(nn.ArchiBase):
 
             class ResidualBlock(nn.ModelBase):
                 def on_build(self, ch, kernel_size=3 ):
-                    self.conv1 = nn.Conv2D( ch, ch*2, kernel_size=kernel_size, padding='SAME')
-                    self.conv2 = nn.Conv2D( ch*2, ch, kernel_size=kernel_size, padding='SAME')
-                    self.scale_add = nn.ScaleAdd(ch)
+                    self.conv1 = nn.Conv2D( ch, ch, kernel_size=kernel_size, padding='SAME')
+                    self.conv2 = nn.Conv2D( ch, ch, kernel_size=kernel_size, padding='SAME')
 
                 def forward(self, inp):
                     x = self.conv1(inp)
                     x = tf.nn.leaky_relu(x, 0.2)
                     x = self.conv2(x)
-                    x = tf.nn.leaky_relu(x, 0.2)
-                    x = self.scale_add([inp, x])
+                    x = tf.nn.leaky_relu(inp + x, 0.2)
                     return x
 
             class Encoder(nn.ModelBase):
