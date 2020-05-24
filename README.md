@@ -1,6 +1,14 @@
 ﻿<table align="center" border="0"><tr><td align="center" width="9999">
 
 # DeepFaceLab  
+
+
+<a href="https://arxiv.org/abs/2005.05535">
+
+<img src="https://static.arxiv.org/static/browse/0.3.0/images/icons/favicon.ico" width=14></img>
+https://arxiv.org/abs/2005.05535</a>
+
+
 ### the leading software for creating deepfakes
 
 <img src="doc/DFL_welcome.png" align="center">
@@ -153,7 +161,7 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 ||bitcoin:bc1qkhh7h0gwwhxgg6h6gpllfgstkd645fefrd5s6z|
 |Alipay 捐款|![](doc/Alipay_donation.jpg)|
 |||
-|Last donations||
+|Last donations|-|
 |||
 |Collect facesets|You can collect faceset of any celebrity that can be used in DeepFaceLab and share it [in the community](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|
 |||
