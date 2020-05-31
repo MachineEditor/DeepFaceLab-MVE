@@ -35,6 +35,7 @@ class OpMode(IntEnum):
     EDIT_PTS = 2
     VIEW_BAKED = 3
     VIEW_XSEG_MASK = 4
+    VIEW_XSEG_OVERLAY_MASK = 5
 
 class PTEditMode(IntEnum):
     MOVE = 0
@@ -89,39 +90,39 @@ class ImagePreviewSequenceBar(QFrame):
     def get_preview_images_count(self):
         return self.preview_images_count
 
-    def update_images(self, prev_q_imgs=None, next_q_imgs=None):
+    def update_images(self, prev_imgs=None, next_imgs=None):
         # Fix arrays
-        if prev_q_imgs is None:
-            prev_q_imgs = []
+        if prev_imgs is None:
+            prev_imgs = []
         prev_img_conts_len = len(self.prev_img_conts)
-        prev_q_imgs_len = len(prev_q_imgs)
+        prev_q_imgs_len = len(prev_imgs)
         if prev_q_imgs_len < prev_img_conts_len:
             for i in range ( prev_img_conts_len - prev_q_imgs_len ):
-                prev_q_imgs.append(None)
+                prev_imgs.append(None)
         elif prev_q_imgs_len > prev_img_conts_len:
-            prev_q_imgs = prev_q_imgs[:prev_img_conts_len]
+            prev_imgs = prev_imgs[:prev_img_conts_len]
 
-        if next_q_imgs is None:
-            next_q_imgs = []
+        if next_imgs is None:
+            next_imgs = []
         next_img_conts_len = len(self.next_img_conts)
-        next_q_imgs_len = len(next_q_imgs)
+        next_q_imgs_len = len(next_imgs)
         if next_q_imgs_len < next_img_conts_len:
             for i in range ( next_img_conts_len - next_q_imgs_len ):
-                next_q_imgs.append(None)
+                next_imgs.append(None)
         elif next_q_imgs_len > next_img_conts_len:
-            next_q_imgs = next_q_imgs[:next_img_conts_len]
+            next_imgs = next_imgs[:next_img_conts_len]
 
-        for i,q_img in enumerate(prev_q_imgs):
-            if q_img is None:
+        for i,img in enumerate(prev_imgs):
+            if img is None:
                 self.prev_img_conts[i].setPixmap( self.black_q_pixmap )
             else:
-                self.prev_img_conts[i].setPixmap( QPixmap.fromImage(q_img) )
+                self.prev_img_conts[i].setPixmap( QPixmap.fromImage( QImage_from_np(img) ) )
 
-        for i,q_img in enumerate(next_q_imgs):
-            if q_img is None:
+        for i,img in enumerate(next_imgs):
+            if img is None:
                 self.next_img_conts[i].setPixmap( self.black_q_pixmap )
             else:
-                self.next_img_conts[i].setPixmap( QPixmap.fromImage(q_img) )
+                self.next_img_conts[i].setPixmap( QPixmap.fromImage( QImage_from_np(img) ) )
 
 class ColorScheme():
     def __init__(self, unselected_color, selected_color, outline_color, outline_width, pt_outline_color, cross_cursor):
@@ -255,6 +256,11 @@ class QCanvasControlsRightBar(QFrame):
         self.btn_view_xseg_mask_act = QActionEx( QIconDB.view_xseg, QStringDB.btn_view_xseg_mask_tip, shortcut='5', shortcut_in_tooltip=True, is_checkable=True)
         btn_view_xseg_mask.setDefaultAction(self.btn_view_xseg_mask_act)
         btn_view_xseg_mask.setIconSize(QUIConfig.icon_q_size)
+        
+        btn_view_xseg_overlay_mask = QToolButton()
+        self.btn_view_xseg_overlay_mask_act = QActionEx( QIconDB.view_xseg_overlay, QStringDB.btn_view_xseg_overlay_mask_tip, shortcut='6', shortcut_in_tooltip=True, is_checkable=True)
+        btn_view_xseg_overlay_mask.setDefaultAction(self.btn_view_xseg_overlay_mask_act)
+        btn_view_xseg_overlay_mask.setIconSize(QUIConfig.icon_q_size)
 
         self.btn_poly_color_act_grp = QActionGroup (self)
         self.btn_poly_color_act_grp.addAction(self.btn_poly_color_red_act)
@@ -262,6 +268,7 @@ class QCanvasControlsRightBar(QFrame):
         self.btn_poly_color_act_grp.addAction(self.btn_poly_color_blue_act)
         self.btn_poly_color_act_grp.addAction(self.btn_view_baked_mask_act)
         self.btn_poly_color_act_grp.addAction(self.btn_view_xseg_mask_act)
+        self.btn_poly_color_act_grp.addAction(self.btn_view_xseg_overlay_mask_act)
         self.btn_poly_color_act_grp.setExclusive(True)
         #==============================================
         btn_view_lock_center = QToolButton()
@@ -275,6 +282,7 @@ class QCanvasControlsRightBar(QFrame):
         controls_bar_frame1_l.addWidget ( btn_poly_color_blue )
         controls_bar_frame1_l.addWidget ( btn_view_baked_mask )
         controls_bar_frame1_l.addWidget ( btn_view_xseg_mask )
+        controls_bar_frame1_l.addWidget ( btn_view_xseg_overlay_mask )
         controls_bar_frame1 = QFrame()
         controls_bar_frame1.setFrameShape(QFrame.StyledPanel)
         controls_bar_frame1.setSizePolicy (QSizePolicy.Fixed, QSizePolicy.Fixed)
@@ -307,7 +315,8 @@ class QCanvasOperator(QWidget):
         self.cbar.btn_poly_color_blue_act.triggered.connect ( lambda : self.set_color_scheme_id(2) )
         self.cbar.btn_view_baked_mask_act.toggled.connect ( lambda : self.set_op_mode(OpMode.VIEW_BAKED) )
         self.cbar.btn_view_xseg_mask_act.toggled.connect ( self.set_view_xseg_mask )
-
+        self.cbar.btn_view_xseg_overlay_mask_act.toggled.connect ( self.set_view_xseg_overlay_mask )
+        
         self.cbar.btn_poly_type_include_act.triggered.connect ( lambda : self.set_poly_include_type(SegIEPolyType.INCLUDE) )
         self.cbar.btn_poly_type_exclude_act.triggered.connect ( lambda : self.set_poly_include_type(SegIEPolyType.EXCLUDE) )
 
@@ -328,17 +337,22 @@ class QCanvasOperator(QWidget):
         self.initialized = False
         self.last_state = None
 
-    def initialize(self, q_img, img_look_pt=None, view_scale=None, ie_polys=None, xseg_mask=None, canvas_config=None ):
-        self.q_img = q_img
+    def initialize(self, img, img_look_pt=None, view_scale=None, ie_polys=None, xseg_mask=None, canvas_config=None ):
+        q_img = self.q_img = QImage_from_np(img)
         self.img_pixmap = QPixmap.fromImage(q_img)
 
         self.xseg_mask_pixmap = None
         if xseg_mask is not None:
-            w,h = QSize_to_np ( q_img.size() )
+            h,w,c = img.shape
             xseg_mask = cv2.resize(xseg_mask, (w,h), cv2.INTER_CUBIC)
-            xseg_mask = (imagelib.normalize_channels(xseg_mask, 1) * 255).astype(np.uint8)
-            self.xseg_mask_pixmap = QPixmap.fromImage(QImage_from_np(xseg_mask))
-
+            xseg_mask = imagelib.normalize_channels(xseg_mask, 1)            
+            xseg_img = img.astype(np.float32)/255.0
+            xseg_overlay_mask = xseg_img*(1-xseg_mask)*0.5 + xseg_img*xseg_mask
+            xseg_overlay_mask = np.clip(xseg_overlay_mask*255, 0, 255).astype(np.uint8)            
+            xseg_mask = np.clip(xseg_mask*255, 0, 255).astype(np.uint8)            
+            self.xseg_mask_pixmap = QPixmap.fromImage(QImage_from_np(xseg_mask))            
+            self.xseg_overlay_mask_pixmap = QPixmap.fromImage(QImage_from_np(xseg_overlay_mask))
+            
         self.img_size = QSize_to_np (self.img_pixmap.size())
 
         self.img_look_pt = img_look_pt
@@ -389,7 +403,7 @@ class QCanvasOperator(QWidget):
             if self.op_mode == OpMode.DRAW_PTS:
                 self.set_op_mode(OpMode.EDIT_PTS)
 
-            self.last_state = sn(op_mode = self.op_mode if self.op_mode in [OpMode.VIEW_BAKED, OpMode.VIEW_XSEG_MASK] else None,
+            self.last_state = sn(op_mode = self.op_mode if self.op_mode in [OpMode.VIEW_BAKED, OpMode.VIEW_XSEG_MASK, OpMode.VIEW_XSEG_OVERLAY_MASK] else None,
                                  color_scheme_id = self.color_scheme_id,
                                )
 
@@ -521,7 +535,9 @@ class QCanvasOperator(QWidget):
                 self.cbar.btn_view_baked_mask_act.setChecked(False)
             elif self.op_mode == OpMode.VIEW_XSEG_MASK:
                 self.cbar.btn_view_xseg_mask_act.setChecked(False)
-
+            elif self.op_mode == OpMode.VIEW_XSEG_OVERLAY_MASK:
+                self.cbar.btn_view_xseg_overlay_mask_act.setChecked(False)
+                
             self.op_mode = op_mode
 
             # Initialize new mode
@@ -544,6 +560,9 @@ class QCanvasOperator(QWidget):
                 self.img_baked_pixmap = QPixmap.fromImage(QImage_from_np(n))
             elif op_mode == OpMode.VIEW_XSEG_MASK:
                 self.cbar.btn_view_xseg_mask_act.setChecked(True)
+            elif op_mode == OpMode.VIEW_XSEG_OVERLAY_MASK:
+                self.cbar.btn_view_xseg_overlay_mask_act.setChecked(True)
+                
             if op_mode in [OpMode.DRAW_PTS, OpMode.EDIT_PTS]:
                 self.mouse_op_poly_pt_id = None
                 self.mouse_op_poly_edge_id = None
@@ -617,6 +636,13 @@ class QCanvasOperator(QWidget):
 
         self.cbar.btn_view_xseg_mask_act.setChecked(is_checked )
 
+    def set_view_xseg_overlay_mask(self, is_checked):
+        if is_checked:
+            self.set_op_mode(OpMode.VIEW_XSEG_OVERLAY_MASK)
+        else:
+            self.set_op_mode(OpMode.NONE)
+
+        self.cbar.btn_view_xseg_overlay_mask_act.setChecked(is_checked )
 
     # ====================================================================================
     # ====================================================================================
@@ -936,6 +962,11 @@ class QCanvasOperator(QWidget):
                 src_rect = QRect(0, 0, *self.img_size)
                 dst_rect = self.img_to_cli_rect( src_rect )
                 qp.drawPixmap(dst_rect, self.xseg_mask_pixmap, src_rect)
+        elif self.op_mode == OpMode.VIEW_XSEG_OVERLAY_MASK:
+            if self.xseg_overlay_mask_pixmap is not None:
+                src_rect = QRect(0, 0, *self.img_size)
+                dst_rect = self.img_to_cli_rect( src_rect )
+                qp.drawPixmap(dst_rect, self.xseg_overlay_mask_pixmap, src_rect)
         else:
             if self.img_pixmap is not None:
                 src_rect = QRect(0, 0, *self.img_size)
@@ -1061,6 +1092,7 @@ class QCanvas(QFrame):
                    btn_poly_color_blue_act  = self.canvas_control_right_bar.btn_poly_color_blue_act,
                    btn_view_baked_mask_act  = self.canvas_control_right_bar.btn_view_baked_mask_act,
                    btn_view_xseg_mask_act  = self.canvas_control_right_bar.btn_view_xseg_mask_act,
+                   btn_view_xseg_overlay_mask_act  = self.canvas_control_right_bar.btn_view_xseg_overlay_mask_act,
                    btn_poly_color_act_grp = self.canvas_control_right_bar.btn_poly_color_act_grp,
                    btn_view_lock_center_act = self.canvas_control_right_bar.btn_view_lock_center_act,
 
@@ -1151,7 +1183,7 @@ class MainWindow(QXMainWindow):
         self.cfg_path = cfg_root_path / 'MainWindow_cfg.dat'
         self.cfg_dict = pickle.loads(self.cfg_path.read_bytes()) if self.cfg_path.exists() else {}
 
-        self.cached_QImages = {}
+        self.cached_images = {}
         self.cached_has_ie_polys = {}
 
         self.initialize_ui()
@@ -1188,7 +1220,7 @@ class MainWindow(QXMainWindow):
 
 
     def update_cached_images (self, count=5):
-        d = self.cached_QImages
+        d = self.cached_images
 
         for image_path in self.image_paths_done[:-count]+self.image_paths[count:]:
             if image_path in d:
@@ -1198,13 +1230,14 @@ class MainWindow(QXMainWindow):
             if image_path not in d:
                 img = cv2_imread(image_path)
                 if img is not None:
-                    d[image_path] = QImage_from_np(img)
+                    d[image_path] = img
 
-    def load_QImage(self, image_path):
+    def load_image(self, image_path):
         try:
-            img = self.cached_QImages.get(image_path, None)
+            img = self.cached_images.get(image_path, None)
             if img is None:
-                img = QImage_from_np(cv2_imread(image_path))
+                img = cv2_imread(image_path)
+                self.cached_images[image_path] = img
             if img is None:
                 io.log_err(f'Unable to load {image_path}')
         except:
@@ -1214,10 +1247,10 @@ class MainWindow(QXMainWindow):
 
     def update_preview_bar(self):
         count = self.image_bar.get_preview_images_count()
-        d = self.cached_QImages
-        prev_q_imgs = [ d.get(image_path, None) for image_path in self.image_paths_done[-1:-count:-1] ]
-        next_q_imgs = [ d.get(image_path, None) for image_path in self.image_paths[:count] ]
-        self.image_bar.update_images(prev_q_imgs, next_q_imgs)
+        d = self.cached_images
+        prev_imgs = [ d.get(image_path, None) for image_path in self.image_paths_done[-1:-count:-1] ]
+        next_imgs = [ d.get(image_path, None) for image_path in self.image_paths[:count] ]
+        self.image_bar.update_images(prev_imgs, next_imgs)
 
 
     def canvas_initialize(self, image_path, only_has_polys=False):
@@ -1230,11 +1263,11 @@ class MainWindow(QXMainWindow):
 
         ie_polys = dflimg.get_seg_ie_polys()
         xseg_mask = dflimg.get_xseg_mask()
-        q_img = self.load_QImage(image_path)
-        if q_img is None:
+        img = self.load_image(image_path)
+        if img is None:
             return False
 
-        self.canvas.op.initialize ( q_img,  ie_polys=ie_polys, xseg_mask=xseg_mask )
+        self.canvas.op.initialize ( img,  ie_polys=ie_polys, xseg_mask=xseg_mask )
 
         self.filename_label.setText(str(image_path.name))
 

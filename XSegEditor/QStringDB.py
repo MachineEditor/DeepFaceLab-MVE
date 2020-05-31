@@ -34,6 +34,11 @@ class QStringDB():
                                                 'ru' : 'Посмотреть тренированную XSeg маску',
                                                 'zh' : '查看导入后的XSeg遮罩',
                                             }[lang]
+                                            
+        QStringDB.btn_view_xseg_overlay_mask_tip =  {   'en' : 'View trained XSeg mask overlay face',
+                                                        'ru' : 'Посмотреть тренированную XSeg маску поверх лица',
+                                                        'zh' : '查看导入后的XSeg遮罩于脸上方',
+                                                    }[lang]
                                            
         QStringDB.btn_poly_type_include_tip = { 'en' : 'Poly include mode',
                                                 'ru' : 'Режим полигонов - включение',
