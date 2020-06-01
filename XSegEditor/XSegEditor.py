@@ -256,7 +256,7 @@ class QCanvasControlsRightBar(QFrame):
         self.btn_view_xseg_mask_act = QActionEx( QIconDB.view_xseg, QStringDB.btn_view_xseg_mask_tip, shortcut='5', shortcut_in_tooltip=True, is_checkable=True)
         btn_view_xseg_mask.setDefaultAction(self.btn_view_xseg_mask_act)
         btn_view_xseg_mask.setIconSize(QUIConfig.icon_q_size)
-        
+
         btn_view_xseg_overlay_mask = QToolButton()
         self.btn_view_xseg_overlay_mask_act = QActionEx( QIconDB.view_xseg_overlay, QStringDB.btn_view_xseg_overlay_mask_tip, shortcut='6', shortcut_in_tooltip=True, is_checkable=True)
         btn_view_xseg_overlay_mask.setDefaultAction(self.btn_view_xseg_overlay_mask_act)
@@ -316,7 +316,7 @@ class QCanvasOperator(QWidget):
         self.cbar.btn_view_baked_mask_act.toggled.connect ( lambda : self.set_op_mode(OpMode.VIEW_BAKED) )
         self.cbar.btn_view_xseg_mask_act.toggled.connect ( self.set_view_xseg_mask )
         self.cbar.btn_view_xseg_overlay_mask_act.toggled.connect ( self.set_view_xseg_overlay_mask )
-        
+
         self.cbar.btn_poly_type_include_act.triggered.connect ( lambda : self.set_poly_include_type(SegIEPolyType.INCLUDE) )
         self.cbar.btn_poly_type_exclude_act.triggered.connect ( lambda : self.set_poly_include_type(SegIEPolyType.EXCLUDE) )
 
@@ -342,17 +342,18 @@ class QCanvasOperator(QWidget):
         self.img_pixmap = QPixmap.fromImage(q_img)
 
         self.xseg_mask_pixmap = None
+        self.xseg_overlay_mask_pixmap = None
         if xseg_mask is not None:
             h,w,c = img.shape
             xseg_mask = cv2.resize(xseg_mask, (w,h), cv2.INTER_CUBIC)
-            xseg_mask = imagelib.normalize_channels(xseg_mask, 1)            
+            xseg_mask = imagelib.normalize_channels(xseg_mask, 1)
             xseg_img = img.astype(np.float32)/255.0
             xseg_overlay_mask = xseg_img*(1-xseg_mask)*0.5 + xseg_img*xseg_mask
-            xseg_overlay_mask = np.clip(xseg_overlay_mask*255, 0, 255).astype(np.uint8)            
-            xseg_mask = np.clip(xseg_mask*255, 0, 255).astype(np.uint8)            
-            self.xseg_mask_pixmap = QPixmap.fromImage(QImage_from_np(xseg_mask))            
+            xseg_overlay_mask = np.clip(xseg_overlay_mask*255, 0, 255).astype(np.uint8)
+            xseg_mask = np.clip(xseg_mask*255, 0, 255).astype(np.uint8)
+            self.xseg_mask_pixmap = QPixmap.fromImage(QImage_from_np(xseg_mask))
             self.xseg_overlay_mask_pixmap = QPixmap.fromImage(QImage_from_np(xseg_overlay_mask))
-            
+
         self.img_size = QSize_to_np (self.img_pixmap.size())
 
         self.img_look_pt = img_look_pt
@@ -537,7 +538,7 @@ class QCanvasOperator(QWidget):
                 self.cbar.btn_view_xseg_mask_act.setChecked(False)
             elif self.op_mode == OpMode.VIEW_XSEG_OVERLAY_MASK:
                 self.cbar.btn_view_xseg_overlay_mask_act.setChecked(False)
-                
+
             self.op_mode = op_mode
 
             # Initialize new mode
@@ -562,7 +563,7 @@ class QCanvasOperator(QWidget):
                 self.cbar.btn_view_xseg_mask_act.setChecked(True)
             elif op_mode == OpMode.VIEW_XSEG_OVERLAY_MASK:
                 self.cbar.btn_view_xseg_overlay_mask_act.setChecked(True)
-                
+
             if op_mode in [OpMode.DRAW_PTS, OpMode.EDIT_PTS]:
                 self.mouse_op_poly_pt_id = None
                 self.mouse_op_poly_edge_id = None
@@ -952,25 +953,19 @@ class QCanvasOperator(QWidget):
         qp.setRenderHint(QPainter.HighQualityAntialiasing)
         qp.setRenderHint(QPainter.SmoothPixmapTransform)
 
-        if self.op_mode == OpMode.VIEW_BAKED:
+        src_rect = QRect(0, 0, *self.img_size)
+        dst_rect = self.img_to_cli_rect( src_rect )
 
-            src_rect = QRect(0, 0, *self.img_size)
-            dst_rect = self.img_to_cli_rect( src_rect )
+        if self.op_mode == OpMode.VIEW_BAKED:
             qp.drawPixmap(dst_rect, self.img_baked_pixmap, src_rect)
         elif self.op_mode == OpMode.VIEW_XSEG_MASK:
             if self.xseg_mask_pixmap is not None:
-                src_rect = QRect(0, 0, *self.img_size)
-                dst_rect = self.img_to_cli_rect( src_rect )
                 qp.drawPixmap(dst_rect, self.xseg_mask_pixmap, src_rect)
         elif self.op_mode == OpMode.VIEW_XSEG_OVERLAY_MASK:
             if self.xseg_overlay_mask_pixmap is not None:
-                src_rect = QRect(0, 0, *self.img_size)
-                dst_rect = self.img_to_cli_rect( src_rect )
                 qp.drawPixmap(dst_rect, self.xseg_overlay_mask_pixmap, src_rect)
         else:
             if self.img_pixmap is not None:
-                src_rect = QRect(0, 0, *self.img_size)
-                dst_rect = self.img_to_cli_rect( src_rect )
                 qp.drawPixmap(dst_rect, self.img_pixmap, src_rect)
 
             polys = self.ie_polys.get_polys()
