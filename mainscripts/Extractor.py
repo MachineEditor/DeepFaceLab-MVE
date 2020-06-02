@@ -10,6 +10,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+from numpy import linalg as npla
 
 import facelib
 from core import imagelib
@@ -94,7 +95,7 @@ class ExtractSubprocessor(Subprocessor):
                 self.cached_image = ( filepath, image )
 
             h, w, c = image.shape
-            
+
             dflimg = DFLIMG.load (filepath)
             extract_from_dflimg = (h == w and (dflimg is not None and dflimg.has_data()) )
 
@@ -302,16 +303,16 @@ class ExtractSubprocessor(Subprocessor):
             if not cpu_only:
                 if type == 'landmarks-manual':
                     devices = [devices.get_best_device()]
-                
+
                 result = []
-                
+
                 for device in devices:
                     count = 1
-                    
+
                     if count == 1:
                         result += [ (device.index, 'GPU', device.name, device.total_mem_gb) ]
                     else:
-                        for i in range(count):                            
+                        for i in range(count):
                             result += [ (device.index, 'GPU', f"{device.name} #{i}", device.total_mem_gb) ]
 
                 return result
@@ -358,6 +359,7 @@ class ExtractSubprocessor(Subprocessor):
             self.cache_text_lines_img = (None, None)
             self.hide_help = False
             self.landmarks_accurate = True
+            self.force_landmarks = False
 
             self.landmarks = None
             self.x = 0
@@ -397,7 +399,6 @@ class ExtractSubprocessor(Subprocessor):
     def get_data(self, host_dict):
         if self.type == 'landmarks-manual':
             need_remark_face = False
-            redraw_needed = False
             while len (self.input_data) > 0:
                 data = self.input_data[0]
                 filepath, data_rects, data_landmarks = data.filepath, data.rects, data.landmarks
@@ -410,11 +411,12 @@ class ExtractSubprocessor(Subprocessor):
                         self.landmarks = data_landmarks.pop()
                         data_rects.clear()
                         data_landmarks.clear()
-                        redraw_needed = True
+
                         self.rect_locked = True
                         self.rect_size = ( self.rect[2] - self.rect[0] ) / 2
                         self.x = ( self.rect[0] + self.rect[2] ) / 2
                         self.y = ( self.rect[1] + self.rect[3] ) / 2
+                        self.redraw()
 
                 if len(data_rects) == 0:
                     if self.cache_original_image[0] == filepath:
@@ -440,8 +442,8 @@ class ExtractSubprocessor(Subprocessor):
                         self.text_lines_img = self.cache_text_lines_img[1]
                     else:
                         self.text_lines_img = (imagelib.get_draw_text_lines ( self.image, sh,
-                                                        [   '[Mouse click] - lock/unlock selection',
-                                                            '[Mouse wheel] - change rect',
+                                                        [   '[L Mouse click] - lock/unlock selection. [Mouse wheel] - change rect',
+                                                            '[R Mouse Click] - manual face rectangle',
                                                             '[Enter] / [Space] - confirm / skip frame',
                                                             '[,] [.]- prev frame, next frame. [Q] - skip remaining frames',
                                                             '[a] - accuracy on/off (more fps)',
@@ -453,8 +455,10 @@ class ExtractSubprocessor(Subprocessor):
                     while True:
                         io.process_messages(0.0001)
 
-                        new_x = self.x
-                        new_y = self.y
+                        if not self.force_landmarks:
+                            new_x = self.x
+                            new_y = self.y
+
                         new_rect_size = self.rect_size
 
                         mouse_events = io.get_mouse_events(self.wnd_name)
@@ -465,8 +469,19 @@ class ExtractSubprocessor(Subprocessor):
                                 diff = 1 if new_rect_size <= 40 else np.clip(new_rect_size / 10, 1, 10)
                                 new_rect_size = max (5, new_rect_size + diff*mod)
                             elif ev == io.EVENT_LBUTTONDOWN:
-                                self.rect_locked = not self.rect_locked
-                                self.extract_needed = True
+                                if self.force_landmarks:
+                                    self.x = new_x
+                                    self.y = new_y
+                                    self.force_landmarks = False
+                                    self.rect_locked = True
+                                    self.redraw()
+                                else:
+                                    self.rect_locked = not self.rect_locked
+                                    self.extract_needed = True
+                            elif ev == io.EVENT_RBUTTONDOWN:
+                                self.force_landmarks = not self.force_landmarks
+                                if self.force_landmarks:
+                                    self.rect_locked = False
                             elif not self.rect_locked:
                                 new_x = np.clip (x, 0, w-1) / self.view_scale
                                 new_y = np.clip (y, 0, h-1) / self.view_scale
@@ -532,11 +547,35 @@ class ExtractSubprocessor(Subprocessor):
                             self.landmarks_accurate = not self.landmarks_accurate
                             break
 
-                        if self.x != new_x or \
+                        if self.force_landmarks:
+                            pt2 = np.float32([new_x, new_y])
+                            pt1 = np.float32([self.x, self.y])
+
+                            pt_vec_len = npla.norm(pt2-pt1)
+                            pt_vec = pt2-pt1
+                            if pt_vec_len != 0:
+                                pt_vec /= pt_vec_len
+
+                            self.rect_size = pt_vec_len
+                            self.rect = ( int(self.x-self.rect_size),
+                                          int(self.y-self.rect_size),
+                                          int(self.x+self.rect_size),
+                                          int(self.y+self.rect_size) )
+
+                            if pt_vec_len > 0:
+                                lmrks = np.concatenate ( (np.zeros ((17,2), np.float32), LandmarksProcessor.landmarks_2D), axis=0 )
+                                lmrks -= lmrks[30:31,:]
+                                mat = cv2.getRotationMatrix2D( (0, 0), -np.arctan2( pt_vec[1], pt_vec[0] )*180/math.pi , pt_vec_len)
+                                mat[:, 2] += (self.x, self.y)
+                                self.landmarks = LandmarksProcessor.transform_points(lmrks, mat )
+
+
+                            self.redraw()
+
+                        elif self.x != new_x or \
                            self.y != new_y or \
                            self.rect_size != new_rect_size or \
-                           self.extract_needed or \
-                           redraw_needed:
+                           self.extract_needed:
                             self.x = new_x
                             self.y = new_y
                             self.rect_size = new_rect_size
@@ -545,11 +584,7 @@ class ExtractSubprocessor(Subprocessor):
                                           int(self.x+self.rect_size),
                                           int(self.y+self.rect_size) )
 
-                            if redraw_needed:
-                                redraw_needed = False
-                                return ExtractSubprocessor.Data (filepath, landmarks_accurate=self.landmarks_accurate)
-                            else:
-                                return ExtractSubprocessor.Data (filepath, rects=[self.rect], landmarks_accurate=self.landmarks_accurate)
+                            return ExtractSubprocessor.Data (filepath, rects=[self.rect], landmarks_accurate=self.landmarks_accurate)
 
                 else:
                     is_frame_done = True
@@ -571,6 +606,40 @@ class ExtractSubprocessor(Subprocessor):
         if not self.type != 'landmarks-manual':
             self.input_data.insert(0, data)
 
+    def redraw(self):
+        (h,w,c) = self.image.shape
+
+        if not self.hide_help:
+            image = cv2.addWeighted (self.image,1.0,self.text_lines_img,1.0,0)
+        else:
+            image = self.image.copy()
+
+        view_rect = (np.array(self.rect) * self.view_scale).astype(np.int).tolist()
+        view_landmarks  = (np.array(self.landmarks) * self.view_scale).astype(np.int).tolist()
+
+        if self.rect_size <= 40:
+            scaled_rect_size = h // 3 if w > h else w // 3
+
+            p1 = (self.x - self.rect_size, self.y - self.rect_size)
+            p2 = (self.x + self.rect_size, self.y - self.rect_size)
+            p3 = (self.x - self.rect_size, self.y + self.rect_size)
+
+            wh = h if h < w else w
+            np1 = (w / 2 - wh / 4, h / 2 - wh / 4)
+            np2 = (w / 2 + wh / 4, h / 2 - wh / 4)
+            np3 = (w / 2 - wh / 4, h / 2 + wh / 4)
+
+            mat = cv2.getAffineTransform( np.float32([p1,p2,p3])*self.view_scale, np.float32([np1,np2,np3]) )
+            image = cv2.warpAffine(image, mat,(w,h) )
+            view_landmarks = LandmarksProcessor.transform_points (view_landmarks, mat)
+
+        landmarks_color = (255,255,0) if self.rect_locked else (0,255,0)
+        LandmarksProcessor.draw_rect_landmarks (image, view_rect, view_landmarks, self.face_type, self.image_size, landmarks_color=landmarks_color)
+        self.extract_needed = False
+
+        io.show_image (self.wnd_name, image)
+
+
     #override
     def on_result (self, host_dict, data, result):
         if self.type == 'landmarks-manual':
@@ -579,37 +648,7 @@ class ExtractSubprocessor(Subprocessor):
             if len(landmarks) != 0 and landmarks[0] is not None:
                 self.landmarks = landmarks[0]
 
-            (h,w,c) = self.image.shape
-
-            if not self.hide_help:
-                image = cv2.addWeighted (self.image,1.0,self.text_lines_img,1.0,0)
-            else:
-                image = self.image.copy()
-
-            view_rect = (np.array(self.rect) * self.view_scale).astype(np.int).tolist()
-            view_landmarks  = (np.array(self.landmarks) * self.view_scale).astype(np.int).tolist()
-
-            if self.rect_size <= 40:
-                scaled_rect_size = h // 3 if w > h else w // 3
-
-                p1 = (self.x - self.rect_size, self.y - self.rect_size)
-                p2 = (self.x + self.rect_size, self.y - self.rect_size)
-                p3 = (self.x - self.rect_size, self.y + self.rect_size)
-
-                wh = h if h < w else w
-                np1 = (w / 2 - wh / 4, h / 2 - wh / 4)
-                np2 = (w / 2 + wh / 4, h / 2 - wh / 4)
-                np3 = (w / 2 - wh / 4, h / 2 + wh / 4)
-
-                mat = cv2.getAffineTransform( np.float32([p1,p2,p3])*self.view_scale, np.float32([np1,np2,np3]) )
-                image = cv2.warpAffine(image, mat,(w,h) )
-                view_landmarks = LandmarksProcessor.transform_points (view_landmarks, mat)
-
-            landmarks_color = (255,255,0) if self.rect_locked else (0,255,0)
-            LandmarksProcessor.draw_rect_landmarks (image, view_rect, view_landmarks, self.face_type, self.image_size, landmarks_color=landmarks_color)
-            self.extract_needed = False
-
-            io.show_image (self.wnd_name, image)
+            self.redraw()
         else:
             self.result.append ( result )
             io.progress_bar_inc(1)
@@ -690,14 +729,14 @@ def main(detector=None,
          cpu_only = False,
          force_gpu_idxs = None,
          ):
-         
+
     if not input_path.exists():
         io.log_err ('Input directory not found. Please ensure it exists.')
         return
 
     if face_type is not None:
         face_type = FaceType.fromString(face_type)
-        
+
     if face_type is None:
         if manual_output_debug_fix and output_path.exists():
             files = pathex.get_image_paths(output_path)
@@ -705,14 +744,14 @@ def main(detector=None,
                 dflimg = DFLIMG.load(Path(files[0]))
                 if dflimg is not None and dflimg.has_data():
                      face_type = FaceType.fromString ( dflimg.get_face_type() )
-                
+
     if face_type is None:
         face_type = io.input_str ("Face type", 'wf', ['f','wf','head'], help_message="Full face / whole face / head. 'Whole face' covers full area of face include forehead. 'head' covers full head, but requires XSeg for src and dst faceset.").lower()
         face_type = {'f'  : FaceType.FULL,
                      'wf' : FaceType.WHOLE_FACE,
                      'head' : FaceType.HEAD}[face_type]
 
-    image_size = 512 if face_type < FaceType.HEAD else 768    
+    image_size = 512 if face_type < FaceType.HEAD else 768
 
     if detector is None:
         io.log_info ("Choose detector type.")
