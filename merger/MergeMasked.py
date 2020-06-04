@@ -232,6 +232,10 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
 
                 cfg_mp = cfg.motion_blur_power / 100.0
 
+                # linux opencv can produce nan's so there will be errors in multiplying and glitches in videos
+                img_bgr = np.nan_to_num(img_bgr)
+                img_face_mask_a = np.nan_to_num(img_face_mask_a)
+                out_img = np.nan_to_num(out_img)
                 out_img = img_bgr*(1-img_face_mask_a) + (out_img*img_face_mask_a)
 
                 if ('seamless' in cfg.mode and cfg.color_transfer_mode != 0) or \
