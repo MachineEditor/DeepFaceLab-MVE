@@ -31,9 +31,7 @@ goods or services; loss of use, data, or profits; or business interruption) howe
 import numpy as np
 import cv2
 from math import atan2, pi
-from scipy.ndimage import convolve
-from skimage.filters.edges import HSOBEL_WEIGHTS
-from skimage.feature import canny
+
 
 def sobel(image):
     # type: (numpy.ndarray) -> numpy.ndarray
@@ -42,10 +40,11 @@ def sobel(image):
 
     Inspired by the [Octave implementation](https://sourceforge.net/p/octave/image/ci/default/tree/inst/edge.m#l196).
     """
-
+    from skimage.filters.edges import HSOBEL_WEIGHTS
     h1 = np.array(HSOBEL_WEIGHTS)
     h1 /= np.sum(abs(h1))  # normalize h1
-
+    
+    from scipy.ndimage import convolve
     strength2 = np.square(convolve(image, h1.T))
 
     # Note: https://sourceforge.net/p/octave/image/ci/default/tree/inst/edge.m#l59
@@ -103,6 +102,7 @@ def compute(image):
     # edge detection using canny and sobel canny edge detection is done to
     # classify the blocks as edge or non-edge blocks and sobel edge
     # detection is done for the purpose of edge width measurement.
+    from skimage.feature import canny
     canny_edges = canny(image)
     sobel_edges = sobel(image)
 
