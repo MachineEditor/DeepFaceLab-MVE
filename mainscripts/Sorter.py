@@ -13,7 +13,7 @@ from numpy import linalg as npla
 
 from core import imagelib, mathlib, pathex
 from core.cv2ex import *
-from core.imagelib import estimate_sharpness
+from core.imagelib.estimate_sharpness import estimate_sharpness
 from core.interact import interact as io
 from core.joblib import Subprocessor
 from core.leras import nn
