@@ -3,6 +3,7 @@ from .LayerBase import *
 
 from .Conv2D import *
 from .Conv2DTranspose import *
+from .DepthwiseConv2D import *
 from .Dense import *
 from .BlurPool import *
 
