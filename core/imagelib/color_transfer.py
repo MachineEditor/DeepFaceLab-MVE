@@ -89,6 +89,8 @@ def color_transfer_mkl(x0, x1):
     return np.clip ( result.reshape ( (h,w,c) ).astype(x0.dtype), 0, 1)
 
 def color_transfer_idt(i0, i1, bins=256, n_rot=20):
+    import scipy.stats
+    
     relaxation = 1 / n_rot
     h,w,c = i0.shape
     h1,w1,c1 = i1.shape
