@@ -25,7 +25,7 @@ class RMSprop(nn.OptimizerBase):
     def get_weights(self):
         return [self.lr, self.rho, self.epsilon, self.iterations] + list(self.accumulators_dict.values())
 
-    def initialize_variables(self, trainable_weights, vars_on_cpu=True):
+    def initialize_variables(self, trainable_weights, vars_on_cpu=True, lr_dropout_on_cpu=False):
         # Initialize here all trainable variables used in training
         e = tf.device('/CPU:0') if vars_on_cpu else None
         if e: e.__enter__()
@@ -34,7 +34,10 @@ class RMSprop(nn.OptimizerBase):
             self.accumulators_dict.update ( accumulators)
 
             if self.lr_dropout != 1.0:
+                e = tf.device('/CPU:0') if lr_dropout_on_cpu else None
+                if e: e.__enter__()                    
                 lr_rnds = [ nn.random_binomial( v.shape, p=self.lr_dropout, dtype=v.dtype) for v in trainable_weights ]
+                if e: e.__exit__(None, None, None)                
                 self.lr_rnds_dict.update ( { v.name : rnd for v,rnd in zip(trainable_weights,lr_rnds) } )
         if e: e.__exit__(None, None, None)
 
