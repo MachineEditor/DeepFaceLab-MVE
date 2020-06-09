@@ -84,5 +84,14 @@ class QStringDB():
                                             'ru' : 'Сохранить и следующее изображение\nУдерживать SHIFT : ускорить\nУдерживать CTRL : пропустить неразмеченные\n',
                                             'zh' : '保存并转到下一张图片\n按住SHIFT : 加快\n按住CTRL : 跳过未标记的\n',
                                            }[lang]  
-                                           
+        
+        QStringDB.loading_tip = {'en' : 'Loading',
+                                 'ru' : 'Загрузка',
+                                 'zh' : '正在载入',
+                                }[lang]   
+                                
+        QStringDB.labeled_tip = {'en' : 'labeled',
+                                 'ru' : 'размечено',
+                                 'zh' : '标记的',
+                                }[lang]   
                                            

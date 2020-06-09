@@ -27,7 +27,7 @@ from samplelib import PackedFaceset
 from .QCursorDB import QCursorDB
 from .QIconDB import QIconDB
 from .QStringDB import QStringDB
-
+from .QImageDB import QImageDB
 
 class OpMode(IntEnum):
     NONE = 0
@@ -71,12 +71,24 @@ class ImagePreviewSequenceBar(QFrame):
 
         main_frame_l_cont_hl = QGridLayout()
         main_frame_l_cont_hl.setContentsMargins(0,0,0,0)
+        #main_frame_l_cont_hl.setSpacing(0)
+
+
 
         for i in range(len(self.image_containers)):
             q_label = self.image_containers[i]
             q_label.setScaledContents(True)
-            q_label.setMinimumSize(icon_size, icon_size )
-            q_label.setSizePolicy (QSizePolicy.Ignored, QSizePolicy.Ignored)
+            if i == preview_images_count//2:
+                q_label.setMinimumSize(icon_size+16, icon_size+16 )
+                q_label.setMaximumSize(icon_size+16, icon_size+16 )
+            else:
+                q_label.setMinimumSize(icon_size, icon_size )
+                q_label.setMaximumSize(icon_size, icon_size )
+                opacity_effect = QGraphicsOpacityEffect()
+                opacity_effect.setOpacity(0.5)
+                q_label.setGraphicsEffect(opacity_effect)
+
+            q_label.setSizePolicy (QSizePolicy.Fixed, QSizePolicy.Fixed)
 
             main_frame_l_cont_hl.addWidget (q_label, 0, i)
 
@@ -113,16 +125,10 @@ class ImagePreviewSequenceBar(QFrame):
             next_imgs = next_imgs[:next_img_conts_len]
 
         for i,img in enumerate(prev_imgs):
-            if img is None:
-                self.prev_img_conts[i].setPixmap( self.black_q_pixmap )
-            else:
-                self.prev_img_conts[i].setPixmap( QPixmap.fromImage( QImage_from_np(img) ) )
+            self.prev_img_conts[i].setPixmap( QPixmap.fromImage( QImage_from_np(img) ) if img is not None else self.black_q_pixmap )
 
         for i,img in enumerate(next_imgs):
-            if img is None:
-                self.next_img_conts[i].setPixmap( self.black_q_pixmap )
-            else:
-                self.next_img_conts[i].setPixmap( QPixmap.fromImage( QImage_from_np(img) ) )
+            self.next_img_conts[i].setPixmap( QPixmap.fromImage( QImage_from_np(img) ) if img is not None else self.black_q_pixmap )
 
 class ColorScheme():
     def __init__(self, unselected_color, selected_color, outline_color, outline_width, pt_outline_color, cross_cursor):
@@ -1131,7 +1137,7 @@ class LoaderQSubprocessor(QSubprocessor):
         if len (self.idxs) > 0:
             idx = self.idxs.pop(0)
             image_path = self.image_paths[idx]
-            self.q_label.setText(f'{image_path.name}')
+            self.q_label.setText(f'{QStringDB.loading_tip}... {image_path.name}')
 
             return idx, image_path
 
@@ -1164,11 +1170,11 @@ class LoaderQSubprocessor(QSubprocessor):
                 return idx, True, ie_polys.has_polys()
             return idx, False, False
 
-
 class MainWindow(QXMainWindow):
 
     def __init__(self, input_dirpath, cfg_root_path):
         self.loading_frame = None
+        self.help_frame = None
 
         super().__init__()
 
@@ -1189,9 +1195,20 @@ class MainWindow(QXMainWindow):
         self.loading_frame.setFrameShape(QFrame.StyledPanel)
         self.loader_label = QLabel()
         self.loader_progress_bar = QProgressBar()
+
+        intro_image = QLabel()
+        intro_image.setPixmap( QPixmap.fromImage(QImageDB.intro) )
+
+        intro_image_frame_l = QVBoxLayout()
+        intro_image_frame_l.addWidget(intro_image, alignment=Qt.AlignCenter)
+        intro_image_frame = QFrame()
+        intro_image_frame.setSizePolicy (QSizePolicy.Expanding, QSizePolicy.Expanding)
+        intro_image_frame.setLayout(intro_image_frame_l)
+
         loading_frame_l = QVBoxLayout()
-        loading_frame_l.addWidget (self.loader_label, alignment=Qt.AlignBottom)
-        loading_frame_l.addWidget (self.loader_progress_bar, alignment=Qt.AlignTop)
+        loading_frame_l.addWidget (intro_image_frame)
+        loading_frame_l.addWidget (self.loader_label)
+        loading_frame_l.addWidget (self.loader_progress_bar)
         self.loading_frame.setLayout(loading_frame_l)
 
         self.loader_subprocessor = LoaderQSubprocessor( image_paths=pathex.get_image_paths(input_dirpath, return_Path_class=True),
@@ -1204,6 +1221,7 @@ class MainWindow(QXMainWindow):
         self.image_paths_done = []
         self.image_paths = image_paths
         self.image_paths_has_ie_polys = image_paths_has_ie_polys
+        self.set_has_ie_polys_count ( len([ 1 for x in self.image_paths_has_ie_polys if self.image_paths_has_ie_polys[x] == True]) )
         self.loading_frame.hide()
         self.loading_frame = None
 
@@ -1264,7 +1282,7 @@ class MainWindow(QXMainWindow):
 
         self.canvas.op.initialize ( img,  ie_polys=ie_polys, xseg_mask=xseg_mask )
 
-        self.filename_label.setText(str(image_path.name))
+        self.filename_label.setText(f"{image_path.name}")
 
         return True
 
@@ -1277,11 +1295,13 @@ class MainWindow(QXMainWindow):
             new_ie_polys = self.canvas.op.get_ie_polys()
 
             if not new_ie_polys.identical(ie_polys):
-                self.image_paths_has_ie_polys[image_path] = new_ie_polys.has_polys()
+                new_has_ie_polys = new_ie_polys.has_polys()
+                self.set_has_ie_polys_count ( self.get_has_ie_polys_count() + (1 if new_has_ie_polys else -1) )
+                self.image_paths_has_ie_polys[image_path] = new_has_ie_polys
                 dflimg.set_seg_ie_polys( new_ie_polys )
                 dflimg.save()
 
-        self.filename_label.setText("")
+        self.filename_label.setText(f"")
 
     def process_prev_image(self):
         key_mods = QApplication.keyboardModifiers()
@@ -1364,14 +1384,24 @@ class MainWindow(QXMainWindow):
         preview_image_bar.setSizePolicy ( QSizePolicy.Expanding, QSizePolicy.Fixed )
         preview_image_bar.setLayout(preview_image_bar_l)
 
+        label_font = QFont('Courier New')
         self.filename_label = QLabel()
-        f = QFont('Courier New')
-        self.filename_label.setFont(f)
+        self.filename_label.setFont(label_font)
+
+        self.has_ie_polys_count_label = QLabel()
+
+        status_frame_l = QHBoxLayout()
+        status_frame_l.setContentsMargins(0,0,0,0)
+        status_frame_l.addWidget ( QLabel(), alignment=Qt.AlignCenter)
+        status_frame_l.addWidget (self.filename_label, alignment=Qt.AlignCenter)
+        status_frame_l.addWidget (self.has_ie_polys_count_label, alignment=Qt.AlignCenter)
+        status_frame = QFrame()
+        status_frame.setLayout(status_frame_l)
 
         main_canvas_l = QVBoxLayout()
         main_canvas_l.setContentsMargins(0,0,0,0)
         main_canvas_l.addWidget (self.canvas)
-        main_canvas_l.addWidget (self.filename_label, alignment=Qt.AlignCenter)
+        main_canvas_l.addWidget (status_frame)
         main_canvas_l.addWidget (preview_image_bar)
 
         self.main_canvas_frame = QFrame()
@@ -1389,9 +1419,18 @@ class MainWindow(QXMainWindow):
         else:
             self.move( QPoint(0,0))
 
+    def get_has_ie_polys_count(self):
+        return self.has_ie_polys_count
+
+    def set_has_ie_polys_count(self, c):
+        self.has_ie_polys_count = c
+        self.has_ie_polys_count_label.setText(f"{c} {QStringDB.labeled_tip}")
+
     def resizeEvent(self, ev):
         if self.loading_frame is not None:
             self.loading_frame.resize( ev.size() )
+        if self.help_frame is not None:
+            self.help_frame.resize( ev.size() )
 
 def start(input_dirpath):
     """
@@ -1422,6 +1461,7 @@ def start(input_dirpath):
 
     QIconDB.initialize( root_path / 'gfx' / 'icons' )
     QCursorDB.initialize( root_path / 'gfx' / 'cursors' )
+    QImageDB.initialize( root_path / 'gfx' / 'images' )
 
     app.setWindowIcon(QIconDB.app_icon)
     app.setPalette( QDarkPalette() )
