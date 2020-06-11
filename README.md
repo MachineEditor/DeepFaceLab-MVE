@@ -163,7 +163,7 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 ||[Pretrained models](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|Use pretrained models made by community to speed up training|
 ||||
 |Communication groups|||
-||[telegram (English / Russian)](https://t.me/DeepFaceLab_official)|Don't forget to hide your phone number|
+||[telegram (English / Russian)](https://t.me/joinchat/ElkhqlgJ0I5HhdJyFar80w)|Don't forget to hide your phone number|
 ||[telegram (English only)](https://t.me/DeepFaceLab_official_en)|Don't forget to hide your phone number|
 ||[Русское сообщество](https://mrdeepfakes.com/forums/forum-russian-community)||
 ||[mrdeepfakes](https://mrdeepfakes.com/forums/)|the biggest NSFW English community|
