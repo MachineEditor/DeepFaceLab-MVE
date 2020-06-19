@@ -27,7 +27,9 @@ class SAEHDModel(ModelBase):
             suggest_batch_size = 4
 
         yn_str = {True:'y',False:'n'}
-
+        min_res = 64
+        max_res = 640
+        
         default_resolution         = self.options['resolution']         = self.load_or_def_option('resolution', 128)
         default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'f')
         default_models_opt_on_gpu  = self.options['models_opt_on_gpu']  = self.load_or_def_option('models_opt_on_gpu', True)
@@ -66,8 +68,8 @@ class SAEHDModel(ModelBase):
             self.ask_batch_size(suggest_batch_size)
 
         if self.is_first_run():
-            resolution = io.input_int("Resolution", default_resolution, add_info="64-640", help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 16.")
-            resolution = np.clip ( (resolution // 16) * 16, 64, 640)
+            resolution = io.input_int("Resolution", default_resolution, add_info="64-640", help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 16 and 32 for -d archi.")
+            resolution = np.clip ( (resolution // 16) * 16, min_res, max_res)
             self.options['resolution'] = resolution
             self.options['face_type'] = io.input_str ("Face type", default_face_type, ['h','mf','f','wf','head'], help_message="Half / mid face / full face / whole face / head. Half face has better resolution, but covers less area of cheeks. Mid face is 30% wider than half face. 'Whole face' covers full area of face include forehead. 'head' covers full head, but requires XSeg for src and dst faceset.").lower()
 
@@ -98,6 +100,9 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         continue
                     if len([ 1 for opt in archi_opts if opt not in ['u','d'] ]) != 0:
                         continue
+                    
+                    if 'd' in archi_opts:
+                        self.options['resolution'] = np.clip ( (self.options['resolution'] // 32) * 32, min_res, max_res)
 
                 break
             self.options['archi'] = archi
