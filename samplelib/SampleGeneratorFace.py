@@ -6,10 +6,12 @@ import cv2
 import numpy as np
 
 from core import mplib
+from core.interact import interact as io
 from core.joblib import SubprocessGenerator, ThisThreadGenerator
 from facelib import LandmarksProcessor
 from samplelib import (SampleGeneratorBase, SampleLoader, SampleProcessor,
                        SampleType)
+
 
 '''
 arg
@@ -23,15 +25,15 @@ class SampleGeneratorFace(SampleGeneratorBase):
                         random_ct_samples_path=None,
                         sample_process_options=SampleProcessor.Options(),
                         output_sample_types=[],
-                        add_sample_idx=False,
+                        uniform_yaw_distribution=False,
                         generators_count=4,
-                        raise_on_no_data=True,
+                        raise_on_no_data=True,                        
                         **kwargs):
 
         super().__init__(debug, batch_size)
+        self.initialized = False
         self.sample_process_options = sample_process_options
         self.output_sample_types = output_sample_types
-        self.add_sample_idx = add_sample_idx
         
         if self.debug:
             self.generators_count = 1
@@ -40,15 +42,40 @@ class SampleGeneratorFace(SampleGeneratorBase):
 
         samples = SampleLoader.load (SampleType.FACE, samples_path)
         self.samples_len = len(samples)
-
-        self.initialized = False
+        
         if self.samples_len == 0:
             if raise_on_no_data:
                 raise ValueError('No training data provided.')
             else:
                 return
+                
+        if uniform_yaw_distribution:
+            samples_pyr = [ ( idx, sample.get_pitch_yaw_roll() ) for idx, sample in enumerate(samples) ]
+            
+            grads = 128
+            #instead of math.pi / 2, using -1.2,+1.2 because actually maximum yaw for 2DFAN landmarks are -1.2+1.2
+            grads_space = np.linspace (-1.2, 1.2,grads)
 
-        index_host = mplib.IndexHost(self.samples_len)
+            yaws_sample_list = [None]*grads
+            for g in io.progress_bar_generator ( range(grads), "Sort by yaw"):
+                yaw = grads_space[g]
+                next_yaw = grads_space[g+1] if g < grads-1 else yaw
+
+                yaw_samples = []
+                for idx, pyr in samples_pyr:
+                    s_yaw = -pyr[1]
+                    if (g == 0          and s_yaw < next_yaw) or \
+                    (g < grads-1     and s_yaw >= yaw and s_yaw < next_yaw) or \
+                    (g == grads-1    and s_yaw >= yaw):
+                        yaw_samples += [ idx ]
+                if len(yaw_samples) > 0:
+                    yaws_sample_list[g] = yaw_samples
+            
+            yaws_sample_list = [ y for y in yaws_sample_list if y is not None ]
+            
+            index_host = mplib.Index2DHost( yaws_sample_list )
+        else:
+            index_host = mplib.IndexHost(self.samples_len)
 
         if random_ct_samples_path is not None:
             ct_samples = SampleLoader.load (SampleType.FACE, random_ct_samples_path)
@@ -110,14 +137,8 @@ class SampleGeneratorFace(SampleGeneratorBase):
 
                 if batches is None:
                     batches = [ [] for _ in range(len(x)) ]
-                    if self.add_sample_idx:
-                        batches += [ [] ]
-                        i_sample_idx = len(batches)-1
 
                 for i in range(len(x)):
                     batches[i].append ( x[i] )
-
-                if self.add_sample_idx:
-                    batches[i_sample_idx].append (sample_idx)
 
             yield [ np.array(batch) for batch in batches]

@@ -120,21 +120,21 @@ nn.upsample2d = upsample2d
 def resize2d_bilinear(x, size=2):
     h = x.shape[nn.conv2d_spatial_axes[0]].value
     w = x.shape[nn.conv2d_spatial_axes[1]].value
-    
+
     if nn.data_format == "NCHW":
         x = tf.transpose(x, (0,2,3,1))
-        
+
     if size > 0:
         new_size = (h*size,w*size)
     else:
         new_size = (h//-size,w//-size)
 
     x = tf.image.resize(x, new_size, method=tf.image.ResizeMethod.BILINEAR)
-    
+
     if nn.data_format == "NCHW":
-        x = tf.transpose(x, (0,3,1,2))      
-                
-    return x        
+        x = tf.transpose(x, (0,3,1,2))
+
+    return x
 nn.resize2d_bilinear = resize2d_bilinear
 
 

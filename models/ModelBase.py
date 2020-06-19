@@ -157,7 +157,7 @@ class ModelBase(object):
         else:
             self.device_config = nn.DeviceConfig.GPUIndexes( force_gpu_idxs or nn.ask_choose_device_idxs(suggest_best_multi_gpu=True)) \
                                 if not cpu_only else nn.DeviceConfig.CPU()
-
+        
         nn.initialize(self.device_config)
 
         ####
@@ -296,9 +296,15 @@ class ModelBase(object):
         default_random_flip = self.load_or_def_option('random_flip', True)
         self.options['random_flip'] = io.input_bool("Flip faces randomly", default_random_flip, help_message="Predicted face will look more naturally without this option, but src faceset should cover all face directions as dst faceset.")
 
-    def ask_batch_size(self, suggest_batch_size=None):
+    def ask_batch_size(self, suggest_batch_size=None, range=None):
         default_batch_size = self.load_or_def_option('batch_size', suggest_batch_size or self.batch_size)
-        self.options['batch_size'] = self.batch_size = max(0, io.input_int("Batch_size", default_batch_size, help_message="Larger batch size is better for NN's generalization, but it can cause Out of Memory error. Tune this value for your videocard manually."))
+        
+        batch_size = max(0, io.input_int("Batch_size", default_batch_size, valid_range=range, help_message="Larger batch size is better for NN's generalization, but it can cause Out of Memory error. Tune this value for your videocard manually."))
+        
+        if range is not None:
+            batch_size = np.clip(batch_size, range[0], range[1])
+        
+        self.options['batch_size'] = self.batch_size = batch_size
 
 
     #overridable

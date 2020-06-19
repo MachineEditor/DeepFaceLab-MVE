@@ -5,8 +5,8 @@ import cv2
 import numpy as np
 
 from core.cv2ex import *
-from DFLIMG import *
 from facelib import LandmarksProcessor
+from core import imagelib
 from core.imagelib import SegIEPolys
 
 class SampleType(IntEnum):
@@ -28,6 +28,7 @@ class Sample(object):
                  'landmarks',
                  'seg_ie_polys',
                  'xseg_mask',
+                 'xseg_mask_compressed',
                  'eyebrows_expand_mod',
                  'source_filename',
                  'person_name',
@@ -42,6 +43,7 @@ class Sample(object):
                        landmarks=None,
                        seg_ie_polys=None,
                        xseg_mask=None,
+                       xseg_mask_compressed=None,
                        eyebrows_expand_mod=None,
                        source_filename=None,
                        person_name=None,
@@ -60,6 +62,16 @@ class Sample(object):
             self.seg_ie_polys = SegIEPolys.load(seg_ie_polys)
         
         self.xseg_mask = xseg_mask
+        self.xseg_mask_compressed = xseg_mask_compressed
+        
+        if self.xseg_mask_compressed is None and self.xseg_mask is not None:
+            xseg_mask = np.clip( imagelib.normalize_channels(xseg_mask, 1)*255, 0, 255 ).astype(np.uint8)        
+            ret, xseg_mask_compressed = cv2.imencode('.png', xseg_mask)
+            if not ret:
+                raise Exception("Sample(): unable to generate xseg_mask_compressed")
+            self.xseg_mask_compressed = xseg_mask_compressed
+            self.xseg_mask = None
+ 
         self.eyebrows_expand_mod = eyebrows_expand_mod if eyebrows_expand_mod is not None else 1.0
         self.source_filename = source_filename
         self.person_name = person_name
@@ -67,6 +79,14 @@ class Sample(object):
 
         self._filename_offset_size = None
 
+    def get_xseg_mask(self):
+        if self.xseg_mask_compressed is not None:
+            xseg_mask = cv2.imdecode(self.xseg_mask_compressed, cv2.IMREAD_UNCHANGED)
+            if len(xseg_mask.shape) == 2:
+                xseg_mask = xseg_mask[...,None]
+            return xseg_mask.astype(np.float32) / 255.0
+        return self.xseg_mask
+        
     def get_pitch_yaw_roll(self):
         if self.pitch_yaw_roll is None:
             self.pitch_yaw_roll = LandmarksProcessor.estimate_pitch_yaw_roll(self.landmarks, size=self.shape[1])
@@ -97,6 +117,7 @@ class Sample(object):
                 'landmarks': self.landmarks.tolist(),
                 'seg_ie_polys': self.seg_ie_polys.dump(),
                 'xseg_mask' : self.xseg_mask,
+                'xseg_mask_compressed' : self.xseg_mask_compressed,
                 'eyebrows_expand_mod': self.eyebrows_expand_mod,
                 'source_filename': self.source_filename,
                 'person_name': self.person_name

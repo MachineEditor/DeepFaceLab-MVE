@@ -56,15 +56,16 @@ class SampleProcessor(object):
             ct_sample_bgr = None
             h,w,c = sample_bgr.shape
             
-            def get_full_face_mask():                                        
-                if sample.xseg_mask is not None:                   
-                    full_face_mask = sample.xseg_mask
-                    if full_face_mask.shape[0] != h or full_face_mask.shape[1] != w:
-                        full_face_mask = cv2.resize(full_face_mask, (w,h), interpolation=cv2.INTER_CUBIC)                    
-                        full_face_mask = imagelib.normalize_channels(full_face_mask, 1)
+            def get_full_face_mask():   
+                xseg_mask = sample.get_xseg_mask()                                     
+                if xseg_mask is not None:           
+                    if xseg_mask.shape[0] != h or xseg_mask.shape[1] != w:
+                        xseg_mask = cv2.resize(xseg_mask, (w,h), interpolation=cv2.INTER_CUBIC)                    
+                        xseg_mask = imagelib.normalize_channels(xseg_mask, 1)
+                    return np.clip(xseg_mask, 0, 1)
                 else:
                     full_face_mask = LandmarksProcessor.get_image_hull_mask (sample_bgr.shape, sample_landmarks, eyebrows_expand_mod=sample.eyebrows_expand_mod )
-                return np.clip(full_face_mask, 0, 1)
+                    return np.clip(full_face_mask, 0, 1)
                 
             def get_eyes_mask():
                 eyes_mask = LandmarksProcessor.get_image_eye_mask (sample_bgr.shape, sample_landmarks)
