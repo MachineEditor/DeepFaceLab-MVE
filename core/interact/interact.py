@@ -269,7 +269,7 @@ class InteractBase(object):
             s += " ("
 
         if valid_range is not None:
-            s += f" {valid_range[0]}-{valid_range[1]} "
+            s += f" {valid_range[0]}-{valid_range[1]}"
 
         if add_info is not None:
             s += f" {add_info}"
