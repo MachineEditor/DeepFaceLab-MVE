@@ -575,7 +575,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'ct_mode': ct_mode,                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                               ],
-                        uniform_yaw_distribution=self.options['uniform_yaw'],
+                        uniform_yaw_distribution=self.options['uniform_yaw'] or self.pretrain,
                         generators_count=src_generators_count ),
 
                     SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
@@ -584,7 +584,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                                'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                               ],
-                        uniform_yaw_distribution=self.options['uniform_yaw'],
+                        uniform_yaw_distribution=self.options['uniform_yaw'] or self.pretrain,
                         generators_count=dst_generators_count )
                              ])
 
