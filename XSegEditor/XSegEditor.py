@@ -1294,10 +1294,16 @@ class MainWindow(QXMainWindow):
             ie_polys = dflimg.get_seg_ie_polys()
             new_ie_polys = self.canvas.op.get_ie_polys()
 
-            if not new_ie_polys.identical(ie_polys):
-                new_has_ie_polys = new_ie_polys.has_polys()
-                self.set_has_ie_polys_count ( self.get_has_ie_polys_count() + (1 if new_has_ie_polys else -1) )
-                self.image_paths_has_ie_polys[image_path] = new_has_ie_polys
+            if not new_ie_polys.identical(ie_polys):                
+                prev_has_polys = self.image_paths_has_ie_polys[image_path]                
+                self.image_paths_has_ie_polys[image_path] = new_ie_polys.has_polys()
+                new_has_polys = self.image_paths_has_ie_polys[image_path]
+                
+                if not prev_has_polys and new_has_polys:
+                    self.set_has_ie_polys_count ( self.get_has_ie_polys_count() +1)
+                elif prev_has_polys and not new_has_polys:
+                    self.set_has_ie_polys_count ( self.get_has_ie_polys_count() -1)
+                
                 dflimg.set_seg_ie_polys( new_ie_polys )
                 dflimg.save()
 
