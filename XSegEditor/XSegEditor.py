@@ -263,7 +263,7 @@ class QCanvasControlsRightBar(QFrame):
         btn_view_xseg_mask.setIconSize(QUIConfig.icon_q_size)
 
         btn_view_xseg_overlay_mask = QToolButton()
-        self.btn_view_xseg_overlay_mask_act = QActionEx( QIconDB.view_xseg_overlay, QStringDB.btn_view_xseg_overlay_mask_tip, shortcut='6', shortcut_in_tooltip=True, is_checkable=True)
+        self.btn_view_xseg_overlay_mask_act = QActionEx( QIconDB.view_xseg_overlay, QStringDB.btn_view_xseg_overlay_mask_tip, shortcut='`', shortcut_in_tooltip=True, is_checkable=True)
         btn_view_xseg_overlay_mask.setDefaultAction(self.btn_view_xseg_overlay_mask_act)
         btn_view_xseg_overlay_mask.setIconSize(QUIConfig.icon_q_size)
 
@@ -280,6 +280,13 @@ class QCanvasControlsRightBar(QFrame):
         btn_view_lock_center.setDefaultAction(self.btn_view_lock_center_act)
         btn_view_lock_center.setIconSize(QUIConfig.icon_q_size)
 
+        controls_bar_frame2_l = QVBoxLayout()
+        controls_bar_frame2_l.addWidget ( btn_view_xseg_overlay_mask )
+        controls_bar_frame2 = QFrame()
+        controls_bar_frame2.setFrameShape(QFrame.StyledPanel)
+        controls_bar_frame2.setSizePolicy (QSizePolicy.Fixed, QSizePolicy.Fixed)
+        controls_bar_frame2.setLayout(controls_bar_frame2_l)
+        
         controls_bar_frame1_l = QVBoxLayout()
         controls_bar_frame1_l.addWidget ( btn_poly_color_red )
         controls_bar_frame1_l.addWidget ( btn_poly_color_green )
@@ -290,13 +297,6 @@ class QCanvasControlsRightBar(QFrame):
         controls_bar_frame1.setFrameShape(QFrame.StyledPanel)
         controls_bar_frame1.setSizePolicy (QSizePolicy.Fixed, QSizePolicy.Fixed)
         controls_bar_frame1.setLayout(controls_bar_frame1_l)
-    
-        controls_bar_frame2_l = QVBoxLayout()
-        controls_bar_frame2_l.addWidget ( btn_view_xseg_overlay_mask )
-        controls_bar_frame2 = QFrame()
-        controls_bar_frame2.setFrameShape(QFrame.StyledPanel)
-        controls_bar_frame2.setSizePolicy (QSizePolicy.Fixed, QSizePolicy.Fixed)
-        controls_bar_frame2.setLayout(controls_bar_frame2_l)
         
         controls_bar_frame3_l = QVBoxLayout()
         controls_bar_frame3_l.addWidget ( btn_view_lock_center )
@@ -307,8 +307,8 @@ class QCanvasControlsRightBar(QFrame):
 
         controls_bar_l = QVBoxLayout()
         controls_bar_l.setContentsMargins(0,0,0,0)
-        controls_bar_l.addWidget(controls_bar_frame1)
         controls_bar_l.addWidget(controls_bar_frame2)
+        controls_bar_l.addWidget(controls_bar_frame1)
         controls_bar_l.addWidget(controls_bar_frame3)
         
         self.setSizePolicy ( QSizePolicy.Fixed, QSizePolicy.Expanding )
