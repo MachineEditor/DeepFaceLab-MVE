@@ -33,6 +33,10 @@ class BlurEstimatorSubprocessor(Subprocessor):
                 return [ str(filepath), 0 ]
             else:
                 image = cv2_imread( str(filepath) )
+                
+                face_mask = LandmarksProcessor.get_image_hull_mask (image.shape, dflimg.get_landmarks())
+                image = (image*face_mask).astype(np.uint8)
+            
                 return [ str(filepath), estimate_sharpness(image) ]
 
 
@@ -448,7 +452,8 @@ class FinalLoaderSubprocessor(Subprocessor):
                     source_rect = dflimg.get_source_rect()
                     sharpness = mathlib.polygon_area(np.array(source_rect[[0,2,2,0]]).astype(np.float32), np.array(source_rect[[1,1,3,3]]).astype(np.float32))
                 else:
-                    sharpness = estimate_sharpness(gray)
+                    face_mask = LandmarksProcessor.get_image_hull_mask (gray.shape, dflimg.get_landmarks())                
+                    sharpness = estimate_sharpness( (gray*face_mask).astype(np.uint8) )
 
                 pitch, yaw, roll = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks(), size=dflimg.get_shape()[1] )
 

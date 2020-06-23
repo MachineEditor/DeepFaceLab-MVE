@@ -269,9 +269,10 @@ def get_block_contrast(block):
 
 
 def estimate_sharpness(image):
-    height, width = image.shape[:2]
-
     if image.ndim == 3:
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
+        if image.shape[2] > 1:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            image = image[...,0]
+        
     return compute(image)
