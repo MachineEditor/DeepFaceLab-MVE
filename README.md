@@ -52,8 +52,31 @@ DeepFaceLab is used by such popular youtube channels as
 </td></tr>
 <tr><td align="center" width="9999">
 
-## Replace the head
+## De-age the face
 
+<table align="center" border="0">
+
+<tr><td align="center" width="9999">
+
+<img src="doc/deage_0_1.jpg" align="center">
+
+</td>
+<td align="center" width="9999">
+
+<img src="doc/deage_0_2.jpg" align="center">
+
+</td></tr>
+
+<tr><td colspan=2  align="center" width="9999">
+
+![](doc/youtube_icon.png) https://www.youtube.com/watch?v=Ddx5B-84ebo
+
+</td></tr>
+</table>
+
+<tr><td align="center" width="9999">
+
+## Replace the head
 
 <table align="center" border="0">
 
@@ -160,8 +183,8 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 |Windows|[Get magnet link](https://pastebin.com/LLysqZpY)|Last release. Use torrent client to download.|
 ||[Mega.nz](https://mega.nz/folder/Po0nGQrA#dbbttiNWojCt8jzD4xYaPw)|Contains new and prev releases.|
 |Google Colab|[github](https://github.com/chervonij/DFL-Colab)|by @chervonij . You can train fakes for free using Google Colab.|
-|CentOS Linux|[github](https://github.com/elemantalcode/dfl)|by @elemantalcode|
-|Linux|[github](https://github.com/lbfs/DeepFaceLab_Linux)|by @lbfs |
+|CentOS Linux|[github](https://github.com/elemantalcode/dfl)|May be outdated. By @elemantalcode|
+|Linux|[github](https://github.com/lbfs/DeepFaceLab_Linux)|May be outdated. By @lbfs|
 ||||
 
 </td></tr>
@@ -175,7 +198,7 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 ||[DeepFaceLab guide](https://mrdeepfakes.com/forums/thread-guide-deepfacelab-2-0-explained-and-tutorials-recommended)|Main guide|
 ||[Faceset creation guide](https://mrdeepfakes.com/forums/thread-guide-celebrity-faceset-dataset-creation-how-to-create-celebrity-facesets)|How to create the right faceset |
 ||[Google Colab guide](https://mrdeepfakes.com/forums/thread-guide-deepfacelab-google-colab-tutorial)|Guide how to train the fake on Google Colab|
-||[Compositing](https://mrdeepfakes.com/forums/thread-deepfacelab-2-0-compositing-in-davinci-resolve-vegas-pro-and-after-effects)|To achieve the highest quality, compose deepfake manually in video editors such as Davince Resolve or Adobe AfterEffects|
+||[Compositing](https://mrdeepfakes.com/forums/thread-deepfacelab-2-0-compositing-in-davinci-resolve-vegas-pro-and-after-effects)|To achieve the highest quality, compose deepfake manually in video editors such as Davinci Resolve or Adobe AfterEffects|
 ||[Discussion and suggestions](https://mrdeepfakes.com/forums/thread-deepfacelab-2-0-discussion-tips-suggestions)||
 ||||
 |Supplementary material|||
