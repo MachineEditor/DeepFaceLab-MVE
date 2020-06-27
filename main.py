@@ -38,6 +38,7 @@ if __name__ == "__main__":
                         manual_output_debug_fix = arguments.manual_output_debug_fix,
                         manual_window_size      = arguments.manual_window_size,
                         face_type               = arguments.face_type,
+                        max_faces_from_image    = arguments.max_faces_from_image,
                         image_size              = arguments.image_size,
                         jpeg_quality            = arguments.jpeg_quality,
                         cpu_only                = arguments.cpu_only,
@@ -51,6 +52,7 @@ if __name__ == "__main__":
     p.add_argument('--output-debug', action="store_true", dest="output_debug", default=None, help="Writes debug images to <output-dir>_debug\ directory.")
     p.add_argument('--no-output-debug', action="store_false", dest="output_debug", default=None, help="Don't writes debug images to <output-dir>_debug\ directory.")
     p.add_argument('--face-type', dest="face_type", choices=['half_face', 'full_face', 'whole_face', 'head', 'mark_only'], default=None)
+    p.add_argument('--max-faces-from-image', type=int, dest="max_faces_from_image", default=None, help="Max faces from image.")    
     p.add_argument('--image-size', type=int, dest="image_size", default=None, help="Output image size.")
     p.add_argument('--jpeg-quality', type=int, dest="jpeg_quality", default=None, help="Jpeg quality.")    
     p.add_argument('--manual-fix', action="store_true", dest="manual_fix", default=False, help="Enables manual extract only frames where faces were not recognized.")
