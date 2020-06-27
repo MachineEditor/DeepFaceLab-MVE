@@ -447,13 +447,12 @@ class FinalLoaderSubprocessor(Subprocessor):
                     raise Exception ("Unable to load %s" % (filepath.name) )
 
                 gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-
                 if self.faster:
                     source_rect = dflimg.get_source_rect()
                     sharpness = mathlib.polygon_area(np.array(source_rect[[0,2,2,0]]).astype(np.float32), np.array(source_rect[[1,1,3,3]]).astype(np.float32))
                 else:
-                    face_mask = LandmarksProcessor.get_image_hull_mask (gray.shape, dflimg.get_landmarks())                
-                    sharpness = estimate_sharpness( (gray*face_mask).astype(np.uint8) )
+                    face_mask = LandmarksProcessor.get_image_hull_mask (gray.shape, dflimg.get_landmarks())     
+                    sharpness = estimate_sharpness( (gray[...,None]*face_mask).astype(np.uint8) )
 
                 pitch, yaw, roll = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks(), size=dflimg.get_shape()[1] )
 
