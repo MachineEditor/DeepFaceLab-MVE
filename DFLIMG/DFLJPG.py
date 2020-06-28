@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 
 from core import imagelib
+from core.cv2ex import *
 from core.imagelib import SegIEPolys
 from core.interact import interact as io
 from core.structex import *
@@ -19,7 +20,8 @@ class DFLJPG(object):
         self.length = 0
         self.chunks = []
         self.dfl_dict = None
-        self.shape = (0,0,0)
+        self.shape = None
+        self.img = None
 
     @staticmethod
     def load_raw(filename, loader_func=None):
@@ -136,8 +138,6 @@ class DFLJPG(object):
 
                     if id == b"JFIF":
                         c, ver_major, ver_minor, units, Xdensity, Ydensity, Xthumbnail, Ythumbnail = struct_unpack (d, c, "=BBBHHBB")
-                        #if units == 0:
-                        #    inst.shape = (Ydensity, Xdensity, 3)
                     else:
                         raise Exception("Unknown jpeg ID: %s" % (id) )
                 elif chunk['name'] == 'SOF0' or chunk['name'] == 'SOF2':
@@ -205,7 +205,16 @@ class DFLJPG(object):
 
         return data
 
+    def get_img(self):
+        if self.img is None:
+            self.img = cv2_imread(self.filename)
+        return self.img
+
     def get_shape(self):
+        if self.shape is None:
+            img = self.get_img()
+            if img is not None:
+                self.shape = img.shape
         return self.shape
 
     def get_height(self):
@@ -247,7 +256,7 @@ class DFLJPG(object):
 
     def has_seg_ie_polys(self):
         return self.dfl_dict.get('seg_ie_polys',None) is not None
-        
+
     def get_seg_ie_polys(self):
         d = self.dfl_dict.get('seg_ie_polys',None)
         if d is not None:
