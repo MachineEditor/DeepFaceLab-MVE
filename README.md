@@ -212,6 +212,7 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 ||[mrdeepfakes](https://mrdeepfakes.com/forums/)|the biggest NSFW English community|
 ||[reddit r/GifFakes/](https://www.reddit.com/r/GifFakes/new/)|Post your deepfakes there !|
 ||[reddit r/SFWdeepfakes/](https://www.reddit.com/r/SFWdeepfakes/new/)|Post your deepfakes there !|
+||[reddit r/RUdeepfakes/](https://www.reddit.com/r/RUdeepfakes/new/)|Постим русские дипфейки сюда !|
 ||QQ 951138799|中文 Chinese QQ group for ML/AI experts|
 ||[deepfaker.xyz](https://www.deepfaker.xyz/)|中文学习站（非官方|
 
