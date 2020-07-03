@@ -757,9 +757,14 @@ def main(detector=None,
 
     input_image_paths = pathex.get_image_unique_filestem_paths(input_path, verbose_print_func=io.log_info)    
     output_images_paths = pathex.get_image_paths(output_path)
-    
-    if not manual_output_debug_fix and len(output_images_paths) > 0:        
-        if len(output_images_paths) > 128 and io.input_bool ("Continue extraction?", True, help_message="Extraction can be continued, but you must specify the same options again."):
+    output_debug_path = output_path.parent / (output_path.name + '_debug')
+
+    continue_extraction = False
+    if not manual_output_debug_fix and len(output_images_paths) > 0:  
+        if len(output_images_paths) > 128:        
+            continue_extraction = io.input_bool ("Continue extraction?", True, help_message="Extraction can be continued, but you must specify the same options again.")
+         
+        if len(output_images_paths) > 128 and continue_extraction:
             try:
                 input_image_paths = input_image_paths[ [ Path(x).stem for x in input_image_paths ].index ( Path(output_images_paths[-128]).stem.split('_')[0] ) : ]
             except:
@@ -794,10 +799,12 @@ def main(detector=None,
         io.log_info ("[1] manual")
         detector = {0:'s3fd', 1:'manual'}[ io.input_int("", 0, [0,1]) ]
 
-    output_debug_path = output_path.parent / (output_path.name + '_debug')
-
+    
     if output_debug is None:
         output_debug = io.input_bool (f"Write debug images to {output_debug_path.name}?", False)
+        
+    if output_debug:
+        output_debug_path.mkdir(parents=True, exist_ok=True)
 
     if manual_output_debug_fix:
         if not output_debug_path.exists():
@@ -811,11 +818,9 @@ def main(detector=None,
             input_image_paths = sorted (input_image_paths)
             io.log_info('Found %d images.' % (len(input_image_paths)))
     else:
-        if output_debug_path.exists():
+        if not continue_extraction and output_debug_path.exists():
             for filename in pathex.get_image_paths(output_debug_path):
                 Path(filename).unlink()
-        else:
-            output_debug_path.mkdir(parents=True, exist_ok=True)
 
     images_found = len(input_image_paths)
     faces_detected = 0
