@@ -151,7 +151,7 @@ class SampleProcessor(object):
                                 img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_LINEAR )
                             else:
                                 if w != resolution:
-                                    img = cv2.resize( img, (resolution, resolution), cv2.INTER_CUBIC )
+                                    img = cv2.resize( img, (resolution, resolution), cv2.INTER_LINEAR )
                                 
                             img = imagelib.warp_by_params (params_per_resolution[resolution], img, warp, transform, can_flip=True, border_replicate=border_replicate, cv2_inter=cv2.INTER_LINEAR)
 
