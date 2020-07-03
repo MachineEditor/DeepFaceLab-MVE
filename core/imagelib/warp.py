@@ -6,6 +6,11 @@ def gen_warp_params (w, flip, rotation_range=[-10,10], scale_range=[-0.5, 0.5], 
     if rnd_state is None:
         rnd_state = np.random
 
+    rw = None
+    if w < 16:        
+        rw = w
+        w = 16
+        
     rotation = rnd_state.uniform( rotation_range[0], rotation_range[1] )
     scale = rnd_state.uniform(1 +scale_range[0], 1 +scale_range[1])
     tx = rnd_state.uniform( tx_range[0], tx_range[1] )
@@ -37,15 +42,26 @@ def gen_warp_params (w, flip, rotation_range=[-10,10], scale_range=[-0.5, 0.5], 
     params['mapy'] = mapy
     params['rmat'] = random_transform_mat
     params['w'] = w
+    params['rw'] = rw
     params['flip'] = p_flip
 
     return params
 
 def warp_by_params (params, img, can_warp, can_transform, can_flip, border_replicate, cv2_inter=cv2.INTER_CUBIC):
+    rw = params['rw']
+    
+    if (can_warp or can_transform) and rw is not None:
+        img = cv2.resize(img, (16,16), cv2_inter)
+        
     if can_warp:
         img = cv2.remap(img, params['mapx'], params['mapy'], cv2_inter )
     if can_transform:
         img = cv2.warpAffine( img, params['rmat'], (params['w'], params['w']), borderMode=(cv2.BORDER_REPLICATE if border_replicate else cv2.BORDER_CONSTANT), flags=cv2_inter )
+    
+    
+    if (can_warp or can_transform) and rw is not None:
+        img = cv2.resize(img, (rw,rw), cv2_inter)
+    
     if len(img.shape) == 2:
         img = img[...,None]
     if can_flip and params['flip']:
