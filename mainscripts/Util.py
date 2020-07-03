@@ -64,7 +64,7 @@ def restore_faceset_metadata_folder(input_path):
 
         img = cv2_imread (filepath)
         if img.shape != shape:
-            img = cv2.resize (img, (shape[1], shape[0]), cv2.INTER_LANCZOS4 )
+            img = cv2.resize (img, (shape[1], shape[0]), interpolation=cv2.INTER_LANCZOS4 )
 
             cv2_imwrite (str(filepath), img, [int(cv2.IMWRITE_JPEG_QUALITY), 100] )
 
