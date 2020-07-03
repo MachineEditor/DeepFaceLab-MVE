@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 
 from core import imagelib
+from core.cv2ex import *
 from core.imagelib import sd
 from facelib import FaceType, LandmarksProcessor
 
@@ -95,6 +96,7 @@ class SampleProcessor(object):
                 sample_type    = opts.get('sample_type', SPST.NONE)
                 channel_type   = opts.get('channel_type', SPCT.NONE)                
                 resolution     = opts.get('resolution', 0)
+                nearest_resize_to = opts.get('nearest_resize_to', None)
                 warp           = opts.get('warp', False)
                 transform      = opts.get('transform', False)
                 motion_blur    = opts.get('motion_blur', None)
@@ -219,6 +221,9 @@ class SampleProcessor(object):
                             out_sample = np.repeat ( np.expand_dims(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY),-1), (3,), -1)
 
                     # Final transformations
+                    if nearest_resize_to is not None:
+                        out_sample = cv2_resize(out_sample, (nearest_resize_to,nearest_resize_to), interpolation=cv2.INTER_NEAREST)
+                        
                     if not debug:
                         if normalize_tanh:
                             out_sample = np.clip (out_sample * 2.0 - 1.0, -1.0, 1.0)
