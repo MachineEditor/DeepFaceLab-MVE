@@ -248,7 +248,7 @@ class FaceEnhancer(object):
             final_img = final_img [t_padding*up_res:(h-b_padding)*up_res, l_padding*up_res:(w-r_padding)*up_res,:]
 
         if preserve_size:
-            final_img = cv2.resize (final_img, (iw,ih), cv2.INTER_LANCZOS4)
+            final_img = cv2.resize (final_img, (iw,ih), interpolation=cv2.INTER_LANCZOS4)
 
         if not is_tanh:
             final_img = np.clip( final_img/2+0.5, 0, 1 )
@@ -278,7 +278,7 @@ class FaceEnhancer(object):
             preupscale_rate = 1.0 / ( max(h,w) / patch_size )
 
         if preupscale_rate != 1.0:
-            inp_img = cv2.resize (inp_img, ( int(w*preupscale_rate), int(h*preupscale_rate) ), cv2.INTER_LANCZOS4)
+            inp_img = cv2.resize (inp_img, ( int(w*preupscale_rate), int(h*preupscale_rate) ), interpolation=cv2.INTER_LANCZOS4)
             h,w,c = inp_img.shape
 
         i_max = w-patch_size+1
@@ -310,10 +310,10 @@ class FaceEnhancer(object):
         final_img /= final_img_div
 
         if preserve_size:
-            final_img = cv2.resize (final_img, (w,h), cv2.INTER_LANCZOS4)
+            final_img = cv2.resize (final_img, (w,h), interpolation=cv2.INTER_LANCZOS4)
         else:
             if preupscale_rate != 1.0:
-                final_img = cv2.resize (final_img, (tw,th), cv2.INTER_LANCZOS4)
+                final_img = cv2.resize (final_img, (tw,th), interpolation=cv2.INTER_LANCZOS4)
 
         if not is_tanh:
             final_img = np.clip( final_img/2+0.5, 0, 1 )

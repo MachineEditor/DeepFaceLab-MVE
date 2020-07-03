@@ -144,14 +144,14 @@ class SampleProcessor(object):
                             img = cv2.warpAffine( img, mat, (warp_resolution, warp_resolution), flags=cv2.INTER_LINEAR )
                             
                             img = imagelib.warp_by_params (params_per_resolution[resolution], img, warp, transform, can_flip=True, border_replicate=border_replicate, cv2_inter=cv2.INTER_LINEAR)
-                            img = cv2.resize( img, (resolution,resolution), cv2.INTER_LINEAR )
+                            img = cv2.resize( img, (resolution,resolution), interpolation=cv2.INTER_LINEAR )
                         else:
                             if face_type != sample_face_type:
                                 mat = LandmarksProcessor.get_transform_mat (sample_landmarks, resolution, face_type)                            
                                 img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_LINEAR )
                             else:
                                 if w != resolution:
-                                    img = cv2.resize( img, (resolution, resolution), cv2.INTER_LINEAR )
+                                    img = cv2.resize( img, (resolution, resolution), interpolation=cv2.INTER_LINEAR )
                                 
                             img = imagelib.warp_by_params (params_per_resolution[resolution], img, warp, transform, can_flip=True, border_replicate=border_replicate, cv2_inter=cv2.INTER_LINEAR)
 
@@ -180,13 +180,13 @@ class SampleProcessor(object):
                             img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_CUBIC )
                         else:
                             if w != resolution:
-                                img = cv2.resize( img, (resolution, resolution), cv2.INTER_CUBIC )
+                                img = cv2.resize( img, (resolution, resolution), interpolation=cv2.INTER_CUBIC )
                                 
                         # Apply random color transfer                        
                         if ct_mode is not None and ct_sample is not None:
                             if ct_sample_bgr is None:
                                ct_sample_bgr = ct_sample.load_bgr()
-                            img = imagelib.color_transfer (ct_mode, img, cv2.resize( ct_sample_bgr, (resolution,resolution), cv2.INTER_LINEAR ) )
+                            img = imagelib.color_transfer (ct_mode, img, cv2.resize( ct_sample_bgr, (resolution,resolution), interpolation=cv2.INTER_LINEAR ) )
 
                         
                         img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=border_replicate)
@@ -227,7 +227,7 @@ class SampleProcessor(object):
                 elif sample_type == SPST.IMAGE:
                     img = sample_bgr      
                     img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=True)
-                    img  = cv2.resize( img,  (resolution, resolution), cv2.INTER_CUBIC )
+                    img  = cv2.resize( img,  (resolution, resolution), interpolation=cv2.INTER_CUBIC )
                     out_sample = img
                     
                     if data_format == "NCHW":

@@ -85,8 +85,8 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
 
             if face_type == sample.face_type:
                 if w != resolution:
-                    img = cv2.resize( img, (resolution, resolution), cv2.INTER_LANCZOS4 )
-                    mask = cv2.resize( mask, (resolution, resolution), cv2.INTER_LANCZOS4 )
+                    img = cv2.resize( img, (resolution, resolution), interpolation=cv2.INTER_LANCZOS4 )
+                    mask = cv2.resize( mask, (resolution, resolution), interpolation=cv2.INTER_LANCZOS4 )
             else:
                 mat = LandmarksProcessor.get_transform_mat (sample.landmarks, resolution, face_type)
                 img  = cv2.warpAffine( img,  mat, (resolution,resolution), borderMode=cv2.BORDER_CONSTANT, flags=cv2.INTER_LANCZOS4 )

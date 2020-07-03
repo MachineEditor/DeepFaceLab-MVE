@@ -79,8 +79,8 @@ def apply_random_bilinear_resize( img, chance, max_size_per, mask=None, rnd_stat
         rw = w - int( trg * int(w*(max_size_per/100.0)) )                        
         rh = h - int( trg * int(h*(max_size_per/100.0)) )   
              
-        result = cv2.resize (result, (rw,rh), cv2.INTER_LINEAR )
-        result = cv2.resize (result, (w,h), cv2.INTER_LINEAR )
+        result = cv2.resize (result, (rw,rh), interpolation=cv2.INTER_LINEAR )
+        result = cv2.resize (result, (w,h), interpolation=cv2.INTER_LINEAR )
         if mask is not None:
             result = img*(1-mask) + result*mask
             

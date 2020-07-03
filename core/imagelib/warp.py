@@ -51,7 +51,7 @@ def warp_by_params (params, img, can_warp, can_transform, can_flip, border_repli
     rw = params['rw']
     
     if (can_warp or can_transform) and rw is not None:
-        img = cv2.resize(img, (16,16), cv2_inter)
+        img = cv2.resize(img, (16,16), interpolation=cv2_inter)
         
     if can_warp:
         img = cv2.remap(img, params['mapx'], params['mapy'], cv2_inter )
@@ -60,7 +60,7 @@ def warp_by_params (params, img, can_warp, can_transform, can_flip, border_repli
     
     
     if (can_warp or can_transform) and rw is not None:
-        img = cv2.resize(img, (rw,rw), cv2_inter)
+        img = cv2.resize(img, (rw,rw), interpolation=cv2_inter)
     
     if len(img.shape) == 2:
         img = img[...,None]
