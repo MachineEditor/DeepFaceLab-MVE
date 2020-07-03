@@ -357,7 +357,7 @@ class QCanvasOperator(QWidget):
         self.xseg_overlay_mask_pixmap = None
         if xseg_mask is not None:
             h,w,c = img.shape
-            xseg_mask = cv2.resize(xseg_mask, (w,h), cv2.INTER_CUBIC)
+            xseg_mask = cv2.resize(xseg_mask, (w,h), interpolation=cv2.INTER_CUBIC)
             xseg_mask = imagelib.normalize_channels(xseg_mask, 1)
             xseg_img = img.astype(np.float32)/255.0
             xseg_overlay_mask = xseg_img*(1-xseg_mask)*0.5 + xseg_img*xseg_mask
