@@ -110,7 +110,7 @@ DeepFaceLab is used by such popular youtube channels as
 
 <tr ><td colspan=2  align="center" width="9999">
 
-![](doc/youtube_icon.png) https://www.youtube.com/watch?v=vTM7D2Wn_Ug
+![](doc/youtube_icon.png) https://www.youtube.com/watch?v=RTjgkhMugVw
 
 </td></tr>
 
