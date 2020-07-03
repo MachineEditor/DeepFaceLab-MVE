@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 from core.interact import interact as io
+from core import imagelib 
 import traceback
 
 def cv2_imread(filename, flags=cv2.IMREAD_UNCHANGED, loader_func=None, verbose=True):
@@ -29,3 +30,11 @@ def cv2_imwrite(filename, img, *args):
                 stream.write( buf )
         except:
             pass
+
+def cv2_resize(x, *args, **kwargs):
+    h,w,c = x.shape
+    x = cv2.resize(x, *args, **kwargs)
+    
+    x = imagelib.normalize_channels(x, c)
+    return x
+    
