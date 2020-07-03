@@ -371,6 +371,9 @@ class ExtractSubprocessor(Subprocessor):
             self.rect_size = 100
             self.rect_locked = False
             self.extract_needed = True
+            
+            self.image = None
+            self.image_filepath = None
 
         io.progress_bar (None, len (self.input_data))
 
@@ -408,22 +411,9 @@ class ExtractSubprocessor(Subprocessor):
                 data = self.input_data[0]
                 filepath, data_rects, data_landmarks = data.filepath, data.rects, data.landmarks
                 is_frame_done = False
-
-                if need_remark_face: # need remark image from input data that already has a marked face?
-                    need_remark_face = False
-                    if len(data_rects) != 0: # If there was already a face then lock the rectangle to it until the mouse is clicked
-                        self.rect = data_rects.pop()
-                        self.landmarks = data_landmarks.pop()
-                        data_rects.clear()
-                        data_landmarks.clear()
-
-                        self.rect_locked = True
-                        self.rect_size = ( self.rect[2] - self.rect[0] ) / 2
-                        self.x = ( self.rect[0] + self.rect[2] ) / 2
-                        self.y = ( self.rect[1] + self.rect[3] ) / 2
-                        self.redraw()
-
-                if len(data_rects) == 0:
+                
+                if self.image_filepath != filepath:
+                    self.image_filepath = filepath
                     if self.cache_original_image[0] == filepath:
                         self.original_image = self.cache_original_image[1]
                     else:
@@ -456,7 +446,23 @@ class ExtractSubprocessor(Subprocessor):
                                                         ], (1, 1, 1) )*255).astype(np.uint8)
 
                         self.cache_text_lines_img = (sh, self.text_lines_img)
+                        
+                if need_remark_face: # need remark image from input data that already has a marked face?
+                    need_remark_face = False
+                    if len(data_rects) != 0: # If there was already a face then lock the rectangle to it until the mouse is clicked
+                        self.rect = data_rects.pop()
+                        self.landmarks = data_landmarks.pop()
+                        data_rects.clear()
+                        data_landmarks.clear()
 
+                        self.rect_locked = True
+                        self.rect_size = ( self.rect[2] - self.rect[0] ) / 2
+                        self.x = ( self.rect[0] + self.rect[2] ) / 2
+                        self.y = ( self.rect[1] + self.rect[3] ) / 2
+                        self.redraw()
+
+                if len(data_rects) == 0:
+                    (h,w,c) = self.image.shape
                     while True:
                         io.process_messages(0.0001)
 
