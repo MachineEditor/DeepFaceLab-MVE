@@ -198,7 +198,7 @@ class InteractBase(object):
     def add_key_event(self, wnd_name, ord_key, ctrl_pressed, alt_pressed, shift_pressed):
         if wnd_name not in self.key_events:
             self.key_events[wnd_name] = []
-        self.key_events[wnd_name] += [ (ord_key, chr(ord_key), ctrl_pressed, alt_pressed, shift_pressed) ]
+        self.key_events[wnd_name] += [ (ord_key, chr(ord_key) if ord_key <= 255 else chr(0), ctrl_pressed, alt_pressed, shift_pressed) ]
 
     def get_mouse_events(self, wnd_name):
         ar = self.mouse_events.get(wnd_name, [])
@@ -501,10 +501,11 @@ class InteractDesktop(InteractBase):
 
         if has_windows or has_capture_keys:
             wait_key_time = max(1, int(sleep_time*1000) )
-            ord_key = cv2.waitKey(wait_key_time)
+            ord_key = cv2.waitKeyEx(wait_key_time)
+            
             shift_pressed = False
             if ord_key != -1:
-                chr_key = chr(ord_key)
+                chr_key = chr(ord_key) if ord_key <= 255 else chr(0)
 
                 if chr_key >= 'A' and chr_key <= 'Z':
                     shift_pressed = True
