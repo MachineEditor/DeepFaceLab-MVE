@@ -141,7 +141,7 @@ def resize2d_nearest(x, size=2):
     if size in [-1,0,1]:
         return x
         
-    """
+
     if size > 0:
         raise Exception("")
     else:
@@ -150,7 +150,6 @@ def resize2d_nearest(x, size=2):
         else:
             x = x[:,::-size,::-size,:]
     return x
-    """
         
     h = x.shape[nn.conv2d_spatial_axes[0]].value
     w = x.shape[nn.conv2d_spatial_axes[1]].value

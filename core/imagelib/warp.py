@@ -7,9 +7,9 @@ def gen_warp_params (w, flip, rotation_range=[-10,10], scale_range=[-0.5, 0.5], 
         rnd_state = np.random
 
     rw = None
-    if w < 16:        
+    if w < 64:        
         rw = w
-        w = 16
+        w = 64
         
     rotation = rnd_state.uniform( rotation_range[0], rotation_range[1] )
     scale = rnd_state.uniform(1 +scale_range[0], 1 +scale_range[1])
@@ -51,7 +51,7 @@ def warp_by_params (params, img, can_warp, can_transform, can_flip, border_repli
     rw = params['rw']
     
     if (can_warp or can_transform) and rw is not None:
-        img = cv2.resize(img, (16,16), interpolation=cv2_inter)
+        img = cv2.resize(img, (64,64), interpolation=cv2_inter)
         
     if can_warp:
         img = cv2.remap(img, params['mapx'], params['mapy'], cv2_inter )
