@@ -21,7 +21,7 @@ class Conv2D(nn.LayerBase):
 
         if isinstance(padding, str):
             if padding == "SAME":
-                padding = ( (kernel_size - 1) * dilations + 1 ) // 2
+                padding = int( ( (kernel_size - 1) * dilations + 1 ) / 2.5 )
             elif padding == "VALID":
                 padding = 0
             else:
