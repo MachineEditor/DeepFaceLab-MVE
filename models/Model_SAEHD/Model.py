@@ -29,7 +29,7 @@ class SAEHDModel(ModelBase):
         yn_str = {True:'y',False:'n'}
         min_res = 64
         max_res = 640
-        
+
         default_resolution         = self.options['resolution']         = self.load_or_def_option('resolution', 128)
         default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'f')
         default_models_opt_on_gpu  = self.options['models_opt_on_gpu']  = self.load_or_def_option('models_opt_on_gpu', True)
@@ -100,7 +100,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         continue
                     if len([ 1 for opt in archi_opts if opt not in ['u','d'] ]) != 0:
                         continue
-                    
+
                     if 'd' in archi_opts:
                         self.options['resolution'] = np.clip ( (self.options['resolution'] // 32) * 32, min_res, max_res)
 
@@ -135,11 +135,11 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         if self.is_first_run() or ask_override:
             self.options['models_opt_on_gpu'] = io.input_bool ("Place models and optimizer on GPU", default_models_opt_on_gpu, help_message="When you train on one GPU, by default model and optimizer weights are placed on GPU to accelerate the process. You can place they on CPU to free up extra VRAM, thus set bigger dimensions.")
 
-            self.options['lr_dropout']  = io.input_str (f"Use learning rate dropout", default_lr_dropout, ['n','y','cpu'], help_message="When the face is trained enough, you can enable this option to get extra sharpness and reduce subpixel shake for less amount of iterations.\nn - disabled.\ny - enabled\ncpu - enabled on CPU. This allows not to use extra VRAM, sacrificing 20% time of iteration.")
+            self.options['lr_dropout']  = io.input_str (f"Use learning rate dropout", default_lr_dropout, ['n','y','cpu'], help_message="When the face is trained enough, you can enable this option to get extra sharpness and reduce subpixel shake for less amount of iterations. Enabled it before `disable random warp` and before GAN. \nn - disabled.\ny - enabled\ncpu - enabled on CPU. This allows not to use extra VRAM, sacrificing 20% time of iteration.")
 
             self.options['random_warp'] = io.input_bool ("Enable random warp of samples", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness and reduce subpixel shake for less amount of iterations.")
 
-            self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 10.0", help_message="Train the network in Generative Adversarial manner. Accelerates the speed of training. Forces the neural network to learn small details of the face. Enable it only when the face is trained enough and don't disable. Typical value is 1.0"), 0.0, 10.0 )
+            self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 10.0", help_message="Train the network in Generative Adversarial manner. Forces the neural network to learn small details of the face. Enable it only when the face is trained enough and don't disable. Typical value is 0.1"), 0.0, 10.0 )
 
             if 'df' in self.options['archi']:
                 self.options['true_face_power'] = np.clip ( io.input_number ("'True face' power.", default_true_face_power, add_info="0.0000 .. 1.0", help_message="Experimental option. Discriminates result face to be more like src face. Higher value - stronger discrimination. Typical value is 0.01 . Comparison - https://i.imgur.com/czScS9q.png"), 0.0, 1.0 )
@@ -261,10 +261,8 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
             if self.is_training:
                 if gan_power != 0:
-                    self.D_src = nn.PatchDiscriminator(patch_size=resolution//16, in_ch=input_ch, name="D_src")
-                    self.D_src_x2 = nn.PatchDiscriminator(patch_size=resolution//32, in_ch=input_ch, name="D_src_x2")
-                    self.model_filename_list += [ [self.D_src, 'D_src.npy'] ]
-                    self.model_filename_list += [ [self.D_src_x2, 'D_src_x2.npy'] ]
+                    self.D_src = nn.UNetPatchDiscriminator(patch_size=resolution//16, in_ch=input_ch, name="D_src")
+                    self.model_filename_list += [ [self.D_src, 'D_src_v2.npy'] ]
 
                 # Initialize optimizers
                 lr=5e-5
@@ -287,8 +285,8 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                 if gan_power != 0:
                     self.D_src_dst_opt = nn.RMSprop(lr=lr, lr_dropout=lr_dropout, clipnorm=clipnorm, name='D_src_dst_opt')
-                    self.D_src_dst_opt.initialize_variables ( self.D_src.get_weights()+self.D_src_x2.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')
-                    self.model_filename_list += [ (self.D_src_dst_opt, 'D_src_dst_opt.npy') ]
+                    self.D_src_dst_opt.initialize_variables ( self.D_src.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')#+self.D_src_x2.get_weights()
+                    self.model_filename_list += [ (self.D_src_dst_opt, 'D_src_v2_opt.npy') ]
 
         if self.is_training:
             # Adjust batch size for multiple GPU
@@ -360,7 +358,10 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     gpu_target_dstm_eyes = tf.clip_by_value (gpu_target_dstm_all-1, 0, 1)
 
                     gpu_target_srcm_blur = nn.gaussian_blur(gpu_target_srcm,  max(1, resolution // 32) )
+                    gpu_target_srcm_blur = tf.clip_by_value(gpu_target_srcm_blur, 0, 0.5) * 2
+
                     gpu_target_dstm_blur = nn.gaussian_blur(gpu_target_dstm,  max(1, resolution // 32) )
+                    gpu_target_dstm_blur = tf.clip_by_value(gpu_target_dstm_blur, 0, 0.5) * 2
 
                     gpu_target_dst_masked      = gpu_target_dst*gpu_target_dstm_blur
                     gpu_target_dst_anti_masked = gpu_target_dst*(1.0 - gpu_target_dstm_blur)
@@ -431,27 +432,30 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_D_code_loss_gvs += [ nn.gradients (gpu_D_code_loss, self.code_discriminator.get_weights() ) ]
 
                     if gan_power != 0:
-                        gpu_pred_src_src_d       = self.D_src(gpu_pred_src_src_masked_opt)
+                        gpu_pred_src_src_d, \
+                        gpu_pred_src_src_d2           = self.D_src(gpu_pred_src_src_masked_opt)
+
                         gpu_pred_src_src_d_ones  = tf.ones_like (gpu_pred_src_src_d)
                         gpu_pred_src_src_d_zeros = tf.zeros_like(gpu_pred_src_src_d)
-                        gpu_target_src_d         = self.D_src(gpu_target_src_masked_opt)
-                        gpu_target_src_d_ones    = tf.ones_like(gpu_target_src_d)
 
-                        gpu_pred_src_src_x2_d       = self.D_src_x2(gpu_pred_src_src_masked_opt)
-                        gpu_pred_src_src_x2_d_ones  = tf.ones_like (gpu_pred_src_src_x2_d)
-                        gpu_pred_src_src_x2_d_zeros = tf.zeros_like(gpu_pred_src_src_x2_d)
-                        gpu_target_src_x2_d         = self.D_src_x2(gpu_target_src_masked_opt)
-                        gpu_target_src_x2_d_ones    = tf.ones_like(gpu_target_src_x2_d)
+                        gpu_pred_src_src_d2_ones  = tf.ones_like (gpu_pred_src_src_d2)
+                        gpu_pred_src_src_d2_zeros = tf.zeros_like(gpu_pred_src_src_d2)
+
+                        gpu_target_src_d, \
+                        gpu_target_src_d2            = self.D_src(gpu_target_src_masked_opt)
+
+                        gpu_target_src_d_ones    = tf.ones_like(gpu_target_src_d)
+                        gpu_target_src_d2_ones    = tf.ones_like(gpu_target_src_d2)
 
                         gpu_D_src_dst_loss = (DLoss(gpu_target_src_d_ones      , gpu_target_src_d) + \
                                               DLoss(gpu_pred_src_src_d_zeros   , gpu_pred_src_src_d) ) * 0.5 + \
-                                             (DLoss(gpu_target_src_x2_d_ones   , gpu_target_src_x2_d) + \
-                                              DLoss(gpu_pred_src_src_x2_d_zeros, gpu_pred_src_src_x2_d) ) * 0.5
+                                             (DLoss(gpu_target_src_d2_ones      , gpu_target_src_d2) + \
+                                              DLoss(gpu_pred_src_src_d2_zeros   , gpu_pred_src_src_d2) ) * 0.5
 
-                        gpu_D_src_dst_loss_gvs += [ nn.gradients (gpu_D_src_dst_loss, self.D_src.get_weights()+self.D_src_x2.get_weights() ) ]
+                        gpu_D_src_dst_loss_gvs += [ nn.gradients (gpu_D_src_dst_loss, self.D_src.get_weights() ) ]#+self.D_src_x2.get_weights()
 
-                        gpu_G_loss += 0.5*gan_power*( DLoss(gpu_pred_src_src_d_ones, gpu_pred_src_src_d) + DLoss(gpu_pred_src_src_x2_d_ones, gpu_pred_src_src_x2_d))
-
+                        gpu_G_loss += gan_power*(DLoss(gpu_pred_src_src_d_ones, gpu_pred_src_src_d)  + \
+                                                 DLoss(gpu_pred_src_src_d2_ones, gpu_pred_src_src_d2))
 
                     gpu_G_loss_gvs += [ nn.gradients ( gpu_G_loss, self.src_dst_trainable_weights ) ]
 
