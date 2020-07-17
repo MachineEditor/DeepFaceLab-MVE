@@ -140,7 +140,7 @@ class InteractiveMergerSubprocessor(Subprocessor):
 
 
     #override
-    def __init__(self, is_interactive, merger_session_filepath, predictor_func, predictor_input_shape, face_enhancer_func, xseg_256_extract_func, merger_config, frames, frames_root_path, output_path, output_mask_path, model_iter):
+    def __init__(self, is_interactive, merger_session_filepath, predictor_func, predictor_input_shape, face_enhancer_func, xseg_256_extract_func, merger_config, frames, frames_root_path, output_path, output_mask_path, model_iter, subprocess_count=4):
         if len (frames) == 0:
             raise ValueError ("len (frames) == 0")
 
@@ -161,7 +161,7 @@ class InteractiveMergerSubprocessor(Subprocessor):
         self.output_mask_path = output_mask_path
         self.model_iter = model_iter
 
-        self.prefetch_frame_count = self.process_count = multiprocessing.cpu_count()
+        self.prefetch_frame_count = self.process_count = subprocess_count
 
         session_data = None
         if self.is_interactive and self.merger_session_filepath.exists():
