@@ -609,6 +609,10 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         for model, filename in io.progress_bar_generator(self.get_model_filename_list(), "Saving", leave=False):
             model.save_weights ( self.get_strpath_storage_for_file(filename) )
 
+    #override
+    def should_save_preview_history(self):
+        return (not io.is_colab() and self.iter % ( 10*(max(1,self.resolution // 64)) ) == 0) or \
+               (io.is_colab() and self.iter % 100 == 0)
 
     #override
     def onTrainOneIter(self):
