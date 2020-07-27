@@ -175,7 +175,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                           'head' : FaceType.HEAD}[ self.options['face_type'] ]
 
         eyes_prio = self.options['eyes_prio']
-        
+
         archi_split = self.options['archi'].split('-')
 
         if len(archi_split) == 2:
@@ -191,8 +191,16 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         if self.pretrain_just_disabled:
             self.set_iter(0)
 
-        self.gan_power = gan_power = self.options['gan_power'] if not self.pretrain else 0.0
+        self.gan_power = gan_power = 0.0 if self.pretrain else self.options['gan_power']
         random_warp = False if self.pretrain else self.options['random_warp']
+
+        if self.pretrain:
+            self.options_show_override['gan_power'] = 0.0
+            self.options_show_override['random_warp'] = False
+            self.options_show_override['lr_dropout'] = 'n'
+            self.options_show_override['face_style_power'] = 0.0
+            self.options_show_override['bg_style_power'] = 0.0
+            self.options_show_override['uniform_yaw'] = True
 
         masked_training = self.options['masked_training']
         ct_mode = self.options['ct_mode']
@@ -454,7 +462,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                                               DLoss(gpu_pred_src_src_d_zeros   , gpu_pred_src_src_d) ) * 0.5 + \
                                              (DLoss(gpu_target_src_d2_ones      , gpu_target_src_d2) + \
                                               DLoss(gpu_pred_src_src_d2_zeros   , gpu_pred_src_src_d2) ) * 0.5
-                            
+
                         gpu_D_src_dst_loss_gvs += [ nn.gradients (gpu_D_src_dst_loss, self.D_src.get_weights() ) ]#+self.D_src_x2.get_weights()
 
                         gpu_G_loss += gan_power*(DLoss(gpu_pred_src_src_d_ones, gpu_pred_src_src_d)  + \

@@ -132,6 +132,7 @@ class ModelBase(object):
 
         self.iter = 0
         self.options = {}
+        self.options_show_override = {}
         self.loss_history = []
         self.sample_for_preview = None
         self.choosed_gpu_indexes = None
@@ -532,10 +533,13 @@ class ModelBase(object):
         return self.get_strpath_storage_for_file('summary.txt')
 
     def get_summary_text(self):
+        visible_options = self.options.copy()
+        visible_options.update(self.options_show_override)
+        
         ###Generate text summary of model hyperparameters
         #Find the longest key name and value string. Used as column widths.
-        width_name = max([len(k) for k in self.options.keys()] + [17]) + 1 # Single space buffer to left edge. Minimum of 17, the length of the longest static string used "Current iteration"
-        width_value = max([len(str(x)) for x in self.options.values()] + [len(str(self.get_iter())), len(self.get_model_name())]) + 1 # Single space buffer to right edge
+        width_name = max([len(k) for k in visible_options.keys()] + [17]) + 1 # Single space buffer to left edge. Minimum of 17, the length of the longest static string used "Current iteration"
+        width_value = max([len(str(x)) for x in visible_options.values()] + [len(str(self.get_iter())), len(self.get_model_name())]) + 1 # Single space buffer to right edge
         if len(self.device_config.devices) != 0: #Check length of GPU names
             width_value = max([len(device.name)+1 for device in self.device_config.devices] + [width_value])
         width_total = width_name + width_value + 2 #Plus 2 for ": "
@@ -550,8 +554,8 @@ class ModelBase(object):
 
         summary_text += [f'=={" Model Options ":-^{width_total}}=='] # Model options
         summary_text += [f'=={" "*width_total}==']
-        for key in self.options.keys():
-            summary_text += [f'=={key: >{width_name}}: {str(self.options[key]): <{width_value}}=='] # self.options key/value pairs
+        for key in visible_options.keys():
+            summary_text += [f'=={key: >{width_name}}: {str(visible_options[key]): <{width_value}}=='] # visible_options key/value pairs
         summary_text += [f'=={" "*width_total}==']
 
         summary_text += [f'=={" Running On ":-^{width_total}}=='] # Training hardware info
