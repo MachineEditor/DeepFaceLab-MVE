@@ -1,7 +1,8 @@
-﻿<table align="center" border="0"><tr><td align="center" width="9999">
+﻿<table align="center" border="0">
+
+<tr><td colspan=2 align="center">
 
 # DeepFaceLab  
-
 
 <a href="https://arxiv.org/abs/2005.05535">
 
@@ -14,7 +15,7 @@ https://arxiv.org/abs/2005.05535</a>
 <img src="doc/DFL_welcome.png" align="center">
 
 </td></tr>
-<tr><td align="center" width="9999">
+<tr><td colspan=2 align="center">
 
 <p align="center">
 
@@ -38,105 +39,103 @@ DeepFaceLab is used by such popular youtube channels as
 |---|---|
 
 </td></tr>
-<tr><td align="center" width="9999">
+
+<tr><td colspan=2 align="center">
 
 # What can I do using DeepFaceLab?
 
 </td></tr>
-<tr><td align="center" width="9999">
+<tr><td colspan=2 align="center">
 
 ## Replace the face
 
 <img src="doc/replace_the_face.png" align="center">
 
 </td></tr>
-<tr><td align="center" width="9999">
+
+<tr><td colspan=2 align="center">
 
 ## De-age the face
 
-<table align="center" border="0">
+</td></tr>
 
-<tr><td align="center" width="9999">
+<tr><td align="center">
 
 <img src="doc/deage_0_1.jpg" align="center">
 
 </td>
-<td align="center" width="9999">
+<td align="center">
 
 <img src="doc/deage_0_2.jpg" align="center">
 
 </td></tr>
 
-<tr><td colspan=2  align="center" width="9999">
+<tr><td colspan=2 align="center">
 
 ![](doc/youtube_icon.png) https://www.youtube.com/watch?v=Ddx5B-84ebo
 
 </td></tr>
-</table>
 
-<tr><td align="center" width="9999">
+<tr><td colspan=2 align="center">
 
 ## Replace the head
 
-<table align="center" border="0">
+</td></tr>
 
-<tr><td align="center" width="9999">
+
+<tr><td align="center">
 
 <img src="doc/head_replace_0_1.jpg" align="center">
 
 </td>
-<td align="center" width="9999">
+<td align="center">
 
 <img src="doc/head_replace_0_2.jpg" align="center">
 
 </td></tr>
 
-<tr ><td colspan=2  align="center" width="9999">
+<tr><td colspan=2 align="center">
 
 ![](doc/youtube_icon.png) https://www.youtube.com/watch?v=xr5FHd0AdlQ
 
 </td></tr>
 
-<tr><td align="center" width="9999">
+<tr><td align="center">
 
 <img src="doc/head_replace_1_1.jpg" align="center">
 
 </td>
-<td align="center" width="9999">
+<td align="center">
 
 <img src="doc/head_replace_1_2.jpg" align="center">
 
 </td></tr>
 
-<tr ><td colspan=2  align="center" width="9999">
+<tr><td colspan=2 align="center">
 
 ![](doc/youtube_icon.png) https://www.youtube.com/watch?v=RTjgkhMugVw
 
 </td></tr>
 
-<tr><td align="center" width="9999">
+<tr><td align="center">
 
 <img src="doc/head_replace_2_1.jpg" align="center">
 
 </td>
-<td align="center" width="9999">
+<td align="center">
 
 <img src="doc/head_replace_2_2.jpg" align="center">
 
 </td></tr>
 
-<tr ><td colspan=2  align="center" width="9999">
+<tr><td colspan=2  align="center">
 
 ![](doc/youtube_icon.png) https://www.youtube.com/watch?v=R9f7WD0gKPo
 
 </td></tr>
 
-</table>
 
-
-
-</td></tr>
-<tr><td align="center" width="9999">
+<tr><td colspan=2 align="center">
 
 ## Change the lip movement of politicians*
 
@@ -146,24 +145,24 @@ DeepFaceLab is used by such popular youtube channels as
 
 \* also requires a skill in video editors such as *Adobe After Effects* or *Davinci Resolve*
 </td></tr>
-<tr><td align="center" width="9999">
+<tr><td colspan=2 align="center">
 
 # Deepfake native resolution progress
 
 </td></tr>
-<tr><td align="center" width="9999">
+<tr><td colspan=2 align="center">
 
 <img src="doc/deepfake_progress.png" align="center">
 
 </td></tr>
-<tr><td align="center" width="9999">
+<tr><td colspan=2 align="center">
 
 <img src="doc/make_everything_ok.png" align="center">
 
 Unfortunately, there is no "make everything ok" button in DeepFaceLab. You should spend time studying the workflow and growing your skills. A skill in programs such as *AfterEffects* or *Davince Resolve* is also desirable.
 
 </td></tr>
-<tr><td align="center" width="9999">
+<tr><td colspan=2 align="center">
 
 ## Mini tutorial
 
@@ -174,104 +173,210 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 </a>
 
 </td></tr>
-<tr><td align="center" width="9999">
+<tr><td colspan=2 align="center">
 
 ## Releases
 
-||||
-|---|---|---|
-|Windows|[Get magnet link](https://pastebin.com/LLysqZpY)|Last release. Use torrent client to download.|
-||[Mega.nz](https://mega.nz/folder/Po0nGQrA#dbbttiNWojCt8jzD4xYaPw)|Contains new and prev releases.|
-|Google Colab|[github](https://github.com/chervonij/DFL-Colab)|by @chervonij . You can train fakes for free using Google Colab.|
-|Linux|[github](https://github.com/nagadit/DeepFaceLab_Linux)|By @nagadit|
-|CentOS Linux|[github](https://github.com/elemantalcode/dfl)|May be outdated. By @elemantalcode|
-||||
-
 </td></tr>
-<tr><td align="center" width="9999">
+
+<tr><td align="right">
+<a href="https://pastebin.com/LLysqZpY">Windows (magnet link)</a>
+</td><td align="center">Last release. Use torrent client to download.</td></tr>
+
+<tr><td align="right">
+<a href="https://mega.nz/folder/Po0nGQrA#dbbttiNWojCt8jzD4xYaPw">Windows (Mega.nz)</a>
+</td><td align="center">Contains new and prev releases.</td></tr>
+
+<tr><td align="right">
+<a href="https://github.com/chervonij/DFL-Colab">Google Colab (github)</a>
+</td><td align="center">by @chervonij . You can train fakes for free using Google Colab.</td></tr>
+
+<tr><td align="right">
+<a href="https://github.com/nagadit/DeepFaceLab_Linux">Linux (github)</a>
+</td><td align="center">by @nagadit</td></tr>
+
+<tr><td align="right">
+<a href="https://github.com/elemantalcode/dfl">CentOS Linux (github)</a>
+</td><td align="center">May be outdated. By @elemantalcode</td></tr>
+
+</table>
+
+<table align="center" border="0">
+
+<tr><td colspan=2 align="center">
 
 ## Links
 
-||||
-|---|---|---|
-|Guides and tutorials|||
-||[DeepFaceLab guide](https://mrdeepfakes.com/forums/thread-guide-deepfacelab-2-0-explained-and-tutorials-recommended)|Main guide|
-||[Faceset creation guide](https://mrdeepfakes.com/forums/thread-guide-celebrity-faceset-dataset-creation-how-to-create-celebrity-facesets)|How to create the right faceset |
-||[Google Colab guide](https://mrdeepfakes.com/forums/thread-guide-deepfacelab-google-colab-tutorial)|Guide how to train the fake on Google Colab|
-||[Compositing](https://mrdeepfakes.com/forums/thread-deepfacelab-2-0-compositing-in-davinci-resolve-vegas-pro-and-after-effects)|To achieve the highest quality, compose deepfake manually in video editors such as Davinci Resolve or Adobe AfterEffects|
-||[Discussion and suggestions](https://mrdeepfakes.com/forums/thread-deepfacelab-2-0-discussion-tips-suggestions)||
-||||
-|Supplementary material|||
-||[Ready to work facesets](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|Celebrity facesets made by community|
-||[Pretrained models](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|Use pretrained models made by community to speed up training|
-||||
-|Communication groups|||
-||[reddit r/RUdeepfakes/](https://www.reddit.com/r/RUdeepfakes/new/)|Постим русские дипфейки сюда !|
-||[Русское сообщество](https://mrdeepfakes.com/forums/forum-russian-community)||
-||[telegram (English / Русский)](https://t.me/joinchat/ElkhqlgJ0I5HhdJyFar80w)|Don't forget to hide your phone number|
-||[telegram (English only)](https://t.me/DeepFaceLab_official_en)|Don't forget to hide your phone number|
-||[mrdeepfakes](https://mrdeepfakes.com/forums/)|the biggest NSFW English community|
-||[reddit r/GifFakes/](https://www.reddit.com/r/GifFakes/new/)|Post your deepfakes there !|
-||[reddit r/SFWdeepfakes/](https://www.reddit.com/r/SFWdeepfakes/new/)|Post your deepfakes there !|
-||QQ 951138799|中文 Chinese QQ group for ML/AI experts|
-||[deepfaker.xyz](https://www.deepfaker.xyz/)|中文学习站（非官方|
+</td></tr>
+
+<tr><td colspan=2 align="center">
+
+### Guides and tutorials
 
 </td></tr>
 
-<tr><td align="center" width="9999">
-  
+<tr><td align="right">
+<a href="https://mrdeepfakes.com/forums/thread-guide-deepfacelab-2-0-explained-and-tutorials-recommended">DeepFaceLab guide</a>
+</td><td align="center">Main guide</td></tr>
+
+<tr><td align="right">
+<a href="https://mrdeepfakes.com/forums/thread-guide-celebrity-faceset-dataset-creation-how-to-create-celebrity-facesets">Faceset creation guide</a>
+</td><td align="center">How to create the right faceset</td></tr>
+
+<tr><td align="right">
+<a href="https://mrdeepfakes.com/forums/thread-deepfacelab-2-0-compositing-in-davinci-resolve-vegas-pro-and-after-effects">Google Colab guide</a>
+</td><td align="center">To achieve the highest quality, compose deepfake manually in video editors such as Davinci Resolve or Adobe AfterEffects</td></tr>
+
+<tr><td align="right">
+<a href="https://mrdeepfakes.com/forums/thread-guide-deepfacelab-google-colab-tutorial">Compositing</a>
+</td><td align="center">Guide how to train the fake on Google Colab</td></tr>
+
+<tr><td align="right">
+<a href="https://mrdeepfakes.com/forums/thread-deepfacelab-2-0-discussion-tips-suggestions">Discussion and suggestions</a>
+</td><td align="center"></td></tr>
+
+<tr><td colspan=2 align="center">
+
+### Supplementary material
+
+</td></tr>
+
+<tr><td align="right">
+<a href="https://mrdeepfakes.com/forums/forum-celebrity-facesets">Ready to work facesets</a>
+</td><td align="center">Celebrity facesets made by community</td></tr>
+
+<tr><td align="right">
+<a href="https://mrdeepfakes.com/forums/forum-trained-models">Pretrained models</a>
+</td><td align="center">Pretrained models made by community</td></tr>
+
+<tr><td colspan=2 align="center">
+
+### Communication groups
+
+</td></tr>
+
+<tr><td align="right">
+<a href="https://www.reddit.com/r/RUdeepfakes/new/">reddit r/RUdeepfakes/</a>
+</td><td align="center">Постим русские дипфейки сюда !</td></tr>
+
+<tr><td align="right">
+<a href="https://mrdeepfakes.com/forums/forum-russian-community">Русское сообщество</a>
+</td><td align="center"></td></tr>
+
+<tr><td align="right">
+<a href="https://t.me/joinchat/ElkhqlgJ0I5HhdJyFar80w">telegram (English / Русский)</a>
+</td><td align="center">Don't forget to hide your phone number</td></tr>
+
+<tr><td align="right">
+<a href="https://t.me/DeepFaceLab_official_en">telegram (English only)</a>
+</td><td align="center">Don't forget to hide your phone number</td></tr>
+
+<tr><td align="right">
+<a href="https://mrdeepfakes.com/forums/">mrdeepfakes</a>
+</td><td align="center">the biggest NSFW English community</td></tr>
+
+<tr><td align="right">
+<a href="https://www.reddit.com/r/GifFakes/new/">reddit r/GifFakes/</a>
+</td><td align="center">Post your deepfakes there !</td></tr>
+
+<tr><td align="right">
+<a href="https://www.reddit.com/r/SFWdeepfakes/new/">reddit r/SFWdeepfakes/</a>
+</td><td align="center">Post your deepfakes there !</td></tr>
+
+<tr><td align="right">
+QQ 951138799
+</td><td align="center">中文 Chinese QQ group for ML/AI experts</td></tr>
+
+<tr><td align="right">
+<a href="https://www.deepfaker.xyz/">deepfaker.xyz</a>
+</td><td align="center">中文学习站（非官方)</td></tr>
+
+</table>
+
+<table align="center" border="0">
+
+<tr><td colspan=2 align="center">
+
 ## How I can help the project?
 
-|||
-|---|---|
-|Donate|Sponsor deepfake research and DeepFaceLab development.|
-||[Donate via Paypal](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=lepersorium@gmail.com&lc=US&no_note=0&item_name=Support+DeepFaceLab&cn=&curency_code=USD&bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted)
-||[Donate via Yandex.Money](https://money.yandex.ru/to/41001142318065)|
-||bitcoin:bc1qkhh7h0gwwhxgg6h6gpllfgstkd645fefrd5s6z|
-|Alipay 捐款|![](doc/Alipay_donation.jpg)|
-|||
-|Last donations|-|
-|||
-|Collect facesets|You can collect faceset of any celebrity that can be used in DeepFaceLab and share it [in the community](https://mrdeepfakes.com/forums/forum-celebrity-facesets)|
-|||
-|Star this repo|Register github account and push "Star" button.|
+</td></tr>
+
+<tr><td colspan=2 align="center">
+
+### Sponsor deepfake research and DeepFaceLab development.
 
 </td></tr>
 
-<tr><td align="center" width="9999">
-  
+<tr><td colspan=2 align="center">
+<a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=lepersorium@gmail.com&lc=US&no_note=0&item_name=Support+DeepFaceLab&cn=&curency_code=USD&bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted">Donate via Paypal</a>
+</td></tr>
+
+<tr><td colspan=2 align="center">
+<a href="https://money.yandex.ru/to/41001142318065">Donate via Yandex.Money</a>
+</td></tr>
+
+<tr><td colspan=2 align="center">
+bitcoin:bc1qkhh7h0gwwhxgg6h6gpllfgstkd645fefrd5s6z
+</td></tr>
+
+<tr><td align="right">
+Alipay 捐款
+</td><td align="center"> <img src="doc/Alipay_donation.jpg" align="center"> </td></tr>
+
+<tr><td colspan=2 align="center">
+
+### Collect facesets
+
+</td></tr>
+
+<tr><td colspan=2 align="center">
+
+You can collect faceset of any celebrity that can be used in DeepFaceLab and share it <a href="https://mrdeepfakes.com/forums/forum-celebrity-facesets">in the community</a>
+</td></tr>
+
+<tr><td colspan=2 align="center">
+
+### Star this repo
+
+</td></tr>
+
+<tr><td colspan=2 align="center">
+
+Register github account and push "Star" button.
+
+</td></tr>
+
+</table>
+
+
+
+<table align="center" border="0">
+<tr><td colspan=2 align="center">
+
 ## Meme zone
-<p align="center">
 
-<table align="center" border="0"><tr>
+</td></tr>
 
-<td align="center" width="9999">
+<tr><td align="center" width="50%">
 
 <img src="doc/meme1.jpg" align="center">
 
 </td>
 
-<td align="center" width="9999">
+<td align="center" width="50%">
 
 <img src="doc/meme2.jpg" align="center">
 
-</td> </tr>
-
-<tr>
-<td colspan=2>
-<img src="doc/meme3.jpg" align="center">
-
-</td>
-</tr>
-
-</table>
-
-</p>
-
 </td></tr>
-<tr><td align="center" width="9999">
+
+<tr><td colspan=2>
+<img src="doc/meme3.jpg" align="center">
+</td></tr>
+
+<tr><td colspan=2 align="center">
 
 <sub>#deepfacelab #deepfakes #faceswap #face-swap #deep-learning #deeplearning #deep-neural-networks #deepface #deep-face-swap #fakeapp #fake-app #neural-networks #neural-nets #tensorflow #cuda #nvidia</sub>
 
 </td></tr>
+
 </table>
