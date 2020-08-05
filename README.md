@@ -159,7 +159,7 @@ DeepFaceLab is used by such popular youtube channels as
 
 <img src="doc/make_everything_ok.png" align="center">
 
-Unfortunately, there is no "make everything ok" button in DeepFaceLab. You should spend time studying the workflow and growing your skills. A skill in programs such as *AfterEffects* or *Davince Resolve* is also desirable.
+Unfortunately, there is no "make everything ok" button in DeepFaceLab. You should spend time studying the workflow and growing your skills. A skill in programs such as *AfterEffects* or *Davinci Resolve* is also desirable.
 
 </td></tr>
 <tr><td colspan=2 align="center">
