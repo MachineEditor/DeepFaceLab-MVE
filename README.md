@@ -59,12 +59,12 @@ DeepFaceLab is used by such popular youtube channels as
 
 </td></tr>
 
-<tr><td align="center">
+<tr><td align="center" width="50%">
 
 <img src="doc/deage_0_1.jpg" align="center">
 
 </td>
-<td align="center">
+<td align="center" width="50%">
 
 <img src="doc/deage_0_2.jpg" align="center">
 
@@ -83,12 +83,12 @@ DeepFaceLab is used by such popular youtube channels as
 </td></tr>
 
 
-<tr><td align="center">
+<tr><td align="center" width="50%">
 
 <img src="doc/head_replace_0_1.jpg" align="center">
 
 </td>
-<td align="center">
+<td align="center" width="50%">
 
 <img src="doc/head_replace_0_2.jpg" align="center">
 
@@ -100,12 +100,12 @@ DeepFaceLab is used by such popular youtube channels as
 
 </td></tr>
 
-<tr><td align="center">
+<tr><td align="center" width="50%">
 
 <img src="doc/head_replace_1_1.jpg" align="center">
 
 </td>
-<td align="center">
+<td align="center" width="50%">
 
 <img src="doc/head_replace_1_2.jpg" align="center">
 
@@ -117,12 +117,12 @@ DeepFaceLab is used by such popular youtube channels as
 
 </td></tr>
 
-<tr><td align="center">
+<tr><td align="center" width="50%">
 
 <img src="doc/head_replace_2_1.jpg" align="center">
 
 </td>
-<td align="center">
+<td align="center" width="50%">
 
 <img src="doc/head_replace_2_2.jpg" align="center">
 
