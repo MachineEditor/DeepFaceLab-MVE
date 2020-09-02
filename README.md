@@ -225,11 +225,11 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 
 <tr><td align="right">
 <a href="https://mrdeepfakes.com/forums/thread-deepfacelab-2-0-compositing-in-davinci-resolve-vegas-pro-and-after-effects">Google Colab guide</a>
-</td><td align="center">To achieve the highest quality, compose deepfake manually in video editors such as Davinci Resolve or Adobe AfterEffects</td></tr>
+</td><td align="center">Guide how to train the fake on Google Colab</td></tr>
 
 <tr><td align="right">
 <a href="https://mrdeepfakes.com/forums/thread-guide-deepfacelab-google-colab-tutorial">Compositing</a>
-</td><td align="center">Guide how to train the fake on Google Colab</td></tr>
+</td><td align="center">To achieve the highest quality, compose deepfake manually in video editors such as Davinci Resolve or Adobe AfterEffects</td></tr>
 
 <tr><td align="right">
 <a href="https://mrdeepfakes.com/forums/thread-deepfacelab-2-0-discussion-tips-suggestions">Discussion and suggestions</a>
@@ -268,7 +268,7 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 </td><td align="center">Don't forget to hide your phone number</td></tr>
 
 <tr><td align="right">
-<a href="https://t.me/DeepFaceLab_official_en">telegram (English only)</a>
+<a href="https://t.me/joinchat/ElkhqkzB6uqyjCzoXwv3gg">telegram (English only)</a>
 </td><td align="center">Don't forget to hide your phone number</td></tr>
 
 <tr><td align="right">
