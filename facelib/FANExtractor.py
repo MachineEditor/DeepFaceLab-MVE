@@ -28,13 +28,13 @@ class FANExtractor(object):
                 self.out_planes = out_planes
 
                 self.bn1 = nn.BatchNorm2D(in_planes)
-                self.conv1 = nn.Conv2D (in_planes, out_planes/2, kernel_size=3, strides=1, padding='SAME', use_bias=False )
+                self.conv1 = nn.Conv2D (in_planes, out_planes//2, kernel_size=3, strides=1, padding='SAME', use_bias=False )
 
                 self.bn2 = nn.BatchNorm2D(out_planes//2)
-                self.conv2 = nn.Conv2D (out_planes/2, out_planes/4, kernel_size=3, strides=1, padding='SAME', use_bias=False )
+                self.conv2 = nn.Conv2D (out_planes//2, out_planes//4, kernel_size=3, strides=1, padding='SAME', use_bias=False )
 
                 self.bn3 = nn.BatchNorm2D(out_planes//4)
-                self.conv3 = nn.Conv2D (out_planes/4, out_planes/4, kernel_size=3, strides=1, padding='SAME', use_bias=False )
+                self.conv3 = nn.Conv2D (out_planes//4, out_planes//4, kernel_size=3, strides=1, padding='SAME', use_bias=False )
 
                 if self.in_planes != self.out_planes:
                     self.down_bn1 = nn.BatchNorm2D(in_planes)
