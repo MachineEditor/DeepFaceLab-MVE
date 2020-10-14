@@ -366,3 +366,52 @@ def color_transfer(ct_mode, img_src, img_trg):
     else:
         raise ValueError(f"unknown ct_mode {ct_mode}")
     return out
+
+
+# imported from faceswap
+def color_augmentation(img):
+    """ Color adjust RGB image """
+    face = img
+    face = (face * 255.0).astype("uint8")
+    face = random_clahe(face)
+    face = random_lab(face)
+    img[:, :, :3] = face
+    return img.astype('float32') / 255.0
+
+
+def random_lab(image):
+    """ Perform random color/lightness adjustment in L*a*b* colorspace """
+    amount_l = 30 / 100
+    amount_ab = 8 / 100
+    randoms = [(random() * amount_l * 2) - amount_l,  # L adjust
+                (random() * amount_ab * 2) - amount_ab,  # A adjust
+                (random() * amount_ab * 2) - amount_ab]  # B adjust
+    image = cv2.cvtColor(  # pylint:disable=no-member
+    image, cv2.COLOR_BGR2LAB).astype("float32") / 255.0  # pylint:disable=no-member
+
+    for idx, adjustment in enumerate(randoms):
+        if adjustment >= 0:
+            image[:, :, idx] = ((1 - image[:, :, idx]) * adjustment) + image[:, :, idx]
+        else:
+            image[:, :, idx] = image[:, :, idx] * (1 + adjustment)
+    image = cv2.cvtColor((image * 255.0).astype("uint8"),  # pylint:disable=no-member
+                        cv2.COLOR_LAB2BGR)  # pylint:disable=no-member
+    return image
+
+def random_clahe(image):
+    """ Randomly perform Contrast Limited Adaptive Histogram Equalization """
+    contrast_random = random()
+    if contrast_random > 50 / 100:
+        return image
+
+    # base_contrast = image.shape[0] // 128
+    base_contrast = 1 # testing because it breaks on small sizes
+    grid_base = random() * 4
+    contrast_adjustment = int(grid_base * (base_contrast / 2))
+    grid_size = base_contrast + contrast_adjustment
+
+    clahe = cv2.createCLAHE(clipLimit=2.0,  # pylint: disable=no-member
+                            tileGridSize=(grid_size, grid_size))
+    for chan in range(3):
+        image[:, :, chan] = clahe.apply(image[:, :, chan])
+    return image

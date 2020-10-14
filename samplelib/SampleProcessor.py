@@ -197,10 +197,13 @@ class SampleProcessor(object):
                                 img = cv2.resize( img, (resolution, resolution), interpolation=cv2.INTER_CUBIC )
                                 
                         # Apply random color transfer                        
-                        if ct_mode is not None and ct_sample is not None:
-                            if ct_sample_bgr is None:
-                               ct_sample_bgr = ct_sample.load_bgr()
-                            img = imagelib.color_transfer (ct_mode, img, cv2.resize( ct_sample_bgr, (resolution,resolution), interpolation=cv2.INTER_LINEAR ) )
+                        if ct_mode is not None and ct_sample is not None or ct_mode == 'fs-aug':
+                            if 'fs-aug':
+                                img = imagelib.color_augmentation(img)
+                            elif:
+                                if ct_sample_bgr is None:
+                                    ct_sample_bgr = ct_sample.load_bgr()
+                                img = imagelib.color_transfer (ct_mode, img, cv2.resize( ct_sample_bgr, (resolution,resolution), interpolation=cv2.INTER_LINEAR ) )
 
                         
                         img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=border_replicate)
