@@ -70,7 +70,15 @@ class SampleProcessor(object):
                 
             def get_eyes_mask():
                 eyes_mask = LandmarksProcessor.get_image_eye_mask (sample_bgr.shape, sample_landmarks)
-                return np.clip(eyes_mask, 0, 1)
+                # set eye masks to 1-2
+                clip = np.clip(eyes_mask, 0, 1)
+                return a[a > 0.1] += 1
+
+            def get_mouth_mask():
+                mouth_mask = LandmarksProcessor.get_image_mouth_mask (sample_bgr.shape, sample_landmarks)
+                # set eye masks to 2-3
+                clip = np.clip(mouth_mask, 0, 1)
+                return a[a > 0.1] += 2
 
             is_face_sample = sample_landmarks is not None
 
@@ -136,8 +144,12 @@ class SampleProcessor(object):
                         elif face_mask_type == SPFMT.EYES:
                             img = get_eyes_mask()
                         elif face_mask_type == SPFMT.FULL_FACE_EYES:
+                            # sets both eyes and mouth mask parts
                             img = get_full_face_mask()                            
-                            img += get_eyes_mask()*img
+                            eye_mask = get_eyes_mask()
+                            img = np.where(eye_mask > 1, eye_mask, img)
+                            mouth_mask = get_mouth_mask()
+                            img = np.where(mouth_mask > 2, mouth_mask, img)
                         else:
                             img = np.zeros ( sample_bgr.shape[0:2]+(1,), dtype=np.float32)
 

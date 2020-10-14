@@ -44,6 +44,7 @@ class SAEHDModel(ModelBase):
         default_d_mask_dims        = self.options['d_mask_dims']        = self.options.get('d_mask_dims', None)
         default_masked_training    = self.options['masked_training']    = self.load_or_def_option('masked_training', True)
         default_eyes_prio          = self.options['eyes_prio']          = self.load_or_def_option('eyes_prio', False)
+        default_mouth_prio         = self.options['mouth_prio']         = self.load_or_def_option('mouth_prio', False)
         default_uniform_yaw        = self.options['uniform_yaw']        = self.load_or_def_option('uniform_yaw', False)
 
         lr_dropout = self.load_or_def_option('lr_dropout', 'n')
@@ -130,6 +131,8 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                 self.options['masked_training']  = io.input_bool ("Masked training", default_masked_training, help_message="This option is available only for 'whole_face' or 'head' type. Masked training clips training area to full_face mask or XSeg mask, thus network will train the faces properly.")
 
             self.options['eyes_prio'] = io.input_bool ("Eyes priority", default_eyes_prio, help_message='Helps to fix eye problems during training like "alien eyes" and wrong eyes direction ( especially on HD architectures ) by forcing the neural network to train eyes with higher priority. before/after https://i.imgur.com/YQHOuSR.jpg ')
+            self.options['mouth_prio'] = io.input_bool ("Mouth priority", default_mouth_prio, help_message='Helps to fix mouth problems during training by forcing the neural network to train mouth with higher priority similar to eyes ')
+
             self.options['uniform_yaw'] = io.input_bool ("Uniform yaw distribution of samples", default_uniform_yaw, help_message='Helps to fix blurry side faces due to small amount of them in the faceset.')
 
         if self.is_first_run() or ask_override:
@@ -175,6 +178,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                           'head' : FaceType.HEAD}[ self.options['face_type'] ]
 
         eyes_prio = self.options['eyes_prio']
+        mouth_prio = self.options['mouth_prio']
 
         archi_split = self.options['archi'].split('-')
 
@@ -363,8 +367,12 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     # unpack masks from one combined mask
                     gpu_target_srcm      = tf.clip_by_value (gpu_target_srcm_all, 0, 1)
                     gpu_target_dstm      = tf.clip_by_value (gpu_target_dstm_all, 0, 1)
-                    gpu_target_srcm_eyes = tf.clip_by_value (gpu_target_srcm_all-1, 0, 1)
-                    gpu_target_dstm_eyes = tf.clip_by_value (gpu_target_dstm_all-1, 0, 1)
+                    gpu_target_srcm_eye_mouth = tf.clip_by_value (gpu_target_srcm_all-1, 0, 1)
+                    gpu_target_dstm_eye_mouth = tf.clip_by_value (gpu_target_dstm_all-1, 0, 1)
+                    gpu_target_srcm_mouth = tf.clip_by_value (gpu_target_srcm_all-2, 0, 1)
+                    gpu_target_dstm_mouth = tf.clip_by_value (gpu_target_dstm_all-2, 0, 1)
+                    gpu_target_srcm_eyes = tf.clip_by_value (gpu_target_srcm_eye_mouth-gpu_target_srcm_mouth, 0, 1)
+                    gpu_target_dstm_eyes = tf.clip_by_value (gpu_target_dstm_eye_mouth-gpu_target_dstm_mouth, 0, 1)
 
                     gpu_target_srcm_blur = nn.gaussian_blur(gpu_target_srcm,  max(1, resolution // 32) )
                     gpu_target_srcm_blur = tf.clip_by_value(gpu_target_srcm_blur, 0, 0.5) * 2
@@ -393,8 +401,15 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_src_loss += tf.reduce_mean ( 5*nn.dssim(gpu_target_src_masked_opt, gpu_pred_src_src_masked_opt, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
                     gpu_src_loss += tf.reduce_mean ( 10*tf.square ( gpu_target_src_masked_opt - gpu_pred_src_src_masked_opt ), axis=[1,2,3])
 
-                    if eyes_prio:
-                        gpu_src_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_src*gpu_target_srcm_eyes - gpu_pred_src_src*gpu_target_srcm_eyes ), axis=[1,2,3])
+                    if eyes_prio or mouth_prio:
+                        if eyes_prio and mouth_prio:
+                            gpu_target_part_mask = gpu_target_srcm_eye_mouth
+                        elif eyes_prio:
+                            gpu_target_part_mask = gpu_target_srcm_eyes
+                        elif mouth_prio:
+                            gpu_target_part_mask = gpu_target_srcm_mouth
+
+                        gpu_src_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_src*gpu_target_part_mask - gpu_pred_src_src*gpu_target_part_mask ), axis=[1,2,3])
 
                     gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
 
@@ -415,8 +430,15 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     gpu_dst_loss += tf.reduce_mean ( 10*tf.square(  gpu_target_dst_masked_opt- gpu_pred_dst_dst_masked_opt ), axis=[1,2,3])
 
 
-                    if eyes_prio:
-                        gpu_dst_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_dst*gpu_target_dstm_eyes - gpu_pred_dst_dst*gpu_target_dstm_eyes ), axis=[1,2,3])
+                    if eyes_prio or mouth_prio:
+                        if eyes_prio and mouth_prio:
+                            gpu_target_part_mask = gpu_target_dstm_eye_mouth
+                        elif eyes_prio:
+                            gpu_target_part_mask = gpu_target_dstm_eyes
+                        elif mouth_prio:
+                            gpu_target_part_mask = gpu_target_dstm_mouth
+
+                        gpu_dst_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_dst*gpu_target_part_mask - gpu_pred_dst_dst*gpu_target_part_mask ), axis=[1,2,3])
 
                     gpu_dst_loss += tf.reduce_mean ( 10*tf.square( gpu_target_dstm - gpu_pred_dst_dstm ),axis=[1,2,3] )
 
