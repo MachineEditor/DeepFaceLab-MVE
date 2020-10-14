@@ -286,7 +286,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         self.D_src_x2 = nn.PatchDiscriminator(patch_size=resolution//32, in_ch=input_ch, name="D_src_x2")
                         self.model_filename_list += [ [self.D_src, 'D_src.npy'] ]	
                         self.model_filename_list += [ [self.D_src_x2, 'D_src_x2.npy'] ]
-                    elif:
+                    else:
                         self.D_src = nn.UNetPatchDiscriminator(patch_size=resolution//16, in_ch=input_ch, name="D_src")
                         self.model_filename_list += [ [self.D_src, 'D_src_v2.npy'] ]
 
@@ -315,7 +315,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     if gan_old:
                         self.D_src_dst_opt.initialize_variables ( self.D_src.get_weights()+self.D_src_x2.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')
                         self.model_filename_list += [ (self.D_src_dst_opt, 'D_src_dst_opt.npy') ]
-                    elif:
+                    else:
                         self.D_src_dst_opt.initialize_variables ( self.D_src.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')#+self.D_src_x2.get_weights()
                         self.model_filename_list += [ (self.D_src_dst_opt, 'D_src_v2_opt.npy') ]
 
@@ -485,16 +485,16 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     if gan_power != 0:
                         if gan_old:
                             gpu_pred_src_src_d       = self.D_src(gpu_pred_src_src_masked_opt)
-                        	
-                            gpu_pred_src_src_d_ones  = tf.ones_like (gpu_pred_src_src_d)	                        gpu_pred_src_src_d_ones  = tf.ones_like (gpu_pred_src_src_d)
-                            gpu_pred_src_src_d_zeros = tf.zeros_like(gpu_pred_src_src_d)	                        gpu_pred_src_src_d_zeros = tf.zeros_like(gpu_pred_src_src_d)
+
+                            gpu_pred_src_src_d_ones  = tf.ones_like (gpu_pred_src_src_d)
+                            gpu_pred_src_src_d_zeros = tf.zeros_like(gpu_pred_src_src_d)
                             gpu_target_src_d         = self.D_src(gpu_target_src_masked_opt)	
                             gpu_target_src_d_ones    = tf.ones_like(gpu_target_src_d)
 
-                            gpu_pred_src_src_x2_d       = self.D_src_x2(gpu_pred_src_src_masked_opt)	                        gpu_pred_src_src_d2_ones  = tf.ones_like (gpu_pred_src_src_d2)
-                            gpu_pred_src_src_x2_d_ones  = tf.ones_like (gpu_pred_src_src_x2_d)	                        gpu_pred_src_src_d2_zeros = tf.zeros_like(gpu_pred_src_src_d2)
+                            gpu_pred_src_src_x2_d       = self.D_src_x2(gpu_pred_src_src_masked_opt)
+                            gpu_pred_src_src_x2_d_ones  = tf.ones_like (gpu_pred_src_src_x2_d)
                             gpu_pred_src_src_x2_d_zeros = tf.zeros_like(gpu_pred_src_src_x2_d)	
-                            gpu_target_src_x2_d         = self.D_src_x2(gpu_target_src_masked_opt)	                        gpu_target_src_d, \
+                            gpu_target_src_x2_d         = self.D_src_x2(gpu_target_src_masked_opt)
                             gpu_target_src_x2_d_ones    = tf.ones_like(gpu_target_src_x2_d)
 
                             gpu_D_src_dst_loss = (DLoss(gpu_target_src_d_ones      , gpu_target_src_d) + \
@@ -507,7 +507,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                             gpu_G_loss += 0.5*gan_power*( DLoss(gpu_pred_src_src_d_ones,
                                     gpu_pred_src_src_d) + DLoss(gpu_pred_src_src_x2_d_ones, gpu_pred_src_src_x2_d))
 
-                        elif:
+                        else:
                             gpu_pred_src_src_d, \
                             gpu_pred_src_src_d2           = self.D_src(gpu_pred_src_src_masked_opt)
 
@@ -648,6 +648,10 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             if ct_mode is not None:
                 src_generators_count = int(src_generators_count * 1.5)
 
+            fs_aug = None
+            if ct_mode == 'fs-aug':
+                fs_aug = 'fs-aug'
+
             self.set_training_data_generators ([
                     SampleGeneratorFace(training_data_src_path, random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(random_flip=self.random_flip),
@@ -658,9 +662,6 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         uniform_yaw_distribution=self.options['uniform_yaw'] or self.pretrain,
                         generators_count=src_generators_count ),
 
-                    fs_aug = None
-                    if ct_mode == 'fs-aug':
-                        fs_aug = 'fs-aug'
                     SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(random_flip=self.random_flip),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'ct_mode': fs_aug,                                                                 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},

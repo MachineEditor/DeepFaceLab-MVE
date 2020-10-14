@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 from numpy import linalg as npla
+from random import random, shuffle, choice
+from scipy.stats import special_ortho_group
 import scipy as sp
 
 def color_transfer_sot(src,trg, steps=10, batch_size=5, reg_sigmaXY=16.0, reg_sigmaV=5.0):
@@ -376,7 +378,7 @@ def color_augmentation(img):
     face = random_clahe(face)
     face = random_lab(face)
     img[:, :, :3] = face
-    return img.astype('float32') / 255.0
+    return np.clip(img.astype('float32') / 255.0, 0, 1)
 
 
 def random_lab(image):

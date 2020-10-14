@@ -72,13 +72,15 @@ class SampleProcessor(object):
                 eyes_mask = LandmarksProcessor.get_image_eye_mask (sample_bgr.shape, sample_landmarks)
                 # set eye masks to 1-2
                 clip = np.clip(eyes_mask, 0, 1)
-                return a[a > 0.1] += 1
+                clip[clip > 0.1] += 1
+                return clip
 
             def get_mouth_mask():
                 mouth_mask = LandmarksProcessor.get_image_mouth_mask (sample_bgr.shape, sample_landmarks)
                 # set eye masks to 2-3
                 clip = np.clip(mouth_mask, 0, 1)
-                return a[a > 0.1] += 2
+                clip[clip > 0.1] += 2
+                return clip
 
             is_face_sample = sample_landmarks is not None
 
@@ -200,18 +202,14 @@ class SampleProcessor(object):
                         if ct_mode is not None and ct_sample is not None or ct_mode == 'fs-aug':
                             if 'fs-aug':
                                 img = imagelib.color_augmentation(img)
-                            elif:
+                            else:
                                 if ct_sample_bgr is None:
                                     ct_sample_bgr = ct_sample.load_bgr()
                                 img = imagelib.color_transfer (ct_mode, img, cv2.resize( ct_sample_bgr, (resolution,resolution), interpolation=cv2.INTER_LINEAR ) )
 
                         
                         img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=border_replicate)
-  
-                        img = np.clip(img.astype(np.float32), 0, 1)
-   
-
-                        
+                        img = np.clip(img.astype(np.float32), 0, 1)                      
                         
                         if motion_blur is not None:                            
                             random_mask = sd.random_circle_faded ([resolution,resolution], rnd_state=np.random.RandomState (sample_rnd_seed+2)) if random_circle_mask else None

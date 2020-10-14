@@ -443,7 +443,7 @@ def get_image_mouth_mask (image_shape, image_landmarks):
 
     image_landmarks = image_landmarks.astype(np.int)
 
-    cv2.fillConvexPoly( hull_mask, cv2.convexHull( image_landmarks[48, 60]), (1,) )
+    cv2.fillConvexPoly( hull_mask, cv2.convexHull( image_landmarks[48:60]), (1,) )
 
     dilate = h // 32
     hull_mask = cv2.dilate(hull_mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(dilate,dilate)), iterations = 1 )
