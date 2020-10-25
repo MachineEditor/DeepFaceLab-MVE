@@ -200,7 +200,7 @@ class SampleProcessor(object):
                                 
                         # Apply random color transfer                        
                         if ct_mode is not None and ct_sample is not None or ct_mode == 'fs-aug':
-                            if 'fs-aug':
+                            if ct_mode == 'fs-aug':
                                 img = imagelib.color_augmentation(img)
                             else:
                                 if ct_sample_bgr is None:
