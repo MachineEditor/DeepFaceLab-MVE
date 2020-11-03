@@ -29,6 +29,10 @@ More than 95% of deepfake videos are created with DeepFaceLab.
 
 DeepFaceLab is used by such popular youtube channels as
 
+
+|![](doc/youtube_icon.png) [Sassy Justice](https://www.youtube.com/c/SassyJustice/videos)|
+|---|
+
 |![](doc/youtube_icon.png) [Ctrl Shift Face](https://www.youtube.com/channel/UCKpH0CKltc73e4wh0_pgL3g)|![](doc/youtube_icon.png) [VFXChris Ume](https://www.youtube.com/channel/UCGf4OlX_aTt8DlrgiH3jN3g/videos)|
 |---|---|
 
