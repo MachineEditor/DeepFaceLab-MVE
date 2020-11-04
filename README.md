@@ -321,7 +321,7 @@ QQ 951138799
 </td></tr>
 
 <tr><td colspan=2 align="center">
-<a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=lepersorium@gmail.com&lc=US&no_note=0&item_name=Support+DeepFaceLab&cn=&curency_code=USD&bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted">Donate via Paypal</a>
+<a href="https://www.paypal.com/paypalme/DeepFaceLab">Donate via Paypal</a>
 </td></tr>
 
 <tr><td colspan=2 align="center">
