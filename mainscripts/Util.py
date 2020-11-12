@@ -1,4 +1,4 @@
-﻿import pickle
+import pickle
 from pathlib import Path
 
 import cv2

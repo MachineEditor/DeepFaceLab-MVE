@@ -1,4 +1,4 @@
-﻿import math
+import math
 import multiprocessing
 import operator
 import os

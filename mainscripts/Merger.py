@@ -1,4 +1,4 @@
-﻿import math
+import math
 import multiprocessing
 import traceback
 from pathlib import Path
