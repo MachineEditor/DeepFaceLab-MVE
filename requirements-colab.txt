@@ -6,4 +6,4 @@ ffmpeg-python==0.1.17
 scikit-image==0.14.2
 scipy==1.4.1
 colorama
-tensorflow-gpu==2.4.0rc1
+tensorflow-gpu==2.3.1
