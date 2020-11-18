@@ -23,7 +23,7 @@ class RMSprop(nn.OptimizerBase):
         self.lr_rnds_dict = {}
 
     def get_weights(self):
-        return [self.lr, self.rho, self.epsilon, self.iterations] + list(self.accumulators_dict.values())
+        return [self.iterations] + list(self.accumulators_dict.values())
 
     def initialize_variables(self, trainable_weights, vars_on_cpu=True, lr_dropout_on_cpu=False):
         # Initialize here all trainable variables used in training
