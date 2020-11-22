@@ -281,6 +281,13 @@ class DFLJPG(object):
     def has_xseg_mask(self):
         return self.dfl_dict.get('xseg_mask',None) is not None
 
+    def get_xseg_mask_compressed(self):
+        mask_buf = self.dfl_dict.get('xseg_mask',None)
+        if mask_buf is None:
+            return None
+
+        return mask_buf
+        
     def get_xseg_mask(self):
         mask_buf = self.dfl_dict.get('xseg_mask',None)
         if mask_buf is None:

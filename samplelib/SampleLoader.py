@@ -81,7 +81,7 @@ class SampleLoader:
               shape,
               landmarks,
               seg_ie_polys,
-              xseg_mask,
+              xseg_mask_compressed,
               eyebrows_expand_mod,
               source_filename ) = data
               
@@ -91,7 +91,7 @@ class SampleLoader:
                                         shape=shape,
                                         landmarks=landmarks,
                                         seg_ie_polys=seg_ie_polys,
-                                        xseg_mask=xseg_mask,
+                                        xseg_mask_compressed=xseg_mask_compressed,
                                         eyebrows_expand_mod=eyebrows_expand_mod,
                                         source_filename=source_filename,
                                     ))
@@ -163,7 +163,7 @@ class FaceSamplesLoaderSubprocessor(Subprocessor):
                         dflimg.get_shape(),
                         dflimg.get_landmarks(),
                         dflimg.get_seg_ie_polys(),
-                        dflimg.get_xseg_mask(),
+                        dflimg.get_xseg_mask_compressed(),
                         dflimg.get_eyebrows_expand_mod(),
                         dflimg.get_source_filename() )
 
