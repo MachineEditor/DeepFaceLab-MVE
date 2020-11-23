@@ -127,6 +127,8 @@ if __name__ == "__main__":
                   'silent_start'             : arguments.silent_start,
                   'execute_programs'         : [ [int(x[0]), x[1] ] for x in arguments.execute_program ],
                   'debug'                    : arguments.debug,
+                  'tensorboard_dir'          : arguments.tensorboard_dir,
+                  'start_tensorboard'        : arguments.start_tensorboard
                   }
         from mainscripts import Trainer
         Trainer.main(**kwargs)
@@ -144,6 +146,8 @@ if __name__ == "__main__":
     p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Train on CPU.")
     p.add_argument('--force-gpu-idxs', dest="force_gpu_idxs", default=None, help="Force to choose GPU indexes separated by comma.")
     p.add_argument('--silent-start', action="store_true", dest="silent_start", default=False, help="Silent start. Automatically chooses Best GPU and last used model.")
+    p.add_argument('--tensorboard-logdir', action=fixPathAction, dest="tensorboard_dir", help="Directory of the tensorboard output files")
+    p.add_argument('--start-tensorboard', action="store_true", dest="start_tensorboard", default=False, help="Automatically start the tensorboard server preconfigured to the tensorboard-logdir")
     
     
     p.add_argument('--execute-program', dest="execute_program", default=[], action='append', nargs='+')
