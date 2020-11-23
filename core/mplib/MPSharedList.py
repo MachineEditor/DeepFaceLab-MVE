@@ -114,7 +114,7 @@ class ArrayFillerSubprocessor(Subprocessor):
     def __init__(self, sh_b, data_list ):
         self.sh_b = sh_b        
         self.data_list = data_list
-        super().__init__('ArrayFillerSubprocessor', ArrayFillerSubprocessor.Cli, 60)
+        super().__init__('ArrayFillerSubprocessor', ArrayFillerSubprocessor.Cli, 60, io_loop_sleep_time=0.001)
 
     #override
     def process_info_generator(self):
@@ -124,7 +124,7 @@ class ArrayFillerSubprocessor(Subprocessor):
     #override
     def get_data(self, host_dict):
         if len(self.data_list) > 0:
-            return self.data_list.pop(0)
+            return self.data_list.pop(-1)
 
         return None
 

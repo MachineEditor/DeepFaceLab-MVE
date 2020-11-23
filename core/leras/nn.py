@@ -70,19 +70,23 @@ class nn():
                         first_run = True
                     os.environ['CUDA_CACHE_PATH'] = str(compute_cache_path)
 
-            os.environ['CUDA_​CACHE_​MAXSIZE'] = '536870912' #512Mb (32mb default)
+            #nvcuda.dll ignores this param : os.environ['CUDA_​CACHE_​MAXSIZE'] = '536870912' #512Mb (32mb default)
             os.environ['TF_MIN_GPU_MULTIPROCESSOR_COUNT'] = '2'
-            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # tf log errors only
+            os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # tf log errors only
 
             if first_run:
                 io.log_info("Caching GPU kernels...")
 
-            import tensorflow as tf
-            nn.tf = tf
+            #import tensorflow as tf
+            import tensorflow.compat.v1 as tf
             
             import logging
             # Disable tensorflow warnings
-            logging.getLogger('tensorflow').setLevel(logging.ERROR)
+            tf_logger = logging.getLogger('tensorflow')
+            tf_logger.setLevel(logging.ERROR)
+            
+            tf.disable_v2_behavior()
+            nn.tf = tf
 
             # Initialize framework
             import core.leras.ops
