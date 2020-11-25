@@ -357,25 +357,114 @@ def extract_umd_csv(input_file_csv,
     io.log_info ('Faces detected:      %d' % (faces_detected) )
     io.log_info ('-------------------------')
 
-def dev_test1(input_dir):
+
+    
+def dev_test(input_dir):
+    # LaPa dataset
+    
+    image_size = 1024
+    face_type = FaceType.HEAD
+    
     input_path = Path(input_dir)
+    images_path = input_path / 'images'    
+    if not images_path.exists:
+        raise ValueError('LaPa dataset: images folder not found.')
+    labels_path = input_path / 'labels'    
+    if not labels_path.exists:
+        raise ValueError('LaPa dataset: labels folder not found.')
+    landmarks_path = input_path / 'landmarks'    
+    if not landmarks_path.exists:
+        raise ValueError('LaPa dataset: landmarks folder not found.')
+    
+    output_path = input_path / 'out'    
+    if output_path.exists():
+        output_images_paths = pathex.get_image_paths(output_path)
+        if len(output_images_paths) != 0:
+            io.input(f"\n WARNING !!! \n {output_path} contains files! \n They will be deleted. \n Press enter to continue.\n")
+            for filename in output_images_paths:
+                Path(filename).unlink()
+    output_path.mkdir(parents=True, exist_ok=True)
+    
+    data = []
+    
+    img_paths = pathex.get_image_paths (images_path)
+    for filename in img_paths:
+        filepath = Path(filename)
 
-    dir_names = pathex.get_all_dir_names(input_path)
+        landmark_filepath = landmarks_path / (filepath.stem + '.txt')
+        if not landmark_filepath.exists():
+            raise ValueError(f'no landmarks for {filepath}')
+        
+        #img = cv2_imread(filepath)
+        
+        lm = landmark_filepath.read_text()
+        lm = lm.split('\n')
+        if int(lm[0]) != 106:
+            raise ValueError(f'wrong landmarks format in {landmark_filepath}')
+        
+        lmrks = []
+        for i in range(106):
+            x,y = lm[i+1].split(' ')
+            x,y = float(x), float(y)
+            lmrks.append ( (x,y) )
+            
+        lmrks = np.array(lmrks)
+        
+        l,t = np.min(lmrks, 0)
+        r,b = np.max(lmrks, 0)
+        
+        l,t,r,b = ( int(x) for x in (l,t,r,b) )
+        
+        #for x, y in lmrks:
+        #    x,y = int(x), int(y)
+        #    cv2.circle(img, (x, y), 1, (0,255,0) , 1, lineType=cv2.LINE_AA)   
+         
+        #imagelib.draw_rect(img, (l,t,r,b), (0,255,0) )
+         
+        
+        data += [ ExtractSubprocessor.Data(filepath=filepath, rects=[ (l,t,r,b) ]) ]
 
-    for dir_name in io.progress_bar_generator(dir_names, desc="Processing"):
+        #cv2.imshow("", img) 
+        #cv2.waitKey(0)
+ 
+    if len(data) > 0:
+        device_config = nn.DeviceConfig.BestGPU()
+        
+        io.log_info ("Performing 2nd pass...")
+        data = ExtractSubprocessor (data, 'landmarks', image_size, 95, face_type,  device_config=device_config).run()
+        io.log_info ("Performing 3rd pass...")
+        data = ExtractSubprocessor (data, 'final', image_size, 95, face_type, final_output_path=output_path, device_config=device_config).run()
 
-        img_paths = pathex.get_image_paths (input_path / dir_name)
-        for filename in img_paths:
+
+        for filename in pathex.get_image_paths (output_path):
             filepath = Path(filename)
+            
+            
+            dflimg = DFLJPG.load(filepath)
+            
+            src_filename = dflimg.get_source_filename()
+            image_to_face_mat = dflimg.get_image_to_face_mat()
 
-            dflimg = DFLIMG.x (filepath)
-            if dflimg is None:
-                raise ValueError
-
-            #dflimg.x(filename, person_name=dir_name)
-
-            #import code
-            #code.interact(local=dict(globals(), **locals()))
+            label_filepath = labels_path / ( Path(src_filename).stem + '.png')        
+            if not label_filepath.exists():
+                raise ValueError(f'{label_filepath} does not exist')
+            
+            mask = cv2_imread(label_filepath)        
+            #mask[mask == 10] = 0 # remove hair
+            mask[mask > 0] = 1
+            mask = cv2.warpAffine(mask, image_to_face_mat, (image_size, image_size), cv2.INTER_LINEAR)
+            mask = cv2.blur(mask, (3,3) )
+            
+            #cv2.imshow("", (mask*255).astype(np.uint8) ) 
+            #cv2.waitKey(0)
+            
+            dflimg.set_xseg_mask(mask)
+            dflimg.save()
+        
+    
+    import code
+    code.interact(local=dict(globals(), **locals()))
+                    
 
 def dev_resave_pngs(input_dir):
     input_path = Path(input_dir)
