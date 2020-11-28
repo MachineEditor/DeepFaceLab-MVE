@@ -297,6 +297,10 @@ QQ 951138799
 </td><td align="center">中文 Chinese QQ group for ML/AI experts</td></tr>
 
 <tr><td align="right">
+<a href="https://www.dfldata.xyz">dfldata.xyz</a>
+</td><td align="center">中文交流论坛，免费软件教程、模型、人脸数据</td></tr>
+
+<tr><td align="right">
 <a href="https://www.deepfaker.xyz/">deepfaker.xyz</a>
 </td><td align="center">中文学习站（非官方)</td></tr>
 
