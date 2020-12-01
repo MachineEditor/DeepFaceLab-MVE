@@ -87,10 +87,10 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
             if sample.seg_ie_polys.has_polys():
                 mask = np.zeros ((h,w,1), dtype=np.float32)
                 sample.seg_ie_polys.overlay_mask(mask)
-            #elif sample.has_xseg_mask():                
-            #    mask = sample.get_xseg_mask()
-            #    mask[mask < 0.5] = 0.0
-            #    mask[mask >= 0.5] = 1.0
+            elif sample.has_xseg_mask():                
+                mask = sample.get_xseg_mask()
+                mask[mask < 0.5] = 0.0
+                mask[mask >= 0.5] = 1.0
             else:
                 raise Exception(f'no mask in sample {sample.filename}')
 
