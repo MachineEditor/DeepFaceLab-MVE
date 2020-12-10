@@ -601,20 +601,29 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     _, gpu_pred_dst_dstm = self.decoder_dst(gpu_dst_code)
 
                 elif 'liae' in archi_type:
+                    gpu_src_code = self.encoder (self.warped_src)
+                    gpu_src_inter_AB_code = self.inter_AB (gpu_src_code)
+                    gpu_src_code = tf.concat([gpu_src_inter_AB_code,gpu_src_inter_AB_code], nn.conv2d_ch_axis )
+                    gpu_pred_src_src, gpu_pred_src_srcm = self.decoder(gpu_src_code)
+
                     gpu_dst_code = self.encoder (self.warped_dst)
                     gpu_dst_inter_B_code = self.inter_B (gpu_dst_code)
                     gpu_dst_inter_AB_code = self.inter_AB (gpu_dst_code)
                     gpu_dst_code = tf.concat([gpu_dst_inter_B_code,gpu_dst_inter_AB_code], nn.conv2d_ch_axis)
                     gpu_src_dst_code = tf.concat([gpu_dst_inter_AB_code,gpu_dst_inter_AB_code], nn.conv2d_ch_axis)
 
-                    gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder(gpu_src_dst_code)
+                    gpu_pred_src_dst, gpu_pred_src_dst_dstm = self.decoder(gpu_src_dst_code)
                     _, gpu_pred_dst_dstm = self.decoder(gpu_dst_code)
 
 
-            def AE_merge( warped_dst):
-                return nn.tf_sess.run ( [gpu_pred_src_dst, gpu_pred_dst_dstm, gpu_pred_src_dstm], feed_dict={self.warped_dst:warped_dst})
+            def AE_merge(warped_dst):
+                return nn.tf_sess.run ( [gpu_pred_src_dst, gpu_pred_dst_dstm, gpu_pred_src_dst_dstm], feed_dict={self.warped_dst:warped_dst})
+            
+            def AE_src(warped_src):
+                return nn.tf_sess.run( [gpu_pred_src_src, gpu_pred_src_srcm], feed_dict={self.warped_src:warped_src})
 
             self.AE_merge = AE_merge
+            self.AE_src = AE_src
 
         # Loading/initializing all models/optimizers weights
         for model, filename in io.progress_bar_generator(self.model_filename_list, "Initializing models"):
@@ -813,9 +822,21 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
         return bgr[0], mask_src_dstm[0][...,0], mask_dst_dstm[0][...,0]
 
+    def src_predictor_func (self, face=None):
+        face = nn.to_data_format(face[None,...], self.model_data_format, "NHWC")
+        bgr, mask_src_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format).astype(np.float32) for x in self.AE_src (face) ]
+        return bgr[0], mask_src_dstm[0][...,0], mask_src_dstm[0][...,0]
+
     #override
     def get_MergerConfig(self):
         import merger
-        return self.predictor_func, (self.options['resolution'], self.options['resolution'], 3), merger.MergerConfigMasked(face_type=self.face_type, default_mode = 'overlay')
+        if self.src_src:
+            merger_config = merger.MergerConfigMasked(face_type=self.face_type,
+                                                default_mode='raw-predict',
+                                                mode='raw-predict',
+                                                src_src=True)
+            return self.src_predictor_func, (self.options['resolution'], self.options['resolution'], 3), merger_config
+        else:
+            return self.predictor_func, (self.options['resolution'], self.options['resolution'], 3), merger.MergerConfigMasked(face_type=self.face_type, default_mode = 'overlay')
 
 Model = SAEHDModel

@@ -164,7 +164,8 @@ if __name__ == "__main__":
                       output_mask_path       = Path(arguments.output_mask_dir),
                       aligned_path           = Path(arguments.aligned_dir) if arguments.aligned_dir is not None else None,
                       force_gpu_idxs         = arguments.force_gpu_idxs,
-                      cpu_only               = arguments.cpu_only)
+                      cpu_only               = arguments.cpu_only,
+                      src_src                = arguments.src_src)
 
     p = subparsers.add_parser( "merge", help="Merger")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
@@ -176,6 +177,7 @@ if __name__ == "__main__":
     p.add_argument('--force-model-name', dest="force_model_name", default=None, help="Forcing to choose model name from model/ folder.")
     p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Merge on CPU.")
     p.add_argument('--force-gpu-idxs', dest="force_gpu_idxs", default=None, help="Force to choose GPU indexes separated by comma.")
+    p.add_argument('--src-src', action="store_true", dest="src_src", default=False, help="Enables special src-src predicted output.")
     p.set_defaults(func=process_merge)
 
     videoed_parser = subparsers.add_parser( "videoed", help="Video processing.").add_subparsers()

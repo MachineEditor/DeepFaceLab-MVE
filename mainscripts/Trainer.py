@@ -69,6 +69,7 @@ def trainerThread (s2c, c2s, e,
             start_time = time.time()
 
             save_interval_min = 15
+            tensorboard_preview_interval_min = 5
 
             if not training_data_src_path.exists():
                 training_data_src_path.mkdir(exist_ok=True, parents=True)
@@ -96,20 +97,14 @@ def trainerThread (s2c, c2s, e,
 
             is_reached_goal = model.is_reached_iter_goal()
 
-            train_summary_writer = None
             if tensorboard_dir is not None:
-                try:
-                    import tensorboardX
-                    if not os.path.exists(tensorboard_dir):
-                        os.makedirs(tensorboard_dir)
-                    summary_writer_folder = os.path.join(tensorboard_dir, model.model_name)
-                    train_summary_writer = tensorboardX.SummaryWriter(summary_writer_folder)
-                    if start_tensorboard:
-                        tb_tool = TensorBoardTool(tensorboard_dir)
-                        tb_tool.run()
-                except:
-                    print("Error importing tensorboardX, please ensure it is installed (pip install tensorboardX)")
-                    print("Continuing training without tensorboard logging...")
+                c2s.put({ 
+                    'op': 'tb', 
+                    'action': 'init', 
+                    'model_name': model.model_name,
+                    'tensorboard_dir': tensorboard_dir,
+                    'start_tensorboard': start_tensorboard
+                })
 
             shared_state = { 'after_save' : False }
             loss_string = ""
@@ -122,12 +117,29 @@ def trainerThread (s2c, c2s, e,
                     
             def model_backup():
                 if not debug and not is_reached_goal:
-                    model.create_backup()             
+                    model.create_backup()   
+
+            def log_step(step, step_time, src_loss, dst_loss):
+                c2s.put({ 
+                    'op': 'tb', 
+                    'action': 'step', 
+                    'step': step,
+                    'step_time': step_time,
+                    'src_loss': src_loss,
+                    'dst_loss': dst_loss
+                })
+            
+            def log_previews(step, previews, static_previews):
+                c2s.put({
+                    'op': 'tb',
+                    'action': 'preview',
+                    'step': step,
+                    'previews': previews,
+                    'static_previews': static_previews
+                })
 
             def send_preview():
                 if not debug:
-                    if train_summary_writer is not None:
-                        log_tensorboard_model_previews(iter, model, train_summary_writer)
                     previews = model.get_previews()
                     c2s.put ( {'op':'show', 'previews': previews, 'iter':model.get_iter(), 'loss_history': model.get_loss_history().copy() } )
                 else:
@@ -144,6 +156,7 @@ def trainerThread (s2c, c2s, e,
                 io.log_info('Starting. Press "Enter" to stop training and save model.')
 
             last_save_time = time.time()
+            last_preview_time = time.time()
 
             execute_programs = [ [x[0], x[1], time.time() ] for x in execute_programs ]
 
@@ -203,13 +216,8 @@ def trainerThread (s2c, c2s, e,
                             else:
                                 io.log_info (loss_string, end='\r')
 
-                        if train_summary_writer is not None:
-                            # report iteration time summary
-                            train_summary_writer.add_scalar('iteration time', iter_time, iter)
-                            # report loss summary
-                            src_loss, dst_loss = loss_history[-1]
-                            train_summary_writer.add_scalar('loss/src', src_loss, iter)
-                            train_summary_writer.add_scalar('loss/dst', dst_loss, iter)
+                        loss_entry = loss_history[-1]
+                        log_step(iter, iter_time, loss_entry[0], loss_entry[1] if len(loss_entry) > 1 else None)
 
                         if model.get_iter() == 1:
                             model_save()
@@ -219,6 +227,12 @@ def trainerThread (s2c, c2s, e,
                             model_save()
                             is_reached_goal = True
                             io.log_info ('You can use preview now.')
+
+                if not is_reached_goal and (time.time() - last_preview_time) >= tensorboard_preview_interval_min*60:
+                    last_preview_time += tensorboard_preview_interval_min*60
+                    previews = model.get_previews()
+                    static_previews = model.get_static_previews()
+                    log_previews(iter, previews, static_previews)
 
                 if not is_reached_goal and (time.time() - last_save_time) >= save_interval_min*60:
                     last_save_time += save_interval_min*60
@@ -262,7 +276,54 @@ def trainerThread (s2c, c2s, e,
         break
     c2s.put ( {'op':'close'} )
 
+_train_summary_writer = None
+def init_writer(model_name, tensorboard_dir, start_tensorboard):
+    import tensorboardX
+    global _train_summary_writer
 
+    if not os.path.exists(tensorboard_dir):
+        os.makedirs(tensorboard_dir)
+    summary_writer_folder = os.path.join(tensorboard_dir, model_name)
+    _train_summary_writer = tensorboardX.SummaryWriter(summary_writer_folder)
+
+    if start_tensorboard:
+        tb_tool = TensorBoardTool(tensorboard_dir)
+        tb_tool.run()
+
+    return _train_summary_writer
+
+def get_writer():
+    global _train_summary_writer
+    return _train_summary_writer
+
+def handle_tensorboard_op(input):
+    train_summary_writer = get_writer()
+    action = input['action']
+    if action == 'init':
+        model_name = input['model_name']
+        tensorboard_dir = input['tensorboard_dir']
+        start_tensorboard = input['start_tensorboard']
+        train_summary_writer = init_writer(model_name, tensorboard_dir, start_tensorboard)
+    if train_summary_writer is not None:
+        if action == 'step':
+            step = input['step']
+            step_time = input['step_time']
+            src_loss = input['src_loss']
+            dst_loss = input['dst_loss']
+            # report iteration time summary
+            train_summary_writer.add_scalar('iteration time', step_time, step)
+            # report loss summary
+            train_summary_writer.add_scalar('loss/src', src_loss, step)
+            if dst_loss is not None:
+                train_summary_writer.add_scalar('loss/dst', dst_loss, step)
+        elif action == 'preview':
+            step = input['step']
+            previews = input['previews']
+            static_previews = input['static_previews']
+            if previews is not None:
+                log_tensorboard_previews(step, previews, 'preview', train_summary_writer)
+            if static_previews is not None:
+                log_tensorboard_previews(step, static_previews, 'static_preview', train_summary_writer)
 
 def main(**kwargs):
     io.log_info ("Running trainer.\r\n")
@@ -283,7 +344,9 @@ def main(**kwargs):
             if not c2s.empty():
                 input = c2s.get()
                 op = input.get('op','')
-                if op == 'close':
+                if op == 'tb':
+                    handle_tensorboard_op(input)
+                elif op == 'close':
                     break
             try:
                 io.process_messages(0.1)
@@ -333,6 +396,8 @@ def main(**kwargs):
                                 previews.append ( (preview_name, cv2.resize(preview_rgb, (max_w, max_h))) )
                         selected_preview = selected_preview % len(previews)
                         update_preview = True
+                elif op == 'tb':
+                    handle_tensorboard_op(input)
                 elif op == 'close':
                     break
 

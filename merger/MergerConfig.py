@@ -113,6 +113,7 @@ class MergerConfigMasked(MergerConfig):
                        image_denoise_power = 0,
                        bicubic_degrade_power = 0,
                        color_degrade_power = 0,
+                       src_src = False,
                        **kwargs
                        ):
 
@@ -121,6 +122,8 @@ class MergerConfigMasked(MergerConfig):
         self.face_type = face_type
         if self.face_type not in [FaceType.HALF, FaceType.MID_FULL, FaceType.FULL, FaceType.WHOLE_FACE, FaceType.HEAD ]:
             raise ValueError("MergerConfigMasked does not support this type of face.")
+
+        self.src_src = src_src
 
         self.default_mode = default_mode
 
@@ -188,13 +191,13 @@ class MergerConfigMasked(MergerConfig):
         self.bicubic_degrade_power = np.clip ( self.bicubic_degrade_power+diff, 0, 100)
 
     def ask_settings(self):
-        s = """Choose mode: \n"""
-        for key in mode_dict.keys():
-            s += f"""({key}) {mode_dict[key]}\n"""
-        io.log_info(s)
-        mode = io.input_int ("", mode_str_dict.get(self.default_mode, 1) )
-
-        self.mode = mode_dict.get (mode, self.default_mode )
+        if 'raw-predict' not in self.mode:
+            s = """Choose mode: \n"""
+            for key in mode_dict.keys():
+                s += f"""({key}) {mode_dict[key]}\n"""
+            io.log_info(s)
+            mode = io.input_int ("", mode_str_dict.get(self.default_mode, 1) )
+            self.mode = mode_dict.get (mode, self.default_mode)
 
         if 'raw' not in self.mode:
             if self.mode == 'hist-match':

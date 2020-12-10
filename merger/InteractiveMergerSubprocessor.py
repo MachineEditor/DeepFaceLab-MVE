@@ -84,15 +84,14 @@ class InteractiveMergerSubprocessor(Subprocessor):
             filepath = frame_info.filepath
 
             if len(frame_info.landmarks_list) == 0:
-                
-                if cfg.mode == 'raw-predict':        
+                self.log_info (f'no faces found for {filepath.name}, copying without faces')
+                if cfg.mode == 'raw-predict':
                     h,w,c = self.predictor_input_shape
                     img_bgr = np.zeros( (h,w,3), dtype=np.uint8)
-                    img_mask = np.zeros( (h,w,1), dtype=np.uint8)               
-                else:                
-                    self.log_info (f'no faces found for {filepath.name}, copying without faces')
+                    img_mask = np.zeros( (h,w,1), dtype=np.uint8)
+                else:
                     img_bgr = cv2_imread(filepath)
-                    imagelib.normalize_channels(img_bgr, 3)                    
+                    imagelib.normalize_channels(img_bgr, 3)
                     h,w,c = img_bgr.shape
                     img_mask = np.zeros( (h,w,1), dtype=img_bgr.dtype)
                     
@@ -140,7 +139,7 @@ class InteractiveMergerSubprocessor(Subprocessor):
 
 
     #override
-    def __init__(self, is_interactive, merger_session_filepath, predictor_func, predictor_input_shape, face_enhancer_func, xseg_256_extract_func, merger_config, frames, frames_root_path, output_path, output_mask_path, model_iter, subprocess_count=4):
+    def __init__(self, is_interactive, merger_session_filepath, predictor_func, predictor_input_shape, face_enhancer_func, xseg_256_extract_func, merger_config, frames, frames_root_path, output_path, output_mask_path, model_iter, subprocess_count=4, src_src=False):
         if len (frames) == 0:
             raise ValueError ("len (frames) == 0")
 
@@ -162,6 +161,8 @@ class InteractiveMergerSubprocessor(Subprocessor):
         self.model_iter = model_iter
 
         self.prefetch_frame_count = self.process_count = subprocess_count
+
+        self.src_src = src_src
 
         session_data = None
         if self.is_interactive and self.merger_session_filepath.exists():

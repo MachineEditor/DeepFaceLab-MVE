@@ -26,7 +26,8 @@ def main (model_class_name=None,
           output_mask_path=None,
           aligned_path=None,
           force_gpu_idxs=None,
-          cpu_only=None):
+          cpu_only=None,
+          src_src=False):
     io.log_info ("Running merger.\r\n")
 
     try:
@@ -47,6 +48,7 @@ def main (model_class_name=None,
         # Initialize model
         import models
         model = models.import_model(model_class_name)(is_training=False,
+                                                      src_src=src_src,
                                                       saved_models_path=saved_models_path,
                                                       force_gpu_idxs=force_gpu_idxs,
                                                       cpu_only=cpu_only)
@@ -68,7 +70,10 @@ def main (model_class_name=None,
                                                     place_model_on_cpu=True,
                                                     run_on_cpu=run_on_cpu)
 
-        is_interactive = io.input_bool ("Use interactive merger?", True) if not io.is_colab() else False
+        if src_src:
+            is_interactive = False
+        else:
+            is_interactive = io.input_bool ("Use interactive merger?", True) if not io.is_colab() else False
 
         if not is_interactive:
             cfg.ask_settings()
@@ -110,7 +115,7 @@ def main (model_class_name=None,
                     io.log_err (f"{filepath.name} is not a dfl image file")
                     continue
 
-                source_filename = dflimg.get_source_filename()
+                source_filename = filepath.name if src_src else dflimg.get_source_filename()
                 if source_filename is None:
                     continue
 
@@ -121,7 +126,7 @@ def main (model_class_name=None,
                     alignments[ source_filename_stem ] = []
 
                 alignments_ar = alignments[ source_filename_stem ]
-                alignments_ar.append ( (dflimg.get_source_landmarks(), filepath, source_filepath ) )
+                alignments_ar.append ( (dflimg.get_source_landmarks(), filepath, source_filepath, dflimg.get_image_to_face_mat(), dflimg.get_shape()[0]) )
 
                 if len(alignments_ar) > 1:
                     multiple_faces_detected = True
@@ -137,22 +142,31 @@ def main (model_class_name=None,
                     for _, filepath, source_filepath in a_ar:
                         io.log_info (f"alignment {filepath.name} refers to {source_filepath.name} ")
                     io.log_info ("")
-
-                alignments[a_key] = [ a[0] for a in a_ar]
+                alignments[a_key] = [ (a[0], a[3], a[4]) for a in a_ar]
 
             if multiple_faces_detected:
                 io.log_info ("It is strongly recommended to process the faces separatelly.")
                 io.log_info ("Use 'recover original filename' to determine the exact duplicates.")
                 io.log_info ("")
 
-            frames = [ InteractiveMergerSubprocessor.Frame( frame_info=FrameInfo(filepath=Path(p),
-                                                                     landmarks_list=alignments.get(Path(p).stem, None)
-                                                                    )
-                                              )
-                       for p in input_path_image_paths ]
+            frames = []
+            for p in input_path_image_paths:
+                alignment = alignments.get(Path(p).stem, None)
+                landmarks_list = None
+                image_to_face_mat = None
+                aligned_size = None
+                if alignment is not None:
+                    landmarks_list, image_to_face_mat, aligned_size = alignment[0]
+                    landmarks_list = [landmarks_list]
+                frame_info = FrameInfo(filepath=Path(p), landmarks_list=landmarks_list, image_to_face_mat=image_to_face_mat, aligned_size=aligned_size)
+                frame = InteractiveMergerSubprocessor.Frame(frame_info=frame_info)
+                frames.append(frame)
 
             if multiple_faces_detected:
                 io.log_info ("Warning: multiple faces detected. Motion blur will not be used.")
+                io.log_info ("")
+            elif src_src:
+                io.log_info ("SRC-SRC mode configured, skipping motion blur calculation...")
                 io.log_info ("")
             else:
                 s = 256
@@ -206,6 +220,7 @@ def main (model_class_name=None,
                             output_mask_path       = output_mask_path,
                             model_iter             = model.get_iter(),
                             subprocess_count       = subprocess_count,
+                            src_src                = src_src,
                         ).run()
 
         model.finalize()

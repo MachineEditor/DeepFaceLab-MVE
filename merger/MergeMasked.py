@@ -12,6 +12,17 @@ from facelib import FaceType, LandmarksProcessor
 is_windows = sys.platform[0:3] == 'win'
 xseg_input_size = 256
 
+def concat_matrix(first, second):
+    mul1 = np.vstack([*first, [0, 0, 1]])
+    mul2 = np.vstack([*second, [0, 0, 1]])
+    mul_r = np.matmul(mul1, mul2)
+    return np.delete(mul_r, (2), axis=0);
+
+def get_identity_affine_mat():
+    pt1 = np.float32([ [0, 0], [1, 0], [1, 1] ])
+    pt2 = np.float32([ [0, 0], [1, 0], [1, 1] ])
+    return cv2.getAffineTransform(pt1, pt2)
+
 def MergeMaskedFace (predictor_func, predictor_input_shape,
                      face_enhancer_func,
                      xseg_256_extract_func,
@@ -26,15 +37,28 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
     if cfg.super_resolution_power != 0:
         output_size *= 4
 
-    face_mat        = LandmarksProcessor.get_transform_mat (img_face_landmarks, output_size, face_type=cfg.face_type)
-    face_output_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, output_size, face_type=cfg.face_type, scale= 1.0 + 0.01*cfg.output_face_scale)
+    existing_mat = get_identity_affine_mat() if cfg.src_src else frame_info.image_to_face_mat
+    aligned_size = frame_info.aligned_size
+
+    if existing_mat is not None:
+        face_scale_mat = cv2.getRotationMatrix2D((0,0), 0, output_size/aligned_size)
+        face_mat = concat_matrix(face_scale_mat, existing_mat)
+        output_scale_mat = cv2.getRotationMatrix2D((output_size/2, output_size/2), 0, 1.0 + 0.01 * cfg.output_face_scale)
+        face_output_mat = concat_matrix(output_scale_mat, face_mat)
+    else:
+        face_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, output_size, face_type=cfg.face_type)
+        face_output_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, output_size, face_type=cfg.face_type, scale= 1.0 + 0.01*cfg.output_face_scale)
 
     if mask_subres_size == output_size:
         face_mask_output_mat = face_output_mat
     else:
-        face_mask_output_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, mask_subres_size, face_type=cfg.face_type, scale= 1.0 + 0.01*cfg.output_face_scale)
+        if existing_mat is not None:
+            mask_output_scale_mat = cv2.getRotationMatrix2D((0, 0), 0, mask_subres_size/output_size)
+            face_mask_output_mat = concat_matrix(mask_output_scale_mat, face_mat)
+        else:
+            face_mask_output_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, mask_subres_size, face_type=cfg.face_type, scale= 1.0 + 0.01*cfg.output_face_scale)
 
-    dst_face_bgr      = cv2.warpAffine( img_bgr        , face_mat, (output_size, output_size), flags=cv2.INTER_CUBIC )
+    dst_face_bgr      = cv2.warpAffine( img_bgr, face_mat, (output_size, output_size), flags=cv2.INTER_CUBIC )
     dst_face_bgr      = np.clip(dst_face_bgr, 0, 1)
 
     dst_face_mask_a_0 = cv2.warpAffine( img_face_mask_a, face_mat, (output_size, output_size), flags=cv2.INTER_CUBIC )
@@ -76,7 +100,11 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
 
         if cfg.mask_mode >= 7 and cfg.mask_mode <= 9:
             # obtain XSeg-dst
-            xseg_mat            = LandmarksProcessor.get_transform_mat (img_face_landmarks, xseg_input_size, face_type=cfg.face_type)
+            if existing_mat is not None:
+                xseg_scale_mat = cv2.getRotationMatrix2D((0,0), 0, xseg_input_size/aligned_size)
+                xseg_mat = concat_matrix(xseg_scale_mat, existing_mat)
+            else:
+                xseg_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, xseg_input_size, face_type=cfg.face_type)
             dst_face_xseg_bgr   = cv2.warpAffine(img_bgr, xseg_mat, (xseg_input_size,)*2, flags=cv2.INTER_CUBIC )
             dst_face_xseg_mask  = xseg_256_extract_func(dst_face_xseg_bgr)
             X_dst_face_mask_a_0 = cv2.resize (dst_face_xseg_mask, (output_size,output_size), interpolation=cv2.INTER_CUBIC)
