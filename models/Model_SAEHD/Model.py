@@ -233,10 +233,10 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         with tf.device (models_opt_device):
             if 'df' in archi_type:
                 self.encoder = model_archi.Encoder(in_ch=input_ch, e_ch=e_dims, name='encoder')
-                encoder_out_ch = self.encoder.compute_output_channels ( (nn.floatx, bgr_shape))
+                encoder_out_ch = self.encoder.get_out_ch()*self.encoder.get_out_res(resolution)**2
 
                 self.inter = model_archi.Inter (in_ch=encoder_out_ch, ae_ch=ae_dims, ae_out_ch=ae_dims, name='inter')
-                inter_out_ch = self.inter.compute_output_channels ( (nn.floatx, (None,encoder_out_ch)))
+                inter_out_ch = self.inter.get_out_ch()
 
                 self.decoder_src = model_archi.Decoder(in_ch=inter_out_ch, d_ch=d_dims, d_mask_ch=d_mask_dims, name='decoder_src')
                 self.decoder_dst = model_archi.Decoder(in_ch=inter_out_ch, d_ch=d_dims, d_mask_ch=d_mask_dims, name='decoder_dst')
@@ -248,19 +248,18 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                 if self.is_training:
                     if self.options['true_face_power'] != 0:
-                        self.code_discriminator = nn.CodeDiscriminator(ae_dims, code_res=model_archi.Inter.get_code_res()*2, name='dis' )
+                        self.code_discriminator = nn.CodeDiscriminator(ae_dims, code_res=model_archi.Inter.get_out_res(), name='dis' )
                         self.model_filename_list += [ [self.code_discriminator, 'code_discriminator.npy'] ]
 
             elif 'liae' in archi_type:
                 self.encoder = model_archi.Encoder(in_ch=input_ch, e_ch=e_dims, name='encoder')
-                encoder_out_ch = self.encoder.compute_output_channels ( (nn.floatx, bgr_shape))
+                encoder_out_ch = self.encoder.get_out_ch()*self.encoder.get_out_res(resolution)**2
 
                 self.inter_AB = model_archi.Inter(in_ch=encoder_out_ch, ae_ch=ae_dims, ae_out_ch=ae_dims*2, name='inter_AB')
                 self.inter_B  = model_archi.Inter(in_ch=encoder_out_ch, ae_ch=ae_dims, ae_out_ch=ae_dims*2, name='inter_B')
 
-                inter_AB_out_ch = self.inter_AB.compute_output_channels ( (nn.floatx, (None,encoder_out_ch)))
-                inter_B_out_ch = self.inter_B.compute_output_channels ( (nn.floatx, (None,encoder_out_ch)))
-                inters_out_ch = inter_AB_out_ch+inter_B_out_ch
+                inter_out_ch = self.inter_AB.get_out_ch() 
+                inters_out_ch = inter_out_ch*2
                 self.decoder = model_archi.Decoder(in_ch=inters_out_ch, d_ch=d_dims, d_mask_ch=d_mask_dims, name='decoder')
 
                 self.model_filename_list += [ [self.encoder,  'encoder.npy'],
