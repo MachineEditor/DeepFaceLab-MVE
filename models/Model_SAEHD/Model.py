@@ -248,7 +248,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                 if self.is_training:
                     if self.options['true_face_power'] != 0:
-                        self.code_discriminator = nn.CodeDiscriminator(ae_dims, code_res=model_archi.Inter.get_out_res(), name='dis' )
+                        self.code_discriminator = nn.CodeDiscriminator(ae_dims, code_res=self.inter.get_out_res(), name='dis' )
                         self.model_filename_list += [ [self.code_discriminator, 'code_discriminator.npy'] ]
 
             elif 'liae' in archi_type:

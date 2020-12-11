@@ -87,7 +87,7 @@ class DeepFakeArchi(nn.ArchiBase):
                     return res // (2**4)
                     
                 def get_out_ch(self):
-                    return 512
+                    return self.e_ch * 8
 
             lowest_dense_res = resolution // (32 if 'd' in opts else 16)
 
