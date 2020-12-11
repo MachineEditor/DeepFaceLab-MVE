@@ -285,7 +285,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                 OptimizerClass = nn.RMSprop
                 if adabelief:
                     lr_dropout = 1.0
-                    lr_cos = 2000
+                    #lr_cos = 2000
                     OptimizerClass = nn.AdaBelief
                 clipnorm = 1.0 if self.options['clipgrad'] else 0.0
 
