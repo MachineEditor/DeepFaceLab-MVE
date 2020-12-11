@@ -101,7 +101,7 @@ class XSegModel(ModelBase):
 
 
             # Average losses and gradients, and create optimizer update ops
-            with tf.device(f'/CPU:0'):
+            with tf.device(f'/CPU:0'): # Temporary fix. Unknown bug with training freeze starts from 2.4.0, but 2.3.1 was ok
             #with tf.device (models_opt_device):
                 pred = tf.concat(gpu_pred_list, 0)
                 loss = tf.concat(gpu_losses, 0)
