@@ -137,14 +137,14 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         if self.is_first_run() or ask_override:
             self.options['models_opt_on_gpu'] = io.input_bool ("Place models and optimizer on GPU", default_models_opt_on_gpu, help_message="When you train on one GPU, by default model and optimizer weights are placed on GPU to accelerate the process. You can place they on CPU to free up extra VRAM, thus set bigger dimensions.")
 
-            self.options['adabelief'] = io.input_bool ("Use AdaBelief optimizer?", default_adabelief, help_message="Experimental AdaBelief optimizer. It requires more VRAM, but the accuracy of the model is higher, and lr_dropout is not needed.")
+            self.options['adabelief'] = io.input_bool ("Use AdaBelief optimizer?", default_adabelief, help_message="AdaBelief optimizer. It requires more VRAM, but the accuracy of the model is higher, and lr_dropout is not needed. Should be enabled from the begining.")
 
             if not self.options['adabelief']:
                 self.options['lr_dropout']  = io.input_str (f"Use learning rate dropout", default_lr_dropout, ['n','y','cpu'], help_message="When the face is trained enough, you can enable this option to get extra sharpness and reduce subpixel shake for less amount of iterations. Enabled it before `disable random warp` and before GAN. \nn - disabled.\ny - enabled\ncpu - enabled on CPU. This allows not to use extra VRAM, sacrificing 20% time of iteration.")
 
             self.options['random_warp'] = io.input_bool ("Enable random warp of samples", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness and reduce subpixel shake for less amount of iterations.")
 
-            self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 10.0", help_message="Train the network in Generative Adversarial manner. Forces the neural network to learn small details of the face. Enable it only when the face is trained enough and don't disable. Typical value is 0.1"), 0.0, 10.0 )
+            self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 10.0", help_message="Train the network in Generative Adversarial manner. Forces the neural network to learn small details of the face. Enable it only when the face is trained enough and don't disable. Typical fine value is 0.05"), 0.0, 10.0 )
 
             if 'df' in self.options['archi']:
                 self.options['true_face_power'] = np.clip ( io.input_number ("'True face' power.", default_true_face_power, add_info="0.0000 .. 1.0", help_message="Experimental option. Discriminates result face to be more like src face. Higher value - stronger discrimination. Typical value is 0.01 . Comparison - https://i.imgur.com/czScS9q.png"), 0.0, 1.0 )
@@ -196,7 +196,11 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         if self.pretrain_just_disabled:
             self.set_iter(0)
 
-        self.gan_power = gan_power = 0.0 if self.pretrain else self.options['gan_power']
+        adabelief = self.options['adabelief']
+        if adabelief:
+            self.options['lr_dropout'] = 'n'
+            
+        self.gan_power = gan_power = 0.0 if self.pretrain else self.options['gan_power']        
         random_warp = False if self.pretrain else self.options['random_warp']
 
         if self.pretrain:
@@ -280,13 +284,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                 # Initialize optimizers
                 lr=5e-5
                 lr_dropout = 0.3 if self.options['lr_dropout'] in ['y','cpu'] and not self.pretrain else 1.0
-                lr_cos = 0
-                adabelief = self.options['adabelief']
-                OptimizerClass = nn.RMSprop
-                if adabelief:
-                    lr_dropout = 1.0
-                    #lr_cos = 2000
-                    OptimizerClass = nn.AdaBelief
+                OptimizerClass = nn.AdaBelief if adabelief else nn.RMSprop
                 clipnorm = 1.0 if self.options['clipgrad'] else 0.0
 
                 if 'df' in archi_type:
@@ -296,17 +294,17 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     
                 
 
-                self.src_dst_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='src_dst_opt')
+                self.src_dst_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, clipnorm=clipnorm, name='src_dst_opt')
                 self.src_dst_opt.initialize_variables (self.src_dst_trainable_weights, vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')
                 self.model_filename_list += [ (self.src_dst_opt, 'src_dst_opt.npy') ]
 
                 if self.options['true_face_power'] != 0:
-                    self.D_code_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='D_code_opt')
+                    self.D_code_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, clipnorm=clipnorm, name='D_code_opt')
                     self.D_code_opt.initialize_variables ( self.code_discriminator.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')
                     self.model_filename_list += [ (self.D_code_opt, 'D_code_opt.npy') ]
 
                 if gan_power != 0:
-                    self.D_src_dst_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='D_src_dst_opt')
+                    self.D_src_dst_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, clipnorm=clipnorm, name='D_src_dst_opt')
                     self.D_src_dst_opt.initialize_variables ( self.D_src.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')#+self.D_src_x2.get_weights()
                     self.model_filename_list += [ (self.D_src_dst_opt, 'D_src_v2_opt.npy') ]
 
