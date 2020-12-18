@@ -137,10 +137,9 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         if self.is_first_run() or ask_override:
             self.options['models_opt_on_gpu'] = io.input_bool ("Place models and optimizer on GPU", default_models_opt_on_gpu, help_message="When you train on one GPU, by default model and optimizer weights are placed on GPU to accelerate the process. You can place they on CPU to free up extra VRAM, thus set bigger dimensions.")
 
-            self.options['adabelief'] = io.input_bool ("Use AdaBelief optimizer?", default_adabelief, help_message="AdaBelief optimizer. It requires more VRAM, but the accuracy of the model is higher, and lr_dropout is not needed. Should be enabled from the begining.")
+            self.options['adabelief'] = io.input_bool ("Use AdaBelief optimizer?", default_adabelief, help_message="Use AdaBelief optimizer. It requires more VRAM, but the accuracy and the generalization of the model is higher.")
 
-            if not self.options['adabelief']:
-                self.options['lr_dropout']  = io.input_str (f"Use learning rate dropout", default_lr_dropout, ['n','y','cpu'], help_message="When the face is trained enough, you can enable this option to get extra sharpness and reduce subpixel shake for less amount of iterations. Enabled it before `disable random warp` and before GAN. \nn - disabled.\ny - enabled\ncpu - enabled on CPU. This allows not to use extra VRAM, sacrificing 20% time of iteration.")
+            self.options['lr_dropout']  = io.input_str (f"Use learning rate dropout", default_lr_dropout, ['n','y','cpu'], help_message="When the face is trained enough, you can enable this option to get extra sharpness and reduce subpixel shake for less amount of iterations. Enabled it before `disable random warp` and before GAN. \nn - disabled.\ny - enabled\ncpu - enabled on CPU. This allows not to use extra VRAM, sacrificing 20% time of iteration.")
 
             self.options['random_warp'] = io.input_bool ("Enable random warp of samples", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness and reduce subpixel shake for less amount of iterations.")
 
@@ -197,8 +196,6 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             self.set_iter(0)
 
         adabelief = self.options['adabelief']
-        if adabelief:
-            self.options['lr_dropout'] = 'n'
             
         self.gan_power = gan_power = 0.0 if self.pretrain else self.options['gan_power']        
         random_warp = False if self.pretrain else self.options['random_warp']
