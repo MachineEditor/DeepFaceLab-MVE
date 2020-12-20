@@ -29,9 +29,9 @@ class SampleProcessor(object):
 
     class FaceMaskType(IntEnum):
         NONE          = 0
-        FULL_FACE      = 1  #mask all hull as grayscale
-        EYES     = 2  #mask eyes hull as grayscale
-        FULL_FACE_EYES = 3  #combo all + eyes as grayscale
+        FULL_FACE      = 1  # mask all hull as grayscale
+        EYES           = 2  # mask eyes hull as grayscale
+        EYES_MOUTH     = 3  # eyes and mouse
 
     class Options(object):
         def __init__(self, random_flip = True, rotation_range=[-10,10], scale_range=[-0.05, 0.05], tx_range=[-0.05, 0.05], ty_range=[-0.05, 0.05] ):
@@ -71,7 +71,13 @@ class SampleProcessor(object):
             def get_eyes_mask():
                 eyes_mask = LandmarksProcessor.get_image_eye_mask (sample_bgr.shape, sample_landmarks)
                 return np.clip(eyes_mask, 0, 1)
-
+            
+            def get_eyes_mouth_mask():                
+                eyes_mask = LandmarksProcessor.get_image_eye_mask (sample_bgr.shape, sample_landmarks)
+                mouth_mask = LandmarksProcessor.get_image_mouth_mask (sample_bgr.shape, sample_landmarks)
+                mask = eyes_mask + mouth_mask
+                return np.clip(mask, 0, 1)
+                
             is_face_sample = sample_landmarks is not None
 
             if debug and is_face_sample:
@@ -135,9 +141,10 @@ class SampleProcessor(object):
                             img = get_full_face_mask()
                         elif face_mask_type == SPFMT.EYES:
                             img = get_eyes_mask()
-                        elif face_mask_type == SPFMT.FULL_FACE_EYES:
-                            img = get_full_face_mask()                            
-                            img += get_eyes_mask()*img
+                        elif face_mask_type == SPFMT.EYES_MOUTH:
+                            mask = get_full_face_mask().copy()
+                            mask[mask != 0.0] = 1.0                            
+                            img = get_eyes_mouth_mask()*mask
                         else:
                             img = np.zeros ( sample_bgr.shape[0:2]+(1,), dtype=np.float32)
 
@@ -157,6 +164,11 @@ class SampleProcessor(object):
                                 
                             img = imagelib.warp_by_params (params_per_resolution[resolution], img, warp, transform, can_flip=True, border_replicate=border_replicate, cv2_inter=cv2.INTER_LINEAR)
 
+                        if face_mask_type == SPFMT.EYES_MOUTH:
+                            div = img.max()
+                            if div != 0.0:
+                                img = img / div # normalize to 1.0 after warp
+                            
                         if len(img.shape) == 2:
                             img = img[...,None]
                             
