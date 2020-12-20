@@ -60,9 +60,11 @@ class MPSharedList():
                 break
             key -= self.obj_counts[i]
 
-        offset_start, offset_end = struct.unpack('<QQ', bytes(sh_b[ table_offset + key*8     : table_offset + (key+2)*8]) )
+        sh_b = memoryview(sh_b).cast('B')
 
-        return pickle.loads( bytes(sh_b[ data_offset + offset_start : data_offset + offset_end ]) )
+        offset_start, offset_end = struct.unpack('<QQ', sh_b[ table_offset + key*8     : table_offset + (key+2)*8].tobytes() )
+
+        return pickle.loads( sh_b[ data_offset + offset_start : data_offset + offset_end ].tobytes() )
 
     def __iter__(self):
         for i in range(self.__len__()):
