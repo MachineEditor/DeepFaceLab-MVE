@@ -1,11 +1,10 @@
 tqdm
-numpy==1.17.0
+numpy==1.19.3
 h5py==2.9.0
 opencv-python==4.1.0.25
 ffmpeg-python==0.1.17
 scikit-image==0.14.2
 scipy==1.4.1
 colorama
-labelme==4.2.9
-tensorflow-gpu==1.13.2
+tensorflow-gpu==2.4.0
 pyqt5

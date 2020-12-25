@@ -79,6 +79,9 @@ class Sample(object):
 
         self._filename_offset_size = None
 
+    def has_xseg_mask(self):
+        return self.xseg_mask is not None or self.xseg_mask_compressed is not None
+        
     def get_xseg_mask(self):
         if self.xseg_mask_compressed is not None:
             xseg_mask = cv2.imdecode(self.xseg_mask_compressed, cv2.IMREAD_UNCHANGED)

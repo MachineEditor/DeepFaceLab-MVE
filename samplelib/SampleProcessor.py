@@ -29,9 +29,9 @@ class SampleProcessor(object):
 
     class FaceMaskType(IntEnum):
         NONE          = 0
-        FULL_FACE      = 1  #mask all hull as grayscale
-        EYES     = 2  #mask eyes hull as grayscale
-        FULL_FACE_EYES = 3  #combo all + eyes as grayscale
+        FULL_FACE      = 1  # mask all hull as grayscale
+        EYES           = 2  # mask eyes hull as grayscale
+        FULL_FACE_EYES     = 3  # eyes and mouse
 
     class Options(object):
         def __init__(self, random_flip = True, rotation_range=[-10,10], scale_range=[-0.05, 0.05], tx_range=[-0.05, 0.05], ty_range=[-0.05, 0.05] ):
@@ -149,9 +149,9 @@ class SampleProcessor(object):
                             # sets both eyes and mouth mask parts
                             img = get_full_face_mask()                            
                             eye_mask = get_eyes_mask()
-                            img = np.where(eye_mask > 1, eye_mask, img)
+                            img = np.where(eye_mask > 1 and img > 0, eye_mask, img)
                             mouth_mask = get_mouth_mask()
-                            img = np.where(mouth_mask > 2, mouth_mask, img)
+                            img = np.where(mouth_mask > 2 and img > 0, mouth_mask, img)
                         else:
                             img = np.zeros ( sample_bgr.shape[0:2]+(1,), dtype=np.float32)
 
@@ -170,7 +170,7 @@ class SampleProcessor(object):
                                     img = cv2.resize( img, (resolution, resolution), interpolation=cv2.INTER_LINEAR )
                                 
                             img = imagelib.warp_by_params (params_per_resolution[resolution], img, warp, transform, can_flip=True, border_replicate=border_replicate, cv2_inter=cv2.INTER_LINEAR)
-
+                          
                         if len(img.shape) == 2:
                             img = img[...,None]
                             

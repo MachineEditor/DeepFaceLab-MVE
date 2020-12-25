@@ -56,10 +56,10 @@ class QModel(ModelBase):
         # Initializing model classes
         with tf.device (models_opt_device):
             self.encoder = model_archi.Encoder(in_ch=input_ch, e_ch=e_dims, name='encoder')
-            encoder_out_ch = self.encoder.compute_output_channels ( (nn.floatx, bgr_shape))
+            encoder_out_ch = self.encoder.get_out_ch()*self.encoder.get_out_res(resolution)**2
 
             self.inter = model_archi.Inter (in_ch=encoder_out_ch, ae_ch=ae_dims, ae_out_ch=ae_dims, name='inter')
-            inter_out_ch = self.inter.compute_output_channels ( (nn.floatx, (None,encoder_out_ch)))
+            inter_out_ch = self.inter.get_out_ch()
 
             self.decoder_src = model_archi.Decoder(in_ch=inter_out_ch, d_ch=d_dims, d_mask_ch=d_mask_dims, name='decoder_src')
             self.decoder_dst = model_archi.Decoder(in_ch=inter_out_ch, d_ch=d_dims, d_mask_ch=d_mask_dims, name='decoder_dst')

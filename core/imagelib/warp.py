@@ -41,6 +41,9 @@ def gen_warp_params (w, flip, rotation_range=[-10,10], scale_range=[-0.5, 0.5], 
     params['mapx'] = mapx
     params['mapy'] = mapy
     params['rmat'] = random_transform_mat
+    u_mat = random_transform_mat.copy()
+    u_mat[:,2] /= w
+    params['umat'] = u_mat
     params['w'] = w
     params['rw'] = rw
     params['flip'] = p_flip

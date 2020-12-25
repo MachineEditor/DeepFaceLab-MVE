@@ -454,7 +454,7 @@ def get_image_mouth_mask (image_shape, image_landmarks):
     hull_mask = hull_mask[...,None]
 
     return hull_mask
-
+    
 def alpha_to_color (img_alpha, color):
     if len(img_alpha.shape) == 2:
         img_alpha = img_alpha[...,None]

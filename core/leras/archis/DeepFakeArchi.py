@@ -72,11 +72,22 @@ class DeepFakeArchi(nn.ArchiBase):
                     return x
 
             class Encoder(nn.ModelBase):
-                def on_build(self, in_ch, e_ch):
-                    self.down1 = DownscaleBlock(in_ch, e_ch, n_downscales=4, kernel_size=5)
+                def __init__(self, in_ch, e_ch, **kwargs ):
+                    self.in_ch = in_ch
+                    self.e_ch = e_ch
+                    super().__init__(**kwargs)
+                    
+                def on_build(self):                    
+                    self.down1 = DownscaleBlock(self.in_ch, self.e_ch, n_downscales=4, kernel_size=5)
 
                 def forward(self, inp):
                     return nn.flatten(self.down1(inp))
+                    
+                def get_out_res(self, res):
+                    return res // (2**4)
+                    
+                def get_out_ch(self):
+                    return self.e_ch * 8
 
             lowest_dense_res = resolution // (32 if 'd' in opts else 16)
 
@@ -104,9 +115,8 @@ class DeepFakeArchi(nn.ArchiBase):
                     x = self.upscale1(x)
                     return x
 
-                @staticmethod
-                def get_code_res():
-                    return lowest_dense_res
+                def get_out_res(self):
+                    return lowest_dense_res * 2
 
                 def get_out_ch(self):
                     return self.ae_out_ch
