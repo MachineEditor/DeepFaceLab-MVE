@@ -28,10 +28,10 @@ class SampleProcessor(object):
         GGG                   = 3  #3xGrayscale
 
     class FaceMaskType(IntEnum):
-        NONE          = 0
+        NONE           = 0
         FULL_FACE      = 1  # mask all hull as grayscale
         EYES           = 2  # mask eyes hull as grayscale
-        FULL_FACE_EYES     = 3  # eyes and mouse
+        FULL_FACE_EYES = 3  # eyes and mouse
 
     class Options(object):
         def __init__(self, random_flip = True, rotation_range=[-10,10], scale_range=[-0.05, 0.05], tx_range=[-0.05, 0.05], ty_range=[-0.05, 0.05] ):
