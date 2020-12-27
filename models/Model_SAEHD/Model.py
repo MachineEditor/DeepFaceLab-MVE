@@ -76,7 +76,7 @@ class SAEHDModel(ModelBase):
             resolution = io.input_int("Resolution", default_resolution, add_info="64-640", help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 16 and 32 for -d archi.")
             resolution = np.clip ( (resolution // 16) * 16, min_res, max_res)
             self.options['resolution'] = resolution
-            self.options['face_type'] = io.input_str ("Face type", default_face_type, ['h','mf','f','wf','head'], help_message="Half / mid face / full face / whole face / head. Half face has better resolution, but covers less area of cheeks. Mid face is 30% wider than half face. 'Whole face' covers full area of face include forehead. 'head' covers full head, but requires XSeg for src and dst faceset.").lower()
+            self.options['face_type'] = io.input_str ("Face type", default_face_type, ['h','mf','f','wf','head', 'custom'], help_message="Half / mid face / full face / whole face / head / custom. Half face has better resolution, but covers less area of cheeks. Mid face is 30% wider than half face. 'Whole face' covers full area of face include forehead. 'head' covers full head, but requires XSeg for src and dst faceset.").lower()
 
             while True:
                 archi = io.input_str ("AE architecture", default_archi, help_message=\
@@ -131,7 +131,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             self.options['d_mask_dims'] = d_mask_dims + d_mask_dims % 2
 
         if self.is_first_run() or ask_override:
-            if self.options['face_type'] == 'wf' or self.options['face_type'] == 'head':
+            if self.options['face_type'] == 'wf' or self.options['face_type'] == 'head' or self.options['face_type'] == 'custom':
                 self.options['masked_training']  = io.input_bool ("Masked training", default_masked_training, help_message="This option is available only for 'whole_face' or 'head' type. Masked training clips training area to full_face mask or XSeg mask, thus network will train the faces properly.")
 
             self.options['eyes_prio'] = io.input_bool ("Eyes priority", default_eyes_prio, help_message='Helps to fix eye problems during training like "alien eyes" and wrong eyes direction ( especially on HD architectures ) by forcing the neural network to train eyes with higher priority. before/after https://i.imgur.com/YQHOuSR.jpg ')
@@ -184,6 +184,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                           'mf' : FaceType.MID_FULL,
                           'f'  : FaceType.FULL,
                           'wf' : FaceType.WHOLE_FACE,
+                          'custom' : FaceType.CUSTOM,
                           'head' : FaceType.HEAD}[ self.options['face_type'] ]
 
         eyes_prio = self.options['eyes_prio']
