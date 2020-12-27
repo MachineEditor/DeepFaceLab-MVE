@@ -147,11 +147,14 @@ class SampleProcessor(object):
                             img = get_eyes_mask()
                         elif face_mask_type == SPFMT.FULL_FACE_EYES:
                             # sets both eyes and mouth mask parts
-                            img = get_full_face_mask()                            
-                            eye_mask = get_eyes_mask()
-                            img = np.where(eye_mask > 1 and img > 0, eye_mask, img)
-                            mouth_mask = get_mouth_mask()
-                            img = np.where(mouth_mask > 2 and img > 0, mouth_mask, img)
+                            img = get_full_face_mask()
+                            mask = img.copy()
+                            mask[mask != 0.0] = 1.0                             
+                            eye_mask = get_eyes_mask() * mask
+                            img = np.where(eye_mask > 1, eye_mask, img)
+
+                            mouth_mask = get_mouth_mask() * mask
+                            img = np.where(mouth_mask > 2, mouth_mask, img)                
                         else:
                             img = np.zeros ( sample_bgr.shape[0:2]+(1,), dtype=np.float32)
 
