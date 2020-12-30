@@ -53,7 +53,6 @@ class SAEHDModel(ModelBase):
         default_lr_dropout         = self.options['lr_dropout'] = lr_dropout
 
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
-        default_gan_power          = self.options['gan_power']          = self.load_or_def_option('gan_power', 0.0)
         default_true_face_power    = self.options['true_face_power']    = self.load_or_def_option('true_face_power', 0.0)
         default_face_style_power   = self.options['face_style_power']   = self.load_or_def_option('face_style_power', 0.0)
         default_bg_style_power     = self.options['bg_style_power']     = self.load_or_def_option('bg_style_power', 0.0)
@@ -73,6 +72,9 @@ class SAEHDModel(ModelBase):
             resolution = io.input_int("Resolution", default_resolution, add_info="64-640", help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 16 and 32 for -d archi.")
             resolution = np.clip ( (resolution // 16) * 16, min_res, max_res)
             self.options['resolution'] = resolution
+            
+
+            
             self.options['face_type'] = io.input_str ("Face type", default_face_type, ['h','mf','f','wf','head'], help_message="Half / mid face / full face / whole face / head. Half face has better resolution, but covers less area of cheeks. Mid face is 30% wider than half face. 'Whole face' covers full area of face include forehead. 'head' covers full head, but requires XSeg for src and dst faceset.").lower()
 
             while True:
@@ -133,7 +135,11 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
             self.options['eyes_mouth_prio'] = io.input_bool ("Eyes and mouth priority", default_eyes_mouth_prio, help_message='Helps to fix eye problems during training like "alien eyes" and wrong eyes direction. Also makes the detail of the teeth higher.')
             self.options['uniform_yaw'] = io.input_bool ("Uniform yaw distribution of samples", default_uniform_yaw, help_message='Helps to fix blurry side faces due to small amount of them in the faceset.')
-
+        
+        default_gan_power          = self.options['gan_power']          = self.load_or_def_option('gan_power', 0.0)
+        default_gan_patch_size     = self.options['gan_patch_size']     = self.load_or_def_option('gan_patch_size', self.options['resolution'] // 8)
+        default_gan_dims           = self.options['gan_dims']           = self.load_or_def_option('gan_dims', 32)
+        
         if self.is_first_run() or ask_override:
             self.options['models_opt_on_gpu'] = io.input_bool ("Place models and optimizer on GPU", default_models_opt_on_gpu, help_message="When you train on one GPU, by default model and optimizer weights are placed on GPU to accelerate the process. You can place they on CPU to free up extra VRAM, thus set bigger dimensions.")
 
@@ -143,8 +149,15 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
             self.options['random_warp'] = io.input_bool ("Enable random warp of samples", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness and reduce subpixel shake for less amount of iterations.")
 
-            self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 10.0", help_message="Train the network in Generative Adversarial manner. Forces the neural network to learn small details of the face. Enable it only when the face is trained enough and don't disable. Typical fine value is 0.05"), 0.0, 10.0 )
-
+            self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 1.0", help_message="Train the network in Generative Adversarial manner. Forces the neural network to learn small details of the face. Enable it only when the face is trained enough with lr_dropout(on) and random_warp(off), and don't disable. Typical fine value is 0.1"), 0.0, 1.0 )
+            
+            if self.options['gan_power'] != 0.0:                
+                gan_patch_size = np.clip ( io.input_int("GAN patch size", default_gan_patch_size, add_info="3-640", help_message="The higher patch size, the higher the quality, the more VRAM is required. Typical fine value is resolution / 8." ), 3, 640 )
+                self.options['gan_patch_size'] = gan_patch_size
+                
+                gan_dims = np.clip ( io.input_int("GAN dimensions", default_gan_dims, add_info="16-512", help_message="The higher dims, the higher the quality, the more VRAM is required. The more varied the src faceset, especially if ct_mode is enabled, the more GAN dimensions are needed. Typical fine value is 32." ), 16, 512 )
+                self.options['gan_dims'] = gan_dims
+                
             if 'df' in self.options['archi']:
                 self.options['true_face_power'] = np.clip ( io.input_number ("'True face' power.", default_true_face_power, add_info="0.0000 .. 1.0", help_message="Experimental option. Discriminates result face to be more like src face. Higher value - stronger discrimination. Typical value is 0.01 . Comparison - https://i.imgur.com/czScS9q.png"), 0.0, 1.0 )
             else:
@@ -160,6 +173,8 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
         if self.options['pretrain'] and self.get_pretraining_data_path() is None:
             raise Exception("pretraining_data_path is not defined")
+        
+        self.gan_model_changed = (default_gan_patch_size != self.options['gan_patch_size']) or (default_gan_dims != self.options['gan_dims'])
 
         self.pretrain_just_disabled = (default_pretrain == True and self.options['pretrain'] == False)
 
@@ -280,8 +295,8 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
             if self.is_training:
                 if gan_power != 0:
-                    self.D_src = nn.UNetPatchDiscriminator(patch_size=resolution//16, in_ch=input_ch, name="D_src")
-                    self.model_filename_list += [ [self.D_src, 'D_src_v2.npy'] ]
+                    self.D_src = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], name="D_src")
+                    self.model_filename_list += [ [self.D_src, 'GAN.npy'] ]
 
                 # Initialize optimizers
                 lr=5e-5
@@ -306,9 +321,9 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     self.model_filename_list += [ (self.D_code_opt, 'D_code_opt.npy') ]
 
                 if gan_power != 0:
-                    self.D_src_dst_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, clipnorm=clipnorm, name='D_src_dst_opt')
+                    self.D_src_dst_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, clipnorm=clipnorm, name='GAN_opt')
                     self.D_src_dst_opt.initialize_variables ( self.D_src.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')#+self.D_src_x2.get_weights()
-                    self.model_filename_list += [ (self.D_src_dst_opt, 'D_src_v2_opt.npy') ]
+                    self.model_filename_list += [ (self.D_src_dst_opt, 'GAN_opt.npy') ]
 
         if self.is_training:
             # Adjust batch size for multiple GPU
@@ -382,14 +397,16 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     gpu_target_dstm_style_blur = gpu_target_dstm_blur #default style mask is 0.5 on boundary
                     gpu_target_dstm_blur = tf.clip_by_value(gpu_target_dstm_blur, 0, 0.5) * 2
 
-                    gpu_target_dst_masked      = gpu_target_dst*gpu_target_dstm_blur
+                    gpu_target_dst_masked           = gpu_target_dst*gpu_target_dstm_blur                    
                     gpu_target_dst_style_masked      = gpu_target_dst*gpu_target_dstm_style_blur
                     gpu_target_dst_style_anti_masked = gpu_target_dst*(1.0 - gpu_target_dstm_style_blur)
 
+                    gpu_target_src_anti_masked = gpu_target_src*(1.0-gpu_target_srcm_blur)
                     gpu_target_src_masked_opt  = gpu_target_src*gpu_target_srcm_blur if masked_training else gpu_target_src
                     gpu_target_dst_masked_opt  = gpu_target_dst_masked if masked_training else gpu_target_dst
 
                     gpu_pred_src_src_masked_opt = gpu_pred_src_src*gpu_target_srcm_blur if masked_training else gpu_pred_src_src
+                    gpu_pred_src_src_anti_masked = gpu_pred_src_src*(1.0-gpu_target_srcm_blur)
                     gpu_pred_dst_dst_masked_opt = gpu_pred_dst_dst*gpu_target_dstm_blur if masked_training else gpu_pred_dst_dst
 
                     gpu_psd_target_dst_style_masked = gpu_pred_src_dst*gpu_target_dstm_style_blur
@@ -422,7 +439,6 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_dst_loss = tf.reduce_mean ( 5*nn.dssim(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0, filter_size=int(resolution/11.6) ), axis=[1])
                         gpu_dst_loss += tf.reduce_mean ( 5*nn.dssim(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0, filter_size=int(resolution/23.2) ), axis=[1])
                     gpu_dst_loss += tf.reduce_mean ( 10*tf.square(  gpu_target_dst_masked_opt- gpu_pred_dst_dst_masked_opt ), axis=[1,2,3])
-
 
                     if eyes_mouth_prio:
                         gpu_dst_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_dst*gpu_target_dstm_em - gpu_pred_dst_dst*gpu_target_dstm_em ), axis=[1,2,3])
@@ -476,7 +492,14 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                         gpu_G_loss += gan_power*(DLoss(gpu_pred_src_src_d_ones, gpu_pred_src_src_d)  + \
                                                  DLoss(gpu_pred_src_src_d2_ones, gpu_pred_src_src_d2))
-
+                                  
+                                  
+                        
+                        if masked_training:
+                            # Minimal src-src-bg rec with total_variation_mse with clip to suppress random bright dots from gan
+                            gpu_G_loss += 0.000001*nn.total_variation_mse(gpu_pred_src_src)
+                            gpu_G_loss += 0.02*tf.reduce_mean(tf.square(gpu_pred_src_src_anti_masked-gpu_target_src_anti_masked),axis=[1,2,3] )
+                            
                     gpu_G_loss_gvs += [ nn.gradients ( gpu_G_loss, self.src_dst_trainable_weights ) ]
 
 
@@ -577,6 +600,9 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         do_init = True
             else:
                 do_init = self.is_first_run()
+                if self.is_training and gan_power != 0 and model == self.D_src:
+                    if self.gan_model_changed:
+                        do_init = True
 
             if not do_init:
                 do_init = not model.load_weights( self.get_strpath_storage_for_file(filename) )
