@@ -1,4 +1,4 @@
-﻿import traceback
+import traceback
 import math
 import multiprocessing
 import operator

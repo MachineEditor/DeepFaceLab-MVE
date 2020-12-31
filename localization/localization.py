@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 import locale
 
 system_locale = locale.getdefaultlocale()[0]
