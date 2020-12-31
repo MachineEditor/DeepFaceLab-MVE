@@ -70,7 +70,6 @@ class nn():
                         first_run = True
                     os.environ['CUDA_CACHE_PATH'] = str(compute_cache_path)
 
-            #nvcuda.dll ignores this param : os.environ['CUDA_​CACHE_​MAXSIZE'] = '536870912' #512Mb (32mb default)
             os.environ['TF_MIN_GPU_MULTIPROCESSOR_COUNT'] = '2'
             os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # tf log errors only
 

@@ -150,7 +150,7 @@ DeepFaceLab is used by such popular youtube channels as
 
 <img src="doc/political_speech2.jpg" align="center">
 
-![](doc/youtube_icon.png) https://www.youtube.com/watch?v=sbFHhpYU15w
+![](doc/youtube_icon.png) https://www.youtube.com/watch?v=IvY-Abd2FfM
 
 <img src="doc/political_speech3.jpg" align="center">
 
