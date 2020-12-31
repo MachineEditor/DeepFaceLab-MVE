@@ -155,7 +155,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                 gan_patch_size = np.clip ( io.input_int("GAN patch size", default_gan_patch_size, add_info="3-640", help_message="The higher patch size, the higher the quality, the more VRAM is required. Typical fine value is resolution / 8." ), 3, 640 )
                 self.options['gan_patch_size'] = gan_patch_size
                 
-                gan_dims = np.clip ( io.input_int("GAN dimensions", default_gan_dims, add_info="16-512", help_message="The higher dims, the higher the quality, the more VRAM is required. The more varied the src faceset, especially if ct_mode is enabled, the more GAN dimensions are needed. Typical fine value is 32." ), 16, 512 )
+                gan_dims = np.clip ( io.input_int("GAN dimensions", default_gan_dims, add_info="16-512", help_message="Change this value only if you want to experiment. Typical fine value is 32." ), 16, 512 )
                 self.options['gan_dims'] = gan_dims
                 
             if 'df' in self.options['archi']:
