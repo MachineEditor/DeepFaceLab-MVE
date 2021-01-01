@@ -77,7 +77,14 @@ class nn():
                 io.log_info("Caching GPU kernels...")
 
             import tensorflow
-            if tensorflow.VERSION[0] == '2':
+            
+            tf_version = getattr(tensorflow,'VERSION', None)
+            if tf_version is None:
+                tf_version = tensorflow.version.GIT_VERSION
+                if tf_version[0] == 'v':
+                    tf_version = tf_version[1:]
+                
+            if tf_version[0] == '2':
                 tf = tensorflow.compat.v1
             else:
                 tf = tensorflow
@@ -87,7 +94,7 @@ class nn():
             tf_logger = logging.getLogger('tensorflow')
             tf_logger.setLevel(logging.ERROR)
             
-            if tensorflow.VERSION[0] == '2':
+            if tf_version[0] == '2':
                 tf.disable_v2_behavior()
             nn.tf = tf
 
