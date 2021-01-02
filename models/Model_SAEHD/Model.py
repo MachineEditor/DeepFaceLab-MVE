@@ -138,7 +138,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         
         default_gan_power          = self.options['gan_power']          = self.load_or_def_option('gan_power', 0.0)
         default_gan_patch_size     = self.options['gan_patch_size']     = self.load_or_def_option('gan_patch_size', self.options['resolution'] // 8)
-        default_gan_dims           = self.options['gan_dims']           = self.load_or_def_option('gan_dims', 32)
+        default_gan_dims           = self.options['gan_dims']           = self.load_or_def_option('gan_dims', 16)
         
         if self.is_first_run() or ask_override:
             self.options['models_opt_on_gpu'] = io.input_bool ("Place models and optimizer on GPU", default_models_opt_on_gpu, help_message="When you train on one GPU, by default model and optimizer weights are placed on GPU to accelerate the process. You can place they on CPU to free up extra VRAM, thus set bigger dimensions.")
@@ -149,13 +149,13 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
             self.options['random_warp'] = io.input_bool ("Enable random warp of samples", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness and reduce subpixel shake for less amount of iterations.")
 
-            self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 1.0", help_message="Train the network in Generative Adversarial manner. Forces the neural network to learn small details of the face. Enable it only when the face is trained enough with lr_dropout(on) and random_warp(off), and don't disable. Typical fine value is 0.1"), 0.0, 1.0 )
+            self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 1.0", help_message="Forces the neural network to learn small details of the face. Enable it only when the face is trained enough with lr_dropout(on) and random_warp(off), and don't disable. The higher the value, the higher the chances of artifacts. Typical fine value is 0.1"), 0.0, 1.0 )
             
             if self.options['gan_power'] != 0.0:                
                 gan_patch_size = np.clip ( io.input_int("GAN patch size", default_gan_patch_size, add_info="3-640", help_message="The higher patch size, the higher the quality, the more VRAM is required. Typical fine value is resolution / 8." ), 3, 640 )
                 self.options['gan_patch_size'] = gan_patch_size
                 
-                gan_dims = np.clip ( io.input_int("GAN dimensions", default_gan_dims, add_info="16-512", help_message="Change this value only if you want to experiment. Typical fine value is 32." ), 16, 512 )
+                gan_dims = np.clip ( io.input_int("GAN dimensions", default_gan_dims, add_info="16-512", help_message="The dimensions of the GAN network. Change this value only if you want to experiment. Typical fine value is 16." ), 16, 512 )
                 self.options['gan_dims'] = gan_dims
                 
             if 'df' in self.options['archi']:
@@ -496,7 +496,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                                   
                         
                         if masked_training:
-                            # Minimal src-src-bg rec with total_variation_mse with clip to suppress random bright dots from gan
+                            # Minimal src-src-bg rec with total_variation_mse to suppress random bright dots from gan
                             gpu_G_loss += 0.000001*nn.total_variation_mse(gpu_pred_src_src)
                             gpu_G_loss += 0.02*tf.reduce_mean(tf.square(gpu_pred_src_src_anti_masked-gpu_target_src_anti_masked),axis=[1,2,3] )
                             
