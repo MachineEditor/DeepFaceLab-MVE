@@ -293,7 +293,7 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 </td><td align="center">the biggest NSFW English community</td></tr>
 
 <tr><td align="right">
-<a href="https://www.reddit.com/r/SFWdeepfakes/new/">reddit r/SFWdeepfakes/</a>
+<a href="https://www.reddit.com/r/DeepFakesSFW/new/">reddit r/DeepFakesSFW/</a>
 </td><td align="center">Post your deepfakes there !</td></tr>
 
 <tr><td align="right">
