@@ -272,6 +272,11 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 
 </td></tr>
 
+
+<tr><td align="right">
+<a href="https://discord.gg/UT4kZzvm">Discord channel (English / Русский)</a>
+</td><td align="center"></td></tr>
+
 <tr><td align="right">
 <a href="https://www.reddit.com/r/RUdeepfakes/new/">reddit r/RUdeepfakes/</a>
 </td><td align="center">Постим русские дипфейки сюда !</td></tr>
