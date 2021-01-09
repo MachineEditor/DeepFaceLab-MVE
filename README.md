@@ -145,8 +145,10 @@ DeepFaceLab is used by such popular youtube channels as
 
 <tr><td colspan=2 align="center">
 
-## Manipulate politicians speech
-(requires a skill in video editors such as *Adobe After Effects* or *Davinci Resolve*)
+## Manipulate politicians lips
+(voice replacement is not included!)
+(also requires a skill in video editors such as *Adobe After Effects* or *Davinci Resolve*)
+
 
 <img src="doc/political_speech1.jpg" align="center">
 
