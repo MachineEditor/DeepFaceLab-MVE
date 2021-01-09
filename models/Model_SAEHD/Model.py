@@ -397,10 +397,10 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     # unpack masks from one combined mask
                     gpu_target_srcm      = tf.clip_by_value (gpu_target_srcm_all, 0, 1)
                     gpu_target_dstm      = tf.clip_by_value (gpu_target_dstm_all, 0, 1)
-                    gpu_target_srcm_eye_mouth = tf.clip_by_value (gpu_target_srcm_all-1, 0, 1)
-                    gpu_target_dstm_eye_mouth = tf.clip_by_value (gpu_target_dstm_all-1, 0, 1)
-                    gpu_target_srcm_mouth = tf.clip_by_value (gpu_target_srcm_all-2, 0, 1)
-                    gpu_target_dstm_mouth = tf.clip_by_value (gpu_target_dstm_all-2, 0, 1)
+                    gpu_target_srcm_eye_mouth = tf.clip_by_value (gpu_target_srcm_em-1, 0, 1)
+                    gpu_target_dstm_eye_mouth = tf.clip_by_value (gpu_target_dstm_em-1, 0, 1)
+                    gpu_target_srcm_mouth = tf.clip_by_value (gpu_target_srcm_em-2, 0, 1)
+                    gpu_target_dstm_mouth = tf.clip_by_value (gpu_target_dstm_em-2, 0, 1)
                     gpu_target_srcm_eyes = tf.clip_by_value (gpu_target_srcm_eye_mouth-gpu_target_srcm_mouth, 0, 1)
                     gpu_target_dstm_eyes = tf.clip_by_value (gpu_target_dstm_eye_mouth-gpu_target_dstm_mouth, 0, 1)
 
