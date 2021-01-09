@@ -34,7 +34,7 @@ class SampleProcessor(object):
         FULL_FACE_EYES = 3  # eyes and mouse
 
     class Options(object):
-        def __init__(self, random_flip = True, rotation_range=[-10,10], scale_range=[-0.05, 0.05], tx_range=[-0.05, 0.05], ty_range=[-0.05, 0.05] ):
+        def __init__(self, random_flip = True, rotation_range=[-2,2], scale_range=[-0.05, 0.05], tx_range=[-0.05, 0.05], ty_range=[-0.05, 0.05] ):
             self.random_flip = random_flip
             self.rotation_range = rotation_range
             self.scale_range = scale_range
