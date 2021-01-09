@@ -41,6 +41,11 @@ DeepFaceLab is used by such popular youtube channels as
 |![](doc/youtube_icon.png) [Futuring Machine](https://www.youtube.com/channel/UCC5BbFxqLQgfnWPhprmQLVg)|![](doc/youtube_icon.png) [RepresentUS](https://www.youtube.com/channel/UCRzgK52MmetD9aG8pDOID3g)|
 |---|---|
 
+|![](doc/youtube_icon.png) [DeepFakeCreator](https://www.youtube.com/channel/UCkNFhcYNLQ5hr6A6lZ56mKA)|![](doc/youtube_icon.png) [DeepFaker](https://www.youtube.com/channel/UCkHecfDTcSazNZSKPEhtPVQ)|
+|---|---|
+
+
+
 </td></tr>
 
 <tr><td colspan=2 align="center">
@@ -140,12 +145,14 @@ DeepFaceLab is used by such popular youtube channels as
 
 <tr><td colspan=2 align="center">
 
-## Manipulate politicians speech
-(requires a skill in video editors such as *Adobe After Effects* or *Davinci Resolve*)
+## Manipulate politicians lips
+(voice replacement is not included!)
+(also requires a skill in video editors such as *Adobe After Effects* or *Davinci Resolve*)
+
 
 <img src="doc/political_speech1.jpg" align="center">
 
-![](doc/youtube_icon.png) https://www.youtube.com/watch?v=2Z1oA3GYPaY
+![](doc/youtube_icon.png) https://www.youtube.com/watch?v=rYKkQ3BOo_E
 
 
 <img src="doc/political_speech2.jpg" align="center">
@@ -192,7 +199,7 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 </td></tr>
 
 <tr><td align="right">
-<a href="https://tinyurl.com/yb6gw8hu">Windows (magnet link)</a>
+<a href="https://tinyurl.com/y8lntghz">Windows (magnet link)</a>
 </td><td align="center">Last release. Use torrent client to download.</td></tr>
 
 <tr><td align="right">
@@ -267,6 +274,11 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 
 </td></tr>
 
+
+<tr><td align="right">
+<a href="https://discord.gg/S2h7kPySQp">Discord channel (English / Русский)</a>
+</td><td align="center"></td></tr>
+
 <tr><td align="right">
 <a href="https://www.reddit.com/r/RUdeepfakes/new/">reddit r/RUdeepfakes/</a>
 </td><td align="center">Постим русские дипфейки сюда !</td></tr>
@@ -288,7 +300,7 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 </td><td align="center">the biggest NSFW English community</td></tr>
 
 <tr><td align="right">
-<a href="https://www.reddit.com/r/SFWdeepfakes/new/">reddit r/SFWdeepfakes/</a>
+<a href="https://www.reddit.com/r/DeepFakesSFW/new/">reddit r/DeepFakesSFW/</a>
 </td><td align="center">Post your deepfakes there !</td></tr>
 
 <tr><td align="right">
