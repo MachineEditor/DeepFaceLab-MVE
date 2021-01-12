@@ -54,9 +54,6 @@ class SAEHDModel(ModelBase):
         default_lr_dropout         = self.options['lr_dropout'] = lr_dropout
 
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
-        default_gan_power          = self.options['gan_power']          = self.load_or_def_option('gan_power', 0.0)
-        default_gan_old            = self.options['gan_old']            = self.load_or_def_option('gan_old', False)
-
         default_true_face_power    = self.options['true_face_power']    = self.load_or_def_option('true_face_power', 0.0)
         default_face_style_power   = self.options['face_style_power']   = self.load_or_def_option('face_style_power', 0.0)
         default_bg_style_power     = self.options['bg_style_power']     = self.load_or_def_option('bg_style_power', 0.0)
@@ -218,8 +215,6 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         adabelief = self.options['adabelief']
 
         self.gan_power = gan_power = 0.0 if self.pretrain else self.options['gan_power']
-        self.gan_old = gan_old = self.options['gan_old']
-
         random_warp = False if self.pretrain else self.options['random_warp']
 
         if self.pretrain:
@@ -497,47 +492,31 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_D_code_loss_gvs += [ nn.gradients (gpu_D_code_loss, self.code_discriminator.get_weights() ) ]
 
                     if gan_power != 0:
-                        if gan_old:
-                            gpu_pred_src_src_d       = self.D_src(gpu_pred_src_src_masked_opt)
+                        gpu_pred_src_src_d, \
+                        gpu_pred_src_src_d2           = self.D_src(gpu_pred_src_src_masked_opt)
 
-                            gpu_pred_src_src_d_ones  = tf.ones_like (gpu_pred_src_src_d)
-                            gpu_pred_src_src_d_zeros = tf.zeros_like(gpu_pred_src_src_d)
-                            gpu_target_src_d         = self.D_src(gpu_target_src_masked_opt)	
-                            gpu_target_src_d_ones    = tf.ones_like(gpu_target_src_d)
+                        gpu_pred_src_src_d_ones  = tf.ones_like (gpu_pred_src_src_d)
+                        gpu_pred_src_src_d_zeros = tf.zeros_like(gpu_pred_src_src_d)
 
-                            gpu_pred_src_src_x2_d       = self.D_src_x2(gpu_pred_src_src_masked_opt)
-                            gpu_pred_src_src_x2_d_ones  = tf.ones_like (gpu_pred_src_src_x2_d)
-                            gpu_pred_src_src_x2_d_zeros = tf.zeros_like(gpu_pred_src_src_x2_d)	
-                            gpu_target_src_x2_d         = self.D_src_x2(gpu_target_src_masked_opt)
-                            gpu_target_src_x2_d_ones    = tf.ones_like(gpu_target_src_x2_d)
+                        gpu_pred_src_src_d2_ones  = tf.ones_like (gpu_pred_src_src_d2)
+                        gpu_pred_src_src_d2_zeros = tf.zeros_like(gpu_pred_src_src_d2)
 
-                            gpu_D_src_dst_loss = (DLoss(gpu_target_src_d_ones      , gpu_target_src_d) + \
-                                                  DLoss(gpu_pred_src_src_d_zeros   , gpu_pred_src_src_d) ) * 0.5 + \
-                                                 (DLoss(gpu_target_src_x2_d_ones   , gpu_target_src_x2_d) + \
-                                                  DLoss(gpu_pred_src_src_x2_d_zeros, gpu_pred_src_src_x2_d) ) * 0.5
+                        gpu_target_src_d, \
+                        gpu_target_src_d2            = self.D_src(gpu_target_src_masked_opt)
 
-                            gpu_D_src_dst_loss_gvs += [ nn.gradients (gpu_D_src_dst_loss,
-                                    self.D_src.get_weights()+self.D_src_x2.get_weights() ) ]
-                            gpu_G_loss += 0.5*gan_power*( DLoss(gpu_pred_src_src_d_ones,
-                                    gpu_pred_src_src_d) + DLoss(gpu_pred_src_src_x2_d_ones, gpu_pred_src_src_x2_d))
+                        gpu_target_src_d_ones    = tf.ones_like(gpu_target_src_d)
+                        gpu_target_src_d2_ones    = tf.ones_like(gpu_target_src_d2)
 
-                        else:
-                            gpu_pred_src_src_d, \
-                            gpu_pred_src_src_d2           = self.D_src(gpu_pred_src_src_masked_opt)
+                        gpu_D_src_dst_loss = (DLoss(gpu_target_src_d_ones      , gpu_target_src_d) + \
+                                              DLoss(gpu_pred_src_src_d_zeros   , gpu_pred_src_src_d) ) * 0.5 + \
+                                             (DLoss(gpu_target_src_d2_ones      , gpu_target_src_d2) + \
+                                              DLoss(gpu_pred_src_src_d2_zeros   , gpu_pred_src_src_d2) ) * 0.5
 
-                            gpu_pred_src_src_d_ones  = tf.ones_like (gpu_pred_src_src_d)
-                            gpu_pred_src_src_d_zeros = tf.zeros_like(gpu_pred_src_src_d)
-
-                            gpu_pred_src_src_d2_ones  = tf.ones_like (gpu_pred_src_src_d2)
-                            gpu_pred_src_src_d2_zeros = tf.zeros_like(gpu_pred_src_src_d2)
-
-                            gpu_target_src_d, \
-                            gpu_target_src_d2            = self.D_src(gpu_target_src_masked_opt)
+                        gpu_D_src_dst_loss_gvs += [ nn.gradients (gpu_D_src_dst_loss, self.D_src.get_weights() ) ]#+self.D_src_x2.get_weights()
 
                         gpu_G_loss += gan_power*(DLoss(gpu_pred_src_src_d_ones, gpu_pred_src_src_d)  + \
                                                  DLoss(gpu_pred_src_src_d2_ones, gpu_pred_src_src_d2))
-                                  
-                                  
+                                                               
                         
                         if masked_training:
                             # Minimal src-src-bg rec with total_variation_mse to suppress random bright dots from gan
