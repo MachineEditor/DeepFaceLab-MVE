@@ -269,26 +269,17 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 
 </td></tr>
 
+<tr><td align="right">
+<a href="https://discord.gg/S2h7kPySQp">Discord</a>
+</td><td align="center">Official discord channel. English / Russian.</td></tr>
 
 <tr><td align="right">
-<a href="https://discord.gg/S2h7kPySQp">Discord channel (English / Русский)</a>
+<a href="https://t.me/joinchat/ElkhqlgJ0I5HhdJyFar80w">Telegram group</a>
+</td><td align="center">Official telegram group. English / Russian. For anonymous communication. Don't forget to hide your phone number</td></tr>
+
+<tr><td align="right">
+<a href="https://mrdeepfakes.com/forums/forum-russian-community">Русский форум</a>
 </td><td align="center"></td></tr>
-
-<tr><td align="right">
-<a href="https://www.reddit.com/r/RUdeepfakes/new/">reddit r/RUdeepfakes/</a>
-</td><td align="center">Постим русские дипфейки сюда !</td></tr>
-
-<tr><td align="right">
-<a href="https://mrdeepfakes.com/forums/forum-russian-community">Русское сообщество</a>
-</td><td align="center"></td></tr>
-
-<tr><td align="right">
-<a href="https://t.me/joinchat/ElkhqlgJ0I5HhdJyFar80w">telegram (English / Русский)</a>
-</td><td align="center">Don't forget to hide your phone number</td></tr>
-
-<tr><td align="right">
-<a href="https://t.me/joinchat/ElkhqkzB6uqyjCzoXwv3gg">telegram (English only)</a>
-</td><td align="center">Don't forget to hide your phone number</td></tr>
 
 <tr><td align="right">
 <a href="https://mrdeepfakes.com/forums/">mrdeepfakes</a>
@@ -297,6 +288,10 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 <tr><td align="right">
 <a href="https://www.reddit.com/r/DeepFakesSFW/new/">reddit r/DeepFakesSFW/</a>
 </td><td align="center">Post your deepfakes there !</td></tr>
+
+<tr><td align="right">
+<a href="https://www.reddit.com/r/RUdeepfakes/new/">reddit r/RUdeepfakes/</a>
+</td><td align="center">Постим русские дипфейки сюда !</td></tr>
 
 <tr><td align="right">
 QQ 951138799
