@@ -144,12 +144,6 @@ DeepFaceLab is used by such popular youtube channels as
 (voice replacement is not included!)
 (also requires a skill in video editors such as *Adobe After Effects* or *Davinci Resolve*)
 
-
-<img src="doc/political_speech1.jpg" align="center">
-
-![](doc/youtube_icon.png) https://www.youtube.com/watch?v=rYKkQ3BOo_E
-
-
 <img src="doc/political_speech2.jpg" align="center">
 
 ![](doc/youtube_icon.png) https://www.youtube.com/watch?v=IvY-Abd2FfM
