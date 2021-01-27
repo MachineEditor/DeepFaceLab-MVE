@@ -384,10 +384,24 @@ Register github account and push "Star" button.
 <img src="doc/meme3.jpg" align="center">
 </td></tr>
 
+<tr><td align="center" width="80%">
+
+## You don't need deepfake detector. You need to stop lying. 
+
+(c) V.I. Lenin
+
+</td><td align="center" width="20%">
+
+<img src="https://i.imgur.com/z0e0xFB.jpg" align="center">
+
+</td></tr>
+
 <tr><td colspan=2 align="center">
 
 <sub>#deepfacelab #deepfakes #faceswap #face-swap #deep-learning #deeplearning #deep-neural-networks #deepface #deep-face-swap #fakeapp #fake-app #neural-networks #neural-nets #tensorflow #cuda #nvidia</sub>
 
 </td></tr>
+
+
 
 </table>
