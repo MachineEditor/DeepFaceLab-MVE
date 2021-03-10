@@ -29,17 +29,23 @@ More than 95% of deepfake videos are created with DeepFaceLab.
 
 DeepFaceLab is used by such popular youtube channels as
 
+|![](doc/tiktok_icon.png) [deeptomcruise](https://www.tiktok.com/@deeptomcruise)|
+|---|
+
 |![](doc/youtube_icon.png) [Ctrl Shift Face](https://www.youtube.com/channel/UCKpH0CKltc73e4wh0_pgL3g)|![](doc/youtube_icon.png) [VFXChris Ume](https://www.youtube.com/channel/UCGf4OlX_aTt8DlrgiH3jN3g/videos)|![](doc/youtube_icon.png) [Sham00k](https://www.youtube.com/channel/UCZXbWcv7fSZFTAZV4beckyw/videos)|
 |---|---|---|
 
 |![](doc/youtube_icon.png) [Collider videos](https://www.youtube.com/watch?v=A91P2qtPT54&list=PLayt6616lBclvOprvrC8qKGCO-mAhPRux)|![](doc/youtube_icon.png) [iFake](https://www.youtube.com/channel/UCC0lK2Zo2BMXX-k1Ks0r7dg/videos)|![](doc/youtube_icon.png) [NextFace](https://www.youtube.com/channel/UCFh3gL0a8BS21g-DHvXZEeQ/videos)|
 |---|---|---|
 
-|![](doc/youtube_icon.png) [Futuring Machine](https://www.youtube.com/channel/UCC5BbFxqLQgfnWPhprmQLVg)|![](doc/youtube_icon.png) [RepresentUS](https://www.youtube.com/channel/UCRzgK52MmetD9aG8pDOID3g)|
+|![](doc/youtube_icon.png) [Futuring Machine](https://www.youtube.com/channel/UCC5BbFxqLQgfnWPhprmQLVg)|![](doc/youtube_icon.png) [RepresentUS](https://www.youtube.com/channel/UCRzgK52MmetD9aG8pDOID3g)|![](doc/youtube_icon.png) [Corridor Crew](https://www.youtube.com/c/corridorcrew/videos)|
+|---|---|---|
+
+|![](doc/youtube_icon.png) [DeepFaker](https://www.youtube.com/channel/UCkHecfDTcSazNZSKPEhtPVQ)|![](doc/youtube_icon.png) [DeepFakes in movie](https://www.youtube.com/c/DeepFakesinmovie/videos)|
 |---|---|
 
-|![](doc/youtube_icon.png) [DeepFakeCreator](https://www.youtube.com/channel/UCkNFhcYNLQ5hr6A6lZ56mKA)|![](doc/youtube_icon.png) [DeepFaker](https://www.youtube.com/channel/UCkHecfDTcSazNZSKPEhtPVQ)|![](doc/youtube_icon.png) [DeepFakes in movie](https://www.youtube.com/c/DeepFakesinmovie/videos)|
-|---|---|---|
+|![](doc/youtube_icon.png) [DeepFakeCreator](https://www.youtube.com/channel/UCkNFhcYNLQ5hr6A6lZ56mKA)|![](doc/youtube_icon.png) [Jarkan](https://www.youtube.com/user/Jarkancio/videos)|
+|---|---|
 
 </td></tr>
 
@@ -143,12 +149,6 @@ DeepFaceLab is used by such popular youtube channels as
 ## Manipulate politicians lips
 (voice replacement is not included!)
 (also requires a skill in video editors such as *Adobe After Effects* or *Davinci Resolve*)
-
-
-<img src="doc/political_speech1.jpg" align="center">
-
-![](doc/youtube_icon.png) https://www.youtube.com/watch?v=rYKkQ3BOo_E
-
 
 <img src="doc/political_speech2.jpg" align="center">
 
@@ -269,26 +269,17 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 
 </td></tr>
 
+<tr><td align="right">
+<a href="https://discord.gg/S2h7kPySQp">Discord</a>
+</td><td align="center">Official discord channel. English / Russian.</td></tr>
 
 <tr><td align="right">
-<a href="https://discord.gg/S2h7kPySQp">Discord channel (English / Русский)</a>
+<a href="https://t.me/joinchat/ElkhqlgJ0I5HhdJyFar80w">Telegram group</a>
+</td><td align="center">Official telegram group. English / Russian. For anonymous communication. Don't forget to hide your phone number</td></tr>
+
+<tr><td align="right">
+<a href="https://mrdeepfakes.com/forums/forum-russian-community">Русский форум</a>
 </td><td align="center"></td></tr>
-
-<tr><td align="right">
-<a href="https://www.reddit.com/r/RUdeepfakes/new/">reddit r/RUdeepfakes/</a>
-</td><td align="center">Постим русские дипфейки сюда !</td></tr>
-
-<tr><td align="right">
-<a href="https://mrdeepfakes.com/forums/forum-russian-community">Русское сообщество</a>
-</td><td align="center"></td></tr>
-
-<tr><td align="right">
-<a href="https://t.me/joinchat/ElkhqlgJ0I5HhdJyFar80w">telegram (English / Русский)</a>
-</td><td align="center">Don't forget to hide your phone number</td></tr>
-
-<tr><td align="right">
-<a href="https://t.me/joinchat/ElkhqkzB6uqyjCzoXwv3gg">telegram (English only)</a>
-</td><td align="center">Don't forget to hide your phone number</td></tr>
 
 <tr><td align="right">
 <a href="https://mrdeepfakes.com/forums/">mrdeepfakes</a>
@@ -297,6 +288,10 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 <tr><td align="right">
 <a href="https://www.reddit.com/r/DeepFakesSFW/new/">reddit r/DeepFakesSFW/</a>
 </td><td align="center">Post your deepfakes there !</td></tr>
+
+<tr><td align="right">
+<a href="https://www.reddit.com/r/RUdeepfakes/new/">reddit r/RUdeepfakes/</a>
+</td><td align="center">Постим русские дипфейки сюда !</td></tr>
 
 <tr><td align="right">
 QQ 951138799
@@ -392,10 +387,25 @@ Register github account and push "Star" button.
 <img src="doc/meme3.jpg" align="center">
 </td></tr>
 
+<tr><td align="center" width="50%">
+
+## You don't need deepfake detector. You need to stop lying. 
+
+
+
+</td><td align="center" width="10%">
+
+<img src="https://i.imgur.com/z0e0xFB.jpg" align="center">
+
+V.I. Lenin
+</td></tr>
+
 <tr><td colspan=2 align="center">
 
 <sub>#deepfacelab #deepfakes #faceswap #face-swap #deep-learning #deeplearning #deep-neural-networks #deepface #deep-face-swap #fakeapp #fake-app #neural-networks #neural-nets #tensorflow #cuda #nvidia</sub>
 
 </td></tr>
+
+
 
 </table>
