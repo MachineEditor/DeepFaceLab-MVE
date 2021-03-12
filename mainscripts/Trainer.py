@@ -15,6 +15,7 @@ from core.interact import interact as io
 
 
 def trainerThread(s2c, c2s, e,
+                  socketio=None,
                   model_class_name=None,
                   saved_models_path=None,
                   training_data_src_path=None,
@@ -28,7 +29,6 @@ def trainerThread(s2c, c2s, e,
                   silent_start=False,
                   execute_programs=None,
                   debug=False,
-                  socketio=None,
                   **kwargs):
     while True:
         try:
