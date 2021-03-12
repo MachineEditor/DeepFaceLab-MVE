@@ -359,9 +359,9 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_target_src      = self.target_src [batch_slice,:,:,:]
                         gpu_target_dst      = self.target_dst [batch_slice,:,:,:]
                         gpu_target_srcm_all = self.target_srcm[batch_slice,:,:,:]
-                        gpu_target_srcm_em  = self.target_srcm_em[batch_slice,:,:,:]
+                        gpu_target_srcm_em = self.target_srcm_em[batch_slice,:,:,:]
                         gpu_target_dstm_all = self.target_dstm[batch_slice,:,:,:]
-                        gpu_target_dstm_em  = self.target_dstm_em[batch_slice,:,:,:]
+                        gpu_target_dstm_em = self.target_dstm_em[batch_slice,:,:,:]
 
                     # process model tensors
                     if 'df' in archi_type:
@@ -590,7 +590,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
 
             def AE_view(warped_src, warped_dst):
-                return nn.tf_sess.run ( [pred_src_src, pred_dst_dst, pred_dst_dstm, pred_src_dst, pred_src_dstm],
+                return nn.tf_sess.run ( [pred_src_src, pred_src_srcm, pred_dst_dst, pred_dst_dstm, pred_src_dst, pred_src_dstm],
                                             feed_dict={self.warped_src:warped_src,
                                                     self.warped_dst:warped_dst})
             self.AE_view = AE_view
@@ -744,8 +744,8 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         ( (warped_src, target_src, target_srcm, target_srcm_em),
           (warped_dst, target_dst, target_dstm, target_dstm_em) ) = samples
 
-        S, D, SS, DD, DDM, SD, SDM = [ np.clip( nn.to_data_format(x,"NHWC", self.model_data_format), 0.0, 1.0) for x in ([target_src,target_dst] + self.AE_view (target_src, target_dst) ) ]
-        DDM, SDM, = [ np.repeat (x, (3,), -1) for x in [DDM, SDM] ]
+        S, D, SS, SSM, DD, DDM, SD, SDM = [ np.clip( nn.to_data_format(x,"NHWC", self.model_data_format), 0.0, 1.0) for x in ([target_src,target_dst] + self.AE_view (target_src, target_dst) ) ]
+        SSM, DDM, SDM, = [ np.repeat (x, (3,), -1) for x in [SSM, DDM, SDM] ]
 
         target_srcm, target_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format) for x in ([target_srcm, target_dstm] )]
 
@@ -765,7 +765,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             for i in range(n_samples):
                 SD_mask = DDM[i]*SDM[i] if self.face_type < FaceType.HEAD else SDM[i]
 
-                ar = S[i]*target_srcm[i], SS[i], D[i]*target_dstm[i], DD[i]*DDM[i], SD[i]*SD_mask
+                ar = S[i]*target_srcm[i], SS[i]*SSM[i], D[i]*target_dstm[i], DD[i]*DDM[i], SD[i]*SD_mask
                 st_m.append ( np.concatenate ( ar, axis=1) )
 
             result += [ ('SAEHD masked', np.concatenate (st_m, axis=0 )), ]
@@ -793,7 +793,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
             st_m = []
             for i in range(n_samples):
-                ar = S[i]*target_srcm[i], SS[i]
+                ar = S[i]*target_srcm[i], SS[i]*SSM[i]
                 st_m.append ( np.concatenate ( ar, axis=1) )
             result += [ ('SAEHD masked src-src', np.concatenate (st_m, axis=0 )), ]
 

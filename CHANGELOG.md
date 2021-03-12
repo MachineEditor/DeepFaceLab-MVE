@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 n/a
 
+## [1.1.2] - 2020-03-12
+### Fixed
+- [Fixed missing predicted src mask in 'SAEHD masked' preview](doc/fixes/predicted_src_mask/README.md)
+
 ## [1.1.1] - 2020-03-12
 ### Added
 - CHANGELOG file for tracking updates, new features, and bug fixes
@@ -22,7 +26,8 @@ n/a
 - Reset stale master branch to [seranus/DeepFaceLab](https://github.com/seranus/DeepFaceLab), 
   21 commits ahead of [iperov/DeepFaceLab](https://github.com/iperov/DeepFaceLab) ([compare](https://github.com/iperov/DeepFaceLab/compare/4818183...seranus:3f5ae05))
 
-[Unreleased]: https://github.com/olivierlacan/keep-a-changelog/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/olivierlacan/keep-a-changelog/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/faceshiftlabs/DeepFaceLab/releases/tag/v1.0.0
