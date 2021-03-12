@@ -4,6 +4,8 @@ import traceback
 import queue
 import threading
 import time
+from enum import Enum
+
 import numpy as np
 import itertools
 from pathlib import Path
