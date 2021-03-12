@@ -333,7 +333,7 @@ def ms_ssim(img1, img2, resolution, kernel_size=11, k1=0.01, k2=0.03, max_value=
         loss = tf.cast(loss, img_dtype)
     return loss
 
-nn.dssim = ms_ssim
+nn.ms_ssim = ms_ssim
 
 
 def space_to_depth(x, size):
