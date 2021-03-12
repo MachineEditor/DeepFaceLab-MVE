@@ -1,4 +1,7 @@
-﻿<table align="center" border="0">
+﻿# CHANGELOG 
+### [View most recent changes](CHANGELOG.md)
+
+<table align="center" border="0">
 
 <tr><td colspan=2 align="center">
 

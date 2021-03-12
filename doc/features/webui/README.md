@@ -3,12 +3,12 @@
 View and interact with the training preview window with your web browser.
 Allows you to view and control the preview remotely, and train on headless machines.
 
-![](example.png)
-
 - [INSTALLATION](#installation)
 - [DESCRIPTION](#description)
-- [USAGE](#usage)  
+- [USAGE](#usage)
 - [SSH PORT FORWARDING](#ssh-port-forwarding)
+
+![](example.png)
 
 ## INSTALLATION
 
