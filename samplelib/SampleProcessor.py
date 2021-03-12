@@ -235,7 +235,7 @@ class SampleProcessor(object):
                         if channel_type == SPCT.BGR:
                             out_sample = img
                         elif channel_type == SPCT.LAB_RAND_TRANSFORM:
-                            out_sample = random_lab_rotation(img)
+                            out_sample = random_lab_rotation(img, sample_rnd_seed)
                         elif channel_type == SPCT.G:
                             out_sample = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)[...,None]
                         elif channel_type == SPCT.GGG:
