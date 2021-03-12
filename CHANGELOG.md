@@ -11,6 +11,7 @@ n/a
 ### Added
 - CHANGELOG file for tracking updates, new features, and bug fixes
 - Documentation for Web UI
+- Link to CHANGELOG at top of README
 
 ## [1.1.0] - 2020-03-11
 ### Added
