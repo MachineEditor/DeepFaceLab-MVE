@@ -8,3 +8,5 @@ scipy==1.4.1
 colorama
 tensorflow-gpu==2.3.1
 pyqt5
+Flask==1.1.1
+flask-socketio==4.2.1
