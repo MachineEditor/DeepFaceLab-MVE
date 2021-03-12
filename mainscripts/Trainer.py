@@ -405,7 +405,7 @@ def main(**kwargs):
                                                                batch_size,
                                                                zoom)
                 # io.show_image(wnd_name, preview_pane_image)
-                model_path = Path(kwargs.get('model_path', ''))
+                model_path = Path(kwargs.get('saved_models_path', ''))
                 filename = 'preview.jpg'
                 preview_file = str(model_path / filename)
                 cv2.imwrite(preview_file, preview_pane_image)
