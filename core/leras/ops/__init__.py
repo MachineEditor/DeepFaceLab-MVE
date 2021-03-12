@@ -325,7 +325,10 @@ def ms_ssim(img1, img2, resolution, kernel_size=11, k1=0.01, k2=0.03, max_value=
     if sum(power_factors) < 1.0:
         power_factors = [x/sum(power_factors) for x in power_factors]
 
-    ms_ssim_val = tf.image.ssim_multiscale(img1, img2, max_val=max_value, power_factors=power_factors,
+    # Transpose images from NCHW to NHWC
+    img1_t = tf.transpose(img1, [0, 2, 3, 1])
+    img2_t = tf.transpose(img2, [0, 2, 3, 1])
+    ms_ssim_val = tf.image.ssim_multiscale(img1_t, img2_t, max_val=max_value, power_factors=power_factors,
                                            filter_size=kernel_size, k1=k1, k2=k2)
     loss = (1.0 - ms_ssim_val) / 2.0
 
