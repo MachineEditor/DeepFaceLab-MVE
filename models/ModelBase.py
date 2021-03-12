@@ -535,7 +535,7 @@ class ModelBase(object):
     def get_summary_text(self):
         visible_options = self.options.copy()
         visible_options.update(self.options_show_override)
-        
+
         ###Generate text summary of model hyperparameters
         #Find the longest key name and value string. Used as column widths.
         width_name = max([len(k) for k in visible_options.keys()] + [17]) + 1 # Single space buffer to left edge. Minimum of 17, the length of the longest static string used "Current iteration"
@@ -574,10 +574,9 @@ class ModelBase(object):
         return summary_text
 
     @staticmethod
-    def get_loss_history_preview(loss_history, iter, w, c):
+    def get_loss_history_preview(loss_history, iter, w, c, lh_height=100):
         loss_history = np.array (loss_history.copy())
 
-        lh_height = 100
         lh_img = np.ones ( (lh_height,w,c) ) * 0.1
 
         if len(loss_history) != 0:

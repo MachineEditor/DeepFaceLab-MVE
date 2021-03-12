@@ -308,9 +308,7 @@ def create_preview_pane_image(previews, selected_preview, loss_history,
         else:
             loss_history_to_show = loss_history[-show_last_history_iters_count:]
         lh_height = int(100 * zoom.scale)
-        # FIXME: investigate old behavior (batch_size, lh_height)
-        # lh_img = models.ModelBase.get_loss_history_preview(loss_history_to_show, iteration, batch_size, w, c, lh_height)
-        lh_img = models.ModelBase.get_loss_history_preview(loss_history_to_show, iteration, w, c)
+        lh_img = models.ModelBase.get_loss_history_preview(loss_history_to_show, iteration, w, c, lh_height)
         final = np.concatenate([final, lh_img], axis=0)
 
     final = np.concatenate([final, selected_preview_rgb], axis=0)
