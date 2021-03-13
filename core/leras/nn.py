@@ -31,7 +31,6 @@ class nn():
     current_DeviceConfig = None
 
     tf = None
-    tf2 = None
     tf_sess = None
     tf_sess_config = None
     tf_default_device = None
@@ -87,8 +86,6 @@ class nn():
 
             if tf_version[0] == '2':
                 tf = tensorflow.compat.v1
-                tf2 = tensorflow
-                nn.tf2 = tf2
             else:
                 tf = tensorflow
 
@@ -115,7 +112,7 @@ class nn():
                 config = tf.ConfigProto(device_count={'GPU': 0})
             else:
                 nn.tf_default_device = "/GPU:0"
-                config = tf.ConfigProto()
+                config = tf.ConfigProto(allow_soft_placement=True)
                 config.gpu_options.visible_device_list = ','.join([str(device.index) for device in device_config.devices])
 
             config.gpu_options.force_gpu_compatible = True
