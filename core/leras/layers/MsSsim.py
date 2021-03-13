@@ -19,7 +19,8 @@ class MsSsim(nn.LayerBase):
         # Transpose images from NCHW to NHWC
         y_true_t = tf.transpose(y_true, [0, 2, 3, 1])
         y_pred_t = tf.transpose(y_pred, [0, 2, 3, 1])
-        loss = tf.image.ssim_multiscale(y_true_t, y_pred_t, max_val, power_factors=self.power_factors)
+        with tf.device('/CPU:0'):
+            loss = tf.image.ssim_multiscale(y_true_t, y_pred_t, max_val, power_factors=self.power_factors)
         return (1.0 - loss) / 2.0
 
 nn.MsSsim = MsSsim
