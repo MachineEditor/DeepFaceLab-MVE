@@ -31,6 +31,7 @@ class nn():
     current_DeviceConfig = None
 
     tf = None
+    tf2 = None
     tf_sess = None
     tf_sess_config = None
     tf_default_device = None
@@ -40,7 +41,7 @@ class nn():
     conv2d_spatial_axes = None
 
     floatx = None
-    
+
     @staticmethod
     def initialize(device_config=None, floatx="float32", data_format="NHWC"):
 
@@ -50,7 +51,7 @@ class nn():
             nn.setCurrentDeviceConfig(device_config)
 
             # Manipulate environment variables before import tensorflow
-            
+
             if 'CUDA_VISIBLE_DEVICES' in os.environ.keys():
                 os.environ.pop('CUDA_VISIBLE_DEVICES')
 
@@ -77,15 +78,17 @@ class nn():
                 io.log_info("Caching GPU kernels...")
 
             import tensorflow
-            
+
             tf_version = getattr(tensorflow,'VERSION', None)
             if tf_version is None:
                 tf_version = tensorflow.version.GIT_VERSION
                 if tf_version[0] == 'v':
                     tf_version = tf_version[1:]
-                
+
             if tf_version[0] == '2':
                 tf = tensorflow.compat.v1
+                tf2 = tensorflow
+                nn.tf2 = tf2
             else:
                 tf = tensorflow
 
@@ -93,7 +96,7 @@ class nn():
             # Disable tensorflow warnings
             tf_logger = logging.getLogger('tensorflow')
             tf_logger.setLevel(logging.ERROR)
-            
+
             if tf_version[0] == '2':
                 tf.disable_v2_behavior()
             nn.tf = tf
@@ -105,7 +108,7 @@ class nn():
             import core.leras.optimizers
             import core.leras.models
             import core.leras.archis
-            
+
             # Configure tensorflow session-config
             if len(device_config.devices) == 0:
                 nn.tf_default_device = "/CPU:0"
@@ -118,7 +121,7 @@ class nn():
             config.gpu_options.force_gpu_compatible = True
             config.gpu_options.allow_growth = True
             nn.tf_sess_config = config
-            
+
         if nn.tf_sess is None:
             nn.tf_sess = tf.Session(config=nn.tf_sess_config)
 
@@ -273,7 +276,7 @@ class nn():
         @staticmethod
         def ask_choose_device(*args, **kwargs):
             return nn.DeviceConfig.GPUIndexes( nn.ask_choose_device_idxs(*args,**kwargs) )
-        
+
         def __init__ (self, devices=None):
             devices = devices or []
 
