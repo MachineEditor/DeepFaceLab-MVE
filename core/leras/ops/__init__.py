@@ -308,44 +308,44 @@ def dssim(img1,img2, max_val, filter_size=11, filter_sigma=1.5, k1=0.01, k2=0.03
 nn.dssim = dssim
 
 
-def ms_ssim(img1, img2, resolution, kernel_size=11, k1=0.01, k2=0.03, max_value=1.0,
-            power_factors=(0.0448, 0.2856, 0.3001, 0.2363, 0.1333)):
-
-    # restrict mssim factors to those greater/equal to kernel size
-    power_factors = [power_factors[i] for i in range(len(power_factors)) if resolution//(2**i) >= kernel_size]
-
-    # normalize power factors if reduced because of size
-    if sum(power_factors) < 1.0:
-        power_factors = [x/sum(power_factors) for x in power_factors]
-
-    img_dtype = img1.dtype
-    if img_dtype != img2.dtype:
-        raise ValueError("img1.dtype != img2.dtype")
-
-    if img_dtype != tf.float32:
-        img1 = tf.cast(img1, tf.float32)
-        img2 = tf.cast(img2, tf.float32)
-
-    # Transpose images from NCHW to NHWC
-    img1_t = tf.transpose(img1, [0, 2, 3, 1])
-    img2_t = tf.transpose(img2, [0, 2, 3, 1])
-
-    def assign_device(op):
-        if op.type != 'ListDiff':
-            return '/gpu:0'
-        else:
-            return '/cpu:0'
-
-    with tf.device(assign_device):
-        ms_ssim_val = tf.image.ssim_multiscale(img1_t, img2_t, max_val=max_value, power_factors=power_factors,
-                                               filter_size=kernel_size, k1=k1, k2=k2)
-    ms_ssim_loss = (1.0 - ms_ssim_val) / 2.0
-
-    if img_dtype != tf.float32:
-        ms_ssim_loss = tf.cast(ms_ssim_loss, img_dtype)
-    return ms_ssim_loss
-
-nn.ms_ssim = ms_ssim
+# def ms_ssim(img1, img2, resolution, kernel_size=11, k1=0.01, k2=0.03, max_value=1.0,
+#             power_factors=(0.0448, 0.2856, 0.3001, 0.2363, 0.1333)):
+#
+#     # restrict mssim factors to those greater/equal to kernel size
+#     power_factors = [power_factors[i] for i in range(len(power_factors)) if resolution//(2**i) >= kernel_size]
+#
+#     # normalize power factors if reduced because of size
+#     if sum(power_factors) < 1.0:
+#         power_factors = [x/sum(power_factors) for x in power_factors]
+#
+#     img_dtype = img1.dtype
+#     if img_dtype != img2.dtype:
+#         raise ValueError("img1.dtype != img2.dtype")
+#
+#     if img_dtype != tf.float32:
+#         img1 = tf.cast(img1, tf.float32)
+#         img2 = tf.cast(img2, tf.float32)
+#
+#     # Transpose images from NCHW to NHWC
+#     img1_t = tf.transpose(img1, [0, 2, 3, 1])
+#     img2_t = tf.transpose(img2, [0, 2, 3, 1])
+#
+#     def assign_device(op):
+#         if op.type != 'ListDiff':
+#             return '/gpu:0'
+#         else:
+#             return '/cpu:0'
+#
+#     with tf.device(assign_device):
+#         ms_ssim_val = tf.image.ssim_multiscale(img1_t, img2_t, max_val=max_value, power_factors=power_factors,
+#                                                filter_size=kernel_size, k1=k1, k2=k2)
+#     ms_ssim_loss = (1.0 - ms_ssim_val) / 2.0
+#
+#     if img_dtype != tf.float32:
+#         ms_ssim_loss = tf.cast(ms_ssim_loss, img_dtype)
+#     return ms_ssim_loss
+#
+# nn.ms_ssim = ms_ssim
 
 
 def space_to_depth(x, size):
