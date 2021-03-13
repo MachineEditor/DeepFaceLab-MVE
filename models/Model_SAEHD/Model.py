@@ -482,12 +482,12 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                             gpu_target_part_mask = gpu_target_dstm_mouth
 
                         if self.options['ms_ssim_loss']:
-                            gpu_dst_loss +=  tf.reduce_mean ( 10*nn.MsSsim(resolution)(gpu_target_dst*gpu_target_part_mask, gpu_pred_dst_dst*gpu_target_part_mask, max_val=1.0))
+                            gpu_dst_loss += tf.reduce_mean ( 10*nn.MsSsim(resolution)(gpu_target_dst*gpu_target_part_mask, gpu_pred_dst_dst*gpu_target_part_mask, max_val=1.0))
                         else:
                             gpu_dst_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_dst*gpu_target_part_mask - gpu_pred_dst_dst*gpu_target_part_mask ), axis=[1,2,3])
 
                     if self.options['ms_ssim_loss']:
-                        gpu_dst_loss +=  tf.reduce_mean ( 10*nn.MsSsim(resolution)(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0))
+                        gpu_dst_loss +=  tf.reduce_mean ( 10*nn.MsSsim(resolution)(gpu_target_dstm, gpu_pred_dst_dstm, max_val=1.0))
                     else:
                         gpu_dst_loss += tf.reduce_mean ( 10*tf.square( gpu_target_dstm - gpu_pred_dst_dstm ),axis=[1,2,3] )
 
