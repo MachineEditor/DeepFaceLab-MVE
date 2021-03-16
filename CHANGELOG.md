@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### In Progress
 - [Freezeable layers (encoder/decoder/etc.)](https://github.com/faceshiftlabs/DeepFaceLab/tree/feature/freezable-weights)
 
+## [1.1.5] - 2020-03-16
+### Fixed
+- Fixed unclosed websocket in Web UI client when exiting
+
 ## [1.1.4] - 2020-03-16
 ### Fixed
 - Fixed bug when exiting from Web UI
