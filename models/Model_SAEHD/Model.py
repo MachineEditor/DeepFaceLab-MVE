@@ -497,8 +497,9 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                         print("Shape (gpu_pred_src_src_d): ", gpu_pred_src_src_d.shape)
                         print("Shape (gpu_pred_src_src_d2): ", gpu_pred_src_src_d2.shape)
+                        for i in gpu_pred_src_src_d2.shape:
+                            print("Shape (gpu_pred_src_src_d2) i: ", i)
 
-                        print("Flattened Shape (gpu_pred_src_src_d): ", gpu_pred_src_src_d.flatten().shape())
 
                         # def get_smooth_noisy_labels_like(label, tensor, smoothing=0.2, noise=0.05):
                         #     new_labels = []
