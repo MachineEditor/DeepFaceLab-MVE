@@ -446,7 +446,7 @@ def main(**kwargs):
         while True:
             if not c2s.empty():
                 item = c2s.get()
-                op = input['op']
+                op = item['op']
                 if op == 'show':
                     is_waiting_preview = False
                     loss_history = item['loss_history'] if 'loss_history' in item.keys() else None
