@@ -5,7 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-n/a
+### Added
+- [Random color training option](https://github.com/faceshiftlabs/DeepFaceLab/tree/feature/random-color)
+- [MS-SSIM loss training option](https://github.com/faceshiftlabs/DeepFaceLab/tree/feature/ms-ssim-loss-2)
+### In Progress
+- [Freezeable layers (encoder/decoder/etc.)](https://github.com/faceshiftlabs/DeepFaceLab/tree/feature/freezable-weights)
+
+## [1.1.3] - 2020-03-16
+### Changed
+- Updated changelog with unreleased features, links to working branches
 
 ## [1.1.2] - 2020-03-12
 ### Fixed
