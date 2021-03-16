@@ -495,6 +495,9 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_pred_src_src_d, \
                         gpu_pred_src_src_d2           = self.D_src(gpu_pred_src_src_masked_opt)
 
+                        print("Shape (gpu_pred_src_src_d): ", gpu_pred_src_src_d.shape)
+                        print("Shape (gpu_pred_src_src_d2): ", gpu_pred_src_src_d2.shape)
+
                         gpu_pred_src_src_d_ones  = tf.ones_like (gpu_pred_src_src_d)
                         gpu_pred_src_src_d_zeros = tf.zeros_like(gpu_pred_src_src_d)
 
