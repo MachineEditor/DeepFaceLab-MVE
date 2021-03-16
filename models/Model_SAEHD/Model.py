@@ -498,6 +498,19 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         print("Shape (gpu_pred_src_src_d): ", gpu_pred_src_src_d.shape)
                         print("Shape (gpu_pred_src_src_d2): ", gpu_pred_src_src_d2.shape)
 
+                        print("Flattened Shape (gpu_pred_src_src_d): ", gpu_pred_src_src_d.flatten().shape())
+
+                        # def get_smooth_noisy_labels_like(label, tensor, smoothing=0.2, noise=0.05):
+                        #     new_labels = []
+                        #     for label in labels:
+                        #         if np.random.random() < noise:
+                        #             label = 0 if label == 1 else 1
+                        #         if label == 0:
+                        #             new_labels.append(np.random.uniform(0, 0+smoothing/2))
+                        #         else:
+                        #             new_labels.append(np.random.uniform(1-smoothing/2, 1.0))
+                        #     return new_labels
+
                         gpu_pred_src_src_d_ones  = tf.ones_like (gpu_pred_src_src_d)
                         gpu_pred_src_src_d_zeros = tf.zeros_like(gpu_pred_src_src_d)
 
