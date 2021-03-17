@@ -498,31 +498,38 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         print("gpu_pred_src_src_d.shape: ", gpu_pred_src_src_d.shape)
                         print("gpu_pred_src_src_d2.shape: ", gpu_pred_src_src_d2.shape)
 
-                        print("tf.reshape(gpu_pred_src_src_d, [-1]).shape: ", tf.reshape(gpu_pred_src_src_d, [-1]).shape)
+                        # print("tf.reshape(gpu_pred_src_src_d, [-1]).shape: ", tf.reshape(gpu_pred_src_src_d, [-1]).shape)
 
 
-                        def get_smooth_noisy_label(label, smoothing=0.2, noise=0.05):
-                            if np.random.random() < noise:
-                                label = 0 if label == 1 else 1
-                            if label == 0:
-                                return lambda x: np.random.uniform(0, 0+smoothing/2)
-                            else:
-                                return lambda x: np.random.uniform(1-smoothing/2, 1.0)
+                        def get_smooth_noisy_labels(label, tensor, smoothing=0.2, noise=0.05):
+                            labels = []
+                            num_labels = self.batch_size
+                            for d in tensor.shape[1:]:
+                                num_labels *= d
+                            for _ in num_labels:
+                                if np.random.random() < noise:
+                                    label = 0 if label == 1 else 1
+                                if label == 0:
+                                    label = np.random.uniform(0, 0+smoothing/2)
+                                else:
+                                    label = np.random.uniform(1-smoothing/2, 1.0)
+                                labels.append(label)
+                            return tf.reshape(labels, tensor.shape)
 
-                        gpu_pred_src_src_d_ones  = tf.reshape(tf.map_fn (get_smooth_noisy_label(1, smoothing=0.2, noise=0.05), tf.reshape(gpu_pred_src_src_d, [-1])), gpu_pred_src_src_d.shape)
-                        gpu_pred_src_src_d_zeros =  tf.map_fn (get_smooth_noisy_label(0, smoothing=0.2, noise=0.05), gpu_pred_src_src_d)
+                        gpu_pred_src_src_d_ones  = get_smooth_noisy_labels(1, gpu_pred_src_src_d, smoothing=0.2, noise=0.05)
+                        gpu_pred_src_src_d_zeros =  get_smooth_noisy_labels(0, gpu_pred_src_src_d, smoothing=0.2, noise=0.05)
 
-                        print("Shape (gpu_pred_src_src_d_ones): ", gpu_pred_src_src_d.shape)
-                        print("Shape (gpu_pred_src_src_d_zeros): ", gpu_pred_src_src_d2.shape)
+                        print("gpu_pred_src_src_d_ones.shape: ", gpu_pred_src_src_d_ones.shape)
+                        print("gpu_pred_src_src_d_zeros.shape: ", gpu_pred_src_src_d_zeros.shape)
 
-                        gpu_pred_src_src_d2_ones  = tf.map_fn (get_smooth_noisy_label(1, smoothing=0.2, noise=0.05), gpu_pred_src_src_d2)
-                        gpu_pred_src_src_d2_zeros = tf.map_fn (get_smooth_noisy_label(0, smoothing=0.2, noise=0.05), gpu_pred_src_src_d2)
+                        gpu_pred_src_src_d2_ones  = get_smooth_noisy_labels(1, gpu_pred_src_src_d2, smoothing=0.2, noise=0.05)
+                        gpu_pred_src_src_d2_zeros = get_smooth_noisy_labels(0, gpu_pred_src_src_d2, smoothing=0.2, noise=0.05)
 
                         gpu_target_src_d, \
                         gpu_target_src_d2            = self.D_src(gpu_target_src_masked_opt)
 
-                        gpu_target_src_d_ones    = tf.map_fn (get_smooth_noisy_label(1, smoothing=0.2, noise=0.05), gpu_target_src_d)
-                        gpu_target_src_d2_ones    = tf.map_fn (get_smooth_noisy_label(1, smoothing=0.2, noise=0.05), gpu_target_src_d2)
+                        gpu_target_src_d_ones    = get_smooth_noisy_labels(1, gpu_target_src_d, smoothing=0.2, noise=0.05)
+                        gpu_target_src_d2_ones    = get_smooth_noisy_labels(1, gpu_target_src_d2, smoothing=0.2, noise=0.05)
 
                         gpu_D_src_dst_loss = (DLoss(gpu_target_src_d_ones      , gpu_target_src_d) + \
                                               DLoss(gpu_pred_src_src_d_zeros   , gpu_pred_src_src_d) ) * 0.5 + \
