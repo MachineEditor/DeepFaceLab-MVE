@@ -503,8 +503,9 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                         def get_smooth_noisy_labels(label, tensor, smoothing=0.2, noise=0.05):
                             num_labels = self.batch_size
-                            for d in tensor.shape[1:]:
+                            for d in tensor.get_shape().as_list()[1:]:
                                 num_labels *= d
+                            # num_labels = int(num_labels)
                             probs = tf.math.log([[noise, 1-noise]]) if label == 1 else tf.math.log([[1-noise, noise]])
                             x = tf.random.categorical(probs, num_labels)
                             x = tf.cast(x, tf.float32)
