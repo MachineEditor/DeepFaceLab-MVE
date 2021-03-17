@@ -654,7 +654,6 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
             channel_type = SampleProcessor.ChannelType.LAB_RAND_TRANSFORM if self.options['random_color'] else SampleProcessor.ChannelType.BGR
 
-
             self.set_training_data_generators ([
                     SampleGeneratorFace(training_data_src_path, random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(random_flip=self.random_flip),
