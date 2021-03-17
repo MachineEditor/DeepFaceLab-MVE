@@ -506,7 +506,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                             num_labels = self.batch_size
                             for d in tensor.shape[1:]:
                                 num_labels *= d
-                            for _ in num_labels:
+                            for _ in range(num_labels):
                                 if np.random.random() < noise:
                                     label = 0 if label == 1 else 1
                                 if label == 0:
