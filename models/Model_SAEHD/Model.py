@@ -450,10 +450,13 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         else:
                             gpu_src_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_src*gpu_target_part_mask - gpu_pred_src_src*gpu_target_part_mask ), axis=[1,2,3])
 
-                    if self.options['ms_ssim_loss']:
-                        gpu_src_loss += tf.reduce_mean ( 10*nn.MsSsim(resolution)(gpu_target_srcm, gpu_pred_src_srcm, max_val=1.0))
-                    else:
-                        gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
+                    # FIXME
+                    # if self.options['ms_ssim_loss']:
+                    #     gpu_src_loss += tf.reduce_mean ( 10*nn.MsSsim(resolution)(gpu_target_srcm, gpu_pred_src_srcm, max_val=1.0))
+                    # else:
+                    print('gpu_target_srcm.shape:', gpu_target_srcm.shape)
+                    print('gpu_pred_src_srcm.shape:', gpu_pred_src_srcm.shape)
+                    gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
 
                     face_style_power = self.options['face_style_power'] / 100.0
                     if face_style_power != 0 and not self.pretrain:
@@ -488,10 +491,11 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         else:
                             gpu_dst_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_dst*gpu_target_part_mask - gpu_pred_dst_dst*gpu_target_part_mask ), axis=[1,2,3])
 
-                    if self.options['ms_ssim_loss']:
-                        gpu_dst_loss +=  tf.reduce_mean ( 10*nn.MsSsim(resolution)(gpu_target_dstm, gpu_pred_dst_dstm, max_val=1.0))
-                    else:
-                        gpu_dst_loss += tf.reduce_mean ( 10*tf.square( gpu_target_dstm - gpu_pred_dst_dstm ),axis=[1,2,3] )
+                    # FIXME
+                    # if self.options['ms_ssim_loss']:
+                    #     gpu_dst_loss +=  tf.reduce_mean ( 10*nn.MsSsim(resolution)(gpu_target_dstm, gpu_pred_dst_dstm, max_val=1.0))
+                    # else:
+                    gpu_dst_loss += tf.reduce_mean ( 10*tf.square( gpu_target_dstm - gpu_pred_dst_dstm ),axis=[1,2,3] )
 
                     gpu_src_losses += [gpu_src_loss]
                     gpu_dst_losses += [gpu_dst_loss]
