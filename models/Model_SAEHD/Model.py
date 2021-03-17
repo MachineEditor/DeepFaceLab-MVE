@@ -495,8 +495,10 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_pred_src_src_d, \
                         gpu_pred_src_src_d2           = self.D_src(gpu_pred_src_src_masked_opt)
 
-                        print("Shape (gpu_pred_src_src_d): ", gpu_pred_src_src_d.shape)
-                        print("Shape (gpu_pred_src_src_d2): ", gpu_pred_src_src_d2.shape)
+                        print("gpu_pred_src_src_d.shape: ", gpu_pred_src_src_d.shape)
+                        print("gpu_pred_src_src_d2.shape: ", gpu_pred_src_src_d2.shape)
+
+                        print("gpu_pred_src_src_d.reshape([-1]).shape: ", gpu_pred_src_src_d.reshape([-1]).shape)
 
 
                         def get_smooth_noisy_label(label, smoothing=0.2, noise=0.05):
@@ -507,7 +509,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                             else:
                                 return lambda x: np.random.uniform(1-smoothing/2, 1.0)
 
-                        gpu_pred_src_src_d_ones  = tf.map_fn (get_smooth_noisy_label(1, smoothing=0.2, noise=0.05), gpu_pred_src_src_d)
+                        gpu_pred_src_src_d_ones  = tf.map_fn (get_smooth_noisy_label(1, smoothing=0.2, noise=0.05), gpu_pred_src_src_d.reshape([-1])).reshape(gpu_pred_src_src_d.shape)
                         gpu_pred_src_src_d_zeros =  tf.map_fn (get_smooth_noisy_label(0, smoothing=0.2, noise=0.05), gpu_pred_src_src_d)
 
                         print("Shape (gpu_pred_src_src_d_ones): ", gpu_pred_src_src_d.shape)
