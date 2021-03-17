@@ -112,7 +112,7 @@ class nn():
                 config = tf.ConfigProto(device_count={'GPU': 0})
             else:
                 nn.tf_default_device = "/GPU:0"
-                config = tf.ConfigProto(allow_soft_placement=True)
+                config = tf.ConfigProto()
                 config.gpu_options.visible_device_list = ','.join([str(device.index) for device in device_config.devices])
 
             config.gpu_options.force_gpu_compatible = True
