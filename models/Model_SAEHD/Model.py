@@ -446,28 +446,14 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                             gpu_target_part_mask = gpu_target_srcm_mouth
 
                         if self.options['ms_ssim_loss']:
-                            # FIXME
-                            ms_ssim_loss = nn.MsSsim(resolution, kernel_size=5)(gpu_target_src*gpu_target_part_mask, gpu_pred_src_src*gpu_target_part_mask, max_val=1.0)
-                            print('ms_ssim_loss.shape: ', ms_ssim_loss.shape)
-                            ms_ssim_mean_loss = tf.reduce_mean(300 * ms_ssim_loss)
-                            print('ms_ssim_mean_loss.shape: ', ms_ssim_mean_loss.shape)
-                            abs_loss = tf.abs ( gpu_target_src*gpu_target_part_mask - gpu_pred_src_src*gpu_target_part_mask )
-                            print('abs_loss.shape: ', abs_loss.shape)
-                            abs_mean_loss = tf.reduce_mean(300 * abs_loss, axis=[1,2,3])
-                            print('abs_mean_loss.shape: ', abs_mean_loss.shape)
-                            gpu_src_loss += 300*nn.MsSsim(resolution, kernel_size=5)(gpu_target_src*gpu_target_part_mask, gpu_pred_src_src*gpu_target_part_mask, max_val=1.0)
-
-                            # gpu_src_loss +=  tf.reduce_mean ( 300*nn.MsSsim(resolution, kernel_size=5)(gpu_target_src*gpu_target_part_mask, gpu_pred_src_src*gpu_target_part_mask, max_val=1.0))
+                            gpu_src_loss += 300 * nn.MsSsim(resolution, kernel_size=5)(gpu_target_src*gpu_target_part_mask, gpu_pred_src_src*gpu_target_part_mask, max_val=1.0)
                         else:
                             gpu_src_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_src*gpu_target_part_mask - gpu_pred_src_src*gpu_target_part_mask ), axis=[1,2,3])
 
-                    # FIXME
-                    # if self.options['ms_ssim_loss']:
-                    #     gpu_src_loss += tf.reduce_mean ( 10*nn.MsSsim(resolution)(gpu_target_srcm, gpu_pred_src_srcm, max_val=1.0))
-                    # else:
-                    print('gpu_target_srcm.shape:', gpu_target_srcm.shape)
-                    print('gpu_pred_src_srcm.shape:', gpu_pred_src_srcm.shape)
-                    gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
+                    if self.options['ms_ssim_loss']:
+                        gpu_src_loss += 10 * nn.MsSsim(resolution)(gpu_target_srcm, gpu_pred_src_srcm, max_val=1.0)
+                    else:
+                        gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
 
                     face_style_power = self.options['face_style_power'] / 100.0
                     if face_style_power != 0 and not self.pretrain:
