@@ -497,32 +497,30 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                         print("Shape (gpu_pred_src_src_d): ", gpu_pred_src_src_d.shape)
                         print("Shape (gpu_pred_src_src_d2): ", gpu_pred_src_src_d2.shape)
-                        for i in gpu_pred_src_src_d2.shape:
-                            print("Shape (gpu_pred_src_src_d2) i: ", i)
 
 
-                        # def get_smooth_noisy_labels_like(label, tensor, smoothing=0.2, noise=0.05):
-                        #     new_labels = []
-                        #     for label in labels:
-                        #         if np.random.random() < noise:
-                        #             label = 0 if label == 1 else 1
-                        #         if label == 0:
-                        #             new_labels.append(np.random.uniform(0, 0+smoothing/2))
-                        #         else:
-                        #             new_labels.append(np.random.uniform(1-smoothing/2, 1.0))
-                        #     return new_labels
+                        def get_smooth_noisy_label(label, smoothing=0.2, noise=0.05):
+                            if np.random.random() < noise:
+                                label = 0 if label == 1 else 1
+                            if label == 0:
+                                return lambda x: np.random.uniform(0, 0+smoothing/2)
+                            else:
+                                return lambda x: np.random.uniform(1-smoothing/2, 1.0)
 
-                        gpu_pred_src_src_d_ones  = tf.ones_like (gpu_pred_src_src_d)
-                        gpu_pred_src_src_d_zeros = tf.zeros_like(gpu_pred_src_src_d)
+                        gpu_pred_src_src_d_ones  = tf.map_fn (get_smooth_noisy_label(1, smoothing=0.2, noise=0.05), gpu_pred_src_src_d)
+                        gpu_pred_src_src_d_zeros =  tf.map_fn (get_smooth_noisy_label(0, smoothing=0.2, noise=0.05), gpu_pred_src_src_d)
 
-                        gpu_pred_src_src_d2_ones  = tf.ones_like (gpu_pred_src_src_d2)
-                        gpu_pred_src_src_d2_zeros = tf.zeros_like(gpu_pred_src_src_d2)
+                        print("Shape (gpu_pred_src_src_d_ones): ", gpu_pred_src_src_d.shape)
+                        print("Shape (gpu_pred_src_src_d_zeros): ", gpu_pred_src_src_d2.shape)
+
+                        gpu_pred_src_src_d2_ones  = tf.map_fn (get_smooth_noisy_label(1, smoothing=0.2, noise=0.05), gpu_pred_src_src_d2)
+                        gpu_pred_src_src_d2_zeros = tf.map_fn (get_smooth_noisy_label(0, smoothing=0.2, noise=0.05), gpu_pred_src_src_d2)
 
                         gpu_target_src_d, \
                         gpu_target_src_d2            = self.D_src(gpu_target_src_masked_opt)
 
-                        gpu_target_src_d_ones    = tf.ones_like(gpu_target_src_d)
-                        gpu_target_src_d2_ones    = tf.ones_like(gpu_target_src_d2)
+                        gpu_target_src_d_ones    = tf.map_fn (get_smooth_noisy_label(1, smoothing=0.2, noise=0.05), gpu_target_src_d)
+                        gpu_target_src_d2_ones    = tf.map_fn (get_smooth_noisy_label(1, smoothing=0.2, noise=0.05), gpu_target_src_d2)
 
                         gpu_D_src_dst_loss = (DLoss(gpu_target_src_d_ones      , gpu_target_src_d) + \
                                               DLoss(gpu_pred_src_src_d_zeros   , gpu_pred_src_src_d) ) * 0.5 + \
