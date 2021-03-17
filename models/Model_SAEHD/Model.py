@@ -495,13 +495,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_pred_src_src_d, \
                         gpu_pred_src_src_d2           = self.D_src(gpu_pred_src_src_masked_opt)
 
-                        print("gpu_pred_src_src_d.shape: ", gpu_pred_src_src_d.shape)
-                        print("gpu_pred_src_src_d2.shape: ", gpu_pred_src_src_d2.shape)
-
-                        # print("tf.reshape(gpu_pred_src_src_d, [-1]).shape: ", tf.reshape(gpu_pred_src_src_d, [-1]).shape)
-
-
-                        def get_smooth_noisy_labels(label, tensor, smoothing=0.2, noise=0.05):
+                        def get_smooth_noisy_labels(label, tensor, smoothing=0.1, noise=0.05):
                             num_labels = self.batch_size
                             for d in tensor.get_shape().as_list()[1:]:
                                 num_labels *= d
@@ -515,20 +509,17 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                             x = tf.reshape(x, (self.batch_size,) + tensor.shape[1:])
                             return x
 
-                        gpu_pred_src_src_d_ones  = get_smooth_noisy_labels(1, gpu_pred_src_src_d, smoothing=0.2, noise=0.05)
-                        gpu_pred_src_src_d_zeros =  get_smooth_noisy_labels(0, gpu_pred_src_src_d, smoothing=0.2, noise=0.05)
+                        gpu_pred_src_src_d_ones  = get_smooth_noisy_labels(1, gpu_pred_src_src_d)
+                        gpu_pred_src_src_d_zeros =  get_smooth_noisy_labels(0, gpu_pred_src_src_d)
 
-                        print("gpu_pred_src_src_d_ones.shape: ", gpu_pred_src_src_d_ones.shape)
-                        print("gpu_pred_src_src_d_zeros.shape: ", gpu_pred_src_src_d_zeros.shape)
-
-                        gpu_pred_src_src_d2_ones  = get_smooth_noisy_labels(1, gpu_pred_src_src_d2, smoothing=0.2, noise=0.05)
-                        gpu_pred_src_src_d2_zeros = get_smooth_noisy_labels(0, gpu_pred_src_src_d2, smoothing=0.2, noise=0.05)
+                        gpu_pred_src_src_d2_ones  = get_smooth_noisy_labels(1, gpu_pred_src_src_d2)
+                        gpu_pred_src_src_d2_zeros = get_smooth_noisy_labels(0, gpu_pred_src_src_d2)
 
                         gpu_target_src_d, \
                         gpu_target_src_d2            = self.D_src(gpu_target_src_masked_opt)
 
-                        gpu_target_src_d_ones    = get_smooth_noisy_labels(1, gpu_target_src_d, smoothing=0.2, noise=0.05)
-                        gpu_target_src_d2_ones    = get_smooth_noisy_labels(1, gpu_target_src_d2, smoothing=0.2, noise=0.05)
+                        gpu_target_src_d_ones    = get_smooth_noisy_labels(1, gpu_target_src_d)
+                        gpu_target_src_d2_ones    = get_smooth_noisy_labels(1, gpu_target_src_d2)
 
                         gpu_D_src_dst_loss = (DLoss(gpu_target_src_d_ones      , gpu_target_src_d) + \
                                               DLoss(gpu_pred_src_src_d_zeros   , gpu_pred_src_src_d) ) * 0.5 + \
