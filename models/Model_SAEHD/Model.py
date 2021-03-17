@@ -502,19 +502,15 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
 
                         def get_smooth_noisy_labels(label, tensor, smoothing=0.2, noise=0.05):
-                            labels = []
                             num_labels = self.batch_size
                             for d in tensor.shape[1:]:
                                 num_labels *= d
-                            for _ in range(num_labels):
-                                if np.random.random() < noise:
-                                    label = 0 if label == 1 else 1
-                                if label == 0:
-                                    label = np.random.uniform(0, 0+smoothing/2)
-                                else:
-                                    label = np.random.uniform(1-smoothing/2, 1.0)
-                                labels.append(label)
-                            return tf.reshape(labels, (self.batch_size,) + tensor.shape[1:])
+                            probs = tf.math.log([[noise, 1-noise]]) if label == 1 else tf.math.log([[1-noise, noise]])
+                            x = tf.random.categorical(probs, num_labels)
+                            x = tf.cast(x, tf.float32)
+                            x = x * (1-smoothing) + (smoothing/x.shape[1])
+                            x = tf.reshape(x, (self.batch_size,) + tensor.shape[1:])
+                            return x
 
                         gpu_pred_src_src_d_ones  = get_smooth_noisy_labels(1, gpu_pred_src_src_d, smoothing=0.2, noise=0.05)
                         gpu_pred_src_src_d_zeros =  get_smooth_noisy_labels(0, gpu_pred_src_src_d, smoothing=0.2, noise=0.05)
