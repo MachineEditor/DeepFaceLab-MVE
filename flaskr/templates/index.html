@@ -13,12 +13,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script type="text/javascript">
       $(function() {
+        const socket = io.connect();
+        socket.on('preview', function(msg) {
+          console.log(msg);
+          $('img#preview').attr("src", "{{ url_for('preview_image') }}?q=" + new Date().getTime());
+        });
+
+        socket.on('loss', function(loss_string) {
+          console.log(loss_string);
+          $('div#loss').html(loss_string);
+        });
+
         function save() {
           $.post("{{ url_for('save') }}");
         }
 
         function exit() {
           $.post("{{ url_for('exit') }}");
+          socket.close();
         }
 
         function update() {
@@ -63,17 +75,6 @@
         $('button#zoom_next').click(zoom_next);
 
         $('img#preview').click(update);
-
-        const socket = io.connect();
-        socket.on('preview', function(msg) {
-          console.log(msg);
-          $('img#preview').attr("src", "{{ url_for('preview_image') }}?q=" + new Date().getTime());
-        });
-
-        socket.on('loss', function(loss_string) {
-          console.log(loss_string);
-          $('div#loss').html(loss_string);
-        });
       });
     </script>
 </head>
