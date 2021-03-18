@@ -54,6 +54,7 @@ class SAEHDModel(ModelBase):
         default_lr_dropout         = self.options['lr_dropout'] = lr_dropout
 
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
+        default_background_power   = self.options['background_power']   = self.load_or_def_option('background_power', 0.0)
         default_true_face_power    = self.options['true_face_power']    = self.load_or_def_option('true_face_power', 0.0)
         default_face_style_power   = self.options['face_style_power']   = self.load_or_def_option('face_style_power', 0.0)
         default_bg_style_power     = self.options['bg_style_power']     = self.load_or_def_option('bg_style_power', 0.0)
@@ -163,6 +164,8 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                 self.options['true_face_power'] = np.clip ( io.input_number ("'True face' power.", default_true_face_power, add_info="0.0000 .. 1.0", help_message="Experimental option. Discriminates result face to be more like src face. Higher value - stronger discrimination. Typical value is 0.01 . Comparison - https://i.imgur.com/czScS9q.png"), 0.0, 1.0 )
             else:
                 self.options['true_face_power'] = 0.0
+
+            self.options['background_power'] = np.clip ( io.input_number("Background power", default_background_power, add_info="0.0..1.0", help_message="Learn the area outside of the mask. Helps smooth out area near the mask boundaries. Can be used at any time"), 0.0, 1.0 )
 
             self.options['face_style_power'] = np.clip ( io.input_number("Face style power", default_face_style_power, add_info="0.0..100.0", help_message="Learn the color of the predicted face to be the same as dst inside mask. If you want to use this option with 'whole_face' you have to use XSeg trained mask. Warning: Enable it only after 10k iters, when predicted face is clear enough to start learn style. Start from 0.001 value and check history changes. Enabling this option increases the chance of model collapse."), 0.0, 100.0 )
             self.options['bg_style_power'] = np.clip ( io.input_number("Background style power", default_bg_style_power, add_info="0.0..100.0", help_message="Learn the area outside mask of the predicted face to be the same as dst. If you want to use this option with 'whole_face' you have to use XSeg trained mask. For whole_face you have to use XSeg trained mask. This can make face more like dst. Enabling this option increases the chance of model collapse. Typical value is 2.0"), 0.0, 100.0 )
@@ -413,12 +416,15 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     gpu_target_dst_style_anti_masked = gpu_target_dst*(1.0 - gpu_target_dstm_style_blur)
 
                     gpu_target_src_anti_masked = gpu_target_src*(1.0-gpu_target_srcm_blur)
+                    gpu_target_dst_anti_masked = gpu_target_dst_style_anti_masked
+
                     gpu_target_src_masked_opt  = gpu_target_src*gpu_target_srcm_blur if masked_training else gpu_target_src
                     gpu_target_dst_masked_opt  = gpu_target_dst_masked if masked_training else gpu_target_dst
 
                     gpu_pred_src_src_masked_opt = gpu_pred_src_src*gpu_target_srcm_blur if masked_training else gpu_pred_src_src
                     gpu_pred_src_src_anti_masked = gpu_pred_src_src*(1.0-gpu_target_srcm_blur)
                     gpu_pred_dst_dst_masked_opt = gpu_pred_dst_dst*gpu_target_dstm_blur if masked_training else gpu_pred_dst_dst
+                    gpu_pred_dst_dst_anti_masked = gpu_pred_dst_dst*(1.0-gpu_target_dstm_blur)
 
                     gpu_psd_target_dst_style_masked = gpu_pred_src_dst*gpu_target_dstm_style_blur
                     gpu_psd_target_dst_style_anti_masked = gpu_pred_src_dst*(1.0 - gpu_target_dstm_style_blur)
@@ -441,6 +447,15 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_src_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_src*gpu_target_part_mask - gpu_pred_src_src*gpu_target_part_mask ), axis=[1,2,3])
 
                     gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
+
+                    if self.options['background_power'] > 0:
+                        bg_factor = self.options['background_power']
+                        if resolution < 256:
+                            gpu_src_loss +=  bg_factor * tf.reduce_mean ( 10*nn.dssim(gpu_target_src_anti_masked, gpu_pred_src_src_anti_masked, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                        else:
+                            gpu_src_loss +=  bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_src_anti_masked, gpu_pred_src_src_anti_masked, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                            gpu_src_loss += bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_src_anti_masked, gpu_pred_src_src_anti_masked, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
+                        gpu_src_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_src_anti_masked - gpu_pred_src_src_anti_masked ), axis=[1,2,3])
 
                     face_style_power = self.options['face_style_power'] / 100.0
                     if face_style_power != 0 and not self.pretrain:
@@ -468,6 +483,15 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                             gpu_target_part_mask = gpu_target_dstm_mouth
 
                         gpu_dst_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_dst*gpu_target_part_mask - gpu_pred_dst_dst*gpu_target_part_mask ), axis=[1,2,3])
+
+                    if self.options['background_power'] > 0:
+                        bg_factor = self.options['background_power']
+                        if resolution < 256:
+                            gpu_dst_loss +=  bg_factor * tf.reduce_mean ( 10*nn.dssim(gpu_target_dst_anti_masked, gpu_pred_dst_dst_anti_masked, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                        else:
+                            gpu_dst_loss +=  bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_dst_anti_masked, gpu_pred_dst_dst_anti_masked, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                            gpu_dst_loss += bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_dst_anti_masked, gpu_pred_dst_dst_anti_masked, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
+                        gpu_dst_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_dst_anti_masked - gpu_pred_dst_dst_anti_masked ), axis=[1,2,3])
 
                     gpu_dst_loss += tf.reduce_mean ( 10*tf.square( gpu_target_dstm - gpu_pred_dst_dstm ),axis=[1,2,3] )
 
