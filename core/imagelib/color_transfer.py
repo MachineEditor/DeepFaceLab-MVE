@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from numpy import linalg as npla
-from random import random, shuffle, choice
+import random
 from scipy.stats import special_ortho_group
 import scipy as sp
 
@@ -371,12 +371,12 @@ def color_transfer(ct_mode, img_src, img_trg):
 
 
 # imported from faceswap
-def color_augmentation(img):
+def color_augmentation(img, seed=None):
     """ Color adjust RGB image """
     face = img
     face = np.clip(face*255.0, 0, 255).astype(np.uint8)
-    face = random_clahe(face)
-    face = random_lab(face)
+    face = random_clahe(face, seed)
+    face = random_lab(face, seed)
     img[:, :, :3] = face
     return (face / 255.0).astype(np.float32)
 
@@ -400,13 +400,14 @@ def random_lab_rotation(image, seed=None):
     return image
 
 
-def random_lab(image):
+def random_lab(image, seed=None):
     """ Perform random color/lightness adjustment in L*a*b* colorspace """
+    random.seed(seed)
     amount_l = 30 / 100
     amount_ab = 8 / 100
-    randoms = [(random() * amount_l * 2) - amount_l,  # L adjust
-                (random() * amount_ab * 2) - amount_ab,  # A adjust
-                (random() * amount_ab * 2) - amount_ab]  # B adjust
+    randoms = [(random.random() * amount_l * 2) - amount_l,  # L adjust
+                (random.random() * amount_ab * 2) - amount_ab,  # A adjust
+                (random.random() * amount_ab * 2) - amount_ab]  # B adjust
     image = cv2.cvtColor(  # pylint:disable=no-member
     image, cv2.COLOR_BGR2LAB).astype("float32") / 255.0  # pylint:disable=no-member
 
@@ -419,15 +420,16 @@ def random_lab(image):
                         cv2.COLOR_LAB2BGR)  # pylint:disable=no-member
     return image
 
-def random_clahe(image):
+def random_clahe(image, seed=None):
     """ Randomly perform Contrast Limited Adaptive Histogram Equalization """
-    contrast_random = random()
+    random.seed(seed)
+    contrast_random = random.random()
     if contrast_random > 50 / 100:
         return image
 
     # base_contrast = image.shape[0] // 128
     base_contrast = 1 # testing because it breaks on small sizes
-    grid_base = random() * 4
+    grid_base = random.random() * 4
     contrast_adjustment = int(grid_base * (base_contrast / 2))
     grid_size = base_contrast + contrast_adjustment
 
