@@ -81,7 +81,7 @@ def create_flask_app(s2c, c2s, s2flask, kwargs):
 
     @app.route('/preview_image')
     def preview_image():
-        return send_file(preview_file, mimetype='image/jpeg', cache_timeout=-1)
+        return send_file(preview_file, mimetype='image/png', cache_timeout=-1)
 
     socketio = SocketIO(app)
 
