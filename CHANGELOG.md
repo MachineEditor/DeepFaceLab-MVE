@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Freezeable layers (encoder/decoder/etc.)](https://github.com/faceshiftlabs/DeepFaceLab/tree/feature/freezable-weights)
 - [GAN stability improvements](https://github.com/faceshiftlabs/DeepFaceLab/tree/feature/gan-updates)
 
+## [1.2.1] - 2020-03-20
+### Fixed
+- Fixes bug with `fs-aug` color mode.
+
 ## [1.2.0] - 2020-03-17
 ### Added
 - [Random color training option](doc/features/random-color/README.md)
