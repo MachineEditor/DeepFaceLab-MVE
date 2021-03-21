@@ -10,7 +10,7 @@ def create_flask_app(s2c, c2s, s2flask, kwargs):
     log = logging.getLogger('werkzeug')
     log.disabled = True
     model_path = Path(kwargs.get('saved_models_path', ''))
-    filename = 'preview.jpg'
+    filename = 'preview.png'
     preview_file = str(model_path / filename)
 
     def gen():
