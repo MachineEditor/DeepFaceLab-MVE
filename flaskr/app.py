@@ -20,7 +20,7 @@ def create_flask_app(s2c, c2s, s2flask, kwargs):
                 frame = open(preview_file, 'rb').read()
             except:
                 pass
-            yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n'
+            yield b'--frame\r\nContent-Type: image/png\r\n\r\n'
             yield frame
             yield b'\r\n\r\n'
 
