@@ -161,13 +161,14 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             else:
                 self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 1.0", help_message="Forces the neural network to learn small details of the face. Enable it only when the face is trained enough with lr_dropout(on) and random_warp(off), and don't disable. The higher the value, the higher the chances of artifacts. Typical fine value is 0.1"), 0.0, 1.0 )
 
-            if self.options['gan_power'] != 0.0 and self.options['gan_version'] == 3:
-                gan_patch_size = np.clip ( io.input_int("GAN patch size", default_gan_patch_size, add_info="3-640", help_message="The higher patch size, the higher the quality, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is resolution / 8." ), 3, 640 )
-                self.options['gan_patch_size'] = gan_patch_size
+            if self.options['gan_power'] != 0.0:
+                if self.options['gan_version'] == 3:
+                    gan_patch_size = np.clip ( io.input_int("GAN patch size", default_gan_patch_size, add_info="3-640", help_message="The higher patch size, the higher the quality, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is resolution / 8." ), 3, 640 )
+                    self.options['gan_patch_size'] = gan_patch_size
 
-                gan_dims = np.clip ( io.input_int("GAN dimensions", default_gan_dims, add_info="4-64", help_message="The dimensions of the GAN network. The higher dimensions, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is 16." ), 4, 64 )
-                self.options['gan_dims'] = gan_dims
-
+                    gan_dims = np.clip ( io.input_int("GAN dimensions", default_gan_dims, add_info="4-64", help_message="The dimensions of the GAN network. The higher dimensions, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is 16." ), 4, 64 )
+                    self.options['gan_dims'] = gan_dims
+                
                 self.options['gan_smoothing'] = np.clip ( io.input_number("GAN label smoothing", default_gan_smoothing, add_info="0 - 0.5", help_message="Uses soft labels with values slightly off from 0/1 for GAN, has a regularizing effect"), 0, 0.5)
                 self.options['gan_noise'] = np.clip ( io.input_number("GAN noisy labels", default_gan_noise, add_info="0 - 0.5", help_message="Marks some images with the wrong label, helps prevent collapse"), 0, 0.5)
 
@@ -545,7 +546,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                             num_labels = self.batch_size
                             for d in tensor.get_shape().as_list()[1:]:
                                 num_labels *= d
-                            
+
                             probs = tf.math.log([[noise, 1-noise]]) if label == 1 else tf.math.log([[1-noise, noise]])
                             x = tf.random.categorical(probs, num_labels)
                             x = tf.cast(x, tf.float32)
