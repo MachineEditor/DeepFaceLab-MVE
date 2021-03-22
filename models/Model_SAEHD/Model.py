@@ -168,7 +168,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                     gan_dims = np.clip ( io.input_int("GAN dimensions", default_gan_dims, add_info="4-64", help_message="The dimensions of the GAN network. The higher dimensions, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is 16." ), 4, 64 )
                     self.options['gan_dims'] = gan_dims
-                
+
                 self.options['gan_smoothing'] = np.clip ( io.input_number("GAN label smoothing", default_gan_smoothing, add_info="0 - 0.5", help_message="Uses soft labels with values slightly off from 0/1 for GAN, has a regularizing effect"), 0, 0.5)
                 self.options['gan_noise'] = np.clip ( io.input_number("GAN noisy labels", default_gan_noise, add_info="0 - 0.5", help_message="Marks some images with the wrong label, helps prevent collapse"), 0, 0.5)
 
@@ -551,29 +551,28 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                             x = tf.random.categorical(probs, num_labels)
                             x = tf.cast(x, tf.float32)
                             x = tf.math.scalar_mul(1-smoothing, x)
-                            x = x + (smoothing/num_labels)
+                            # x = x + (smoothing/num_labels)
                             x = tf.reshape(x, (self.batch_size,) + tensor.shape[1:])
                             return x
 
                         smoothing = self.options['gan_smoothing']
                         noise = self.options['gan_noise']
 
-                        gpu_pred_src_src_d_ones  = get_smooth_noisy_labels(1, gpu_pred_src_src_d, smoothing=smoothing, noise=noise)
-                        gpu_pred_src_src_d_zeros =  get_smooth_noisy_labels(0, gpu_pred_src_src_d, smoothing=smoothing, noise=noise)
+                        gpu_pred_src_src_d_ones = tf.ones_like(gpu_pred_src_src_d)
+                        gpu_pred_src_src_d2_ones = tf.ones_like(gpu_pred_src_src_d2)
 
-                        gpu_pred_src_src_d2_ones  = get_smooth_noisy_labels(1, gpu_pred_src_src_d2, smoothing=smoothing, noise=noise)
-                        gpu_pred_src_src_d2_zeros = get_smooth_noisy_labels(0, gpu_pred_src_src_d2, smoothing=smoothing, noise=noise)
+                        gpu_pred_src_src_d_smooth_zeros = get_smooth_noisy_labels(0, gpu_pred_src_src_d, smoothing=smoothing, noise=noise)
+                        gpu_pred_src_src_d2_smooth_zeros = get_smooth_noisy_labels(0, gpu_pred_src_src_d2, smoothing=smoothing, noise=noise)
 
-                        gpu_target_src_d, \
-                        gpu_target_src_d2            = self.D_src(gpu_target_src_masked_opt)
+                        gpu_target_src_d, gpu_target_src_d2 = self.D_src(gpu_target_src_masked_opt)
 
-                        gpu_target_src_d_ones    = get_smooth_noisy_labels(1, gpu_target_src_d, smoothing=smoothing, noise=noise)
-                        gpu_target_src_d2_ones    = get_smooth_noisy_labels(1, gpu_target_src_d2, smoothing=smoothing, noise=noise)
+                        gpu_target_src_d_smooth_ones = get_smooth_noisy_labels(1, gpu_target_src_d, smoothing=smoothing, noise=noise)
+                        gpu_target_src_d2_smooth_ones = get_smooth_noisy_labels(1, gpu_target_src_d2, smoothing=smoothing, noise=noise)
 
-                        gpu_D_src_dst_loss = (DLoss(gpu_target_src_d_ones      , gpu_target_src_d) + \
-                                              DLoss(gpu_pred_src_src_d_zeros   , gpu_pred_src_src_d) ) * 0.5 + \
-                                             (DLoss(gpu_target_src_d2_ones      , gpu_target_src_d2) + \
-                                              DLoss(gpu_pred_src_src_d2_zeros   , gpu_pred_src_src_d2) ) * 0.5
+                        gpu_D_src_dst_loss = DLoss(gpu_target_src_d_smooth_ones, gpu_target_src_d) \
+                                             + DLoss(gpu_pred_src_src_d_smooth_zeros, gpu_pred_src_src_d) \
+                                             + DLoss(gpu_target_src_d2_smooth_ones, gpu_target_src_d2) \
+                                             + DLoss(gpu_pred_src_src_d2_smooth_zeros, gpu_pred_src_src_d2)
 
                         gpu_D_src_dst_loss_gvs += [ nn.gradients (gpu_D_src_dst_loss, self.D_src.get_weights() ) ]#+self.D_src_x2.get_weights()
 
