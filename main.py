@@ -255,6 +255,16 @@ if __name__ == "__main__":
 
     p.set_defaults(func=process_faceset_enhancer)
     
+    
+    p = facesettool_parser.add_parser ("resize", help="Resize DFL faceset.")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory of aligned faces.")
+
+    def process_faceset_resizer(arguments):
+        osex.set_process_lowest_prio()
+        from mainscripts import FacesetResizer
+        FacesetResizer.process_folder ( Path(arguments.input_dir) )
+    p.set_defaults(func=process_faceset_resizer)
+    
     def process_dev_test(arguments):
         osex.set_process_lowest_prio()
         from mainscripts import dev_misc
