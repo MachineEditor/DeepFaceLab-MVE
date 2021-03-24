@@ -19,4 +19,7 @@ maintaining the same `C*` (chroma, relative saturation).
 
 ## USAGE
 
-`[n] Random color ( y/n ?:help ) : y`
+```
+[n] Random color ( y/n ?:help ) : y
+```
+
