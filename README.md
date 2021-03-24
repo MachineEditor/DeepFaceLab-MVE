@@ -3,6 +3,8 @@
 # CHANGELOG 
 ### [View most recent changes](CHANGELOG.md)
 
+![](doc/dfl_cover.png)
+
 <table align="center" border="0">
 
 <tr><td colspan=2 align="center">
