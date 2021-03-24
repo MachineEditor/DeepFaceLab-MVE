@@ -3,10 +3,11 @@
 Allows you to train using the MS-SSIM (multiscale structural similarity index measure) as the main loss metric,
 a perceptually more accurate measure of image quality than MSE (mean squared error).
 
+As an added benefit, you may see a decrease in ms/iteration (when using the same batch size) with Multiscale loss
+enabled. You may also be able to train with a larger batch size with it enabled.
+
 - [DESCRIPTION](#description)
 - [USAGE](#usage)
-
-![](example.png)
 
 ## DESCRIPTION
 
