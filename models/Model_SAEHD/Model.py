@@ -455,13 +455,13 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     if self.options['background_power'] > 0:
                         bg_factor = self.options['background_power']
                         if self.options['ms_ssim_loss']:
-                            gpu_src_loss = 10 * nn.MsSsim(resolution)(gpu_target_src_anti_masked, gpu_pred_src_src_anti_masked, max_val=1.0)
+                            gpu_src_loss = 10 * nn.MsSsim(resolution)(gpu_target_src, gpu_pred_src_src, max_val=1.0)
                         else:
                             if resolution < 256:
-                            gpu_src_loss +=  bg_factor * tf.reduce_mean ( 10*nn.dssim(gpu_target_src, gpu_pred_src_src, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                                gpu_src_loss +=  bg_factor * tf.reduce_mean ( 10*nn.dssim(gpu_target_src, gpu_pred_src_src, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
                             else:
-                            gpu_src_loss +=  bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_src, gpu_pred_src_src, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
-                            gpu_src_loss += bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_src, gpu_pred_src_src, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
+                                gpu_src_loss +=  bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_src, gpu_pred_src_src, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                                gpu_src_loss += bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_src, gpu_pred_src_src, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
                         gpu_src_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_src - gpu_pred_src_src ), axis=[1,2,3])
 
                     face_style_power = self.options['face_style_power'] / 100.0
@@ -497,13 +497,13 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     if self.options['background_power'] > 0:
                         bg_factor = self.options['background_power']
                         if self.options['ms_ssim_loss']:
-                            gpu_src_loss = 10 * nn.MsSsim(resolution)(gpu_target_dst_anti_masked, gpu_pred_dst_dst_anti_masked, max_val=1.0)
+                            gpu_src_loss = 10 * nn.MsSsim(resolution)(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0)
                         else:
                             if resolution < 256:
-                            gpu_dst_loss +=  bg_factor * tf.reduce_mean ( 10*nn.dssim(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                                gpu_dst_loss +=  bg_factor * tf.reduce_mean ( 10*nn.dssim(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
                             else:
-                            gpu_dst_loss +=  bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
-                            gpu_dst_loss += bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
+                                gpu_dst_loss +=  bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                                gpu_dst_loss += bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
                         gpu_dst_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_dst - gpu_pred_dst_dst ), axis=[1,2,3])
 
                     gpu_dst_loss += tf.reduce_mean ( 10*tf.square( gpu_target_dstm - gpu_pred_dst_dstm ),axis=[1,2,3] )
