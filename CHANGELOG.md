@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Freezeable layers (encoder/decoder/etc.)](https://github.com/faceshiftlabs/DeepFaceLab/tree/feature/freezable-weights)
 - [GAN stability improvements](https://github.com/faceshiftlabs/DeepFaceLab/tree/feature/gan-updates)
 
+## [1.3.0] - 2020-03-20
+### Added
+- [Background Power training option](doc/features/background-power/README.md)
+
+## [1.2.1] - 2020-03-20
+### Fixed
+- Fixes bug with `fs-aug` color mode.
+
 ## [1.2.0] - 2020-03-17
 ### Added
 - [Random color training option](doc/features/random-color/README.md)
@@ -45,7 +53,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reset stale master branch to [seranus/DeepFaceLab](https://github.com/seranus/DeepFaceLab), 
   21 commits ahead of [iperov/DeepFaceLab](https://github.com/iperov/DeepFaceLab) ([compare](https://github.com/iperov/DeepFaceLab/compare/4818183...seranus:3f5ae05))
 
-[Unreleased]: https://github.com/olivierlacan/keep-a-changelog/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/olivierlacan/keep-a-changelog/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.2.1...v1.3.0
+[1.2.1]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.1.5...v1.2.0
 [1.1.5]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.1.3...v1.1.4
