@@ -3,7 +3,7 @@
 Allows you to use one-sided label smoothing and noisy labels when training the discriminator.
 
 - [ONE-SIDED LABEL SMOOTHING](#one-sided-label-smoothing)
-- [USAGE](#usage)
+- [NOISY LABELS](#noisy-labels)
 
 ## ONE-SIDED LABEL SMOOTHING
 
@@ -29,7 +29,7 @@ target label value = 1 - (label smoothing value)
 [0.1] GAN label smoothing ( 0 - 0.5 ?:help ) : 0.1
 ```
 
-## Noisy labels
+## NOISY LABELS
 
 > make the labels the noisy for the discriminator: occasionally flip the labels when training the discriminator
  - [How to Train a GAN? Tips and tricks to make GANs work](https://github.com/soumith/ganhacks/blob/master/README.md#6-use-soft-and-noisy-labels)
