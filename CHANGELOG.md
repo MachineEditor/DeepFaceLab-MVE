@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### In Progress
 - [Freezeable layers (encoder/decoder/etc.)](https://github.com/faceshiftlabs/DeepFaceLab/tree/feature/freezable-weights)
 
-## [1.4.1] - 2020-03-24
+## [1.4.2] - 2020-03-26
+### Fixed 
+- Fixes bug in background power with MS-SSIM, that misattributed loss from dst to src
+
+## [1.4.1] - 2020-03-25
 ### Fixed
 - When both Background Power and MS-SSIM were enabled, the src and dst losses were being overwritten with the 
   "background power" losses. Fixed so "background power" losses are properly added with the total losses.
@@ -69,7 +73,8 @@ This should help with rough areas directly next to the mask
 - Reset stale master branch to [seranus/DeepFaceLab](https://github.com/seranus/DeepFaceLab), 
   21 commits ahead of [iperov/DeepFaceLab](https://github.com/iperov/DeepFaceLab) ([compare](https://github.com/iperov/DeepFaceLab/compare/4818183...seranus:3f5ae05))
 
-[Unreleased]: https://github.com/olivierlacan/keep-a-changelog/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.4.2...HEAD
+[1.4.2]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.2.1...v1.3.0
