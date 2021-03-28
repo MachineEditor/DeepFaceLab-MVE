@@ -333,10 +333,6 @@ QQ 951138799
 bitcoin:bc1qkhh7h0gwwhxgg6h6gpllfgstkd645fefrd5s6z
 </td></tr>
 
-<tr><td align="right">
-Alipay 捐款
-</td><td align="center"> <img src="doc/Alipay_donation.jpg" align="center"> </td></tr>
-
 <tr><td colspan=2 align="center">
 
 ### Collect facesets
