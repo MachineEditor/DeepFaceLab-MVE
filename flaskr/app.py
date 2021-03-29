@@ -10,7 +10,7 @@ def create_flask_app(s2c, c2s, s2flask, kwargs):
     log = logging.getLogger('werkzeug')
     log.disabled = True
     model_path = Path(kwargs.get('saved_models_path', ''))
-    filename = 'preview.jpg'
+    filename = 'preview.png'
     preview_file = str(model_path / filename)
 
     def gen():
@@ -20,7 +20,7 @@ def create_flask_app(s2c, c2s, s2flask, kwargs):
                 frame = open(preview_file, 'rb').read()
             except:
                 pass
-            yield b'--frame\r\nContent-Type: image/jpeg\r\n\r\n'
+            yield b'--frame\r\nContent-Type: image/png\r\n\r\n'
             yield frame
             yield b'\r\n\r\n'
 
@@ -81,7 +81,7 @@ def create_flask_app(s2c, c2s, s2flask, kwargs):
 
     @app.route('/preview_image')
     def preview_image():
-        return send_file(preview_file, mimetype='image/jpeg', cache_timeout=-1)
+        return send_file(preview_file, mimetype='image/png', cache_timeout=-1)
 
     socketio = SocketIO(app)
 
