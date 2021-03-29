@@ -81,7 +81,7 @@ This should help with rough areas directly next to the mask
   21 commits ahead of [iperov/DeepFaceLab](https://github.com/iperov/DeepFaceLab) ([compare](https://github.com/iperov/DeepFaceLab/compare/4818183...seranus:3f5ae05))
 
 [Unreleased]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.5.0...HEAD
-[1.4.2]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.4.2...v1.5.0
+[1.5.0]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.4.2...v1.5.0
 [1.4.2]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.3.0...v1.4.0
