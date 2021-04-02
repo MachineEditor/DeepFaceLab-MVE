@@ -1,6 +1,6 @@
 tqdm
 numpy==1.19.3
-h5py==2.9.0
+h5py==2.10.0
 opencv-python==4.1.0.25
 ffmpeg-python==0.1.17
 scikit-image==0.14.2
