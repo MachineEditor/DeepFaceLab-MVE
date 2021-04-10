@@ -66,8 +66,7 @@ def apply_random_gaussian_blur( img, chance, kernel_max_size, mask=None, rnd_sta
             
     return result
     
-    
-def apply_random_bilinear_resize( img, chance, max_size_per, mask=None, rnd_state=None ):
+def apply_random_resize( img, chance, max_size_per, interpolation=cv2.INTER_LINEAR, mask=None, rnd_state=None ):
     if rnd_state is None:
         rnd_state = np.random
 
@@ -79,9 +78,34 @@ def apply_random_bilinear_resize( img, chance, max_size_per, mask=None, rnd_stat
         rw = w - int( trg * int(w*(max_size_per/100.0)) )                        
         rh = h - int( trg * int(h*(max_size_per/100.0)) )   
              
-        result = cv2.resize (result, (rw,rh), interpolation=cv2.INTER_LINEAR )
-        result = cv2.resize (result, (w,h), interpolation=cv2.INTER_LINEAR )
+        result = cv2.resize (result, (rw,rh), interpolation=interpolation )
+        result = cv2.resize (result, (w,h), interpolation=interpolation )
         if mask is not None:
             result = img*(1-mask) + result*mask
             
+    return result
+    
+def apply_random_nearest_resize( img, chance, max_size_per, mask=None, rnd_state=None ):
+    return apply_random_resize( img, chance, max_size_per, interpolation=cv2.INTER_NEAREST, mask=mask, rnd_state=rnd_state )
+    
+def apply_random_bilinear_resize( img, chance, max_size_per, mask=None, rnd_state=None ):
+    return apply_random_resize( img, chance, max_size_per, interpolation=cv2.INTER_LINEAR, mask=mask, rnd_state=rnd_state )
+    
+def apply_random_jpeg_compress( img, chance, mask=None, rnd_state=None ):
+    if rnd_state is None:
+        rnd_state = np.random
+
+    result = img
+    if rnd_state.randint(100) < np.clip(chance, 0, 100):
+        h,w,c = result.shape
+        
+        quality = rnd_state.randint(10,101)
+        
+        ret, result = cv2.imencode('.jpg', np.clip(img*255, 0,255).astype(np.uint8), [int(cv2.IMWRITE_JPEG_QUALITY), quality] )
+        if ret == True:
+            result = cv2.imdecode(result, flags=cv2.IMREAD_UNCHANGED)
+            result = result.astype(np.float32) / 255.0
+            if mask is not None:
+                result = img*(1-mask) + result*mask
+                
     return result
