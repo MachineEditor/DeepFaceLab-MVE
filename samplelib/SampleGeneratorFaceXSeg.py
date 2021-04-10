@@ -79,6 +79,7 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
         random_bilinear_resize_chance, random_bilinear_resize_max_size_per = 25,75
         motion_blur_chance, motion_blur_mb_max_size = 25, 5
         gaussian_blur_chance, gaussian_blur_kernel_max_size = 25, 5
+        random_jpeg_compress_chance = 25
 
         def gen_img_mask(sample):
             img = sample.load_bgr()
@@ -130,14 +131,15 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
                         bg_img, bg_mask = gen_img_mask(bg_sample)
 
                         bg_wp   = imagelib.gen_warp_params(resolution, True, rotation_range=[-180,180], scale_range=[-0.10, 0.10], tx_range=[-0.10, 0.10], ty_range=[-0.10, 0.10] )
-                        bg_img  = imagelib.warp_by_params (bg_wp, bg_img,  can_warp=False, can_transform=True, can_flip=True, border_replicate=False)
+                        bg_img  = imagelib.warp_by_params (bg_wp, bg_img,  can_warp=False, can_transform=True, can_flip=True, border_replicate=True)
                         bg_mask = imagelib.warp_by_params (bg_wp, bg_mask, can_warp=False, can_transform=True, can_flip=True, border_replicate=False)
 
-                        c_mask = (1-bg_mask) * (1-mask)
-                        img = img*(1-c_mask) + bg_img * c_mask
+                        c_mask = 1.0 - (1-bg_mask) * (1-mask)
+                        rnd = np.random.uniform()
+                        img = img*(c_mask) + img*(1-c_mask)*rnd + bg_img*(1-c_mask)*(1-rnd)
 
                     warp_params = imagelib.gen_warp_params(resolution, random_flip, rotation_range=rotation_range, scale_range=scale_range, tx_range=tx_range, ty_range=ty_range )
-                    img   = imagelib.warp_by_params (warp_params, img,  can_warp=True, can_transform=True, can_flip=True, border_replicate=False)
+                    img   = imagelib.warp_by_params (warp_params, img,  can_warp=True, can_transform=True, can_flip=True, border_replicate=True)
                     mask  = imagelib.warp_by_params (warp_params, mask, can_warp=True, can_transform=True, can_flip=True, border_replicate=False)
 
                     img = np.clip(img.astype(np.float32), 0, 1)
@@ -152,8 +154,14 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
 
                     img = imagelib.apply_random_motion_blur( img, motion_blur_chance, motion_blur_mb_max_size, mask=sd.random_circle_faded ([resolution,resolution]))
                     img = imagelib.apply_random_gaussian_blur( img, gaussian_blur_chance, gaussian_blur_kernel_max_size, mask=sd.random_circle_faded ([resolution,resolution]))
-                    img = imagelib.apply_random_bilinear_resize( img, random_bilinear_resize_chance, random_bilinear_resize_max_size_per, mask=sd.random_circle_faded ([resolution,resolution]))
-
+                    
+                    if np.random.randint(2) == 0:
+                        img = imagelib.apply_random_nearest_resize( img, random_bilinear_resize_chance, random_bilinear_resize_max_size_per, mask=sd.random_circle_faded ([resolution,resolution]))
+                    else:
+                        img = imagelib.apply_random_bilinear_resize( img, random_bilinear_resize_chance, random_bilinear_resize_max_size_per, mask=sd.random_circle_faded ([resolution,resolution]))
+                    
+                    img = imagelib.apply_random_jpeg_compress( img, random_jpeg_compress_chance, mask=sd.random_circle_faded ([resolution,resolution]))
+                    
                     if data_format == "NCHW":
                         img = np.transpose(img, (2,0,1) )
                         mask = np.transpose(mask, (2,0,1) )
