@@ -6,7 +6,7 @@ from enum import IntEnum
 
 import cv2
 import numpy as np
-
+from pathlib import Path
 from core import imagelib, mplib, pathex
 from core.imagelib import sd
 from core.cv2ex import *
@@ -31,7 +31,7 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
             if len(seg_sample_idxs) == 0:
                 raise Exception(f"No segmented faces found.")
             else:
-                io.log_info(f"Using {len(seg_sample_idxs)} xseg labeled samples.")                
+                io.log_info(f"Using {len(seg_sample_idxs)} xseg labeled samples.")
         else:
             io.log_info(f"Using {len(seg_sample_idxs)} segmented samples.")
 
@@ -40,11 +40,11 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
         else:
             self.generators_count = max(1, generators_count)
 
+        args = (samples, seg_sample_idxs, resolution, face_type, data_format)
         if self.debug:
-            self.generators = [ThisThreadGenerator ( self.batch_func, (samples, seg_sample_idxs, resolution, face_type, data_format) )]
+            self.generators = [ThisThreadGenerator ( self.batch_func, args )]
         else:
-            self.generators = [SubprocessGenerator ( self.batch_func, (samples, seg_sample_idxs, resolution, face_type, data_format), start_now=False ) \
-                               for i in range(self.generators_count) ]
+            self.generators = [SubprocessGenerator ( self.batch_func, args, start_now=False ) for i in range(self.generators_count) ]
 
             SubprocessGenerator.start_in_parallel( self.generators )
 
@@ -84,11 +84,11 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
         def gen_img_mask(sample):
             img = sample.load_bgr()
             h,w,c = img.shape
-            
+
             if sample.seg_ie_polys.has_polys():
                 mask = np.zeros ((h,w,1), dtype=np.float32)
                 sample.seg_ie_polys.overlay_mask(mask)
-            elif sample.has_xseg_mask():                
+            elif sample.has_xseg_mask():
                 mask = sample.get_xseg_mask()
                 mask[mask < 0.5] = 0.0
                 mask[mask >= 0.5] = 1.0
@@ -122,7 +122,6 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
                     img, mask = gen_img_mask(sample)
 
                     if np.random.randint(2) == 0:
-
                         if len(bg_shuffle_idxs) == 0:
                             bg_shuffle_idxs = seg_sample_idxs.copy()
                             np.random.shuffle(bg_shuffle_idxs)
@@ -133,6 +132,11 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
                         bg_wp   = imagelib.gen_warp_params(resolution, True, rotation_range=[-180,180], scale_range=[-0.10, 0.10], tx_range=[-0.10, 0.10], ty_range=[-0.10, 0.10] )
                         bg_img  = imagelib.warp_by_params (bg_wp, bg_img,  can_warp=False, can_transform=True, can_flip=True, border_replicate=True)
                         bg_mask = imagelib.warp_by_params (bg_wp, bg_mask, can_warp=False, can_transform=True, can_flip=True, border_replicate=False)
+                        bg_img = bg_img*(1-bg_mask)
+                        if np.random.randint(2) == 0:
+                            bg_img = imagelib.apply_random_hsv_shift(bg_img)
+                        else:
+                            bg_img = imagelib.apply_random_rgb_levels(bg_img)
 
                         c_mask = 1.0 - (1-bg_mask) * (1-mask)
                         rnd = np.random.uniform()
@@ -152,16 +156,22 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
                     else:
                         img = imagelib.apply_random_rgb_levels(img, mask=sd.random_circle_faded ([resolution,resolution]))
 
+                    if np.random.randint(2) == 0:
+                        # random face flare
+                        krn = np.random.randint( resolution//4, resolution )
+                        krn = krn - krn % 2 + 1
+                        img = img + cv2.GaussianBlur(img*mask, (krn,krn), 0)
+
                     img = imagelib.apply_random_motion_blur( img, motion_blur_chance, motion_blur_mb_max_size, mask=sd.random_circle_faded ([resolution,resolution]))
                     img = imagelib.apply_random_gaussian_blur( img, gaussian_blur_chance, gaussian_blur_kernel_max_size, mask=sd.random_circle_faded ([resolution,resolution]))
-                    
                     if np.random.randint(2) == 0:
                         img = imagelib.apply_random_nearest_resize( img, random_bilinear_resize_chance, random_bilinear_resize_max_size_per, mask=sd.random_circle_faded ([resolution,resolution]))
                     else:
                         img = imagelib.apply_random_bilinear_resize( img, random_bilinear_resize_chance, random_bilinear_resize_max_size_per, mask=sd.random_circle_faded ([resolution,resolution]))
-                    
+                    img = np.clip(img, 0, 1)
+
                     img = imagelib.apply_random_jpeg_compress( img, random_jpeg_compress_chance, mask=sd.random_circle_faded ([resolution,resolution]))
-                    
+
                     if data_format == "NCHW":
                         img = np.transpose(img, (2,0,1) )
                         mask = np.transpose(mask, (2,0,1) )
@@ -230,3 +240,47 @@ class SegmentedSampleFilterSubprocessor(Subprocessor):
                 return idx, self.samples[idx].has_xseg_mask()
             else:
                 return idx, self.samples[idx].seg_ie_polys.get_pts_count() != 0
+
+"""
+  bg_path = None
+        for path in paths:
+            bg_path = Path(path) / 'backgrounds'
+            if bg_path.exists():
+
+                break
+        if bg_path is None:
+            io.log_info(f'Random backgrounds will not be used. Place no face jpg images to aligned\backgrounds folder. ')
+            bg_pathes = None
+        else:
+            bg_pathes = pathex.get_image_paths(bg_path, image_extensions=['.jpg'], return_Path_class=True)
+            io.log_info(f'Using {len(bg_pathes)} random backgrounds from {bg_path}')
+
+if bg_pathes is not None:
+            bg_path = bg_pathes[ np.random.randint(len(bg_pathes)) ]
+
+            bg_img = cv2_imread(bg_path)
+            if bg_img is not None:
+                bg_img = bg_img.astype(np.float32) / 255.0
+                bg_img = imagelib.normalize_channels(bg_img, 3)
+
+                bg_img = imagelib.random_crop(bg_img, resolution, resolution)
+                bg_img = cv2.resize(bg_img, (resolution, resolution), interpolation=cv2.INTER_LINEAR)
+
+            if np.random.randint(2) == 0:
+                bg_img = imagelib.apply_random_hsv_shift(bg_img)
+            else:
+                bg_img = imagelib.apply_random_rgb_levels(bg_img)
+
+            bg_wp   = imagelib.gen_warp_params(resolution, True, rotation_range=[-180,180], scale_range=[0,0], tx_range=[0,0], ty_range=[0,0])
+            bg_img  = imagelib.warp_by_params (bg_wp, bg_img,  can_warp=False, can_transform=True, can_flip=True, border_replicate=True)
+
+            bg = img*(1-mask)
+            fg = img*mask
+
+            c_mask = sd.random_circle_faded ([resolution,resolution])
+            bg = ( bg_img*c_mask + bg*(1-c_mask) )*(1-mask)
+
+            img = fg+bg
+
+        else:
+"""
