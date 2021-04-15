@@ -14,7 +14,7 @@ from .reduce_colors import reduce_colors
 
 from .color_transfer import color_transfer, color_transfer_mix, color_transfer_sot, color_transfer_mkl, color_transfer_idt, color_hist_match, reinhard_color_transfer, linear_color_transfer
 
-from .common import normalize_channels, cut_odd_image, overlay_alpha_image
+from .common import random_crop, normalize_channels, cut_odd_image, overlay_alpha_image
 
 from .SegIEPolys import *
 
