@@ -95,9 +95,7 @@ class XSegModel(ModelBase):
                     gpu_pred_list.append(gpu_pred_t)
 
                     gpu_loss = tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(labels=gpu_target_t, logits=gpu_pred_logits_t), axis=[1,2,3])
-                    gpu_loss += tf.reduce_mean ( 0.1*nn.dssim(gpu_target_t, gpu_pred_logits_t, max_val=1.0, filter_size=3), axis=[1])
-                        
-                        
+                      
                     gpu_losses += [gpu_loss]
 
                     gpu_loss_gvs += [ nn.gradients ( gpu_loss, self.model.get_weights() ) ]
