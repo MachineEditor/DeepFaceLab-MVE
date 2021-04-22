@@ -235,9 +235,10 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         ct_mode = self.options['ct_mode']
         if ct_mode == 'none':
             ct_mode = None
-
+        
+        
         models_opt_on_gpu = False if len(devices) == 0 else self.options['models_opt_on_gpu']
-        models_opt_device = '/GPU:0' if models_opt_on_gpu and self.is_training else '/CPU:0'
+        models_opt_device = nn.tf_default_device_name if models_opt_on_gpu and self.is_training else '/CPU:0'
         optimizer_vars_on_cpu = models_opt_device=='/CPU:0'
 
         input_ch=3
@@ -336,7 +337,6 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             bs_per_gpu = max(1, self.get_batch_size() // gpu_count)
             self.set_batch_size( gpu_count*bs_per_gpu)
 
-
             # Compute losses per GPU
             gpu_pred_src_src_list = []
             gpu_pred_dst_dst_list = []
@@ -350,9 +350,9 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             gpu_G_loss_gvs = []
             gpu_D_code_loss_gvs = []
             gpu_D_src_dst_loss_gvs = []
+            
             for gpu_id in range(gpu_count):
-                with tf.device( f'/GPU:{gpu_id}' if len(devices) != 0 else f'/CPU:0' ):
-
+                with tf.device( f'/{devices[gpu_id].tf_dev_type}:{gpu_id}' if len(devices) != 0 else f'/CPU:0' ):
                     with tf.device(f'/CPU:0'):
                         # slice on CPU, otherwise all batch data will be transfered to GPU first
                         batch_slice = slice( gpu_id*bs_per_gpu, (gpu_id+1)*bs_per_gpu )
@@ -360,10 +360,10 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_warped_dst      = self.warped_dst [batch_slice,:,:,:]
                         gpu_target_src      = self.target_src [batch_slice,:,:,:]
                         gpu_target_dst      = self.target_dst [batch_slice,:,:,:]
-                        gpu_target_srcm       = self.target_srcm[batch_slice,:,:,:]
-                        gpu_target_srcm_em = self.target_srcm_em[batch_slice,:,:,:]
-                        gpu_target_dstm       = self.target_dstm[batch_slice,:,:,:]
-                        gpu_target_dstm_em = self.target_dstm_em[batch_slice,:,:,:]
+                        gpu_target_srcm     = self.target_srcm[batch_slice,:,:,:]
+                        gpu_target_srcm_em  = self.target_srcm_em[batch_slice,:,:,:]
+                        gpu_target_dstm     = self.target_dstm[batch_slice,:,:,:]
+                        gpu_target_dstm_em  = self.target_dstm_em[batch_slice,:,:,:]
 
                     # process model tensors
                     if 'df' in archi_type:
@@ -571,7 +571,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             self.AE_view = AE_view
         else:
             # Initializing merge function
-            with tf.device( f'/GPU:0' if len(devices) != 0 else f'/CPU:0'):
+            with tf.device( nn.tf_default_device_name if len(devices) != 0 else f'/CPU:0'):
                 if 'df' in archi_type:
                     gpu_dst_code     = self.inter(self.encoder(self.warped_dst))
                     gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder_src(gpu_dst_code)

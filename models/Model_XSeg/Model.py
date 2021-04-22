@@ -52,7 +52,7 @@ class XSegModel(ModelBase):
                           'head' : FaceType.HEAD}[ self.options['face_type'] ]
 
         place_model_on_cpu = len(devices) == 0
-        models_opt_device = '/CPU:0' if place_model_on_cpu else '/GPU:0'
+        models_opt_device = '/CPU:0' if place_model_on_cpu else nn.tf_default_device_name
 
         bgr_shape = nn.get4Dshape(resolution,resolution,3)
         mask_shape = nn.get4Dshape(resolution,resolution,1)
@@ -83,7 +83,7 @@ class XSegModel(ModelBase):
             for gpu_id in range(gpu_count):
 
 
-                with tf.device( f'/GPU:{gpu_id}' if len(devices) != 0 else f'/CPU:0' ):
+                with tf.device(f'/{devices[gpu_id].tf_dev_type}:{gpu_id}' if len(devices) != 0 else f'/CPU:0' ):
                     with tf.device(f'/CPU:0'):
                         # slice on CPU, otherwise all batch data will be transfered to GPU first
                         batch_slice = slice( gpu_id*bs_per_gpu, (gpu_id+1)*bs_per_gpu )
