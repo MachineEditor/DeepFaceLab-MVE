@@ -19,9 +19,9 @@ https://arxiv.org/abs/2005.05535</a>
 
 <p align="center">
 
-![](doc/logo_cuda.png)
 ![](doc/logo_tensorflow.png)
-![](doc/logo_python.png)
+![](doc/logo_cuda.png)
+![](doc/logo_directx.png)
 
 </p>
 
