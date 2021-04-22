@@ -77,6 +77,7 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
         ty_range=[-0.05, 0.05]
 
         random_bilinear_resize_chance, random_bilinear_resize_max_size_per = 25,75
+        sharpen_chance, sharpen_kernel_max_size = 25, 5
         motion_blur_chance, motion_blur_mb_max_size = 25, 5
         gaussian_blur_chance, gaussian_blur_kernel_max_size = 25, 5
         random_jpeg_compress_chance = 25
@@ -162,8 +163,12 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
                         krn = krn - krn % 2 + 1
                         img = img + cv2.GaussianBlur(img*mask, (krn,krn), 0)
 
-                    img = imagelib.apply_random_motion_blur( img, motion_blur_chance, motion_blur_mb_max_size, mask=sd.random_circle_faded ([resolution,resolution]))
-                    img = imagelib.apply_random_gaussian_blur( img, gaussian_blur_chance, gaussian_blur_kernel_max_size, mask=sd.random_circle_faded ([resolution,resolution]))
+                    if np.random.randint(2) == 0:
+                        img = imagelib.apply_random_sharpen( img, sharpen_chance, sharpen_kernel_max_size, mask=sd.random_circle_faded ([resolution,resolution]))
+                    else:
+                        img = imagelib.apply_random_motion_blur( img, motion_blur_chance, motion_blur_mb_max_size, mask=sd.random_circle_faded ([resolution,resolution]))
+                        img = imagelib.apply_random_gaussian_blur( img, gaussian_blur_chance, gaussian_blur_kernel_max_size, mask=sd.random_circle_faded ([resolution,resolution]))
+                        
                     if np.random.randint(2) == 0:
                         img = imagelib.apply_random_nearest_resize( img, random_bilinear_resize_chance, random_bilinear_resize_max_size_per, mask=sd.random_circle_faded ([resolution,resolution]))
                     else:
