@@ -92,12 +92,13 @@ class Devices(object):
     @staticmethod
     def _get_tf_devices_proc(q : multiprocessing.Queue):
         
-        compute_cache_path = Path(os.environ['APPDATA']) / 'NVIDIA' / ('ComputeCache_ALL')
-        os.environ['CUDA_CACHE_PATH'] = str(compute_cache_path)
-        if not compute_cache_path.exists():
-            io.log_info("Caching GPU kernels...")
-            compute_cache_path.mkdir(parents=True, exist_ok=True)
-            
+        if sys.platform[0:3] == 'win':
+            compute_cache_path = Path(os.environ['APPDATA']) / 'NVIDIA' / ('ComputeCache_ALL')
+            os.environ['CUDA_CACHE_PATH'] = str(compute_cache_path)
+            if not compute_cache_path.exists():
+                io.log_info("Caching GPU kernels...")
+                compute_cache_path.mkdir(parents=True, exist_ok=True)
+                
         import tensorflow
         
         tf_version = tensorflow.version.VERSION
@@ -156,7 +157,7 @@ class Devices(object):
     def initialize_main_env():
         if int(os.environ.get("NN_DEVICES_INITIALIZED", 0)) != 0:
             return
-        
+            
         if 'CUDA_VISIBLE_DEVICES' in os.environ.keys():
             os.environ.pop('CUDA_VISIBLE_DEVICES')
         
