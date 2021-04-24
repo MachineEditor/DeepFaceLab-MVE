@@ -21,7 +21,11 @@ class MsSsim(nn.LayerBase):
         y_true_t = tf.transpose(tf.cast(y_true, tf.float32), [0, 2, 3, 1])
         y_pred_t = tf.transpose(tf.cast(y_pred, tf.float32), [0, 2, 3, 1])
 
-        ms_ssim_val = tf.image.ssim_multiscale(y_true_t, y_pred_t, max_val, power_factors=self.power_factors, filter_size=self.kernel_size)
+        if tf.__version__ >= "1.14":
+            ms_ssim_val = tf.image.ssim_multiscale(y_true_t, y_pred_t, max_val, power_factors=self.power_factors, filter_size=self.kernel_size)
+        else:
+            ms_ssim_val = tf.image.ssim_multiscale(y_true_t, y_pred_t, max_val, power_factors=self.power_factors)
+
         # ssim_multiscale returns values in range [0, 1] (where 1 is completely identical)
         # subtract from 1 to get loss
         return 1.0 - ms_ssim_val

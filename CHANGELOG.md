@@ -4,9 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-### In Progress
-- [Freezeable layers (encoder/decoder/etc.)](https://github.com/faceshiftlabs/DeepFaceLab/tree/feature/freezable-weights)
+## [1.5.1] - 2020-04-23
+### Fixed
+- Fixes bug with MS-SSIM when using a version of tensorflow < 1.14
 
 ## [1.5.0] - 2020-03-29
 ### Changed
@@ -80,7 +80,7 @@ This should help with rough areas directly next to the mask
 - Reset stale master branch to [seranus/DeepFaceLab](https://github.com/seranus/DeepFaceLab), 
   21 commits ahead of [iperov/DeepFaceLab](https://github.com/iperov/DeepFaceLab) ([compare](https://github.com/iperov/DeepFaceLab/compare/4818183...seranus:3f5ae05))
 
-[Unreleased]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.5.0...HEAD
+[1.5.1]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.4.2...v1.5.0
 [1.4.2]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.4.0...v1.4.1
