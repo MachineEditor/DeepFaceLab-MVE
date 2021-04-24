@@ -452,7 +452,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     gpu_psd_target_dst_style_anti_masked = gpu_pred_src_dst*(1.0 - gpu_target_dstm_style_blur)
 
                     if self.options['ms_ssim_loss']:
-                        gpu_src_loss = 10 * nn.MsSsim(resolution)(gpu_target_src_masked_opt, gpu_pred_src_src_masked_opt, max_val=1.0)
+                        gpu_src_loss = 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_src_masked_opt, gpu_pred_src_src_masked_opt, max_val=1.0)
                     else:
                         if resolution < 256:
                             gpu_src_loss =  tf.reduce_mean ( 10*nn.dssim(gpu_target_src_masked_opt, gpu_pred_src_src_masked_opt, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
@@ -476,7 +476,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     if self.options['background_power'] > 0:
                         bg_factor = self.options['background_power']
                         if self.options['ms_ssim_loss']:
-                            gpu_src_loss += bg_factor * 10 * nn.MsSsim(resolution)(gpu_target_src, gpu_pred_src_src, max_val=1.0)
+                            gpu_src_loss += bg_factor * 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_src, gpu_pred_src_src, max_val=1.0)
                         else:
                             if resolution < 256:
                                 gpu_src_loss +=  bg_factor * tf.reduce_mean ( 10*nn.dssim(gpu_target_src, gpu_pred_src_src, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
@@ -495,7 +495,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_src_loss += tf.reduce_mean( (10*bg_style_power)*tf.square(gpu_psd_target_dst_style_anti_masked - gpu_target_dst_style_anti_masked), axis=[1,2,3] )
 
                     if self.options['ms_ssim_loss']:
-                        gpu_dst_loss = 10 * nn.MsSsim(resolution)(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0)
+                        gpu_dst_loss = 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0)
                     else:
                         if resolution < 256:
                             gpu_dst_loss = tf.reduce_mean ( 10*nn.dssim(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0, filter_size=int(resolution/11.6) ), axis=[1])
@@ -518,7 +518,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     if self.options['background_power'] > 0:
                         bg_factor = self.options['background_power']
                         if self.options['ms_ssim_loss']:
-                            gpu_dst_loss += bg_factor * 10 * nn.MsSsim(resolution)(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0)
+                            gpu_dst_loss += bg_factor * 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0)
                         else:
                             if resolution < 256:
                                 gpu_dst_loss +=  bg_factor * tf.reduce_mean ( 10*nn.dssim(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
