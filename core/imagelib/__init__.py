@@ -27,4 +27,5 @@ from .filters import apply_random_rgb_levels, \
                      apply_random_gaussian_blur, \
                      apply_random_nearest_resize, \
                      apply_random_bilinear_resize, \
-                     apply_random_jpeg_compress
+                     apply_random_jpeg_compress, \
+                     apply_random_relight

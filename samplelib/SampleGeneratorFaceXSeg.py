@@ -138,6 +138,8 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
                             bg_img = imagelib.apply_random_hsv_shift(bg_img)
                         else:
                             bg_img = imagelib.apply_random_rgb_levels(bg_img)
+                            
+                        
 
                         c_mask = 1.0 - (1-bg_mask) * (1-mask)
                         rnd = np.random.uniform()
@@ -151,12 +153,16 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
                     mask[mask < 0.5] = 0.0
                     mask[mask >= 0.5] = 1.0
                     mask = np.clip(mask, 0, 1)
+            
+                    if np.random.randint(4) < 3:
+                        img = imagelib.apply_random_relight(img)
 
                     if np.random.randint(2) == 0:
                         img = imagelib.apply_random_hsv_shift(img, mask=sd.random_circle_faded ([resolution,resolution]))
                     else:
                         img = imagelib.apply_random_rgb_levels(img, mask=sd.random_circle_faded ([resolution,resolution]))
-
+                        
+                    
                     if np.random.randint(2) == 0:
                         # random face flare
                         krn = np.random.randint( resolution//4, resolution )
