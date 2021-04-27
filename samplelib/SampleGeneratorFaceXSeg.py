@@ -154,8 +154,8 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
                     mask[mask >= 0.5] = 1.0
                     mask = np.clip(mask, 0, 1)
             
-                    if np.random.randint(4) < 3:
-                        img = imagelib.apply_random_relight(img)
+                    #if np.random.randint(4) < 3:
+                    #    img = imagelib.apply_random_relight(img)
 
                     if np.random.randint(2) == 0:
                         img = imagelib.apply_random_hsv_shift(img, mask=sd.random_circle_faded ([resolution,resolution]))
