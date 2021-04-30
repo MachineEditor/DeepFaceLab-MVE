@@ -1341,7 +1341,15 @@ class MainWindow(QXMainWindow):
 
         self.update_cached_images()
         self.update_preview_bar()
-
+        
+    def delete_current_image(self):
+        self.process_next_image()
+        
+        img_path = self.image_paths_done.pop(-1)
+        Path(img_path).unlink()
+        self.update_cached_images()
+        self.update_preview_bar()
+        
     def initialize_ui(self):
 
         self.canvas = QCanvas()
@@ -1356,12 +1364,19 @@ class MainWindow(QXMainWindow):
         btn_next_image = QXIconButton(QIconDB.right, QStringDB.btn_next_image_tip, shortcut='D', click_func=self.process_next_image)
         btn_next_image.setIconSize(QUIConfig.preview_bar_icon_q_size)
 
-
+        btn_delete_image = QXIconButton(QIconDB.trashcan, QStringDB.btn_delete_image_tip, shortcut='X', click_func=self.delete_current_image)
+        btn_delete_image.setIconSize(QUIConfig.preview_bar_icon_q_size)
+    
+        pad_image = QWidget()
+        pad_image.setFixedSize(QUIConfig.preview_bar_icon_q_size)
+        
         preview_image_bar_frame_l = QHBoxLayout()
         preview_image_bar_frame_l.setContentsMargins(0,0,0,0)
+        preview_image_bar_frame_l.addWidget ( pad_image, alignment=Qt.AlignCenter)
         preview_image_bar_frame_l.addWidget ( btn_prev_image, alignment=Qt.AlignCenter)
         preview_image_bar_frame_l.addWidget ( image_bar)
         preview_image_bar_frame_l.addWidget ( btn_next_image, alignment=Qt.AlignCenter)
+        preview_image_bar_frame_l.addWidget ( btn_delete_image, alignment=Qt.AlignCenter)
 
         preview_image_bar_frame = QFrame()
         preview_image_bar_frame.setSizePolicy ( QSizePolicy.Fixed, QSizePolicy.Fixed )
