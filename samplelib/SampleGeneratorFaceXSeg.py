@@ -138,11 +138,9 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
                             bg_img = imagelib.apply_random_hsv_shift(bg_img)
                         else:
                             bg_img = imagelib.apply_random_rgb_levels(bg_img)
-                            
-                        
 
                         c_mask = 1.0 - (1-bg_mask) * (1-mask)
-                        rnd = np.random.uniform()
+                        rnd = 0.15 + np.random.uniform()*0.85
                         img = img*(c_mask) + img*(1-c_mask)*rnd + bg_img*(1-c_mask)*(1-rnd)
 
                     warp_params = imagelib.gen_warp_params(resolution, random_flip, rotation_range=rotation_range, scale_range=scale_range, tx_range=tx_range, ty_range=ty_range )
@@ -153,15 +151,13 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
                     mask[mask < 0.5] = 0.0
                     mask[mask >= 0.5] = 1.0
                     mask = np.clip(mask, 0, 1)
-            
-                    #if np.random.randint(4) < 3:
-                    #    img = imagelib.apply_random_relight(img)
 
+                    img = imagelib.apply_random_overlay_triangle(img, max_alpha=0.25, mask=sd.random_circle_faded ([resolution,resolution]))
+                    
                     if np.random.randint(2) == 0:
                         img = imagelib.apply_random_hsv_shift(img, mask=sd.random_circle_faded ([resolution,resolution]))
                     else:
                         img = imagelib.apply_random_rgb_levels(img, mask=sd.random_circle_faded ([resolution,resolution]))
-                        
                     
                     if np.random.randint(2) == 0:
                         # random face flare

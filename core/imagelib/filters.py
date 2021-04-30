@@ -128,7 +128,29 @@ def apply_random_jpeg_compress( img, chance, mask=None, rnd_state=None ):
 
     return result
     
+def apply_random_overlay_triangle( img, max_alpha, mask=None, rnd_state=None ):
+    if rnd_state is None:
+        rnd_state = np.random
 
+    h,w,c = img.shape
+    pt1 = [rnd_state.randint(w), rnd_state.randint(h) ]
+    pt2 = [rnd_state.randint(w), rnd_state.randint(h) ]
+    pt3 = [rnd_state.randint(w), rnd_state.randint(h) ]
+    
+    alpha = rnd_state.uniform()*max_alpha
+    
+    tri_mask = cv2.fillPoly( np.zeros_like(img), [ np.array([pt1,pt2,pt3], np.int32) ], (alpha,)*c )
+    
+    if rnd_state.randint(2) == 0:
+        result = np.clip(img+tri_mask, 0, 1)
+    else:
+        result = np.clip(img-tri_mask, 0, 1)
+    
+    if mask is not None:
+        result = img*(1-mask) + result*mask
+
+    return result
+    
 def _min_resize(x, m):
     if x.shape[0] < x.shape[1]:
         s0 = m

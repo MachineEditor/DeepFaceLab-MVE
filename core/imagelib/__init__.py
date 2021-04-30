@@ -21,6 +21,7 @@ from .SegIEPolys import *
 from .blursharpen import LinearMotionBlur, blursharpen
 
 from .filters import apply_random_rgb_levels, \
+                     apply_random_overlay_triangle, \
                      apply_random_hsv_shift, \
                      apply_random_sharpen, \
                      apply_random_motion_blur, \
