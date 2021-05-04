@@ -237,6 +237,19 @@ def gaussian_blur(input, radius=2.0):
     return x
 nn.gaussian_blur = gaussian_blur
 
+def get_gaussian_weights(batch_size, in_ch, resolution, num_scale=5, sigma=(0.5, 1., 2., 4., 8.)):
+    w = np.empty((num_scale, batch_size, in_ch, resolution, resolution))
+    for i in range(num_scale):
+        gaussian = np.exp(-1.*np.arange(-(resolution/2-0.5), resolution/2+0.5)**2/(2*sigma[i]**2))
+        gaussian = np.outer(gaussian, gaussian.reshape((resolution, 1)))  # extend to 2D
+        gaussian = gaussian/np.sum(gaussian)							  # normalization
+        gaussian = np.reshape(gaussian, (1, 1, resolution, resolution)) 	  # reshape to 3D
+        gaussian = np.tile(gaussian, (batch_size, in_ch, 1, 1))
+        w[i, :, :, :, :] = gaussian
+    return w
+
+nn.get_gaussian_weights = get_gaussian_weights
+
 def style_loss(target, style, gaussian_blur_radius=0.0, loss_weight=1.0, step_size=1):
     def sd(content, style, loss_weight):
         content_nc = content.shape[ nn.conv2d_ch_axis ]
@@ -385,7 +398,7 @@ def total_variation_mse(images):
     """
     pixel_dif1 = images[:, 1:, :, :] - images[:, :-1, :, :]
     pixel_dif2 = images[:, :, 1:, :] - images[:, :, :-1, :]
-    
+
     tot_var = ( tf.reduce_sum(tf.square(pixel_dif1), axis=[1,2,3]) +
                 tf.reduce_sum(tf.square(pixel_dif2), axis=[1,2,3]) )
     return tot_var
