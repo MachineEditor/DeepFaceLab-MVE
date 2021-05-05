@@ -373,8 +373,9 @@ def color_transfer(ct_mode, img_src, img_trg):
 # imported from faceswap
 def color_augmentation(img, seed=None):
     """ Color adjust RGB image """
-    face = img.astype(np.float32)
-    face = np.clip(face*255.0, 0, 255)
+    img = img.astype(np.float32)
+    face = img
+    face = np.clip(face*255.0, 0, 255).astype(np.uint8)
     face = random_clahe(face, seed)
     face = random_lab(face, seed)
     img[:, :, :3] = face
