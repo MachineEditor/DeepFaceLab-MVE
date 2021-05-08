@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2] - 2021-05-08
+### Fixed
+- Fixed bug with GAN smoothing/noisy labels with certain versions of Tensorflow
+
 ## [1.6.1] - 2021-05-04
 ### Fixed
 - Fixed bug when `fs-aug` used on model with same resolution as dataset
@@ -88,6 +92,7 @@ This should help with rough areas directly next to the mask
 - Reset stale master branch to [seranus/DeepFaceLab](https://github.com/seranus/DeepFaceLab), 
   21 commits ahead of [iperov/DeepFaceLab](https://github.com/iperov/DeepFaceLab) ([compare](https://github.com/iperov/DeepFaceLab/compare/4818183...seranus:3f5ae05))
 
+[1.6.2]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/faceshiftlabs/DeepFaceLab/compare/v1.5.0...v1.5.1
