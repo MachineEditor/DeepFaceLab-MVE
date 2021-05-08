@@ -145,7 +145,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         default_gan_patch_size     = self.options['gan_patch_size']     = self.load_or_def_option('gan_patch_size', self.options['resolution'] // 8)
         default_gan_dims           = self.options['gan_dims']           = self.load_or_def_option('gan_dims', 16)
         default_gan_smoothing      = self.options['gan_smoothing']      = self.load_or_def_option('gan_smoothing', 0.1)
-        default_gan_noise          = self.options['gan_noise']          = self.load_or_def_option('gan_noise', 0.05)
+        default_gan_noise          = self.options['gan_noise']          = self.load_or_def_option('gan_noise', 0.0)
 
         if self.is_first_run() or ask_override:
             self.options['models_opt_on_gpu'] = io.input_bool ("Place models and optimizer on GPU", default_models_opt_on_gpu, help_message="When you train on one GPU, by default model and optimizer weights are placed on GPU to accelerate the process. You can place they on CPU to free up extra VRAM, thus set bigger dimensions.")
@@ -580,7 +580,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                             x = tf.cast(x, tf.float32)
                             x = tf.math.scalar_mul(1-smoothing, x)
                             # x = x + (smoothing/num_labels)
-                            x = tf.reshape(x, (self.batch_size,) + tensor.shape[1:])
+                            x = tf.reshape(x, (self.batch_size,) + tuple(tensor.get_shape().as_list()[1:]))
                             return x
 
                         smoothing = self.options['gan_smoothing']
