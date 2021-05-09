@@ -127,6 +127,7 @@ class FacesetResizerSubprocessor(Subprocessor):
                         if image_to_face_mat is not None:
                             image_to_face_mat = LandmarksProcessor.get_transform_mat ( dflimg.get_source_landmarks(), image_size, face_type )
                             dflimg.set_image_to_face_mat(image_to_face_mat)
+                        dflimg.set_face_type( FaceType.toString(face_type) )
                         dflimg.save()
                         
                     else:
