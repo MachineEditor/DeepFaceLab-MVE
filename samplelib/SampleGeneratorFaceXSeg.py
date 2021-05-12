@@ -151,11 +151,6 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
                     mask[mask < 0.5] = 0.0
                     mask[mask >= 0.5] = 1.0
                     mask = np.clip(mask, 0, 1)
-
-                    if np.random.randint(2) == 0:
-                        img = imagelib.apply_random_hsv_shift(img, mask=sd.random_circle_faded ([resolution,resolution]))
-                    else:
-                        img = imagelib.apply_random_rgb_levels(img, mask=sd.random_circle_faded ([resolution,resolution]))
                     
                     if np.random.randint(2) == 0:
                         # random face flare
@@ -163,6 +158,17 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
                         krn = krn - krn % 2 + 1
                         img = img + cv2.GaussianBlur(img*mask, (krn,krn), 0)
 
+                    if np.random.randint(2) == 0:
+                        # random bg flare
+                        krn = np.random.randint( resolution//4, resolution )
+                        krn = krn - krn % 2 + 1
+                        img = img + cv2.GaussianBlur(img*(1-mask), (krn,krn), 0)
+
+                    if np.random.randint(2) == 0:
+                        img = imagelib.apply_random_hsv_shift(img, mask=sd.random_circle_faded ([resolution,resolution]))
+                    else:
+                        img = imagelib.apply_random_rgb_levels(img, mask=sd.random_circle_faded ([resolution,resolution]))
+                        
                     if np.random.randint(2) == 0:
                         img = imagelib.apply_random_sharpen( img, sharpen_chance, sharpen_kernel_max_size, mask=sd.random_circle_faded ([resolution,resolution]))
                     else:
