@@ -227,12 +227,13 @@ class SampleProcessor(object):
                             noise_scale = (20 * np.random.random() + 20) / 255.0
 
                             if noise_type == 'gaussian':
-                                noise = np.random.normal(scale=noise_scale, size=img.shape)
-                                img += noise
-                            elif noise_type == 'laplace':
-                                # noise = np.random.laplace(scale=noise_scale, size=img.shape)
+                                # noise = np.random.normal(scale=noise_scale, size=img.shape)
                                 # img += noise
                                 pass
+                            elif noise_type == 'laplace':
+                                noise = np.random.laplace(scale=noise_scale, size=img.shape)
+                                img += noise
+                                # pass
                             elif noise_type == 'poisson':
                                 # noise_lam = (15 * np.random.random() + 15)
                                 # noise = np.random.poisson(lam=noise_lam, size=img.shape)
