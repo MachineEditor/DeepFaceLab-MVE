@@ -163,6 +163,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             self.options['random_noise'] = io.input_bool("Enable random noise added to samples", False, help_message="")
             self.options['random_blur'] = io.input_bool("Enable random blur of samples", False, help_message="")
             self.options['random_jpeg'] = io.input_bool("Enable random jpeg compression of samples", False, help_message="")
+
             self.options['gan_version'] = np.clip (io.input_int("GAN version", default_gan_version, add_info="2 or 3", help_message="Choose GAN version (v2: 7/16/2020, v3: 1/3/2021):"), 2, 3)
 
             if self.options['gan_version'] == 2:
@@ -853,7 +854,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             wt = []
             for i in range(n_samples):
                 ar = SW[i], SS[i], DW[i], DD[i], SD[i]
-                st.append ( np.concatenate ( ar, axis=1) )
+                wt.append ( np.concatenate ( ar, axis=1) )
             result += [ ('SAEHD warped', np.concatenate (wt, axis=0 )), ]
 
             st_m = []
