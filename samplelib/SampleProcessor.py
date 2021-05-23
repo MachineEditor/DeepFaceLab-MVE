@@ -113,6 +113,7 @@ class SampleProcessor(object):
                 warp           = opts.get('warp', False)
                 transform      = opts.get('transform', False)
                 random_downsample = opts.get('random_downsample', False)
+                random_noise = opts.get('random_noise', False)
                 motion_blur    = opts.get('motion_blur', None)
                 gaussian_blur  = opts.get('gaussian_blur', None)
                 random_bilinear_resize = opts.get('random_bilinear_resize', None)
@@ -219,6 +220,24 @@ class SampleProcessor(object):
                             down_res = np.random.randint(int(0.125*resolution), int(0.25*resolution))
                             img = cv2.resize(img, (down_res, down_res), interpolation=cv2.INTER_CUBIC)
                             img = cv2.resize(img, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
+
+                        # Apply random noise
+                        if random_noise:
+                            noise_type = np.random.choice(['gaussian', 'laplace', 'poisson'])
+                            noise_scale = (20 * np.random.random() + 20) / 255.0
+
+                            if noise_type == 'gaussian':
+                                noise = np.random.normal(scale=noise_scale, size=img.shape)
+                                img += noise
+                            elif noise_type == 'laplace':
+                                # noise = np.random.laplace(scale=noise_scale, size=img.shape)
+                                # img += noise
+                                pass
+                            elif noise_type == 'poisson':
+                                # noise_lam = (15 * np.random.random() + 15)
+                                # noise = np.random.poisson(lam=noise_lam, size=img.shape)
+                                # img += noise
+                                pass
 
                         img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=border_replicate)
                         img = np.clip(img.astype(np.float32), 0, 1)

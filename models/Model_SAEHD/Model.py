@@ -57,6 +57,7 @@ class SAEHDModel(ModelBase):
 
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
         default_random_downsample  = self.options['random_downsample']  = self.load_or_def_option('random_downsample', False)
+        default_random_noise       = self.options['random_noise']       = self.load_or_def_option('random_noise', False)
         default_background_power   = self.options['background_power']   = self.load_or_def_option('background_power', 0.0)
         default_true_face_power    = self.options['true_face_power']    = self.load_or_def_option('true_face_power', 0.0)
         default_face_style_power   = self.options['face_style_power']   = self.load_or_def_option('face_style_power', 0.0)
@@ -161,7 +162,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             self.options['random_warp'] = io.input_bool ("Enable random warp of samples", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness and reduce subpixel shake for less amount of iterations.")
 
             self.options['random_downsample'] = io.input_bool("Enable random downsample of samples", default_random_downsample, help_message="")
-            # self.options['random_noise'] = io.input_bool("Enable random noise added to samples", False, help_message="")
+            self.options['random_noise'] = io.input_bool("Enable random noise added to samples", False, help_message="")
             # self.options['random_blur'] = io.input_bool("Enable random blur of samples", False, help_message="")
             # self.options['random_jpeg'] = io.input_bool("Enable random jpeg compression of samples", False, help_message="")
 
@@ -751,7 +752,11 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             self.set_training_data_generators ([
                     SampleGeneratorFace(training_data_src_path, random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(random_flip=self.random_flip),
-                        output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp, 'random_downsample': self.options['random_downsample'], 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                        output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp,
+                                                 'random_downsample': self.options['random_downsample'],
+                                                 'random_noise': self.options['random_noise'],
+                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,
+                                                 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
@@ -761,7 +766,11 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                     SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(random_flip=self.random_flip),
-                        output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp, 'random_downsample': self.options['random_downsample'], 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,                                                                 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                        output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp,
+                                                 'random_downsample': self.options['random_downsample'],
+                                                 'random_noise': self.options['random_noise'],
+                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,
+                                                 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,                                                                 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
