@@ -112,6 +112,7 @@ class SampleProcessor(object):
                 nearest_resize_to = opts.get('nearest_resize_to', None)
                 warp           = opts.get('warp', False)
                 transform      = opts.get('transform', False)
+                random_downsample = opts.get('random_downsample', False)
                 motion_blur    = opts.get('motion_blur', None)
                 gaussian_blur  = opts.get('gaussian_blur', None)
                 random_bilinear_resize = opts.get('random_bilinear_resize', None)
@@ -213,6 +214,11 @@ class SampleProcessor(object):
                                     ct_sample_bgr = ct_sample.load_bgr()
                                 img = imagelib.color_transfer (ct_mode, img, cv2.resize( ct_sample_bgr, (resolution,resolution), interpolation=cv2.INTER_LINEAR ) )
 
+                        # Apply random downsampling
+                        if random_downsample:
+                            down_res = np.random.randint(int(0.125*resolution), int(0.25*resolution))
+                            img = cv2.resize(img, (down_res, down_res), interpolation=cv2.INTER_CUBIC)
+                            img = cv2.resize(img, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
 
                         img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=border_replicate)
                         img = np.clip(img.astype(np.float32), 0, 1)
