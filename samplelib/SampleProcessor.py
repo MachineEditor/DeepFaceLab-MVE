@@ -229,16 +229,13 @@ class SampleProcessor(object):
                             if noise_type == 'gaussian':
                                 noise = np.random.normal(scale=noise_scale, size=img.shape)
                                 img += noise / 255.0
-                                # pass
                             elif noise_type == 'laplace':
                                 noise = np.random.laplace(scale=noise_scale, size=img.shape)
                                 img += noise / 255.0
-                                # pass
                             elif noise_type == 'poisson':
                                 noise_lam = (15 * np.random.random() + 15)
                                 noise = np.random.poisson(lam=noise_lam, size=img.shape)
                                 img += noise / 255.0
-                                # pass
 
                         img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=border_replicate)
                         img = np.clip(img.astype(np.float32), 0, 1)
