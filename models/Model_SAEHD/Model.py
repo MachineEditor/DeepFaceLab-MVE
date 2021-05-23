@@ -887,6 +887,23 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                 st.append ( np.concatenate ( ar, axis=1) )
             result += [ ('SAEHD pred', np.concatenate (st, axis=0 )), ]
 
+            wt = []
+            for i in range(n_samples):
+                ar = SW[i], SS[i]
+                wt.append ( np.concatenate ( ar, axis=1) )
+            result += [ ('SAEHD warped src-src', np.concatenate (wt, axis=0 )), ]
+
+            wt = []
+            for i in range(n_samples):
+                ar = DW[i], DD[i]
+                wt.append ( np.concatenate ( ar, axis=1) )
+            result += [ ('SAEHD warped dst-dst', np.concatenate (wt, axis=0 )), ]
+
+            wt = []
+            for i in range(n_samples):
+                ar = DW[i], SD[i]
+                wt.append ( np.concatenate ( ar, axis=1) )
+            result += [ ('SAEHD warped pred', np.concatenate (wt, axis=0 )), ]
 
             st_m = []
             for i in range(n_samples):
