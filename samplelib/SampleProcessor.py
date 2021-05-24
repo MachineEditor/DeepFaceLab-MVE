@@ -7,7 +7,7 @@ import numpy as np
 
 from core import imagelib
 from core.cv2ex import *
-from core.imagelib import sd
+from core.imagelib import sd, blursharpen
 from core.imagelib.color_transfer import random_lab_rotation
 from facelib import FaceType, LandmarksProcessor
 
@@ -114,6 +114,7 @@ class SampleProcessor(object):
                 transform      = opts.get('transform', False)
                 random_downsample = opts.get('random_downsample', False)
                 random_noise = opts.get('random_noise', False)
+                random_blur = opts.get('random_blur', False)
                 motion_blur    = opts.get('motion_blur', None)
                 gaussian_blur  = opts.get('gaussian_blur', None)
                 random_bilinear_resize = opts.get('random_bilinear_resize', None)
@@ -236,6 +237,17 @@ class SampleProcessor(object):
                                 noise_lam = (15 * np.random.random() + 15)
                                 noise = np.random.poisson(lam=noise_lam, size=img.shape)
                                 img += noise / 255.0
+
+                        # Apply random blur
+                        if random_blur:
+                            blur_type = np.random.choice(['motion', 'gaussian'])
+
+                            if blur_type == 'motion':
+                                blur_k = np.random.randint(10, 20)
+                                blur_angle = 360 * np.random.random()
+                                img = blursharpen.LinearMotionBlur(img, blur_k, blur_angle)
+                            elif blur_type == 'gaussian':
+                                pass
 
                         img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=border_replicate)
                         img = np.clip(img.astype(np.float32), 0, 1)
