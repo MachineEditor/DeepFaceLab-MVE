@@ -217,55 +217,57 @@ class SampleProcessor(object):
                                     ct_sample_bgr = ct_sample.load_bgr()
                                 img = imagelib.color_transfer (ct_mode, img, cv2.resize( ct_sample_bgr, (resolution,resolution), interpolation=cv2.INTER_LINEAR ) )
 
-                        # Apply random downsampling
-                        if random_downsample:
-                            down_res = np.random.randint(int(0.125*resolution), int(0.25*resolution))
-                            img = cv2.resize(img, (down_res, down_res), interpolation=cv2.INTER_CUBIC)
-                            img = cv2.resize(img, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
+                        randomization_order = np.random.shuffle(['blur', 'noise', 'jpeg', 'down'])
+                        for random_distortion in randomization_order:
+                            # Apply random blur
+                            if random_distortion == 'blur' and random_blur:
+                                blur_type = np.random.choice(['motion', 'gaussian'])
 
-                        # Apply random noise
-                        if random_noise:
-                            noise_type = np.random.choice(['gaussian', 'laplace', 'poisson'])
-                            noise_scale = (20 * np.random.random() + 20)
+                                if blur_type == 'motion':
+                                    blur_k = np.random.randint(10, 20)
+                                    blur_angle = 360 * np.random.random()
+                                    img = LinearMotionBlur(img, blur_k, blur_angle)
+                                elif blur_type == 'gaussian':
+                                    blur_sigma = 5 * np.random.random() + 3
 
-                            if noise_type == 'gaussian':
-                                noise = np.random.normal(scale=noise_scale, size=img.shape)
-                                img += noise / 255.0
-                            elif noise_type == 'laplace':
-                                noise = np.random.laplace(scale=noise_scale, size=img.shape)
-                                img += noise / 255.0
-                            elif noise_type == 'poisson':
-                                noise_lam = (15 * np.random.random() + 15)
-                                noise = np.random.poisson(lam=noise_lam, size=img.shape)
-                                img += noise / 255.0
+                                    if blur_sigma < 5.0:
+                                        kernel_size = 2.9 * blur_sigma  # 97% of weight
+                                    else:
+                                        kernel_size = 2.6 * blur_sigma  # 95% of weight
+                                    kernel_size = int(kernel_size)
+                                    kernel_size = kernel_size + 1 if kernel_size % 2 == 0 else kernel_size
 
-                        # Apply random blur
-                        if random_blur:
-                            blur_type = np.random.choice(['motion', 'gaussian'])
+                                    img = cv2.GaussianBlur(img, (kernel_size, kernel_size), blur_sigma)
 
-                            if blur_type == 'motion':
-                                blur_k = np.random.randint(10, 20)
-                                blur_angle = 360 * np.random.random()
-                                img = LinearMotionBlur(img, blur_k, blur_angle)
-                            elif blur_type == 'gaussian':
-                                blur_sigma = 5 * np.random.random() + 3
+                            # Apply random noise
+                            if random_distortion == 'noise' and random_noise:
+                                noise_type = np.random.choice(['gaussian', 'laplace', 'poisson'])
+                                noise_scale = (20 * np.random.random() + 20)
 
-                                if blur_sigma < 5.0:
-                                    kernel_size = 2.9 * blur_sigma  # 97% of weight
-                                else:
-                                    kernel_size = 2.6 * blur_sigma  # 95% of weight
-                                kernel_size = int(kernel_size)
-                                kernel_size = kernel_size + 1 if kernel_size % 2 == 0 else kernel_size
+                                if noise_type == 'gaussian':
+                                    noise = np.random.normal(scale=noise_scale, size=img.shape)
+                                    img += noise / 255.0
+                                elif noise_type == 'laplace':
+                                    noise = np.random.laplace(scale=noise_scale, size=img.shape)
+                                    img += noise / 255.0
+                                elif noise_type == 'poisson':
+                                    noise_lam = (15 * np.random.random() + 15)
+                                    noise = np.random.poisson(lam=noise_lam, size=img.shape)
+                                    img += noise / 255.0
 
-                                img = cv2.GaussianBlur(img, (kernel_size, kernel_size), blur_sigma)
+                            # Apply random jpeg compression
+                            if random_distortion == 'jpeg' and random_jpeg:
+                                img = np.clip(img*255, 0, 255).astype(np.uint8)
+                                jpeg_compression_level = np.random.randint(50, 85)
+                                encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpeg_compression_level]
+                                _, enc_img = cv2.imencode('.jpg', img, encode_param)
+                                img = cv2.imdecode(enc_img, cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.0
 
-                        # Apply random jpeg compression
-                        if random_jpeg:
-                            img = np.clip(img*255, 0, 255).astype(np.uint8)
-                            jpeg_compression_level = np.random.randint(50, 85)
-                            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpeg_compression_level]
-                            _, enc_img = cv2.imencode('.jpg', img, encode_param)
-                            img = cv2.imdecode(enc_img, cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.0
+                            # Apply random downsampling
+                            if random_distortion == 'down' and random_downsample:
+                                down_res = np.random.randint(int(0.125*resolution), int(0.25*resolution))
+                                img = cv2.resize(img, (down_res, down_res), interpolation=cv2.INTER_CUBIC)
+                                img = cv2.resize(img, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
 
                         img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=border_replicate)
                         img = np.clip(img.astype(np.float32), 0, 1)
