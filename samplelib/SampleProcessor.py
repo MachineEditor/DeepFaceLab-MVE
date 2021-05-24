@@ -243,11 +243,19 @@ class SampleProcessor(object):
                             blur_type = np.random.choice(['motion', 'gaussian'])
 
                             if blur_type == 'motion':
-                                blur_k = np.random.randint(10, 20)
-                                blur_angle = 360 * np.random.random()
-                                img = LinearMotionBlur(img, blur_k, blur_angle)
-                            elif blur_type == 'gaussian':
+                                # blur_k = np.random.randint(10, 20)
+                                # blur_angle = 360 * np.random.random()
+                                # img = LinearMotionBlur(img, blur_k, blur_angle)
                                 pass
+                            elif blur_type == 'gaussian':
+                                blur_sigma = 5 * np.random.random() + 3
+
+                                if blur_sigma < 5.0:
+                                    kernel_size = 2.9 * blur_sigma  # 97% of weight
+                                else:
+                                    kernel_size = 2.6 * blur_sigma  # 95% of weight
+
+                                img = cv2.GaussianBlur(img, (kernel_size, kernel_size), blur_sigma)
 
                         img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=border_replicate)
                         img = np.clip(img.astype(np.float32), 0, 1)
