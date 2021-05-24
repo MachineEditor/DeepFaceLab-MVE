@@ -115,6 +115,7 @@ class SampleProcessor(object):
                 random_downsample = opts.get('random_downsample', False)
                 random_noise = opts.get('random_noise', False)
                 random_blur = opts.get('random_blur', False)
+                random_jpeg = opts.get('random_jpeg', False)
                 motion_blur    = opts.get('motion_blur', None)
                 gaussian_blur  = opts.get('gaussian_blur', None)
                 random_bilinear_resize = opts.get('random_bilinear_resize', None)
@@ -257,6 +258,13 @@ class SampleProcessor(object):
                                 kernel_size = kernel_size + 1 if kernel_size % 2 == 0 else kernel_size
 
                                 img = cv2.GaussianBlur(img, (kernel_size, kernel_size), blur_sigma)
+
+                        # Apply random jpeg compression
+                        if random_jpeg:
+                            jpeg_compression_level = np.random.randint(50, 85)
+                            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpeg_compression_level]
+                            _, encimg = cv2.imencode('.jpg', img, encode_param)
+                            img = cv2.imdecode(encimg, 1)
 
                         img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=border_replicate)
                         img = np.clip(img.astype(np.float32), 0, 1)
