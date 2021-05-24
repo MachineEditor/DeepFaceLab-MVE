@@ -254,6 +254,7 @@ class SampleProcessor(object):
                                     kernel_size = 2.9 * blur_sigma  # 97% of weight
                                 else:
                                     kernel_size = 2.6 * blur_sigma  # 95% of weight
+                                kernel_size = int(kernel_size)
 
                                 img = cv2.GaussianBlur(img, (kernel_size, kernel_size), blur_sigma)
 
