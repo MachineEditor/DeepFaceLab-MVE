@@ -261,10 +261,11 @@ class SampleProcessor(object):
 
                         # Apply random jpeg compression
                         if random_jpeg:
+                            img = np.clip(img*255, 0, 255).astype(np.uint8)
                             jpeg_compression_level = np.random.randint(50, 85)
                             encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpeg_compression_level]
-                            _, encimg = cv2.imencode('.jpg', img, encode_param)
-                            img = cv2.imdecode(encimg, 1)
+                            _, enc_img = cv2.imencode('.jpg', img, encode_param)
+                            img = cv2.imdecode(enc_img, cv2.IMREAD_UNCHANGED).astype(np.float32) / 255.0
 
                         img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=border_replicate)
                         img = np.clip(img.astype(np.float32), 0, 1)
