@@ -7,7 +7,7 @@ import numpy as np
 
 from core import imagelib
 from core.cv2ex import *
-from core.imagelib import sd, blursharpen
+from core.imagelib import sd, LinearMotionBlur
 from core.imagelib.color_transfer import random_lab_rotation
 from facelib import FaceType, LandmarksProcessor
 
@@ -245,7 +245,7 @@ class SampleProcessor(object):
                             if blur_type == 'motion':
                                 blur_k = np.random.randint(10, 20)
                                 blur_angle = 360 * np.random.random()
-                                img = blursharpen.LinearMotionBlur(img, blur_k, blur_angle)
+                                img = LinearMotionBlur(img, blur_k, blur_angle)
                             elif blur_type == 'gaussian':
                                 pass
 
