@@ -243,10 +243,9 @@ class SampleProcessor(object):
                             blur_type = np.random.choice(['motion', 'gaussian'])
 
                             if blur_type == 'motion':
-                                # blur_k = np.random.randint(10, 20)
-                                # blur_angle = 360 * np.random.random()
-                                # img = LinearMotionBlur(img, blur_k, blur_angle)
-                                pass
+                                blur_k = np.random.randint(10, 20)
+                                blur_angle = 360 * np.random.random()
+                                img = LinearMotionBlur(img, blur_k, blur_angle)
                             elif blur_type == 'gaussian':
                                 blur_sigma = 5 * np.random.random() + 3
 
