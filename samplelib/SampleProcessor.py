@@ -217,7 +217,9 @@ class SampleProcessor(object):
                                     ct_sample_bgr = ct_sample.load_bgr()
                                 img = imagelib.color_transfer (ct_mode, img, cv2.resize( ct_sample_bgr, (resolution,resolution), interpolation=cv2.INTER_LINEAR ) )
 
-                        randomization_order = np.random.shuffle(['blur', 'noise', 'jpeg', 'down'])
+
+                        randomization_order = ['blur', 'noise', 'jpeg', 'down']
+                        np.random.shuffle(randomization_order)
                         for random_distortion in randomization_order:
                             # Apply random blur
                             if random_distortion == 'blur' and random_blur:
