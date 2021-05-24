@@ -7,7 +7,7 @@ import numpy as np
 
 from core import imagelib
 from core.cv2ex import *
-from core.imagelib import sd
+from core.imagelib import sd, LinearMotionBlur
 from core.imagelib.color_transfer import random_lab_rotation
 from facelib import FaceType, LandmarksProcessor
 
@@ -113,6 +113,8 @@ class SampleProcessor(object):
                 warp           = opts.get('warp', False)
                 transform      = opts.get('transform', False)
                 random_downsample = opts.get('random_downsample', False)
+                random_noise = opts.get('random_noise', False)
+                random_blur = opts.get('random_blur', False)
                 motion_blur    = opts.get('motion_blur', None)
                 gaussian_blur  = opts.get('gaussian_blur', None)
                 random_bilinear_resize = opts.get('random_bilinear_resize', None)
@@ -219,6 +221,42 @@ class SampleProcessor(object):
                             down_res = np.random.randint(int(0.125*resolution), int(0.25*resolution))
                             img = cv2.resize(img, (down_res, down_res), interpolation=cv2.INTER_CUBIC)
                             img = cv2.resize(img, (resolution, resolution), interpolation=cv2.INTER_CUBIC)
+
+                        # Apply random noise
+                        if random_noise:
+                            noise_type = np.random.choice(['gaussian', 'laplace', 'poisson'])
+                            noise_scale = (20 * np.random.random() + 20)
+
+                            if noise_type == 'gaussian':
+                                noise = np.random.normal(scale=noise_scale, size=img.shape)
+                                img += noise / 255.0
+                            elif noise_type == 'laplace':
+                                noise = np.random.laplace(scale=noise_scale, size=img.shape)
+                                img += noise / 255.0
+                            elif noise_type == 'poisson':
+                                noise_lam = (15 * np.random.random() + 15)
+                                noise = np.random.poisson(lam=noise_lam, size=img.shape)
+                                img += noise / 255.0
+
+                        # Apply random blur
+                        if random_blur:
+                            blur_type = np.random.choice(['motion', 'gaussian'])
+
+                            if blur_type == 'motion':
+                                blur_k = np.random.randint(10, 20)
+                                blur_angle = 360 * np.random.random()
+                                img = LinearMotionBlur(img, blur_k, blur_angle)
+                            elif blur_type == 'gaussian':
+                                blur_sigma = 5 * np.random.random() + 3
+
+                                if blur_sigma < 5.0:
+                                    kernel_size = 2.9 * blur_sigma  # 97% of weight
+                                else:
+                                    kernel_size = 2.6 * blur_sigma  # 95% of weight
+                                kernel_size = int(kernel_size)
+                                kernel_size = kernel_size + 1 if kernel_size % 2 == 0 else kernel_size
+
+                                img = cv2.GaussianBlur(img, (kernel_size, kernel_size), blur_sigma)
 
                         img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=border_replicate)
                         img = np.clip(img.astype(np.float32), 0, 1)
