@@ -85,9 +85,9 @@ class QStringDB():
                                             'zh' : '保存并转到下一张图片\n按住SHIFT : 加快\n按住CTRL : 跳过未标记的\n',
                                            }[lang]  
         
-        QStringDB.btn_delete_image_tip = {  'en' : 'Delete and Next image\n',
-                                            'ru' : 'Удалить и следующее изображение\n',
-                                            'zh' : '清除并转到下一张图片',
+        QStringDB.btn_delete_image_tip = {  'en' : 'Move to _trash and Next image\n',
+                                            'ru' : 'Переместить в _trash и следующее изображение\n',
+                                            'zh' : '移至_trash，转到下一张图片 ',
                                            }[lang]  
                                            
         QStringDB.loading_tip = {'en' : 'Loading',

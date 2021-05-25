@@ -1164,6 +1164,7 @@ class MainWindow(QXMainWindow):
         super().__init__()
 
         self.input_dirpath = input_dirpath
+        self.trash_dirpath = input_dirpath.parent / (input_dirpath.name + '_trash')
         self.cfg_root_path = cfg_root_path
 
         self.cfg_path = cfg_root_path / 'MainWindow_cfg.dat'
@@ -1342,11 +1343,14 @@ class MainWindow(QXMainWindow):
         self.update_cached_images()
         self.update_preview_bar()
         
-    def delete_current_image(self):
+    def trash_current_image(self):
         self.process_next_image()
         
         img_path = self.image_paths_done.pop(-1)
-        Path(img_path).unlink()
+        img_path = Path(img_path)
+        self.trash_dirpath.mkdir(parents=True, exist_ok=True)
+        img_path.rename( self.trash_dirpath / img_path.name )
+        
         self.update_cached_images()
         self.update_preview_bar()
         
@@ -1364,7 +1368,7 @@ class MainWindow(QXMainWindow):
         btn_next_image = QXIconButton(QIconDB.right, QStringDB.btn_next_image_tip, shortcut='D', click_func=self.process_next_image)
         btn_next_image.setIconSize(QUIConfig.preview_bar_icon_q_size)
 
-        btn_delete_image = QXIconButton(QIconDB.trashcan, QStringDB.btn_delete_image_tip, shortcut='X', click_func=self.delete_current_image)
+        btn_delete_image = QXIconButton(QIconDB.trashcan, QStringDB.btn_delete_image_tip, shortcut='X', click_func=self.trash_current_image)
         btn_delete_image.setIconSize(QUIConfig.preview_bar_icon_q_size)
     
         pad_image = QWidget()
@@ -1376,15 +1380,24 @@ class MainWindow(QXMainWindow):
         preview_image_bar_frame_l.addWidget ( btn_prev_image, alignment=Qt.AlignCenter)
         preview_image_bar_frame_l.addWidget ( image_bar)
         preview_image_bar_frame_l.addWidget ( btn_next_image, alignment=Qt.AlignCenter)
-        preview_image_bar_frame_l.addWidget ( btn_delete_image, alignment=Qt.AlignCenter)
+        #preview_image_bar_frame_l.addWidget ( btn_delete_image, alignment=Qt.AlignCenter)
 
         preview_image_bar_frame = QFrame()
         preview_image_bar_frame.setSizePolicy ( QSizePolicy.Fixed, QSizePolicy.Fixed )
         preview_image_bar_frame.setLayout(preview_image_bar_frame_l)
 
-        preview_image_bar_l = QHBoxLayout()
-        preview_image_bar_l.addWidget (preview_image_bar_frame)
+        preview_image_bar_frame2_l = QHBoxLayout()
+        preview_image_bar_frame2_l.setContentsMargins(0,0,0,0)
+        preview_image_bar_frame2_l.addWidget ( btn_delete_image, alignment=Qt.AlignCenter)
 
+        preview_image_bar_frame2 = QFrame()
+        preview_image_bar_frame2.setSizePolicy ( QSizePolicy.Fixed, QSizePolicy.Fixed )
+        preview_image_bar_frame2.setLayout(preview_image_bar_frame2_l)
+        
+        preview_image_bar_l = QHBoxLayout()
+        preview_image_bar_l.addWidget (preview_image_bar_frame, alignment=Qt.AlignCenter)
+        preview_image_bar_l.addWidget (preview_image_bar_frame2)
+        
         preview_image_bar = QFrame()
         preview_image_bar.setFrameShape(QFrame.StyledPanel)
         preview_image_bar.setSizePolicy ( QSizePolicy.Expanding, QSizePolicy.Fixed )
