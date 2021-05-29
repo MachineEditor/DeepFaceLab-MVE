@@ -732,9 +732,9 @@ class AMPModel(ModelBase):
         i = np.random.randint(n_samples)
 
         st =  [ np.concatenate ((S[i],  D[i],  DD[i]*DDM_000[i]), axis=1) ]
-        st += [ np.concatenate ((SS[i], DD[i], SD_065[i] ), axis=1) ]
+        st += [ np.concatenate ((SS[i], DD[i], SD_075[i] ), axis=1) ]
 
-        result += [ ('AMP morph 0.65', np.concatenate (st, axis=0 )), ]
+        result += [ ('AMP morph 0.75', np.concatenate (st, axis=0 )), ]
 
         st =  [ np.concatenate ((DD[i], SD_025[i],  SD_050[i]), axis=1) ]
         st += [ np.concatenate ((SD_065[i], SD_075[i], SD_100[i]), axis=1) ]
@@ -756,7 +756,7 @@ class AMPModel(ModelBase):
 
     #override
     def get_MergerConfig(self):
-        morph_factor = np.clip ( io.input_number ("Morph factor", 0.65, add_info="0.0 .. 1.0"), 0.0, 1.0 )
+        morph_factor = np.clip ( io.input_number ("Morph factor", 0.75, add_info="0.0 .. 1.0"), 0.0, 1.0 )
 
         def predictor_morph(face):
             return self.predictor_func(face, morph_factor)
