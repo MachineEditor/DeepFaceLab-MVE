@@ -121,7 +121,7 @@ class AMPModel(ModelBase):
     def on_initialize(self):
         device_config = nn.getCurrentDeviceConfig()
         devices = device_config.devices
-        self.model_data_format = "NCHW"# if len(devices) != 0 and not self.is_debug() else "NHWC"
+        self.model_data_format = "NCHW"
         nn.initialize(data_format=self.model_data_format)
         tf = nn.tf
 
@@ -262,8 +262,6 @@ class AMPModel(ModelBase):
                 m = tf.nn.sigmoid(self.out_convm(m))
                 return x, m
 
-
-
         self.face_type = {'wf' : FaceType.WHOLE_FACE,
                           'head' : FaceType.HEAD}[ self.options['face_type'] ]
 
@@ -286,7 +284,6 @@ class AMPModel(ModelBase):
         ct_mode = self.options['ct_mode']
         if ct_mode == 'none':
             ct_mode = None
-
 
         models_opt_on_gpu = False if len(devices) == 0 else self.options['models_opt_on_gpu']
         models_opt_device = nn.tf_default_device_name if models_opt_on_gpu and self.is_training else '/CPU:0'
