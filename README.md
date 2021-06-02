@@ -26,9 +26,9 @@ https://arxiv.org/abs/2005.05535</a>
 
 <p align="center">
 
-![](doc/logo_cuda.png)
 ![](doc/logo_tensorflow.png)
-![](doc/logo_python.png)
+![](doc/logo_cuda.png)
+![](doc/logo_directx.png)
 
 </p>
 
@@ -201,7 +201,7 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 </td></tr>
 
 <tr><td align="right">
-<a href="https://tinyurl.com/y8lntghz">Windows (magnet link)</a>
+<a href="https://tinyurl.com/87vwbtr4">Windows (magnet link)</a>
 </td><td align="center">Last release. Use torrent client to download.</td></tr>
 
 <tr><td align="right">
@@ -339,10 +339,6 @@ QQ 951138799
 <tr><td colspan=2 align="center">
 bitcoin:bc1qkhh7h0gwwhxgg6h6gpllfgstkd645fefrd5s6z
 </td></tr>
-
-<tr><td align="right">
-Alipay 捐款
-</td><td align="center"> <img src="doc/Alipay_donation.jpg" align="center"> </td></tr>
 
 <tr><td colspan=2 align="center">
 

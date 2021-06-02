@@ -17,6 +17,7 @@ class QIconDB():
         QIconDB.poly_type_exclude = QIcon ( str(icon_path / 'poly_type_exclude.png') )
         QIconDB.left  = QIcon ( str(icon_path / 'left.png') )
         QIconDB.right = QIcon ( str(icon_path / 'right.png') )
+        QIconDB.trashcan = QIcon ( str(icon_path / 'trashcan.png') )
         QIconDB.pt_edit_mode = QIcon ( str(icon_path / 'pt_edit_mode.png') )
         QIconDB.view_lock_center = QIcon ( str(icon_path / 'view_lock_center.png') )
         QIconDB.view_baked = QIcon ( str(icon_path / 'view_baked.png') )

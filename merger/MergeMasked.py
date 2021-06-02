@@ -142,7 +142,9 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
 
     elif 'raw' in cfg.mode:
         if cfg.mode == 'raw-rgb':
-            out_img = cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, img_bgr.copy(), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC )
+            out_img_face = cv2.warpAffine( prd_face_bgr, face_output_mat, img_size, np.empty_like(img_bgr), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC)
+            out_img_face_mask = cv2.warpAffine( np.ones_like(prd_face_bgr), face_output_mat, img_size, np.empty_like(img_bgr), cv2.WARP_INVERSE_MAP | cv2.INTER_CUBIC)
+            out_img = img_bgr*(1-out_img_face_mask) + out_img_face*out_img_face_mask
             out_merging_mask_a = img_face_mask_a
         elif cfg.mode == 'raw-predict':
             out_img = prd_face_bgr
