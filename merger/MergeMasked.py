@@ -57,7 +57,9 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
         prd_face_mask_a_0     = cv2.resize (prd_face_mask_a_0,      (output_size, output_size), interpolation=cv2.INTER_CUBIC)
         prd_face_dst_mask_a_0 = cv2.resize (prd_face_dst_mask_a_0,  (output_size, output_size), interpolation=cv2.INTER_CUBIC)
 
-    if cfg.mask_mode == 1: #dst
+    if cfg.mask_mode == 0: #full
+        wrk_face_mask_a_0 = np.ones_like(dst_face_mask_a_0)
+    elif cfg.mask_mode == 1: #dst
         wrk_face_mask_a_0 = cv2.resize (dst_face_mask_a_0, (output_size,output_size), interpolation=cv2.INTER_CUBIC)
     elif cfg.mask_mode == 2: #learned-prd
         wrk_face_mask_a_0 = prd_face_mask_a_0
