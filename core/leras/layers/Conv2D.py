@@ -98,7 +98,7 @@ class Conv2D(nn.LayerBase):
         else:
             dilations = [1,1,dilations,dilations]
             
-        x = tf.nn.conv2d(x, weight, self.strides, 'VALID', dilations=self.dilations, data_format=nn.data_format)
+        x = tf.nn.conv2d(x, weight, strides, 'VALID', dilations=dilations, data_format=nn.data_format)
         if self.use_bias:
             if nn.data_format == "NHWC":
                 bias = tf.reshape (self.bias, (1,1,1,self.out_ch) )
