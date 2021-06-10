@@ -8,6 +8,7 @@ import pickle
 import shutil
 import tempfile
 import time
+import datetime
 from pathlib import Path
 
 import cv2
@@ -180,8 +181,9 @@ class ModelBase(object):
         if self.is_first_run():
             # save as default options only for first run model initialize
             self.default_options_path.write_bytes( pickle.dumps (self.options) )
-
+        self.session_name = self.options.get('session_name', "")
         self.autobackup_hour = self.options.get('autobackup_hour', 0)
+        self.maximum_n_backups = self.options.get('maximum_n_backups', 24)
         self.write_preview_history = self.options.get('write_preview_history', False)
         self.target_iter = self.options.get('target_iter',0)
         self.random_flip = self.options.get('random_flip',True)
@@ -192,7 +194,7 @@ class ModelBase(object):
         self.preview_history_writer = None
         if self.is_training:
             self.preview_history_path = self.saved_models_path / ( f'{self.get_model_name()}_history' )
-            self.autobackups_path     = self.saved_models_path / ( f'{self.get_model_name()}_autobackups' )
+            self.autobackups_path     = self.saved_models_path / ( f'{self.get_model_name()}__autobackups' )
 
             if self.write_preview_history or io.is_colab():
                 if not self.preview_history_path.exists():
@@ -276,9 +278,17 @@ class ModelBase(object):
     def ask_override(self):
         return self.is_training and self.iter != 0 and io.input_in_time ("Press enter in 2 seconds to override model settings.", 5 if io.is_colab() else 2 )
 
+    def ask_session_name(self, default_value=""):
+        default_session_name = self.options['session_name'] = self.load_or_def_option('session_name', default_value)
+        self.options['session_name'] = io.input_str("Session name", default_session_name, help_message="String to refer back to in summary.txt and in autobackup foldername")
+
     def ask_autobackup_hour(self, default_value=0):
         default_autobackup_hour = self.options['autobackup_hour'] = self.load_or_def_option('autobackup_hour', default_value)
         self.options['autobackup_hour'] = io.input_int(f"Autobackup every N hour", default_autobackup_hour, add_info="0..24", help_message="Autobackup model files with preview every N hour. Latest backup located in model/<>_autobackups/01")
+
+    def ask_maximum_n_backups(self, default_value=24):
+        default_maximum_n_backups = self.options['maximum_n_backups'] = self.load_or_def_option('maximum_n_backups', default_value)
+        self.options['maximum_n_backups'] = io.input_int(f"Maximum N backups", default_maximum_n_backups, help_message="Maximum amount of backups that are located in model/<>_autobackups. Inputting 0 here would allow it to autobackup as many times as it occurs.")
 
     def ask_write_preview_history(self, default_value=False):
         default_write_preview_history = self.load_or_def_option('write_preview_history', default_value)
@@ -405,33 +415,30 @@ class ModelBase(object):
         bckp_filename_list = [ self.get_strpath_storage_for_file(filename) for _, filename in self.get_model_filename_list() ]
         bckp_filename_list += [ str(self.get_summary_path()), str(self.model_data_path) ]
 
-        for i in range(24,0,-1):
-            idx_str = '%.2d' % i
-            next_idx_str = '%.2d' % (i+1)
+        # Create new backup
+        idx_str = datetime.datetime.now().strftime('%Y%m%dT%H%M%S') + "_" + self.session_name
+        idx_backup_path = self.autobackups_path / idx_str
+        idx_backup_path.mkdir()
+        for filename in bckp_filename_list:
+            shutil.copy(str(filename), str(idx_backup_path / Path(filename).name))
+            previews = self.get_previews()
 
-            idx_backup_path = self.autobackups_path / idx_str
-            next_idx_packup_path = self.autobackups_path / next_idx_str
+        # Generate previews and save in new backup
+        plist = []
+        for i in range(len(previews)):
+            name, bgr = previews[i]
+            plist += [ (bgr, idx_backup_path / ( ('preview_%s.jpg') % (name))  )  ]
 
-            if idx_backup_path.exists():
-                if i == 24:
-                    pathex.delete_all_files(idx_backup_path)
-                else:
-                    next_idx_packup_path.mkdir(exist_ok=True)
-                    pathex.move_all_files (idx_backup_path, next_idx_packup_path)
+        if len(plist) != 0:
+            self.get_preview_history_writer().post(plist, self.loss_history, self.iter)
 
-            if i == 1:
-                idx_backup_path.mkdir(exist_ok=True)
-                for filename in bckp_filename_list:
-                    shutil.copy ( str(filename), str(idx_backup_path / Path(filename).name) )
-
-                previews = self.get_previews()
-                plist = []
-                for i in range(len(previews)):
-                    name, bgr = previews[i]
-                    plist += [ (bgr, idx_backup_path / ( ('preview_%s.jpg') % (name))  )  ]
-
-                if len(plist) != 0:
-                    self.get_preview_history_writer().post(plist, self.loss_history, self.iter)
+        # Check if we've exceeded the max number of backups
+        if self.maximum_n_backups != 0:
+            all_backups = sorted([x for x in self.autobackups_path.iterdir() if x.is_dir()])
+            while len(all_backups) > self.maximum_n_backups:
+                oldest_backup = all_backups.pop(0)
+                pathex.delete_all_files(oldest_backup)
+                oldest_backup.rmdir()
 
     def debug_one_iter(self):
         images = []
