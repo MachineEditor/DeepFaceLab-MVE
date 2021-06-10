@@ -194,7 +194,7 @@ class ModelBase(object):
         self.preview_history_writer = None
         if self.is_training:
             self.preview_history_path = self.saved_models_path / ( f'{self.get_model_name()}_history' )
-            self.autobackups_path     = self.saved_models_path / ( f'{self.get_model_name()}__autobackups' )
+            self.autobackups_path     = self.saved_models_path / ( f'{self.get_model_name()}_autobackups' )
 
             if self.write_preview_history or io.is_colab():
                 if not self.preview_history_path.exists():
@@ -284,7 +284,7 @@ class ModelBase(object):
 
     def ask_autobackup_hour(self, default_value=0):
         default_autobackup_hour = self.options['autobackup_hour'] = self.load_or_def_option('autobackup_hour', default_value)
-        self.options['autobackup_hour'] = io.input_int(f"Autobackup every N hour", default_autobackup_hour, add_info="0..24", help_message="Autobackup model files with preview every N hour. Latest backup located in model/<>_autobackups/01")
+        self.options['autobackup_hour'] = io.input_int(f"Autobackup every N hour", default_autobackup_hour, add_info="0..24", help_message="Autobackup model files with preview every N hour. Latest backup is the last folder when sorted by name ascending located in model/<>_autobackups")
 
     def ask_maximum_n_backups(self, default_value=24):
         default_maximum_n_backups = self.options['maximum_n_backups'] = self.load_or_def_option('maximum_n_backups', default_value)
@@ -292,7 +292,7 @@ class ModelBase(object):
 
     def ask_write_preview_history(self, default_value=False):
         default_write_preview_history = self.load_or_def_option('write_preview_history', default_value)
-        self.options['write_preview_history'] = io.input_bool(f"Write preview history", default_write_preview_history, help_message="Preview history will be writed to <ModelName>_history folder.")
+        self.options['write_preview_history'] = io.input_bool(f"Write preview history", default_write_preview_history, help_message="Preview history will be written to <ModelName>_history folder.")
 
         if self.options['write_preview_history']:
             if io.is_support_windows():
@@ -416,12 +416,14 @@ class ModelBase(object):
         bckp_filename_list += [ str(self.get_summary_path()), str(self.model_data_path) ]
 
         # Create new backup
-        idx_str = datetime.datetime.now().strftime('%Y%m%dT%H%M%S') + "_" + self.session_name
+        session_suffix = f'_{self.session_name}' if self.session_name else ''
+        idx_str = datetime.datetime.now().strftime('%Y%m%dT%H%M%S') + session_suffix
         idx_backup_path = self.autobackups_path / idx_str
         idx_backup_path.mkdir()
         for filename in bckp_filename_list:
-            shutil.copy(str(filename), str(idx_backup_path / Path(filename).name))
-            previews = self.get_previews()
+            shutil.copy(str(filename), str(idx_backup_path / Path(filename).name))\
+
+        previews = self.get_previews()
 
         # Generate previews and save in new backup
         plist = []
