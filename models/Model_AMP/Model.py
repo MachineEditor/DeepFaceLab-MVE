@@ -586,7 +586,7 @@ class AMPModel(ModelBase):
                 gpu_src_dst_code =  tf.concat( ( tf.slice(gpu_dst_inter_src_code, [0,0,0,0],   [-1, ae_dims_slice , lowest_dense_res, lowest_dense_res]),
                                                  tf.slice(gpu_dst_inter_dst_code, [0,ae_dims_slice,0,0], [-1,ae_dims-ae_dims_slice, lowest_dense_res,lowest_dense_res]) ), 1 )
 
-                gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder(gpu_dst_inter_src_code)
+                gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder(gpu_src_dst_code)
                 _, gpu_pred_dst_dstm = self.decoder(gpu_dst_inter_dst_code)
 
             def AE_merge(warped_dst, morph_value):
