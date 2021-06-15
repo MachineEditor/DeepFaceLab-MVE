@@ -161,11 +161,11 @@ class FaceEnhancer(object):
         if not model_path.exists():
             raise Exception("Unable to load FaceEnhancer.npy")
 
-        with tf.device ('/CPU:0' if place_model_on_cpu else '/GPU:0'):
+        with tf.device ('/CPU:0' if place_model_on_cpu else nn.tf_default_device_name):
             self.model = FaceEnhancer()
             self.model.load_weights (model_path)
         
-        with tf.device ('/CPU:0' if run_on_cpu else '/GPU:0'):
+        with tf.device ('/CPU:0' if run_on_cpu else nn.tf_default_device_name):
             self.model.build_for_run ([ (tf.float32, nn.get4Dshape (192,192,3) ),
                                         (tf.float32, (None,1,) ),
                                         (tf.float32, (None,1,) ),

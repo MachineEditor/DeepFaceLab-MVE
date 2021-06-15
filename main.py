@@ -127,6 +127,7 @@ if __name__ == "__main__":
                   'silent_start'             : arguments.silent_start,
                   'execute_programs'         : [ [int(x[0]), x[1] ] for x in arguments.execute_program ],
                   'debug'                    : arguments.debug,
+                  'dump_ckpt'                : arguments.dump_ckpt,
                   'flask_preview'            : arguments.flask_preview,
                   }
         from mainscripts import Trainer
@@ -145,6 +146,7 @@ if __name__ == "__main__":
     p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Train on CPU.")
     p.add_argument('--force-gpu-idxs', dest="force_gpu_idxs", default=None, help="Force to choose GPU indexes separated by comma.")
     p.add_argument('--silent-start', action="store_true", dest="silent_start", default=False, help="Silent start. Automatically chooses Best GPU and last used model.")
+    p.add_argument('--dump-ckpt', action="store_true", dest="dump_ckpt", default=False, help="Dump the model to ckpt format.")
     p.add_argument('--flask-preview', action="store_true", dest="flask_preview", default=False,
                    help="Launches a flask server to view the previews in a web browser")
 
@@ -254,7 +256,17 @@ if __name__ == "__main__":
     p.add_argument('--force-gpu-idxs', dest="force_gpu_idxs", default=None, help="Force to choose GPU indexes separated by comma.")
 
     p.set_defaults(func=process_faceset_enhancer)
+    
+    
+    p = facesettool_parser.add_parser ("resize", help="Resize DFL faceset.")
+    p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory of aligned faces.")
 
+    def process_faceset_resizer(arguments):
+        osex.set_process_lowest_prio()
+        from mainscripts import FacesetResizer
+        FacesetResizer.process_folder ( Path(arguments.input_dir) )
+    p.set_defaults(func=process_faceset_resizer)
+    
     def process_dev_test(arguments):
         osex.set_process_lowest_prio()
         from mainscripts import dev_misc

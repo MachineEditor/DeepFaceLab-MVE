@@ -81,7 +81,8 @@ mode_dict = {0:'original',
 
 mode_str_dict = { mode_dict[key] : key for key in mode_dict.keys() }
 
-mask_mode_dict = {1:'dst',
+mask_mode_dict = {0:'full',
+                  1:'dst',
                   2:'learned-prd',
                   3:'learned-dst',
                   4:'learned-prd*learned-dst',

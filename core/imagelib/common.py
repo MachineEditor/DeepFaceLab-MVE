@@ -1,5 +1,16 @@
 import numpy as np
 
+def random_crop(img, w, h):
+    height, width = img.shape[:2]
+    
+    h_rnd = height - h
+    w_rnd = width - w
+    
+    y = np.random.randint(0, h_rnd) if h_rnd > 0 else 0
+    x = np.random.randint(0, w_rnd) if w_rnd > 0 else 0
+    
+    return img[y:y+height, x:x+width]
+                        
 def normalize_channels(img, target_channels):
     img_shape_len = len(img.shape)
     if img_shape_len == 2:
