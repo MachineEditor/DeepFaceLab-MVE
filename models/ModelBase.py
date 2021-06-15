@@ -8,6 +8,7 @@ import pickle
 import shutil
 import tempfile
 import time
+import datetime
 from pathlib import Path
 
 import cv2
@@ -180,12 +181,15 @@ class ModelBase(object):
         if self.is_first_run():
             # save as default options only for first run model initialize
             self.default_options_path.write_bytes( pickle.dumps (self.options) )
-
+        self.session_name = self.options.get('session_name', "")
         self.autobackup_hour = self.options.get('autobackup_hour', 0)
+        self.maximum_n_backups = self.options.get('maximum_n_backups', 24)
         self.write_preview_history = self.options.get('write_preview_history', False)
         self.target_iter = self.options.get('target_iter',0)
         self.random_flip = self.options.get('random_flip',True)
-
+        self.random_src_flip = self.options.get('random_src_flip', False)
+        self.random_dst_flip = self.options.get('random_dst_flip', True)
+        
         self.on_initialize()
         self.options['batch_size'] = self.batch_size
 
@@ -276,13 +280,21 @@ class ModelBase(object):
     def ask_override(self):
         return self.is_training and self.iter != 0 and io.input_in_time ("Press enter in 2 seconds to override model settings.", 5 if io.is_colab() else 2 )
 
+    def ask_session_name(self, default_value=""):
+        default_session_name = self.options['session_name'] = self.load_or_def_option('session_name', default_value)
+        self.options['session_name'] = io.input_str("Session name", default_session_name, help_message="String to refer back to in summary.txt and in autobackup foldername")
+
     def ask_autobackup_hour(self, default_value=0):
         default_autobackup_hour = self.options['autobackup_hour'] = self.load_or_def_option('autobackup_hour', default_value)
-        self.options['autobackup_hour'] = io.input_int(f"Autobackup every N hour", default_autobackup_hour, add_info="0..24", help_message="Autobackup model files with preview every N hour. Latest backup located in model/<>_autobackups/01")
+        self.options['autobackup_hour'] = io.input_int(f"Autobackup every N hour", default_autobackup_hour, add_info="0..24", help_message="Autobackup model files with preview every N hour. Latest backup is the last folder when sorted by name ascending located in model/<>_autobackups")
+
+    def ask_maximum_n_backups(self, default_value=24):
+        default_maximum_n_backups = self.options['maximum_n_backups'] = self.load_or_def_option('maximum_n_backups', default_value)
+        self.options['maximum_n_backups'] = io.input_int(f"Maximum N backups", default_maximum_n_backups, help_message="Maximum amount of backups that are located in model/<>_autobackups. Inputting 0 here would allow it to autobackup as many times as it occurs.")
 
     def ask_write_preview_history(self, default_value=False):
         default_write_preview_history = self.load_or_def_option('write_preview_history', default_value)
-        self.options['write_preview_history'] = io.input_bool(f"Write preview history", default_write_preview_history, help_message="Preview history will be writed to <ModelName>_history folder.")
+        self.options['write_preview_history'] = io.input_bool(f"Write preview history", default_write_preview_history, help_message="Preview history will be written to <ModelName>_history folder.")
 
         if self.options['write_preview_history']:
             if io.is_support_windows():
@@ -297,6 +309,14 @@ class ModelBase(object):
     def ask_random_flip(self):
         default_random_flip = self.load_or_def_option('random_flip', True)
         self.options['random_flip'] = io.input_bool("Flip faces randomly", default_random_flip, help_message="Predicted face will look more naturally without this option, but src faceset should cover all face directions as dst faceset.")
+    
+    def ask_random_src_flip(self):
+        default_random_src_flip = self.load_or_def_option('random_src_flip', False)
+        self.options['random_src_flip'] = io.input_bool("Flip SRC faces randomly", default_random_src_flip, help_message="Random horizontal flip SRC faceset. Covers more angles, but the face may look less naturally.")
+
+    def ask_random_dst_flip(self):
+        default_random_dst_flip = self.load_or_def_option('random_dst_flip', True)
+        self.options['random_dst_flip'] = io.input_bool("Flip DST faces randomly", default_random_dst_flip, help_message="Random horizontal flip DST faceset. Makes generalization of src->dst better, if src random flip is not enabled.")
 
     def ask_batch_size(self, suggest_batch_size=None, range=None):
         default_batch_size = self.load_or_def_option('batch_size', suggest_batch_size or self.batch_size)
@@ -405,33 +425,32 @@ class ModelBase(object):
         bckp_filename_list = [ self.get_strpath_storage_for_file(filename) for _, filename in self.get_model_filename_list() ]
         bckp_filename_list += [ str(self.get_summary_path()), str(self.model_data_path) ]
 
-        for i in range(24,0,-1):
-            idx_str = '%.2d' % i
-            next_idx_str = '%.2d' % (i+1)
+        # Create new backup
+        session_suffix = f'_{self.session_name}' if self.session_name else ''
+        idx_str = datetime.datetime.now().strftime('%Y%m%dT%H%M%S') + session_suffix
+        idx_backup_path = self.autobackups_path / idx_str
+        idx_backup_path.mkdir()
+        for filename in bckp_filename_list:
+            shutil.copy(str(filename), str(idx_backup_path / Path(filename).name))\
 
-            idx_backup_path = self.autobackups_path / idx_str
-            next_idx_packup_path = self.autobackups_path / next_idx_str
+        previews = self.get_previews()
 
-            if idx_backup_path.exists():
-                if i == 24:
-                    pathex.delete_all_files(idx_backup_path)
-                else:
-                    next_idx_packup_path.mkdir(exist_ok=True)
-                    pathex.move_all_files (idx_backup_path, next_idx_packup_path)
+        # Generate previews and save in new backup
+        plist = []
+        for i in range(len(previews)):
+            name, bgr = previews[i]
+            plist += [ (bgr, idx_backup_path / ( ('preview_%s.jpg') % (name))  )  ]
 
-            if i == 1:
-                idx_backup_path.mkdir(exist_ok=True)
-                for filename in bckp_filename_list:
-                    shutil.copy ( str(filename), str(idx_backup_path / Path(filename).name) )
+        if len(plist) != 0:
+            self.get_preview_history_writer().post(plist, self.loss_history, self.iter)
 
-                previews = self.get_previews()
-                plist = []
-                for i in range(len(previews)):
-                    name, bgr = previews[i]
-                    plist += [ (bgr, idx_backup_path / ( ('preview_%s.jpg') % (name))  )  ]
-
-                if len(plist) != 0:
-                    self.get_preview_history_writer().post(plist, self.loss_history, self.iter)
+        # Check if we've exceeded the max number of backups
+        if self.maximum_n_backups != 0:
+            all_backups = sorted([x for x in self.autobackups_path.iterdir() if x.is_dir()])
+            while len(all_backups) > self.maximum_n_backups:
+                oldest_backup = all_backups.pop(0)
+                pathex.delete_all_files(oldest_backup)
+                oldest_backup.rmdir()
 
     def debug_one_iter(self):
         images = []

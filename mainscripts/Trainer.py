@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 import traceback
 import queue
@@ -15,23 +15,23 @@ import cv2
 import models
 from core.interact import interact as io
 
-
-def trainerThread(s2c, c2s, e,
-                  socketio=None,
-                  model_class_name=None,
-                  saved_models_path=None,
-                  training_data_src_path=None,
-                  training_data_dst_path=None,
-                  pretraining_data_path=None,
-                  pretrained_model_path=None,
-                  no_preview=False,
-                  force_model_name=None,
-                  force_gpu_idxs=None,
-                  cpu_only=None,
-                  silent_start=False,
-                  execute_programs=None,
-                  debug=False,
-                  **kwargs):
+def trainerThread (s2c, c2s, e,
+                    socketio=None,
+                    model_class_name = None,
+                    saved_models_path = None,
+                    training_data_src_path = None,
+                    training_data_dst_path = None,
+                    pretraining_data_path = None,
+                    pretrained_model_path = None,
+                    no_preview=False,
+                    force_model_name=None,
+                    force_gpu_idxs=None,
+                    cpu_only=None,
+                    silent_start=False,
+                    execute_programs = None,
+                    debug=False,
+                    dump_ckpt=False,
+                    **kwargs):
     while True:
         try:
             start_time = time.time()
@@ -46,22 +46,29 @@ def trainerThread(s2c, c2s, e,
 
             if not saved_models_path.exists():
                 saved_models_path.mkdir(exist_ok=True, parents=True)
-
+            
+            if dump_ckpt:
+                cpu_only=True
+                
             model = models.import_model(model_class_name)(
-                is_training=True,
-                saved_models_path=saved_models_path,
-                training_data_src_path=training_data_src_path,
-                training_data_dst_path=training_data_dst_path,
-                pretraining_data_path=pretraining_data_path,
-                pretrained_model_path=pretrained_model_path,
-                no_preview=no_preview,
-                force_model_name=force_model_name,
-                force_gpu_idxs=force_gpu_idxs,
-                cpu_only=cpu_only,
-                silent_start=silent_start,
-                debug=debug,
-            )
+                        is_training=not dump_ckpt,
+                        saved_models_path=saved_models_path,
+                        training_data_src_path=training_data_src_path,
+                        training_data_dst_path=training_data_dst_path,
+                        pretraining_data_path=pretraining_data_path,
+                        pretrained_model_path=pretrained_model_path,
+                        no_preview=no_preview,
+                        force_model_name=force_model_name,
+                        force_gpu_idxs=force_gpu_idxs,
+                        cpu_only=cpu_only,
+                        silent_start=silent_start,
+                        debug=debug)
 
+            if dump_ckpt:
+                e.set()
+                model.dump_ckpt()
+                break
+                
             is_reached_goal = model.is_reached_iter_goal()
 
             shared_state = {'after_save': False}
