@@ -77,6 +77,8 @@ class SegIEPoly():
         self.pts = np.array(pts)
         self.n_max = self.n = len(pts)
         
+    def mult_points(self, val):
+        self.pts *= val       
     
         
 
@@ -136,7 +138,11 @@ class SegIEPolys():
 
     def dump(self):
         return {'polys' : [ poly.dump() for poly in self.polys ] }
-
+    
+    def mult_points(self, val):
+        for poly in self.polys:
+            poly.mult_points(val)
+        
     @staticmethod
     def load(data=None):
         ie_polys = SegIEPolys()

@@ -204,7 +204,7 @@ def random_binomial(shape, p=0.0, dtype=None, seed=None):
         seed = np.random.randint(10e6)
     return array_ops.where(
         random_ops.random_uniform(shape, dtype=tf.float16, seed=seed) < p,
-        array_ops.ones(shape, dtype=dtype), array_ops.zeros(shape, dtype=dtype))
+             array_ops.ones(shape, dtype=dtype), array_ops.zeros(shape, dtype=dtype))
 nn.random_binomial = random_binomial
 
 def gaussian_blur(input, radius=2.0):
@@ -346,7 +346,9 @@ def depth_to_space(x, size):
         x = tf.reshape(x, (-1, oh, ow, oc, ))
         return x
     else:
-        return tf.depth_to_space(x, size, data_format=nn.data_format)
+        cfg = nn.getCurrentDeviceConfig()
+        if not cfg.cpu_only:
+            return tf.depth_to_space(x, size, data_format=nn.data_format)
         b,c,h,w = x.shape.as_list()
         oh, ow = h * size, w * size
         oc = c // (size * size)
@@ -356,11 +358,6 @@ def depth_to_space(x, size):
         x = tf.reshape(x, (-1, oc, oh, ow))
         return x
 nn.depth_to_space = depth_to_space
-
-def pixel_norm(x, power = 1.0):
-    return x * power * tf.rsqrt(tf.reduce_mean(tf.square(x), axis=nn.conv2d_spatial_axes, keepdims=True) + 1e-06)
-nn.pixel_norm = pixel_norm
-
 
 def rgb_to_lab(srgb):
     srgb_pixels = tf.reshape(srgb, [-1, 3])
@@ -404,6 +401,11 @@ def total_variation_mse(images):
     return tot_var
 nn.total_variation_mse = total_variation_mse
 
+
+def pixel_norm(x, axes):
+    return x * tf.rsqrt(tf.reduce_mean(tf.square(x), axis=axes, keepdims=True) + 1e-06)
+nn.pixel_norm = pixel_norm
+        
 """
 def tf_suppress_lower_mean(t, eps=0.00001):
     if t.shape.ndims != 1:

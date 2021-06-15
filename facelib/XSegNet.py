@@ -39,7 +39,7 @@ class XSegNet(object):
             self.target_t = tf.placeholder (nn.floatx, nn.get4Dshape(resolution,resolution,1) )
 
         # Initializing model classes
-        with tf.device ('/CPU:0' if place_model_on_cpu else '/GPU:0'):
+        with tf.device ('/CPU:0' if place_model_on_cpu else nn.tf_default_device_name):
             self.model = nn.XSeg(3, 32, 1, name=name)
             self.model_weights = self.model.get_weights()
             if training:
@@ -53,7 +53,7 @@ class XSegNet(object):
         self.model_filename_list += [ [self.model, f'{model_name}.npy'] ]
 
         if not training:
-            with tf.device ('/CPU:0' if run_on_cpu else '/GPU:0'):
+            with tf.device ('/CPU:0' if run_on_cpu else nn.tf_default_device_name):
                 _, pred = self.model(self.input_t)
 
             def net_run(input_np):
