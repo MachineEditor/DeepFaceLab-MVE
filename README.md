@@ -295,7 +295,7 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 
 <tr><td align="right">
 QQ群1095077489
-</td><td align="center">中文 Chinese QQ group for ML/AI experts</td></tr>
+</td><td align="center">中文交流QQ群，商务合作找群主</td></tr>
 
 <tr><td align="right">
 <a href="https://www.dfldata.xyz">dfldata.xyz</a>
