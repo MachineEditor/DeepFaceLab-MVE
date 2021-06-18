@@ -294,7 +294,7 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 </td><td align="center">Постим русские дипфейки сюда !</td></tr>
 
 <tr><td align="right">
-QQ 951138799
+QQ群1095077489
 </td><td align="center">中文 Chinese QQ group for ML/AI experts</td></tr>
 
 <tr><td align="right">
