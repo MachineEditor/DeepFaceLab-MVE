@@ -692,6 +692,10 @@ class AMPModel(ModelBase):
             if ct_mode is not None:
                 src_generators_count = int(src_generators_count * 1.5)
 
+            fs_aug = None
+            if ct_mode == 'fs-aug':
+                fs_aug = 'fs-aug'
+
             channel_type = SampleProcessor.ChannelType.LAB_RAND_TRANSFORM if self.options['random_color'] else SampleProcessor.ChannelType.BGR
 
             self.set_training_data_generators ([
@@ -702,7 +706,8 @@ class AMPModel(ModelBase):
                                                  'random_noise': self.options['random_noise'],
                                                  'random_blur': self.options['random_blur'],
                                                  'random_jpeg': self.options['random_jpeg'],
-                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,
+                                                 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
@@ -717,8 +722,9 @@ class AMPModel(ModelBase):
                                                  'random_noise': self.options['random_noise'],
                                                  'random_blur': self.options['random_blur'],
                                                  'random_jpeg': self.options['random_jpeg'],
-                                                 'transform':True, 'channel_type' : channel_type,                                                                'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type,                                                                'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,
+                                                 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,                                            'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                               ],
