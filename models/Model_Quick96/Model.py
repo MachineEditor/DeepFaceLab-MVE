@@ -278,7 +278,7 @@ class QModel(ModelBase):
         return ( ('src_loss', src_loss), ('dst_loss', dst_loss), )
 
     #override
-    def onGetPreview(self, samples):
+    def onGetPreview(self, samples, for_history=False):
         ( (warped_src, target_src, target_srcm),
           (warped_dst, target_dst, target_dstm) ) = samples
 

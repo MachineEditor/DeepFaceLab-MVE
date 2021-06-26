@@ -27,7 +27,6 @@ def trainerThread (s2c, c2s, e,
                     silent_start=False,
                     execute_programs = None,
                     debug=False,
-                    dump_ckpt=False,
                     **kwargs):
     while True:
         try:
@@ -43,12 +42,9 @@ def trainerThread (s2c, c2s, e,
 
             if not saved_models_path.exists():
                 saved_models_path.mkdir(exist_ok=True, parents=True)
-            
-            if dump_ckpt:
-                cpu_only=True
-                
+                            
             model = models.import_model(model_class_name)(
-                        is_training=not dump_ckpt,
+                        is_training=True,
                         saved_models_path=saved_models_path,
                         training_data_src_path=training_data_src_path,
                         training_data_dst_path=training_data_dst_path,
@@ -61,11 +57,6 @@ def trainerThread (s2c, c2s, e,
                         silent_start=silent_start,
                         debug=debug)
 
-            if dump_ckpt:
-                e.set()
-                model.dump_ckpt()
-                break
-                
             is_reached_goal = model.is_reached_iter_goal()
 
             shared_state = { 'after_save' : False }

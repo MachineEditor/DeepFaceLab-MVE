@@ -164,7 +164,7 @@ class XSegModel(ModelBase):
         return ( ('loss', np.mean(loss) ), )
 
     #override
-    def onGetPreview(self, samples):
+    def onGetPreview(self, samples, for_history=False):
         n_samples = min(4, self.get_batch_size(), 800 // self.resolution )
 
         srcdst_samples, src_samples, dst_samples = samples
