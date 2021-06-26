@@ -12,7 +12,7 @@
             "type": "python",
             "request": "launch",
             "program": "${env:DFL_ROOT}\\main.py",
-            "pythonPath": "${env:PYTHONEXECUTABLE}",
+            "python": "${env:PYTHONEXECUTABLE}",
             "cwd": "${env:WORKSPACE}",
             "console": "integratedTerminal",    
             "args": ["train", 
