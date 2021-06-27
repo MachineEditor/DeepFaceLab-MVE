@@ -166,7 +166,7 @@ class FacesetResizerSubprocessor(Subprocessor):
 
 def process_folder ( dirpath):
     
-    image_size = io.input_int(f"New image size", 512, valid_range=[256,2048])
+    image_size = io.input_int(f"New image size", 512, valid_range=[128,2048])
     
     face_type = io.input_str ("Change face type", 'same', ['h','mf','f','wf','head','same']).lower()
     if face_type == 'same':
