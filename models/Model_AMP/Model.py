@@ -638,10 +638,10 @@ class AMPModel(ModelBase):
                 self.update_sample_for_preview(force_new=True)
 
 
-    def dump_dflive (self):
-        output_path=self.get_strpath_storage_for_file('model.dflive')
+    def export_dfm (self):
+        output_path=self.get_strpath_storage_for_file('model.dfm')
         
-        io.log_info(f'Dumping .dflive to {output_path}')
+        io.log_info(f'Dumping .dfm to {output_path}')
         
         tf = nn.tf
         with tf.device (nn.tf_default_device_name):

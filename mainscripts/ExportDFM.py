@@ -19,4 +19,4 @@ def main(model_class_name, saved_models_path):
                         is_training=False,
                         saved_models_path=saved_models_path,
                         cpu_only=True)
-    model.dump_dflive () 
+    model.export_dfm () 
