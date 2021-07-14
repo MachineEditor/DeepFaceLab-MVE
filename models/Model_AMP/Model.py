@@ -30,7 +30,8 @@ class AMPModel(ModelBase):
         yn_str = {True:'y',False:'n'}
         min_res = 64
         max_res = 640
-
+    
+        default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
         default_resolution         = self.options['resolution']         = self.load_or_def_option('resolution', 224)
         default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'wf')
         default_models_opt_on_gpu  = self.options['models_opt_on_gpu']  = self.load_or_def_option('models_opt_on_gpu', True)
@@ -50,10 +51,6 @@ class AMPModel(ModelBase):
         default_eyes_mouth_prio    = self.options['eyes_mouth_prio']    = self.load_or_def_option('eyes_mouth_prio', True)
         default_uniform_yaw        = self.options['uniform_yaw']        = self.load_or_def_option('uniform_yaw', False)
 
-        lr_dropout = self.load_or_def_option('lr_dropout', 'n')
-        lr_dropout = {True:'y', False:'n'}.get(lr_dropout, lr_dropout) #backward comp
-        default_lr_dropout         = self.options['lr_dropout'] = lr_dropout
-
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
         default_ct_mode            = self.options['ct_mode']            = self.load_or_def_option('ct_mode', 'none')
         default_clipgrad           = self.options['clipgrad']           = self.load_or_def_option('clipgrad', False)
@@ -68,7 +65,8 @@ class AMPModel(ModelBase):
             self.ask_random_src_flip()
             self.ask_random_dst_flip()
             self.ask_batch_size(suggest_batch_size)
-
+            self.options['use_fp16'] = io.input_bool ("Use fp16", default_usefp16, help_message='Increases training/inference speed, reduces model size. Model may crash. Enable it after 1-5k iters.')
+            
         if self.is_first_run():
             resolution = io.input_int("Resolution", default_resolution, add_info="64-640", help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 32 .")
             resolution = np.clip ( (resolution // 32) * 32, min_res, max_res)
@@ -113,11 +111,9 @@ class AMPModel(ModelBase):
         if self.is_first_run() or ask_override:
             self.options['models_opt_on_gpu'] = io.input_bool ("Place models and optimizer on GPU", default_models_opt_on_gpu, help_message="When you train on one GPU, by default model and optimizer weights are placed on GPU to accelerate the process. You can place they on CPU to free up extra VRAM, thus set bigger dimensions.")
 
-            self.options['lr_dropout']  = io.input_str (f"Use learning rate dropout", default_lr_dropout, ['n','y','cpu'], help_message="When the face is trained enough, you can enable this option to get extra sharpness and reduce subpixel shake for less amount of iterations. Enabled it before `disable random warp` and before GAN. \nn - disabled.\ny - enabled\ncpu - enabled on CPU. This allows not to use extra VRAM, sacrificing 20% time of iteration.")
-
             self.options['random_warp'] = io.input_bool ("Enable random warp of samples", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness and reduce subpixel shake for less amount of iterations.")
 
-            self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 1.0", help_message="Forces the neural network to learn small details of the face. Enable it only when the face is trained enough with lr_dropout(on) and random_warp(off), and don't disable. The higher the value, the higher the chances of artifacts. Typical fine value is 0.1"), 0.0, 1.0 )
+            self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 1.0", help_message="Forces the neural network to learn small details of the face. Enable it only when the face is trained enough with random_warp(off), and don't disable. The higher the value, the higher the chances of artifacts. Typical fine value is 0.1"), 0.0, 1.0 )
 
             if self.options['gan_power'] != 0.0:
                 gan_patch_size = np.clip ( io.input_int("GAN patch size", default_gan_patch_size, add_info="3-640", help_message="The higher patch size, the higher the quality, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is resolution / 8." ), 3, 640 )
@@ -151,17 +147,19 @@ class AMPModel(ModelBase):
         d_dims = self.options['d_dims']
         d_mask_dims = self.options['d_mask_dims']
         inter_res = self.inter_res = resolution // 32
-
+        use_fp16 = self.options['use_fp16']
+        conv_dtype = tf.float16 if use_fp16 else tf.float32
+        
         class Downscale(nn.ModelBase):
             def on_build(self, in_ch, out_ch, kernel_size=5 ):
-                self.conv1 = nn.Conv2D( in_ch, out_ch, kernel_size=kernel_size, strides=2, padding='SAME')
+                self.conv1 = nn.Conv2D( in_ch, out_ch, kernel_size=kernel_size, strides=2, padding='SAME', dtype=conv_dtype)
 
             def forward(self, x):
                 return tf.nn.leaky_relu(self.conv1(x), 0.1)
 
         class Upscale(nn.ModelBase):
             def on_build(self, in_ch, out_ch, kernel_size=3 ):
-                self.conv1 = nn.Conv2D(in_ch, out_ch*4, kernel_size=kernel_size, padding='SAME')
+                self.conv1 = nn.Conv2D(in_ch, out_ch*4, kernel_size=kernel_size, padding='SAME', dtype=conv_dtype)
 
             def forward(self, x):
                 x = nn.depth_to_space(tf.nn.leaky_relu(self.conv1(x), 0.1), 2)
@@ -169,8 +167,8 @@ class AMPModel(ModelBase):
 
         class ResidualBlock(nn.ModelBase):
             def on_build(self, ch, kernel_size=3 ):
-                self.conv1 = nn.Conv2D( ch, ch, kernel_size=kernel_size, padding='SAME')
-                self.conv2 = nn.Conv2D( ch, ch, kernel_size=kernel_size, padding='SAME')
+                self.conv1 = nn.Conv2D( ch, ch, kernel_size=kernel_size, padding='SAME', dtype=conv_dtype)
+                self.conv2 = nn.Conv2D( ch, ch, kernel_size=kernel_size, padding='SAME', dtype=conv_dtype)
 
             def forward(self, inp):
                 x = self.conv1(inp)
@@ -190,8 +188,9 @@ class AMPModel(ModelBase):
                 self.res5 = ResidualBlock(e_dims*8)
                 self.dense1 = nn.Dense( (( resolution//(2**5) )**2) * e_dims*8, ae_dims )
 
-            def forward(self, inp):
-                x = inp
+            def forward(self, x):
+                if use_fp16:
+                    x = tf.cast(x, tf.float16)
                 x = self.down1(x)
                 x = self.res1(x)
                 x = self.down2(x)
@@ -199,6 +198,8 @@ class AMPModel(ModelBase):
                 x = self.down4(x)
                 x = self.down5(x)
                 x = self.res5(x)
+                if use_fp16:
+                    x = tf.cast(x, tf.float32)
                 x = nn.pixel_norm(nn.flatten(x), axes=-1)
                 x = self.dense1(x)
                 return x
@@ -232,15 +233,16 @@ class AMPModel(ModelBase):
                 self.upscalem2 = Upscale(d_mask_dims*8, d_mask_dims*4, kernel_size=3)
                 self.upscalem3 = Upscale(d_mask_dims*4, d_mask_dims*2, kernel_size=3)
                 self.upscalem4 = Upscale(d_mask_dims*2, d_mask_dims*1, kernel_size=3)
-                self.out_convm = nn.Conv2D( d_mask_dims*1, 1, kernel_size=1, padding='SAME')
+                self.out_convm = nn.Conv2D( d_mask_dims*1, 1, kernel_size=1, padding='SAME', dtype=conv_dtype)
 
-                self.out_conv  = nn.Conv2D( d_dims*2, 3, kernel_size=1, padding='SAME')
-                self.out_conv1 = nn.Conv2D( d_dims*2, 3, kernel_size=3, padding='SAME')
-                self.out_conv2 = nn.Conv2D( d_dims*2, 3, kernel_size=3, padding='SAME')
-                self.out_conv3 = nn.Conv2D( d_dims*2, 3, kernel_size=3, padding='SAME')
+                self.out_conv  = nn.Conv2D( d_dims*2, 3, kernel_size=1, padding='SAME', dtype=conv_dtype)
+                self.out_conv1 = nn.Conv2D( d_dims*2, 3, kernel_size=3, padding='SAME', dtype=conv_dtype)
+                self.out_conv2 = nn.Conv2D( d_dims*2, 3, kernel_size=3, padding='SAME', dtype=conv_dtype)
+                self.out_conv3 = nn.Conv2D( d_dims*2, 3, kernel_size=3, padding='SAME', dtype=conv_dtype)
 
-            def forward(self, inp):
-                z = inp
+            def forward(self, z):
+                if use_fp16:
+                    z = tf.cast(z, tf.float16)
 
                 x = self.upscale0(z)
                 x = self.res0(x)
@@ -262,6 +264,10 @@ class AMPModel(ModelBase):
                 m = self.upscalem3(m)
                 m = self.upscalem4(m)
                 m = tf.nn.sigmoid(self.out_convm(m))
+                
+                if use_fp16:
+                    x = tf.cast(x, tf.float32)
+                    m = tf.cast(m, tf.float32)
                 return x, m
 
         self.face_type = {'f'  : FaceType.FULL,
@@ -339,12 +345,12 @@ class AMPModel(ModelBase):
 
             if self.is_training:
                 if gan_power != 0:
-                    self.GAN = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], name="GAN")
+                    self.GAN = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], use_fp16=use_fp16, name="GAN")
                     self.model_filename_list += [ [self.GAN, 'GAN.npy'] ]
 
                 # Initialize optimizers
                 lr=5e-5
-                lr_dropout = 0.3 if self.options['lr_dropout'] in ['y','cpu'] else 1.0 #and not self.pretrain
+                lr_dropout = 0.3
 
                 clipnorm = 1.0 if self.options['clipgrad'] else 0.0
 
@@ -355,12 +361,12 @@ class AMPModel(ModelBase):
                 self.trainable_weights = self.encoder.get_weights() + self.decoder.get_weights()
 
                 self.src_dst_opt = nn.AdaBelief(lr=lr, lr_dropout=lr_dropout, clipnorm=clipnorm, name='src_dst_opt')
-                self.src_dst_opt.initialize_variables (self.all_weights, vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')
+                self.src_dst_opt.initialize_variables (self.all_weights, vars_on_cpu=optimizer_vars_on_cpu)
                 self.model_filename_list += [ (self.src_dst_opt, 'src_dst_opt.npy') ]
 
                 if gan_power != 0:
                     self.GAN_opt = nn.AdaBelief(lr=lr, lr_dropout=lr_dropout, clipnorm=clipnorm, name='GAN_opt')
-                    self.GAN_opt.initialize_variables ( self.GAN.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')#+self.D_src_x2.get_weights()
+                    self.GAN_opt.initialize_variables ( self.GAN.get_weights(), vars_on_cpu=optimizer_vars_on_cpu)#+self.D_src_x2.get_weights()
                     self.model_filename_list += [ (self.GAN_opt, 'GAN_opt.npy') ]
 
         if self.is_training:
