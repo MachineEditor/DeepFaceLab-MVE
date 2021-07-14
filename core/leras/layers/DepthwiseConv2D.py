@@ -68,8 +68,8 @@ class DepthwiseConv2D(nn.LayerBase):
             if kernel_initializer is None:
                 kernel_initializer = tf.initializers.random_normal(0, 1.0, dtype=self.dtype)
 
-        if kernel_initializer is None:
-            kernel_initializer = nn.initializers.ca()
+        #if kernel_initializer is None:
+        #    kernel_initializer = nn.initializers.ca()
 
         self.weight = tf.get_variable("weight", (self.kernel_size,self.kernel_size,self.in_ch,self.depth_multiplier), dtype=self.dtype, initializer=kernel_initializer, trainable=self.trainable )
 
