@@ -22,6 +22,7 @@ from samplelib import SampleGeneratorBase
 
 class ModelBase(object):
     def __init__(self, is_training=False,
+                       is_exporting=False,
                        saved_models_path=None,
                        training_data_src_path=None,
                        training_data_dst_path=None,
@@ -36,6 +37,7 @@ class ModelBase(object):
                        silent_start=False,
                        **kwargs):
         self.is_training = is_training
+        self.is_exporting = is_exporting
         self.saved_models_path = saved_models_path
         self.training_data_src_path = training_data_src_path
         self.training_data_dst_path = training_data_dst_path
