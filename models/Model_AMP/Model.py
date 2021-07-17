@@ -46,7 +46,7 @@ class AMPModel(ModelBase):
         default_e_dims             = self.options['e_dims']             = self.load_or_def_option('e_dims', 64)
         default_d_dims             = self.options['d_dims']             = self.options.get('d_dims', None)
         default_d_mask_dims        = self.options['d_mask_dims']        = self.options.get('d_mask_dims', None)
-        default_morph_factor       = self.options['morph_factor']       = self.options.get('morph_factor', 0.1)
+        default_morph_factor       = self.options['morph_factor']       = self.options.get('morph_factor', 0.5)
         default_masked_training    = self.options['masked_training']    = self.load_or_def_option('masked_training', True)
         default_eyes_mouth_prio    = self.options['eyes_mouth_prio']    = self.load_or_def_option('eyes_mouth_prio', True)
         default_uniform_yaw        = self.options['uniform_yaw']        = self.load_or_def_option('uniform_yaw', False)
@@ -780,9 +780,9 @@ class AMPModel(ModelBase):
         i = np.random.randint(n_samples) if not for_history else 0
 
         st =  [ np.concatenate ((S[i],  D[i],  DD[i]*DDM_000[i]), axis=1) ]
-        st += [ np.concatenate ((SS[i], DD[i], SD_075[i] ), axis=1) ]
+        st += [ np.concatenate ((SS[i], DD[i], SD_100[i] ), axis=1) ]
 
-        result += [ ('AMP morph 0.75', np.concatenate (st, axis=0 )), ]
+        result += [ ('AMP morph 1.0', np.concatenate (st, axis=0 )), ]
 
         st =  [ np.concatenate ((DD[i], SD_025[i],  SD_050[i]), axis=1) ]
         st += [ np.concatenate ((SD_065[i], SD_075[i], SD_100[i]), axis=1) ]
@@ -803,7 +803,7 @@ class AMPModel(ModelBase):
 
     #override
     def get_MergerConfig(self):
-        morph_factor = np.clip ( io.input_number ("Morph factor", 0.75, add_info="0.0 .. 1.0"), 0.0, 1.0 )
+        morph_factor = np.clip ( io.input_number ("Morph factor", 1.0, add_info="0.0 .. 1.0"), 0.0, 1.0 )
 
         def predictor_morph(face):
             return self.predictor_func(face, morph_factor)
