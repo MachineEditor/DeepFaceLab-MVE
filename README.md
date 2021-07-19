@@ -305,12 +305,11 @@ QQ群1095077489
 <a href="https://www.deepfaker.xyz/">deepfaker.xyz</a>
 </td><td align="center">中文学习站（非官方)</td></tr>
 
-</table>
-
-<table align="center" border="0">
 <tr><td colspan=2 align="center">
 
 ## Related works
+
+</td></tr>
 
 <tr><td align="right">
 <a href="https://github.com/neuralchen/SimSwap">neuralchen/SimSwap</a>
