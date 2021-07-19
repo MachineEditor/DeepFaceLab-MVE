@@ -313,7 +313,7 @@ QQ群1095077489
 
 <tr><td align="right">
 <a href="https://github.com/neuralchen/SimSwap">neuralchen/SimSwap</a>
-</td><td align="center">swap face using one photo 一张图免训练换脸</td></tr>
+</td><td align="center">Swapping face using ONE single photo 一张图免训练换脸</td></tr>
 
 </td></tr>
 </table>
