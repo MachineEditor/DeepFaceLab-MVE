@@ -308,6 +308,18 @@ QQ群1095077489
 </table>
 
 <table align="center" border="0">
+<tr><td colspan=2 align="center">
+
+## Related works
+
+<tr><td align="right">
+<a href="https://github.com/neuralchen/SimSwap">neuralchen/SimSwap</a>
+</td><td align="center">swap face using one photo 一张图免训练换脸</td></tr>
+
+</td></tr>
+</table>
+
+<table align="center" border="0">
 
 <tr><td colspan=2 align="center">
 
