@@ -34,7 +34,7 @@ class AMPModel(ModelBase):
         default_d_mask_dims        = self.options['d_mask_dims']        = self.options.get('d_mask_dims', None)
         default_morph_factor       = self.options['morph_factor']       = self.options.get('morph_factor', 0.5)
         default_uniform_yaw        = self.options['uniform_yaw']        = self.load_or_def_option('uniform_yaw', False)
-
+        default_lr_dropout         = self.options['lr_dropout'] = self.load_or_def_option('lr_dropout', 'n')
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
         default_ct_mode            = self.options['ct_mode']            = self.load_or_def_option('ct_mode', 'none')
         default_clipgrad           = self.options['clipgrad']           = self.load_or_def_option('clipgrad', False)
@@ -79,6 +79,7 @@ class AMPModel(ModelBase):
 
         if self.is_first_run() or ask_override:
             self.options['uniform_yaw'] = io.input_bool ("Uniform yaw distribution of samples", default_uniform_yaw, help_message='Helps to fix blurry side faces due to small amount of them in the faceset.')
+            self.options['lr_dropout']  = io.input_str (f"Use learning rate dropout", default_lr_dropout, ['n','y','cpu'], help_message="When the face is trained enough, you can enable this option to get extra sharpness and reduce subpixel shake for less amount of iterations. Enabled it before `disable random warp` and before GAN. \nn - disabled.\ny - enabled\ncpu - enabled on CPU. This allows not to use extra VRAM, sacrificing 20% time of iteration.")
 
         default_gan_power          = self.options['gan_power']          = self.load_or_def_option('gan_power', 0.0)
         default_gan_patch_size     = self.options['gan_patch_size']     = self.load_or_def_option('gan_patch_size', self.options['resolution'] // 8)
@@ -290,16 +291,17 @@ class AMPModel(ModelBase):
             if self.is_training:
                 # Initialize optimizers
                 clipnorm = 1.0 if self.options['clipgrad'] else 0.0
-
+                lr_dropout = 0.3 if self.options['lr_dropout'] in ['y','cpu'] else 1.0
+                
                 self.all_weights = self.encoder.get_weights() + self.decoder.get_weights()
 
-                self.src_dst_opt = nn.AdaBelief(lr=5e-5, lr_dropout=0.3, clipnorm=clipnorm, name='src_dst_opt')
+                self.src_dst_opt = nn.AdaBelief(lr=5e-5, lr_dropout=lr_dropout, clipnorm=clipnorm, name='src_dst_opt')
                 self.src_dst_opt.initialize_variables (self.all_weights, vars_on_cpu=optimizer_vars_on_cpu)
                 self.model_filename_list += [ (self.src_dst_opt, 'src_dst_opt.npy') ]
 
                 if gan_power != 0:
                     self.GAN = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], name="GAN")
-                    self.GAN_opt = nn.AdaBelief(lr=5e-5, lr_dropout=0.3, clipnorm=clipnorm, name='GAN_opt')
+                    self.GAN_opt = nn.AdaBelief(lr=5e-5, lr_dropout=lr_dropout, clipnorm=clipnorm, name='GAN_opt')
                     self.GAN_opt.initialize_variables ( self.GAN.get_weights(), vars_on_cpu=optimizer_vars_on_cpu)
                     self.model_filename_list += [ [self.GAN, 'GAN.npy'],
                                                   [self.GAN_opt, 'GAN_opt.npy'] ]
