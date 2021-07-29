@@ -16,18 +16,12 @@ class AMPModel(ModelBase):
 
     #override
     def on_initialize_options(self):
-        device_config = nn.getCurrentDeviceConfig()
-
         default_resolution         = self.options['resolution']         = self.load_or_def_option('resolution', 224)
         default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'wf')
         default_models_opt_on_gpu  = self.options['models_opt_on_gpu']  = self.load_or_def_option('models_opt_on_gpu', True)
 
         default_ae_dims            = self.options['ae_dims']            = self.load_or_def_option('ae_dims', 256)
-
-        inter_dims = self.load_or_def_option('inter_dims', None)
-        if inter_dims is None:
-            inter_dims = self.options['ae_dims']
-        default_inter_dims         = self.options['inter_dims'] = inter_dims
+        default_inter_dims         = self.options['inter_dims']         = self.load_or_def_option('inter_dims', 1024)
 
         default_e_dims             = self.options['e_dims']             = self.load_or_def_option('e_dims', 64)
         default_d_dims             = self.options['d_dims']             = self.options.get('d_dims', None)
@@ -99,7 +93,7 @@ class AMPModel(ModelBase):
                 gan_dims = np.clip ( io.input_int("GAN dimensions", default_gan_dims, add_info="4-512", help_message="The dimensions of the GAN network. The higher dimensions, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is 16." ), 4, 512 )
                 self.options['gan_dims'] = gan_dims
 
-            self.options['ct_mode'] = io.input_str (f"Color transfer for src faceset", default_ct_mode, ['none','rct','lct','mkl','idt','sot'], help_message="Change color distribution of src samples close to dst samples. Try all modes to find the best.")
+            self.options['ct_mode'] = io.input_str (f"Color transfer for src faceset", default_ct_mode, ['none','rct','lct','mkl','idt','sot'], help_message="Change color distribution of src samples close to dst samples. If src faceset is deverse enough, then lct mode is fine in most cases.")
             self.options['clipgrad'] = io.input_bool ("Enable gradient clipping", default_clipgrad, help_message="Gradient clipping reduces chance of model collapse, sacrificing speed of training.")
 
         self.gan_model_changed = (default_gan_patch_size != self.options['gan_patch_size']) or (default_gan_dims != self.options['gan_dims'])
