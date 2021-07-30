@@ -125,7 +125,10 @@ class AMPModel(ModelBase):
         if ct_mode == 'none':
             ct_mode = None
 
-        use_fp16 = self.is_exporting
+        use_fp16 = False
+        if self.is_exporting:
+            use_fp16 = io.input_bool ("Export quantized?", False, help_message='Makes the exported model faster. If you have problems, disable this option.')
+            
         conv_dtype = tf.float16 if use_fp16 else tf.float32
 
         class Downscale(nn.ModelBase):
