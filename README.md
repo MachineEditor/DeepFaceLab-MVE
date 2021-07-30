@@ -194,7 +194,7 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 </td></tr>
 
 <tr><td align="right">
-<a href="https://tinyurl.com/2afv92ay">Windows (magnet link)</a>
+<a href="magnet:?xt=urn:btih:3546c47b5075a13ebf1d3d3778fca2e71ed7acbf&dn=DeepFaceLab&tr=udp%3a%2f%2ftracker.opentrackr.org%3a1337%2fannounce">Windows (magnet link)</a>
 </td><td align="center">Last release. Use torrent client to download.</td></tr>
 
 <tr><td align="right">
