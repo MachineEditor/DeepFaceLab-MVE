@@ -84,19 +84,20 @@ class SampleProcessor(object):
                 LandmarksProcessor.draw_landmarks (sample_bgr, sample_landmarks, (0, 1, 0))
         
             params_per_resolution = {}            
-            warp_rnd_state = np.random.RandomState (sample_rnd_seed-1)            
+            warp_rnd_state = np.random.RandomState (sample_rnd_seed-1)          
             for opts in output_sample_types:
                 resolution = opts.get('resolution', None)
                 if resolution is None:
                     continue
-                params_per_resolution[resolution] = imagelib.gen_warp_params(resolution, 
+                if resolution not in params_per_resolution:
+                    params_per_resolution[resolution] = imagelib.gen_warp_params(resolution, 
                                                                              sample_process_options.random_flip, 
                                                                              rotation_range=sample_process_options.rotation_range, 
                                                                              scale_range=sample_process_options.scale_range, 
                                                                              tx_range=sample_process_options.tx_range, 
                                                                              ty_range=sample_process_options.ty_range, 
                                                                              rnd_state=warp_rnd_state)
-
+            
             outputs_sample = []
             for opts in output_sample_types:
                 sample_type    = opts.get('sample_type', SPST.NONE)
