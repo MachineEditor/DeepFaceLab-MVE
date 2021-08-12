@@ -69,14 +69,14 @@ def gen_pts(W, H, rnd_state=None):
     if rnd_state is None:
         rnd_state = np.random
         
-    min_pts, max_pts = 4, 16
+    min_pts, max_pts = 4, 8
     n_pts = rnd_state.randint(min_pts, max_pts)
     
     min_radius_per = 0.00
     max_radius_per = 0.10
     pts = []
     
-    for i in range(max_pts):
+    for i in range(n_pts):
         while True:
             x, y = rnd_state.randint(W), rnd_state.randint(H)
             rad = min_radius_per + rnd_state.rand()*(max_radius_per-min_radius_per)
