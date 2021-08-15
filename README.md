@@ -315,7 +315,7 @@ QQ群1095077489
 </td></tr>
 
 <tr><td align="right">
-<a href="https://github.com/deepfakes/faceswap">DeepFaceLive</a>
+<a href="https://github.com/iperov/DeepFaceLive">DeepFaceLive</a>
 </td><td align="center">Real-time face swap for PC streaming or video calls</td></tr>
 
 <tr><td align="right">
