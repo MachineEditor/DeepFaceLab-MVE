@@ -97,9 +97,6 @@ class ExtractSubprocessor(Subprocessor):
 
             h, w, c = image.shape
 
-            dflimg = DFLIMG.load (filepath)
-            extract_from_dflimg = (h == w and (dflimg is not None and dflimg.has_data()) )
-
             if 'rects' in self.type or self.type == 'all':
                 data = ExtractSubprocessor.Cli.rects_stage (data=data,
                                                             image=image,
@@ -110,7 +107,6 @@ class ExtractSubprocessor(Subprocessor):
             if 'landmarks' in self.type or self.type == 'all':
                 data = ExtractSubprocessor.Cli.landmarks_stage (data=data,
                                                                 image=image,
-                                                                extract_from_dflimg=extract_from_dflimg,
                                                                 landmarks_extractor=self.landmarks_extractor,
                                                                 rects_extractor=self.rects_extractor,
                                                                 )
@@ -121,7 +117,6 @@ class ExtractSubprocessor(Subprocessor):
                                                            face_type=self.face_type,
                                                            image_size=self.image_size,
                                                            jpeg_quality=self.jpeg_quality,
-                                                           extract_from_dflimg=extract_from_dflimg,
                                                            output_debug_path=self.output_debug_path,
                                                            final_output_path=self.final_output_path,
                                                            )
@@ -161,7 +156,6 @@ class ExtractSubprocessor(Subprocessor):
         @staticmethod
         def landmarks_stage(data,
                             image,
-                            extract_from_dflimg,
                             landmarks_extractor,
                             rects_extractor,
                             ):
@@ -176,7 +170,7 @@ class ExtractSubprocessor(Subprocessor):
             elif data.rects_rotation == 270:
                 rotated_image = image.swapaxes( 0,1 )[::-1,:,:]
 
-            data.landmarks = landmarks_extractor.extract (rotated_image, data.rects, rects_extractor if (not extract_from_dflimg and data.landmarks_accurate) else None, is_bgr=True)
+            data.landmarks = landmarks_extractor.extract (rotated_image, data.rects, rects_extractor if (data.landmarks_accurate) else None, is_bgr=True)
             if data.rects_rotation != 0:
                 for i, (rect, lmrks) in enumerate(zip(data.rects, data.landmarks)):
                     new_rect, new_lmrks = rect, lmrks
@@ -207,7 +201,6 @@ class ExtractSubprocessor(Subprocessor):
                         face_type,
                         image_size,
                         jpeg_quality,
-                        extract_from_dflimg = False,
                         output_debug_path=None,
                         final_output_path=None,
                         ):
@@ -219,72 +212,53 @@ class ExtractSubprocessor(Subprocessor):
             if output_debug_path is not None:
                 debug_image = image.copy()
 
-            if extract_from_dflimg and len(rects) != 1:
-                #if re-extracting from dflimg and more than 1 or zero faces detected - dont process and just copy it
-                print("extract_from_dflimg and len(rects) != 1", filepath )
-                output_filepath = final_output_path / filepath.name
-                if filepath != str(output_file):
-                    shutil.copy ( str(filepath), str(output_filepath) )
-                data.final_output_files.append (output_filepath)
-            else:
-                face_idx = 0
-                for rect, image_landmarks in zip( rects, landmarks ):
+            face_idx = 0
+            for rect, image_landmarks in zip( rects, landmarks ):
+                if image_landmarks is None:
+                    continue
 
-                    if extract_from_dflimg and face_idx > 1:
-                        #cannot extract more than 1 face from dflimg
-                        break
+                rect = np.array(rect)
 
-                    if image_landmarks is None:
+                if face_type == FaceType.MARK_ONLY:
+                    image_to_face_mat = None
+                    face_image = image
+                    face_image_landmarks = image_landmarks
+                else:
+                    image_to_face_mat = LandmarksProcessor.get_transform_mat (image_landmarks, image_size, face_type)
+
+                    face_image = cv2.warpAffine(image, image_to_face_mat, (image_size, image_size), cv2.INTER_LANCZOS4)
+                    face_image_landmarks = LandmarksProcessor.transform_points (image_landmarks, image_to_face_mat)
+
+                    landmarks_bbox = LandmarksProcessor.transform_points ( [ (0,0), (0,image_size-1), (image_size-1, image_size-1), (image_size-1,0) ], image_to_face_mat, True)
+
+                    rect_area      = mathlib.polygon_area(np.array(rect[[0,2,2,0]]).astype(np.float32), np.array(rect[[1,1,3,3]]).astype(np.float32))
+                    landmarks_area = mathlib.polygon_area(landmarks_bbox[:,0].astype(np.float32), landmarks_bbox[:,1].astype(np.float32) )
+
+                    if not data.manual and face_type <= FaceType.FULL_NO_ALIGN and landmarks_area > 4*rect_area: #get rid of faces which umeyama-landmark-area > 4*detector-rect-area
                         continue
 
-                    rect = np.array(rect)
+                    if output_debug_path is not None:
+                        LandmarksProcessor.draw_rect_landmarks (debug_image, rect, image_landmarks, face_type, image_size, transparent_mask=True)
 
-                    if face_type == FaceType.MARK_ONLY:
-                        image_to_face_mat = None
-                        face_image = image
-                        face_image_landmarks = image_landmarks
-                    else:
-                        image_to_face_mat = LandmarksProcessor.get_transform_mat (image_landmarks, image_size, face_type)
+                output_path = final_output_path
+                if data.force_output_path is not None:
+                    output_path = data.force_output_path
 
-                        face_image = cv2.warpAffine(image, image_to_face_mat, (image_size, image_size), cv2.INTER_LANCZOS4)
-                        face_image_landmarks = LandmarksProcessor.transform_points (image_landmarks, image_to_face_mat)
+                output_filepath = output_path / f"{filepath.stem}_{face_idx}.jpg"
+                cv2_imwrite(output_filepath, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), jpeg_quality ] )
 
-                        landmarks_bbox = LandmarksProcessor.transform_points ( [ (0,0), (0,image_size-1), (image_size-1, image_size-1), (image_size-1,0) ], image_to_face_mat, True)
+                dflimg = DFLJPG.load(output_filepath)
+                dflimg.set_face_type(FaceType.toString(face_type))
+                dflimg.set_landmarks(face_image_landmarks.tolist())
+                dflimg.set_source_filename(filepath.name)
+                dflimg.set_source_rect(rect)
+                dflimg.set_source_landmarks(image_landmarks.tolist())
+                dflimg.set_image_to_face_mat(image_to_face_mat)
+                dflimg.save()
 
-                        rect_area      = mathlib.polygon_area(np.array(rect[[0,2,2,0]]).astype(np.float32), np.array(rect[[1,1,3,3]]).astype(np.float32))
-                        landmarks_area = mathlib.polygon_area(landmarks_bbox[:,0].astype(np.float32), landmarks_bbox[:,1].astype(np.float32) )
-
-                        if not data.manual and face_type <= FaceType.FULL_NO_ALIGN and landmarks_area > 4*rect_area: #get rid of faces which umeyama-landmark-area > 4*detector-rect-area
-                            continue
-
-                        if output_debug_path is not None:
-                            LandmarksProcessor.draw_rect_landmarks (debug_image, rect, image_landmarks, face_type, image_size, transparent_mask=True)
-
-                    output_path = final_output_path
-                    if data.force_output_path is not None:
-                        output_path = data.force_output_path
-
-                    if extract_from_dflimg and filepath.suffix == '.jpg':
-                        #if extracting from dflimg and jpg copy it in order not to lose quality
-                        output_filepath = output_path / filepath.name
-                        if filepath != output_filepath:
-                            shutil.copy ( str(filepath), str(output_filepath) )
-                    else:
-                        output_filepath = output_path / f"{filepath.stem}_{face_idx}.jpg"
-                        cv2_imwrite(output_filepath, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), jpeg_quality ] )
-
-                    dflimg = DFLJPG.load(output_filepath)
-                    dflimg.set_face_type(FaceType.toString(face_type))
-                    dflimg.set_landmarks(face_image_landmarks.tolist())
-                    dflimg.set_source_filename(filepath.name)
-                    dflimg.set_source_rect(rect)
-                    dflimg.set_source_landmarks(image_landmarks.tolist())
-                    dflimg.set_image_to_face_mat(image_to_face_mat)
-                    dflimg.save()
-
-                    data.final_output_files.append (output_filepath)
-                    face_idx += 1
-                data.faces_detected = face_idx
+                data.final_output_files.append (output_filepath)
+                face_idx += 1
+            data.faces_detected = face_idx
 
             if output_debug_path is not None:
                 cv2_imwrite( output_debug_path / (filepath.stem+'.jpg'), debug_image, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )

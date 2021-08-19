@@ -23,7 +23,7 @@ class SampleLoader:
         try:
             samples = samplelib.PackedFaceset.load(samples_path)
         except:
-            io.log_err(f"Error occured while loading samplelib.PackedFaceset.load {str(samples_dat_path)}, {traceback.format_exc()}")
+            io.log_err(f"Error occured while loading samplelib.PackedFaceset.load {str(samples_path)}, {traceback.format_exc()}")
 
         if samples is None:
             raise ValueError("packed faceset not found.")

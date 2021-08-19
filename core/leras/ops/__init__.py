@@ -204,7 +204,7 @@ def random_binomial(shape, p=0.0, dtype=None, seed=None):
         seed = np.random.randint(10e6)
     return array_ops.where(
         random_ops.random_uniform(shape, dtype=tf.float16, seed=seed) < p,
-        array_ops.ones(shape, dtype=dtype), array_ops.zeros(shape, dtype=dtype))
+             array_ops.ones(shape, dtype=dtype), array_ops.zeros(shape, dtype=dtype))
 nn.random_binomial = random_binomial
 
 def gaussian_blur(input, radius=2.0):
@@ -236,6 +236,19 @@ def gaussian_blur(input, radius=2.0):
     x = tf.nn.depthwise_conv2d(x, k, strides=[1,1,1,1], padding='VALID', data_format=nn.data_format)
     return x
 nn.gaussian_blur = gaussian_blur
+
+def get_gaussian_weights(batch_size, in_ch, resolution, num_scale=5, sigma=(0.5, 1., 2., 4., 8.)):
+    w = np.empty((num_scale, batch_size, in_ch, resolution, resolution))
+    for i in range(num_scale):
+        gaussian = np.exp(-1.*np.arange(-(resolution/2-0.5), resolution/2+0.5)**2/(2*sigma[i]**2))
+        gaussian = np.outer(gaussian, gaussian.reshape((resolution, 1)))  # extend to 2D
+        gaussian = gaussian/np.sum(gaussian)							  # normalization
+        gaussian = np.reshape(gaussian, (1, 1, resolution, resolution)) 	  # reshape to 3D
+        gaussian = np.tile(gaussian, (batch_size, in_ch, 1, 1))
+        w[i, :, :, :, :] = gaussian
+    return w
+
+nn.get_gaussian_weights = get_gaussian_weights
 
 def style_loss(target, style, gaussian_blur_radius=0.0, loss_weight=1.0, step_size=1):
     def sd(content, style, loss_weight):
@@ -333,7 +346,9 @@ def depth_to_space(x, size):
         x = tf.reshape(x, (-1, oh, ow, oc, ))
         return x
     else:
-        return tf.depth_to_space(x, size, data_format=nn.data_format)
+        cfg = nn.getCurrentDeviceConfig()
+        if not cfg.cpu_only:
+            return tf.depth_to_space(x, size, data_format=nn.data_format)
         b,c,h,w = x.shape.as_list()
         oh, ow = h * size, w * size
         oc = c // (size * size)
@@ -343,11 +358,6 @@ def depth_to_space(x, size):
         x = tf.reshape(x, (-1, oc, oh, ow))
         return x
 nn.depth_to_space = depth_to_space
-
-def pixel_norm(x, power = 1.0):
-    return x * power * tf.rsqrt(tf.reduce_mean(tf.square(x), axis=nn.conv2d_spatial_axes, keepdims=True) + 1e-06)
-nn.pixel_norm = pixel_norm
-
 
 def rgb_to_lab(srgb):
     srgb_pixels = tf.reshape(srgb, [-1, 3])
@@ -385,12 +395,17 @@ def total_variation_mse(images):
     """
     pixel_dif1 = images[:, 1:, :, :] - images[:, :-1, :, :]
     pixel_dif2 = images[:, :, 1:, :] - images[:, :, :-1, :]
-    
+
     tot_var = ( tf.reduce_sum(tf.square(pixel_dif1), axis=[1,2,3]) +
                 tf.reduce_sum(tf.square(pixel_dif2), axis=[1,2,3]) )
     return tot_var
 nn.total_variation_mse = total_variation_mse
 
+
+def pixel_norm(x, axes):
+    return x * tf.rsqrt(tf.reduce_mean(tf.square(x), axis=axes, keepdims=True) + 1e-06)
+nn.pixel_norm = pixel_norm
+        
 """
 def tf_suppress_lower_mean(t, eps=0.00001):
     if t.shape.ndims != 1:

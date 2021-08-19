@@ -373,12 +373,32 @@ def color_transfer(ct_mode, img_src, img_trg):
 # imported from faceswap
 def color_augmentation(img, seed=None):
     """ Color adjust RGB image """
+    img = img.astype(np.float32)
     face = img
     face = np.clip(face*255.0, 0, 255).astype(np.uint8)
     face = random_clahe(face, seed)
     face = random_lab(face, seed)
     img[:, :, :3] = face
     return (face / 255.0).astype(np.float32)
+
+
+def random_lab_rotation(image, seed=None):
+    """
+    Randomly rotates image color around the L axis in LAB colorspace,
+    keeping perceptual lightness constant.
+    """
+    image = cv2.cvtColor(image.astype(np.float32), cv2.COLOR_BGR2LAB)
+    M = np.eye(3)
+    M[1:, 1:] = special_ortho_group.rvs(2, 1, seed)
+    image = image.dot(M)
+    l, a, b = cv2.split(image)
+    l = np.clip(l, 0, 100)
+    a = np.clip(a, -127, 127)
+    b = np.clip(b, -127, 127)
+    image = cv2.merge([l, a, b])
+    image = cv2.cvtColor(image.astype(np.float32), cv2.COLOR_LAB2BGR)
+    np.clip(image, 0, 1, out=image)
+    return image
 
 
 def random_lab(image, seed=None):

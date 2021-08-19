@@ -1,4 +1,11 @@
-﻿<table align="center" border="0">
+[![Patreon](https://c5.patreon.com/external/logo/become_a_patron_button@2x.png)](https://www.patreon.com/bePatron?u=22997465)
+
+# CHANGELOG 
+### [View most recent changes](CHANGELOG.md)
+
+![](doc/dfl_cover.png)
+
+<table align="center" border="0">
 
 <tr><td colspan=2 align="center">
 
@@ -19,9 +26,9 @@ https://arxiv.org/abs/2005.05535</a>
 
 <p align="center">
 
-![](doc/logo_cuda.png)
 ![](doc/logo_tensorflow.png)
-![](doc/logo_python.png)
+![](doc/logo_cuda.png)
+![](doc/logo_directx.png)
 
 </p>
 
@@ -29,8 +36,8 @@ More than 95% of deepfake videos are created with DeepFaceLab.
 
 DeepFaceLab is used by such popular youtube channels as
 
-|![](doc/tiktok_icon.png) [deeptomcruise](https://www.tiktok.com/@deeptomcruise)|
-|---|
+|![](doc/tiktok_icon.png) [deeptomcruise](https://www.tiktok.com/@deeptomcruise)|![](doc/tiktok_icon.png) [1facerussia](https://www.tiktok.com/@1facerussia)|![](doc/tiktok_icon.png) [arnoldschwarzneggar](https://www.tiktok.com/@arnoldschwarzneggar)
+|---|---|---|
 
 |![](doc/youtube_icon.png) [Ctrl Shift Face](https://www.youtube.com/channel/UCKpH0CKltc73e4wh0_pgL3g)|![](doc/youtube_icon.png) [VFXChris Ume](https://www.youtube.com/channel/UCGf4OlX_aTt8DlrgiH3jN3g/videos)|![](doc/youtube_icon.png) [Sham00k](https://www.youtube.com/channel/UCZXbWcv7fSZFTAZV4beckyw/videos)|
 |---|---|---|
@@ -194,7 +201,7 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 </td></tr>
 
 <tr><td align="right">
-<a href="https://tinyurl.com/y8lntghz">Windows (magnet link)</a>
+<a href="https://tinyurl.com/4tb2tn4w">Windows (magnet link)</a>
 </td><td align="center">Last release. Use torrent client to download.</td></tr>
 
 <tr><td align="right">
@@ -332,10 +339,6 @@ QQ 951138799
 <tr><td colspan=2 align="center">
 bitcoin:bc1qkhh7h0gwwhxgg6h6gpllfgstkd645fefrd5s6z
 </td></tr>
-
-<tr><td align="right">
-Alipay 捐款
-</td><td align="center"> <img src="doc/Alipay_donation.jpg" align="center"> </td></tr>
 
 <tr><td colspan=2 align="center">
 
