@@ -81,8 +81,8 @@ class XSegNet(object):
     def get_resolution(self):
         return self.resolution
         
-    def flow(self, x):
-        return self.model(x)
+    def flow(self, x, pretrain=False):
+        return self.model(x, pretrain=pretrain)
 
     def get_weights(self):
         return self.model_weights

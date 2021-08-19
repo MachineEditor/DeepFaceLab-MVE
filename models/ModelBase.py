@@ -23,6 +23,7 @@ from samplelib import SampleGeneratorBase
 
 class ModelBase(object):
     def __init__(self, is_training=False,
+                       is_exporting=False,
                        saved_models_path=None,
                        training_data_src_path=None,
                        training_data_dst_path=None,
@@ -37,6 +38,7 @@ class ModelBase(object):
                        silent_start=False,
                        **kwargs):
         self.is_training = is_training
+        self.is_exporting = is_exporting
         self.saved_models_path = saved_models_path
         self.training_data_src_path = training_data_src_path
         self.training_data_dst_path = training_data_dst_path
@@ -234,7 +236,7 @@ class ModelBase(object):
                 preview_id_counter = 0
                 while not choosed:
                     self.sample_for_preview = self.generate_next_samples()
-                    previews = self.get_static_previews()
+                    previews = self.get_history_previews()
 
                     io.show_image( wnd_name, ( previews[preview_id_counter % len(previews) ][1] *255).astype(np.uint8) )
 
@@ -260,7 +262,7 @@ class ModelBase(object):
                 self.sample_for_preview = self.generate_next_samples()
 
         try:
-            self.get_static_previews()
+            self.get_history_previews()
         except:
             self.sample_for_preview = self.generate_next_samples()
 
@@ -357,7 +359,7 @@ class ModelBase(object):
         return ( ('loss_src', 0), ('loss_dst', 0) )
 
     #overridable
-    def onGetPreview(self, sample):
+    def onGetPreview(self, sample, for_history=False):
         #you can return multiple previews
         #return [ ('preview_name',preview_rgb), ... ]
         return []
@@ -387,8 +389,8 @@ class ModelBase(object):
     def get_previews(self):
         return self.onGetPreview ( self.last_sample )
 
-    def get_static_previews(self):
-        return self.onGetPreview (self.sample_for_preview)
+    def get_history_previews(self):
+        return self.onGetPreview (self.sample_for_preview, for_history=True)
 
     def get_preview_history_writer(self):
         if self.preview_history_writer is None:
@@ -493,7 +495,7 @@ class ModelBase(object):
                     plist += [ (bgr, self.get_strpath_storage_for_file('preview_%s.jpg' % (name) ) ) ]
 
             if self.write_preview_history:
-                previews = self.get_static_previews()
+                previews = self.get_history_previews()
                 for i in range(len(previews)):
                     name, bgr = previews[i]
                     path = self.preview_history_path / name

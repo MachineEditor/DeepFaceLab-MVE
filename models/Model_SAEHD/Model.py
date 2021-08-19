@@ -29,7 +29,8 @@ class SAEHDModel(ModelBase):
         yn_str = {True:'y',False:'n'}
         min_res = 64
         max_res = 640
-
+    
+        #default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
         default_resolution         = self.options['resolution']         = self.load_or_def_option('resolution', 128)
         default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'f')
         default_models_opt_on_gpu  = self.options['models_opt_on_gpu']  = self.load_or_def_option('models_opt_on_gpu', True)
@@ -80,7 +81,8 @@ class SAEHDModel(ModelBase):
             self.ask_random_src_flip()
             self.ask_random_dst_flip()
             self.ask_batch_size(suggest_batch_size)
-
+            #self.options['use_fp16'] = io.input_bool ("Use fp16", default_usefp16, help_message='Increases training/inference speed, reduces model size. Model may crash. Enable it after 1-5k iters.')
+            
         if self.is_first_run():
             resolution = io.input_int("Resolution", default_resolution, add_info="64-640", help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 16 and 32 for -d archi.")
             resolution = np.clip ( (resolution // 16) * 16, min_res, max_res)
@@ -250,7 +252,11 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             self.set_iter(0)
 
         adabelief = self.options['adabelief']
-
+        
+        use_fp16 = False
+        if self.is_exporting:
+            use_fp16 = io.input_bool ("Export quantized?", False, help_message='Makes the exported model faster. If you have problems, disable this option.')
+        
         self.gan_power = gan_power = 0.0 if self.pretrain else self.options['gan_power']
         random_warp = False if self.pretrain else self.options['random_warp']
         random_src_flip = self.random_src_flip if not self.pretrain else True
@@ -293,7 +299,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             self.target_dstm_em = tf.placeholder (nn.floatx, mask_shape, name='target_dstm_em')
 
         # Initializing model classes
-        model_archi = nn.DeepFakeArchi(resolution, opts=archi_opts)
+        model_archi = nn.DeepFakeArchi(resolution, use_fp16=use_fp16, opts=archi_opts)
 
         with tf.device (models_opt_device):
             if 'df' in archi_type:
@@ -578,7 +584,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                         gpu_G_loss += self.options['true_face_power']*DLoss(gpu_src_code_d_ones, gpu_src_code_d)
 
-                        gpu_D_code_loss = (DLoss(gpu_src_code_d_ones , gpu_dst_code_d) + \
+                        gpu_D_code_loss = (DLoss(gpu_dst_code_d_ones , gpu_dst_code_d) + \
                                            DLoss(gpu_src_code_d_zeros, gpu_src_code_d) ) * 0.5
 
                         gpu_D_code_loss_gvs += [ nn.gradients (gpu_D_code_loss, self.code_discriminator.get_weights() ) ]
@@ -802,11 +808,15 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             if self.pretrain_just_disabled:
                 self.update_sample_for_preview(force_new=True)
     
-    def dump_ckpt(self):
+    def export_dfm (self):
+        output_path=self.get_strpath_storage_for_file('model.dfm')
+        
+        io.log_info(f'Dumping .dfm to {output_path}')
+        
         tf = nn.tf
+        nn.set_data_format('NCHW')
         
-        
-        with tf.device ('/CPU:0'):
+        with tf.device (nn.tf_default_device_name):
             warped_dst = tf.placeholder (nn.floatx, (None, self.resolution, self.resolution, 3), name='in_face')
             warped_dst = tf.transpose(warped_dst, (0,3,1,2))
             
@@ -830,15 +840,26 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             gpu_pred_dst_dstm = tf.transpose(gpu_pred_dst_dstm, (0,2,3,1))
             gpu_pred_src_dstm = tf.transpose(gpu_pred_src_dstm, (0,2,3,1))
 
-            
-        saver = tf.train.Saver()
         tf.identity(gpu_pred_dst_dstm, name='out_face_mask')
         tf.identity(gpu_pred_src_dst, name='out_celeb_face')
         tf.identity(gpu_pred_src_dstm, name='out_celeb_face_mask')       
         
-        saver.save(nn.tf_sess, self.get_strpath_storage_for_file('.ckpt') )
-
+        output_graph_def = tf.graph_util.convert_variables_to_constants(
+            nn.tf_sess, 
+            tf.get_default_graph().as_graph_def(), 
+            ['out_face_mask','out_celeb_face','out_celeb_face_mask']
+        ) 
         
+        import tf2onnx
+        with tf.device("/CPU:0"):
+            model_proto, _ = tf2onnx.convert._convert_common(
+                output_graph_def,
+                name='SAEHD',
+                input_names=['in_face:0'],
+                output_names=['out_face_mask:0','out_celeb_face:0','out_celeb_face_mask:0'],
+                opset=13,
+                output_path=output_path)
+                
     #override
     def get_model_filename_list(self):
         return self.model_filename_list
@@ -894,7 +915,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         return ( ('src_loss', np.mean(src_loss) ), ('dst_loss', np.mean(dst_loss) ), )
 
     #override
-    def onGetPreview(self, samples):
+    def onGetPreview(self, samples, for_history=False):
         ( (warped_src, target_src, target_srcm, target_srcm_em),
           (warped_dst, target_dst, target_dstm, target_dstm_em) ) = samples
 
