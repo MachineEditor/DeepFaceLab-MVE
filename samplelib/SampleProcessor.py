@@ -108,6 +108,7 @@ class SampleProcessor(object):
                 transform      = opts.get('transform', False)
                 motion_blur    = opts.get('motion_blur', None)
                 gaussian_blur  = opts.get('gaussian_blur', None)
+                denoise_filter = opts.get('denoise_filter', False)
                 random_bilinear_resize = opts.get('random_bilinear_resize', None)
                 random_rgb_levels = opts.get('random_rgb_levels', False)
                 random_hsv_shift = opts.get('random_hsv_shift', False)
@@ -150,6 +151,7 @@ class SampleProcessor(object):
                             img = np.zeros ( sample_bgr.shape[0:2]+(1,), dtype=np.float32)
 
                         if sample_face_type == FaceType.MARK_ONLY:
+                            raise NotImplementedError()
                             mat  = LandmarksProcessor.get_transform_mat (sample_landmarks, warp_resolution, face_type)
                             img = cv2.warpAffine( img, mat, (warp_resolution, warp_resolution), flags=cv2.INTER_LINEAR )
                             
@@ -181,6 +183,7 @@ class SampleProcessor(object):
                     elif sample_type == SPST.FACE_IMAGE:
                         img = sample_bgr                      
                         
+                        
                         if random_rgb_levels:
                             random_mask = sd.random_circle_faded ([w,w], rnd_state=np.random.RandomState (sample_rnd_seed) ) if random_circle_mask else None
                             img = imagelib.apply_random_rgb_levels(img, mask=random_mask, rnd_state=np.random.RandomState (sample_rnd_seed) )
@@ -207,9 +210,6 @@ class SampleProcessor(object):
                         img  = imagelib.warp_by_params (params_per_resolution[resolution], img,  warp, transform, can_flip=True, border_replicate=border_replicate)
   
                         img = np.clip(img.astype(np.float32), 0, 1)
-   
-
-                        
                         
                         if motion_blur is not None:                            
                             random_mask = sd.random_circle_faded ([resolution,resolution], rnd_state=np.random.RandomState (sample_rnd_seed+2)) if random_circle_mask else None
@@ -222,9 +222,11 @@ class SampleProcessor(object):
                         if random_bilinear_resize is not None:
                             random_mask = sd.random_circle_faded ([resolution,resolution], rnd_state=np.random.RandomState (sample_rnd_seed+4)) if random_circle_mask else None
                             img = imagelib.apply_random_bilinear_resize(img, *random_bilinear_resize, mask=random_mask,rnd_state=np.random.RandomState (sample_rnd_seed+4) )
-                            
-                             
-                            
+
+                        if denoise_filter:
+                            d_size = ( (max(*img.shape[:2]) // 128) + 1 )*2 +1
+                            img = cv2.bilateralFilter( np.clip(img*255, 0,255).astype(np.uint8), d_size, 80, 80).astype(np.float32) / 255.0
+
                         # Transform from BGR to desired channel_type
                         if channel_type == SPCT.BGR:
                             out_sample = img
