@@ -120,7 +120,7 @@ class MergerConfigMasked(MergerConfig):
         super().__init__(type=MergerConfig.TYPE_MASKED, **kwargs)
 
         self.face_type = face_type
-        if self.face_type not in [FaceType.HALF, FaceType.MID_FULL, FaceType.FULL, FaceType.WHOLE_FACE, FaceType.HEAD ]:
+        if self.face_type not in [FaceType.HALF, FaceType.MID_FULL, FaceType.FULL, FaceType.WHOLE_FACE, FaceType.HEAD, FaceType.CUSTOM ]:
             raise ValueError("MergerConfigMasked does not support this type of face.")
 
         self.default_mode = default_mode

@@ -122,7 +122,7 @@ def main (model_class_name=None,
                     alignments[ source_filename_stem ] = []
 
                 alignments_ar = alignments[ source_filename_stem ]
-                alignments_ar.append ( (dflimg.get_source_landmarks(), filepath, source_filepath ) )
+                alignments_ar.append ( (dflimg.get_source_landmarks(), filepath, source_filepath, dflimg ) )
 
                 if len(alignments_ar) > 1:
                     multiple_faces_detected = True
@@ -135,11 +135,11 @@ def main (model_class_name=None,
             for a_key in list(alignments.keys()):
                 a_ar = alignments[a_key]
                 if len(a_ar) > 1:
-                    for _, filepath, source_filepath in a_ar:
+                    for _, filepath, source_filepath, _ in a_ar:
                         io.log_info (f"alignment {filepath.name} refers to {source_filepath.name} ")
                     io.log_info ("")
 
-                alignments[a_key] = [ a[0] for a in a_ar]
+                alignments[a_key] = [ [a[0], a[3]] for a in a_ar]
 
             if multiple_faces_detected:
                 io.log_info ("It is strongly recommended to process the faces separatelly.")
@@ -147,7 +147,9 @@ def main (model_class_name=None,
                 io.log_info ("")
 
             frames = [ InteractiveMergerSubprocessor.Frame( frame_info=FrameInfo(filepath=Path(p),
-                                                                     landmarks_list=alignments.get(Path(p).stem, None)
+                                                                     landmarks_list=[alignments.get(Path(p).stem, None)[0][0]] if alignments.get(Path(p).stem, None) != None else None,
+                                                                     dfl_images_list=[alignments.get(Path(p).stem, None)[0][1]] if alignments.get(Path(p).stem, None) != None else None
+                                                                     # landmarks_list = alignments_orig.get(Path(p).stem, None)
                                                                     )
                                               )
                        for p in input_path_image_paths ]
