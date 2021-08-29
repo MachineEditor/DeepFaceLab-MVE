@@ -29,7 +29,6 @@ class AMPModel(ModelBase):
         default_morph_factor       = self.options['morph_factor']       = self.options.get('morph_factor', 0.5)
         default_uniform_yaw        = self.options['uniform_yaw']        = self.load_or_def_option('uniform_yaw', False)
         default_blur_out_mask      = self.options['blur_out_mask']      = self.load_or_def_option('blur_out_mask', False)
-        default_dst_denoise        = self.options['rtm_dst_denoise']    = self.load_or_def_option('rtm_dst_denoise', False)
         default_lr_dropout         = self.options['lr_dropout']         = self.load_or_def_option('lr_dropout', 'n')
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
         default_ct_mode            = self.options['ct_mode']            = self.load_or_def_option('ct_mode', 'none')
@@ -76,8 +75,6 @@ class AMPModel(ModelBase):
         if self.is_first_run() or ask_override:
             self.options['uniform_yaw'] = io.input_bool ("Uniform yaw distribution of samples", default_uniform_yaw, help_message='Helps to fix blurry side faces due to small amount of them in the faceset.')
             self.options['blur_out_mask'] = io.input_bool ("Blur out mask", default_blur_out_mask, help_message='Blurs nearby area outside of applied face mask of training samples. The result is the background near the face is smoothed and less noticeable on swapped face. The exact xseg mask in src and dst faceset is required.')
-            self.options['rtm_dst_denoise'] = io.input_bool ("Denoise RTM DST faceset.", default_dst_denoise, help_message='Used in RTM(ReadyToMerge) training with RTM DST faceset. Removes high frequency noise keeping edges. Result is better face syncronization with any face. Can be enabled at any time.')            
-            
             self.options['lr_dropout']  = io.input_str (f"Use learning rate dropout", default_lr_dropout, ['n','y','cpu'], help_message="When the face is trained enough, you can enable this option to get extra sharpness and reduce subpixel shake for less amount of iterations. Enabled it before `disable random warp` and before GAN. \nn - disabled.\ny - enabled\ncpu - enabled on CPU. This allows not to use extra VRAM, sacrificing 20% time of iteration.")
 
         default_gan_power          = self.options['gan_power']          = self.load_or_def_option('gan_power', 0.0)
@@ -127,7 +124,6 @@ class AMPModel(ModelBase):
         random_warp  = self.options['random_warp']
         
         blur_out_mask = self.options['blur_out_mask']
-        rtm_dst_denoise = self.options['rtm_dst_denoise']
         
         ct_mode = self.options['ct_mode']
         if ct_mode == 'none':
@@ -576,7 +572,6 @@ class AMPModel(ModelBase):
                         sample_process_options=SampleProcessor.Options(random_flip=self.random_dst_flip),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                             'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                             'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'denoise_filter' : rtm_dst_denoise,                         'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE,  'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.EYES_MOUTH, 'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                               ],
@@ -652,13 +647,13 @@ class AMPModel(ModelBase):
         bs = self.get_batch_size()
 
         ( (warped_src, target_src, target_srcm, target_srcm_em), \
-          (warped_dst, target_dst, target_dst_train, target_dstm, target_dstm_em) ) = self.generate_next_samples()
+          (warped_dst, target_dst, target_dstm, target_dstm_em) ) = self.generate_next_samples()
 
-        src_loss, dst_loss = self.train (warped_src, target_src, target_srcm, target_srcm_em, warped_dst, target_dst_train, target_dstm, target_dstm_em)
+        src_loss, dst_loss = self.train (warped_src, target_src, target_srcm, target_srcm_em, warped_dst, target_dst, target_dstm, target_dstm_em)
 
         for i in range(bs):
             self.last_src_samples_loss.append ( (src_loss[i], target_src[i], target_srcm[i], target_srcm_em[i]) )
-            self.last_dst_samples_loss.append ( (dst_loss[i], target_dst[i], target_dst_train[i], target_dstm[i], target_dstm_em[i]) )
+            self.last_dst_samples_loss.append ( (dst_loss[i], target_dst[i], target_dst[i], target_dstm[i], target_dstm_em[i]) )
 
         if len(self.last_src_samples_loss) >= bs*16:
             src_samples_loss = sorted(self.last_src_samples_loss, key=operator.itemgetter(0), reverse=True)
@@ -669,23 +664,22 @@ class AMPModel(ModelBase):
             target_srcm_em    = np.stack( [ x[3] for x in src_samples_loss[:bs] ] )
 
             target_dst        = np.stack( [ x[1] for x in dst_samples_loss[:bs] ] )
-            target_dst_train  = np.stack( [ x[2] for x in dst_samples_loss[:bs] ] )
-            target_dstm       = np.stack( [ x[3] for x in dst_samples_loss[:bs] ] )
-            target_dstm_em    = np.stack( [ x[4] for x in dst_samples_loss[:bs] ] )
+            target_dstm       = np.stack( [ x[2] for x in dst_samples_loss[:bs] ] )
+            target_dstm_em    = np.stack( [ x[3] for x in dst_samples_loss[:bs] ] )
 
-            src_loss, dst_loss = self.train (target_src, target_src, target_srcm, target_srcm_em, target_dst, target_dst_train, target_dstm, target_dstm_em)
+            src_loss, dst_loss = self.train (target_src, target_src, target_srcm, target_srcm_em, target_dst, target_dst, target_dstm, target_dstm_em)
             self.last_src_samples_loss = []
             self.last_dst_samples_loss = []
 
         if self.gan_power != 0:
-            self.GAN_train (warped_src, target_src, target_srcm, target_srcm_em, warped_dst, target_dst_train, target_dstm, target_dstm_em)
+            self.GAN_train (warped_src, target_src, target_srcm, target_srcm_em, warped_dst, target_dst, target_dstm, target_dstm_em)
 
         return ( ('src_loss', np.mean(src_loss) ), ('dst_loss', np.mean(dst_loss) ), )
 
     #override
     def onGetPreview(self, samples, for_history=False):
         ( (warped_src, target_src, target_srcm, target_srcm_em),
-          (warped_dst, target_dst, target_dst_train, target_dstm, target_dstm_em) ) = samples
+          (warped_dst, target_dst, target_dstm, target_dstm_em) ) = samples
 
         S, D, SS, DD, DDM_000, _, _ = [ np.clip( nn.to_data_format(x,"NHWC", self.model_data_format), 0.0, 1.0) for x in ([target_src,target_dst] + self.AE_view (target_src, target_dst, 0.0)  ) ]
 
