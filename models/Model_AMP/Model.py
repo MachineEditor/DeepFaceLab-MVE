@@ -294,7 +294,7 @@ class AMPModel(ModelBase):
                 clipnorm = 1.0 if self.options['clipgrad'] else 0.0
                 lr_dropout = 0.3 if self.options['lr_dropout'] in ['y','cpu'] else 1.0
 
-                self.G_weights = self.encoder.get_weights() + self.decoder.get_weights()
+                self.G_weights = self.encoder.get_weights() + self.inter_src.get_weights() + self.inter_dst.get_weights() + self.decoder.get_weights()
 
                 self.src_dst_opt = nn.AdaBelief(lr=5e-5, lr_dropout=lr_dropout, clipnorm=clipnorm, name='src_dst_opt')
                 self.src_dst_opt.initialize_variables (self.G_weights, vars_on_cpu=optimizer_vars_on_cpu)
