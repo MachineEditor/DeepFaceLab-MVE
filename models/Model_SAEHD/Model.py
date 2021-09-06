@@ -394,7 +394,8 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_pred_src_src, gpu_pred_src_srcm = self.decoder_src(gpu_src_code)
                         gpu_pred_dst_dst, gpu_pred_dst_dstm = self.decoder_dst(gpu_dst_code)
                         gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder_src(gpu_dst_code)
-
+                        gpu_pred_src_dst_no_code_grad, _ = self.decoder(tf.stop_gradient(gpu_dst_code))
+                        
                     elif 'liae' in archi_type:
                         gpu_src_code = self.encoder (gpu_warped_src)
                         gpu_src_inter_AB_code = self.inter_AB (gpu_src_code)
@@ -409,6 +410,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_pred_dst_dst, gpu_pred_dst_dstm = self.decoder(gpu_dst_code)
                         gpu_pred_dst_dst_no_code_grad, _ = self.decoder(tf.stop_gradient(gpu_dst_code))
                         gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder(gpu_src_dst_code)
+                        gpu_pred_src_dst_no_code_grad, _ = self.decoder(tf.stop_gradient(gpu_src_dst_code))
 
                     gpu_pred_src_src_list.append(gpu_pred_src_src)
                     gpu_pred_dst_dst_list.append(gpu_pred_dst_dst)
@@ -459,7 +461,8 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                     face_style_power = self.options['face_style_power'] / 100.0
                     if face_style_power != 0 and not self.pretrain:
-                        gpu_src_loss += nn.style_loss(gpu_psd_target_dst_style_masked, gpu_target_dst_style_masked, gaussian_blur_radius=resolution//16, loss_weight=10000*face_style_power)
+                        gpu_src_loss += nn.style_loss(gpu_pred_src_dst_no_code_grad*tf.stop_gradient(gpu_pred_src_dstm), tf.stop_gradient(gpu_pred_dst_dst*gpu_pred_dst_dstm), gaussian_blur_radius=resolution//8, loss_weight=10000*face_style_power)
+                        #gpu_src_loss += nn.style_loss(gpu_psd_target_dst_style_masked, gpu_target_dst_style_masked, gaussian_blur_radius=resolution//16, loss_weight=10000*face_style_power)
 
                     bg_style_power = self.options['bg_style_power'] / 100.0
                     if bg_style_power != 0 and not self.pretrain:
