@@ -394,7 +394,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_pred_src_src, gpu_pred_src_srcm = self.decoder_src(gpu_src_code)
                         gpu_pred_dst_dst, gpu_pred_dst_dstm = self.decoder_dst(gpu_dst_code)
                         gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder_src(gpu_dst_code)
-                        gpu_pred_src_dst_no_code_grad, _ = self.decoder(tf.stop_gradient(gpu_dst_code))
+                        gpu_pred_src_dst_no_code_grad, _ = self.decoder_src(tf.stop_gradient(gpu_dst_code))
                         
                     elif 'liae' in archi_type:
                         gpu_src_code = self.encoder (gpu_warped_src)
