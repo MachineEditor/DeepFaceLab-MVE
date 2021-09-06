@@ -183,7 +183,7 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 
 ## Mini tutorial
 
-<a href="https://www.youtube.com/watch?v=1smpMsfC3ls">
+<a href="https://www.youtube.com/watch?v=kOIMXt8KK8M">
 
 <img src="doc/mini_tutorial.jpg" align="center">
 
