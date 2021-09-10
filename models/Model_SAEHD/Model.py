@@ -375,18 +375,19 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     gpu_target_dstm_anti = 1-gpu_target_dstm
 
                     if blur_out_mask:
-                        #gpu_target_src = gpu_target_src*gpu_target_srcm_blur + nn.gaussian_blur(gpu_target_src, resolution // 32)*gpu_target_srcm_anti_blur
-                        #gpu_target_dst = gpu_target_dst*gpu_target_dstm_blur + nn.gaussian_blur(gpu_target_dst, resolution // 32)*gpu_target_dstm_anti_blur
-                        bg_blur_div = 128
+                        sigma = resolution / 128
+                        
+                        x = nn.gaussian_blur(gpu_target_src*gpu_target_srcm_anti, sigma)
+                        y = 1-nn.gaussian_blur(gpu_target_srcm, sigma) 
+                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)                        
+                        gpu_target_src = gpu_target_src*gpu_target_srcm + (x/y)*gpu_target_srcm_anti
+                        
+                        x = nn.gaussian_blur(gpu_target_dst*gpu_target_dstm_anti, sigma)
+                        y = 1-nn.gaussian_blur(gpu_target_dstm, sigma) 
+                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)                        
+                        gpu_target_dst = gpu_target_dst*gpu_target_dstm + (x/y)*gpu_target_dstm_anti
 
-                        gpu_target_src = gpu_target_src*gpu_target_srcm + \
-                                         tf.math.divide_no_nan(nn.gaussian_blur(gpu_target_src*gpu_target_srcm_anti, resolution / bg_blur_div),
-                                                               (1-nn.gaussian_blur(gpu_target_srcm, resolution / bg_blur_div) ) ) * gpu_target_srcm_anti
-
-                        gpu_target_dst = gpu_target_dst*gpu_target_dstm + \
-                                         tf.math.divide_no_nan(nn.gaussian_blur(gpu_target_dst*gpu_target_dstm_anti, resolution / bg_blur_div),
-                                                               (1-nn.gaussian_blur(gpu_target_dstm, resolution / bg_blur_div)) ) * gpu_target_dstm_anti
-
+                    
                     # process model tensors
                     if 'df' in archi_type:
                         gpu_src_code     = self.inter(self.encoder(gpu_warped_src))
@@ -742,7 +743,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                 name='SAEHD',
                 input_names=['in_face:0'],
                 output_names=['out_face_mask:0','out_celeb_face:0','out_celeb_face_mask:0'],
-                opset=13,
+                opset=9,
                 output_path=output_path)
 
     #override
