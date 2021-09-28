@@ -30,13 +30,12 @@ class SAEHDModel(ModelBase):
         min_res = 64
         max_res = 640
 
+        default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
         default_resolution         = self.options['resolution']         = self.load_or_def_option('resolution', 128)
         default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'f')
         default_models_opt_on_gpu  = self.options['models_opt_on_gpu']  = self.load_or_def_option('models_opt_on_gpu', True)
 
-        archi = self.load_or_def_option('archi', 'liae-ud')
-        archi = {'dfuhd':'df-u','liaeuhd':'liae-u'}.get(archi, archi) #backward comp
-        default_archi              = self.options['archi'] = archi
+        default_archi              = self.options['archi']              = self.load_or_def_option('archi', 'liae-ud')
 
         default_ae_dims            = self.options['ae_dims']            = self.load_or_def_option('ae_dims', 256)
         default_e_dims             = self.options['e_dims']             = self.load_or_def_option('e_dims', 64)
@@ -46,6 +45,7 @@ class SAEHDModel(ModelBase):
         default_eyes_prio          = self.options['eyes_prio']          = self.load_or_def_option('eyes_prio', False)
         default_mouth_prio         = self.options['mouth_prio']         = self.load_or_def_option('mouth_prio', False)
         default_uniform_yaw        = self.options['uniform_yaw']        = self.load_or_def_option('uniform_yaw', False)
+        default_blur_out_mask      = self.options['blur_out_mask']      = self.load_or_def_option('blur_out_mask', False)
 
         default_adabelief          = self.options['adabelief']          = self.load_or_def_option('adabelief', True)
 
@@ -80,6 +80,7 @@ class SAEHDModel(ModelBase):
             self.ask_random_src_flip()
             self.ask_random_dst_flip()
             self.ask_batch_size(suggest_batch_size)
+            self.options['use_fp16'] = io.input_bool ("Use fp16", default_usefp16, help_message='Increases training/inference speed, reduces model size. Model may crash. Enable it after 1-5k iters.')
 
         if self.is_first_run():
             resolution = io.input_int("Resolution", default_resolution, add_info="64-640", help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 16 and 32 for -d archi.")
@@ -112,7 +113,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                 if archi_opts is not None:
                     if len(archi_opts) == 0:
                         continue
-                    if len([ 1 for opt in archi_opts if opt not in ['u','d'] ]) != 0:
+                    if len([ 1 for opt in archi_opts if opt not in ['u','d','t'] ]) != 0:
                         continue
 
                     if 'd' in archi_opts:
@@ -147,6 +148,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             self.options['mouth_prio'] = io.input_bool ("Mouth priority", default_mouth_prio, help_message='Helps to fix mouth problems during training by forcing the neural network to train mouth with higher priority similar to eyes ')
 
             self.options['uniform_yaw'] = io.input_bool ("Uniform yaw distribution of samples", default_uniform_yaw, help_message='Helps to fix blurry side faces due to small amount of them in the faceset.')
+            self.options['blur_out_mask'] = io.input_bool ("Blur out mask", default_blur_out_mask, help_message='Blurs nearby area outside of applied face mask of training samples. The result is the background near the face is smoothed and less noticeable on swapped face. The exact xseg mask in src and dst faceset is required.')
 
         default_gan_version        = self.options['gan_version']        = self.load_or_def_option('gan_version', 2)
         default_gan_power          = self.options['gan_power']          = self.load_or_def_option('gan_power', 0.0)
@@ -250,11 +252,17 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             self.set_iter(0)
 
         adabelief = self.options['adabelief']
+        
+        use_fp16 = False
+        if self.is_exporting:
+            use_fp16 = io.input_bool ("Export quantized?", False, help_message='Makes the exported model faster. If you have problems, disable this option.')
 
         self.gan_power = gan_power = 0.0 if self.pretrain else self.options['gan_power']
         random_warp = False if self.pretrain else self.options['random_warp']
         random_src_flip = self.random_src_flip if not self.pretrain else True
         random_dst_flip = self.random_dst_flip if not self.pretrain else True
+        blur_out_mask = self.options['blur_out_mask']
+        learn_dst_bg = False#True
         
         if self.pretrain:
             self.options_show_override['gan_power'] = 0.0
@@ -293,7 +301,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             self.target_dstm_em = tf.placeholder (nn.floatx, mask_shape, name='target_dstm_em')
 
         # Initializing model classes
-        model_archi = nn.DeepFakeArchi(resolution, opts=archi_opts)
+        model_archi = nn.DeepFakeArchi(resolution, use_fp16=use_fp16, opts=archi_opts)
 
         with tf.device (models_opt_device):
             if 'df' in archi_type:
@@ -407,6 +415,22 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_target_dstm_all = self.target_dstm[batch_slice,:,:,:]
                         gpu_target_dstm_em = self.target_dstm_em[batch_slice,:,:,:]
 
+                    gpu_target_srcm_anti = 1-gpu_target_srcm_all
+                    gpu_target_dstm_anti = 1-gpu_target_dstm_all
+
+                    if blur_out_mask:
+                        sigma = resolution / 128
+                        
+                        x = nn.gaussian_blur(gpu_target_src*gpu_target_srcm_anti, sigma)
+                        y = 1-nn.gaussian_blur(gpu_target_srcm_all, sigma) 
+                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)                        
+                        gpu_target_src = gpu_target_src*gpu_target_srcm_all + (x/y)*gpu_target_srcm_anti
+                        
+                        x = nn.gaussian_blur(gpu_target_dst*gpu_target_dstm_anti, sigma)
+                        y = 1-nn.gaussian_blur(gpu_target_dstm_all, sigma) 
+                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)                        
+                        gpu_target_dst = gpu_target_dst*gpu_target_dstm_all + (x/y)*gpu_target_dstm_anti
+
                     # process model tensors
                     if 'df' in archi_type:
                         gpu_src_code     = self.inter(self.encoder(gpu_warped_src))
@@ -414,6 +438,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_pred_src_src, gpu_pred_src_srcm = self.decoder_src(gpu_src_code)
                         gpu_pred_dst_dst, gpu_pred_dst_dstm = self.decoder_dst(gpu_dst_code)
                         gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder_src(gpu_dst_code)
+                        gpu_pred_src_dst_no_code_grad, _ = self.decoder_src(tf.stop_gradient(gpu_dst_code))
 
                     elif 'liae' in archi_type:
                         gpu_src_code = self.encoder (gpu_warped_src)
@@ -427,7 +452,9 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                         gpu_pred_src_src, gpu_pred_src_srcm = self.decoder(gpu_src_code)
                         gpu_pred_dst_dst, gpu_pred_dst_dstm = self.decoder(gpu_dst_code)
+                        gpu_pred_dst_dst_no_code_grad, _ = self.decoder(tf.stop_gradient(gpu_dst_code))
                         gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder(gpu_src_dst_code)
+                        gpu_pred_src_dst_no_code_grad, _ = self.decoder(tf.stop_gradient(gpu_src_dst_code))
 
                     gpu_pred_src_src_list.append(gpu_pred_src_src)
                     gpu_pred_dst_dst_list.append(gpu_pred_dst_dst)
@@ -449,25 +476,31 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                     gpu_target_srcm_blur = nn.gaussian_blur(gpu_target_srcm,  max(1, resolution // 32) )
                     gpu_target_srcm_blur = tf.clip_by_value(gpu_target_srcm_blur, 0, 0.5) * 2
+                    gpu_target_srcm_anti_blur = 1.0-gpu_target_srcm_blur
 
                     gpu_target_dstm_blur = nn.gaussian_blur(gpu_target_dstm,  max(1, resolution // 32) )
                     gpu_target_dstm_style_blur = gpu_target_dstm_blur #default style mask is 0.5 on boundary
+                    gpu_target_dstm_style_anti_blur = 1.0 - gpu_target_dstm_style_blur
                     gpu_target_dstm_blur = tf.clip_by_value(gpu_target_dstm_blur, 0, 0.5) * 2
+                    gpu_target_dstm_anti_blur = 1.0-gpu_target_dstm_blur
 
-                    gpu_target_dst_masked           = gpu_target_dst*gpu_target_dstm_blur
+                    gpu_target_dst_masked            = gpu_target_dst*gpu_target_dstm_blur
                     gpu_target_dst_style_masked      = gpu_target_dst*gpu_target_dstm_style_blur
-                    gpu_target_dst_style_anti_masked = gpu_target_dst*(1.0 - gpu_target_dstm_style_blur)
+                    gpu_target_dst_style_anti_masked = gpu_target_dst*gpu_target_dstm_style_anti_blur
 
-                    gpu_target_src_anti_masked = gpu_target_src*(1.0-gpu_target_srcm_blur)
+                    gpu_target_src_anti_masked = gpu_target_src*gpu_target_srcm_anti_blur
+                    gpu_target_dst_anti_masked = gpu_target_dst*gpu_target_dstm_anti_blur
+                    gpu_pred_src_src_anti_masked = gpu_pred_src_src*gpu_target_srcm_anti_blur
+                    gpu_pred_dst_dst_anti_masked = gpu_pred_dst_dst*gpu_target_dstm_anti_blur
+
                     gpu_target_src_masked_opt  = gpu_target_src*gpu_target_srcm_blur if masked_training else gpu_target_src
                     gpu_target_dst_masked_opt  = gpu_target_dst_masked if masked_training else gpu_target_dst
-
                     gpu_pred_src_src_masked_opt = gpu_pred_src_src*gpu_target_srcm_blur if masked_training else gpu_pred_src_src
                     gpu_pred_src_src_anti_masked = gpu_pred_src_src*(1.0-gpu_target_srcm_blur)
                     gpu_pred_dst_dst_masked_opt = gpu_pred_dst_dst*gpu_target_dstm_blur if masked_training else gpu_pred_dst_dst
 
                     gpu_psd_target_dst_style_masked = gpu_pred_src_dst*gpu_target_dstm_style_blur
-                    gpu_psd_target_dst_style_anti_masked = gpu_pred_src_dst*(1.0 - gpu_target_dstm_style_blur)
+                    gpu_psd_target_dst_style_anti_masked = gpu_pred_src_dst*gpu_target_dstm_style_anti_blur
 
                     if self.options['loss_function'] == 'MS-SSIM':
                         gpu_src_loss = 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_src_masked_opt, gpu_pred_src_src_masked_opt, max_val=1.0)
@@ -512,7 +545,8 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                     face_style_power = self.options['face_style_power'] / 100.0
                     if face_style_power != 0 and not self.pretrain:
-                        gpu_src_loss += nn.style_loss(gpu_psd_target_dst_style_masked, gpu_target_dst_style_masked, gaussian_blur_radius=resolution//16, loss_weight=10000*face_style_power)
+                        gpu_src_loss += nn.style_loss(gpu_pred_src_dst_no_code_grad*tf.stop_gradient(gpu_pred_src_dstm), tf.stop_gradient(gpu_pred_dst_dst*gpu_pred_dst_dstm), gaussian_blur_radius=resolution//8, loss_weight=10000*face_style_power)
+                        #gpu_src_loss += nn.style_loss(gpu_psd_target_dst_style_masked, gpu_target_dst_style_masked, gaussian_blur_radius=resolution//16, loss_weight=10000*face_style_power)
 
                     bg_style_power = self.options['bg_style_power'] / 100.0
                     if bg_style_power != 0 and not self.pretrain:
@@ -531,7 +565,6 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                             gpu_dst_loss = tf.reduce_mean ( 5*nn.dssim(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0, filter_size=int(resolution/11.6) ), axis=[1])
                             gpu_dst_loss += tf.reduce_mean ( 5*nn.dssim(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0, filter_size=int(resolution/23.2) ), axis=[1])
                         gpu_dst_loss += tf.reduce_mean ( 10*tf.square(  gpu_target_dst_masked_opt- gpu_pred_dst_dst_masked_opt ), axis=[1,2,3])
-
 
                     if eyes_prio or mouth_prio:
                         if eyes_prio and mouth_prio:
@@ -565,6 +598,9 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     gpu_dst_losses += [gpu_dst_loss]
 
                     gpu_G_loss = gpu_src_loss + gpu_dst_loss
+
+                    if learn_dst_bg and masked_training and 'liae' in archi_type:
+                        gpu_G_loss += tf.reduce_mean( tf.square(gpu_pred_dst_dst_no_code_grad*gpu_target_dstm_anti_blur-gpu_target_dst_anti_masked),axis=[1,2,3] )
 
                     def DLoss(labels,logits):
                         return tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits), axis=[1,2,3])
@@ -750,7 +786,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
             random_ct_samples_path=training_data_dst_path if ct_mode is not None and not self.pretrain else None
 
-            cpu_count = min(multiprocessing.cpu_count(), 8)
+            cpu_count = multiprocessing.cpu_count()
             src_generators_count = cpu_count // 2
             dst_generators_count = cpu_count // 2
             if ct_mode is not None:
@@ -801,16 +837,20 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
             if self.pretrain_just_disabled:
                 self.update_sample_for_preview(force_new=True)
-    
-    def dump_ckpt(self):
+
+    def export_dfm (self):
+        output_path=self.get_strpath_storage_for_file('model.dfm')
+
+        io.log_info(f'Dumping .dfm to {output_path}')
+
         tf = nn.tf
-        
-        
-        with tf.device ('/CPU:0'):
+        nn.set_data_format('NCHW')
+
+        with tf.device (nn.tf_default_device_name):
             warped_dst = tf.placeholder (nn.floatx, (None, self.resolution, self.resolution, 3), name='in_face')
             warped_dst = tf.transpose(warped_dst, (0,3,1,2))
-            
-            
+
+
             if 'df' in self.archi_type:
                 gpu_dst_code     = self.inter(self.encoder(warped_dst))
                 gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder_src(gpu_dst_code)
@@ -825,20 +865,31 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                 gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder(gpu_src_dst_code)
                 _, gpu_pred_dst_dstm = self.decoder(gpu_dst_code)
-                
+
             gpu_pred_src_dst = tf.transpose(gpu_pred_src_dst, (0,2,3,1))
             gpu_pred_dst_dstm = tf.transpose(gpu_pred_dst_dstm, (0,2,3,1))
             gpu_pred_src_dstm = tf.transpose(gpu_pred_src_dstm, (0,2,3,1))
 
-            
-        saver = tf.train.Saver()
         tf.identity(gpu_pred_dst_dstm, name='out_face_mask')
         tf.identity(gpu_pred_src_dst, name='out_celeb_face')
-        tf.identity(gpu_pred_src_dstm, name='out_celeb_face_mask')       
-        
-        saver.save(nn.tf_sess, self.get_strpath_storage_for_file('.ckpt') )
+        tf.identity(gpu_pred_src_dstm, name='out_celeb_face_mask')
 
-        
+        output_graph_def = tf.graph_util.convert_variables_to_constants(
+            nn.tf_sess,
+            tf.get_default_graph().as_graph_def(),
+            ['out_face_mask','out_celeb_face','out_celeb_face_mask']
+        )
+
+        import tf2onnx
+        with tf.device("/CPU:0"):
+            model_proto, _ = tf2onnx.convert._convert_common(
+                output_graph_def,
+                name='SAEHD',
+                input_names=['in_face:0'],
+                output_names=['out_face_mask:0','out_celeb_face:0','out_celeb_face_mask:0'],
+                opset=9,
+                output_path=output_path)
+
     #override
     def get_model_filename_list(self):
         return self.model_filename_list
@@ -892,7 +943,6 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             self.D_src_dst_train (warped_src, target_src, target_srcm, target_srcm_em, warped_dst, target_dst, target_dstm, target_dstm_em)
 
         return ( ('src_loss', np.mean(src_loss) ), ('dst_loss', np.mean(dst_loss) ), )
-
     #override
     def onGetPreview(self, samples):
         ( (warped_src, target_src, target_srcm, target_srcm_em),
