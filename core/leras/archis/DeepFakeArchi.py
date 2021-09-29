@@ -20,7 +20,14 @@ class DeepFakeArchi(nn.ArchiBase):
 
 
         conv_dtype = tf.float16 if use_fp16 else tf.float32
-
+        
+        if 'c' in opts:
+            def act(x, alpha=0.1):
+                return tf.nn.relu(x)
+        else:
+            def act(x, alpha=0.1):
+                return tf.nn.leaky_relu(x, alpha)
+                
         if mod is None:
             class Downscale(nn.ModelBase):
                 def __init__(self, in_ch, out_ch, kernel_size=5, *kwargs ):
@@ -34,7 +41,7 @@ class DeepFakeArchi(nn.ArchiBase):
 
                 def forward(self, x):
                     x = self.conv1(x)
-                    x = tf.nn.leaky_relu(x, 0.1)
+                    x = act(x, 0.1)
                     return x
 
                 def get_out_ch(self):
@@ -62,7 +69,7 @@ class DeepFakeArchi(nn.ArchiBase):
 
                 def forward(self, x):
                     x = self.conv1(x)
-                    x = tf.nn.leaky_relu(x, 0.1)
+                    x = act(x, 0.1)
                     x = nn.depth_to_space(x, 2)
                     return x
 
@@ -73,9 +80,9 @@ class DeepFakeArchi(nn.ArchiBase):
 
                 def forward(self, inp):
                     x = self.conv1(inp)
-                    x = tf.nn.leaky_relu(x, 0.2)
+                    x = act(x, 0.2)
                     x = self.conv2(x)
-                    x = tf.nn.leaky_relu(inp + x, 0.2)
+                    x = act(inp + x, 0.2)
                     return x
 
             class Encoder(nn.ModelBase):
