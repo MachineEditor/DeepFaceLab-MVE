@@ -108,10 +108,15 @@ nn.gelu = gelu
 
 def upsample2d(x, size=2):
     if nn.data_format == "NCHW":
-        b,c,h,w = x.shape.as_list()
-        x = tf.reshape (x, (-1,c,h,1,w,1) )
-        x = tf.tile(x, (1,1,1,size,1,size) )
-        x = tf.reshape (x, (-1,c,h*size,w*size) )
+        x = tf.transpose(x, (0,2,3,1))
+        x = tf.image.resize_nearest_neighbor(x, (x.shape[1]*size, x.shape[2]*size) )
+        x = tf.transpose(x, (0,3,1,2))
+        
+        
+        # b,c,h,w = x.shape.as_list()
+        # x = tf.reshape (x, (-1,c,h,1,w,1) )
+        # x = tf.tile(x, (1,1,1,size,1,size) )
+        # x = tf.reshape (x, (-1,c,h*size,w*size) )
         return x
     else:
         return tf.image.resize_nearest_neighbor(x, (x.shape[1]*size, x.shape[2]*size) )
