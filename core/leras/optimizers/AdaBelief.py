@@ -67,7 +67,7 @@ class AdaBelief(nn.OptimizerBase):
             if self.lr_cos != 0:
                 lr *= (tf.cos(  tf.cast(self.iterations, g.dtype) * (2*3.1415926535/ float(self.lr_cos) )  ) + 1.0) / 2.0
 
-            v_diff = - lr * m_t / (tf.sqrt(v_t) + np.finfo( m_t.dtype.as_numpy_dtype ).resolution )
+            v_diff = - lr * m_t / (tf.sqrt(v_t) + np.finfo( g.dtype.as_numpy_dtype ).resolution )
             if self.lr_dropout != 1.0:
                 lr_rnd = self.lr_rnds_dict[v.name]
                 v_diff *= lr_rnd

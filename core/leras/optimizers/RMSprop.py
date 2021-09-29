@@ -59,7 +59,7 @@ class RMSprop(nn.OptimizerBase):
 
             lr = tf.constant(self.lr, g.dtype)
 
-            v_diff = - lr * g / (tf.sqrt(new_a) + np.finfo( m_t.dtype.as_numpy_dtype ).resolution  )
+            v_diff = - lr * g / (tf.sqrt(new_a) + np.finfo( g.dtype.as_numpy_dtype ).resolution  )
             if self.lr_dropout != 1.0:
                 lr_rnd = self.lr_rnds_dict[v.name]
                 v_diff *= lr_rnd
