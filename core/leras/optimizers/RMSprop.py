@@ -1,9 +1,10 @@
+import numpy as np
 from tensorflow.python.ops import control_flow_ops, state_ops
 from core.leras import nn
 tf = nn.tf
 
 class RMSprop(nn.OptimizerBase):
-    def __init__(self, lr=0.001, rho=0.9, lr_dropout=1.0, epsilon=1e-7, clipnorm=0.0, name=None, **kwargs):
+    def __init__(self, lr=0.001, rho=0.9, lr_dropout=1.0, clipnorm=0.0, name=None, **kwargs):
         super().__init__(name=name)
 
         if name is None:
@@ -12,7 +13,6 @@ class RMSprop(nn.OptimizerBase):
         self.lr_dropout = lr_dropout
         self.lr = lr
         self.rho = rho
-        self.epsilon = epsilon
         
         self.clipnorm = clipnorm
 
@@ -59,7 +59,7 @@ class RMSprop(nn.OptimizerBase):
 
             lr = tf.constant(self.lr, g.dtype)
 
-            v_diff = - lr * g / (tf.sqrt(new_a) + self.epsilon)
+            v_diff = - lr * g / (tf.sqrt(new_a) + np.finfo( m_t.dtype.as_numpy_dtype ).resolution  )
             if self.lr_dropout != 1.0:
                 lr_rnd = self.lr_rnds_dict[v.name]
                 v_diff *= lr_rnd

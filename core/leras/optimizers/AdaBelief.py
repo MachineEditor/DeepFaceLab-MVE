@@ -1,9 +1,11 @@
-from tensorflow.python.ops import control_flow_ops, state_ops
+import numpy as np
 from core.leras import nn
+from tensorflow.python.ops import control_flow_ops, state_ops
+
 tf = nn.tf
 
 class AdaBelief(nn.OptimizerBase):
-    def __init__(self, lr=0.001, beta_1=0.9, beta_2=0.999, lr_dropout=1.0, lr_cos=0, epsilon=1e-7, clipnorm=0.0, name=None, **kwargs):
+    def __init__(self, lr=0.001, beta_1=0.9, beta_2=0.999, lr_dropout=1.0, lr_cos=0, clipnorm=0.0, name=None, **kwargs):
         super().__init__(name=name)
 
         if name is None:
@@ -15,7 +17,6 @@ class AdaBelief(nn.OptimizerBase):
         self.lr_dropout = lr_dropout
         self.lr_cos = lr_cos
         self.clipnorm = clipnorm
-        self.epsilon = epsilon
 
         with tf.device('/CPU:0') :
             with tf.variable_scope(self.name):
@@ -66,7 +67,7 @@ class AdaBelief(nn.OptimizerBase):
             if self.lr_cos != 0:
                 lr *= (tf.cos(  tf.cast(self.iterations, g.dtype) * (2*3.1415926535/ float(self.lr_cos) )  ) + 1.0) / 2.0
 
-            v_diff = - lr * m_t / (tf.sqrt(v_t) + self.epsilon)
+            v_diff = - lr * m_t / (tf.sqrt(v_t) + np.finfo( m_t.dtype.as_numpy_dtype ).resolution )
             if self.lr_dropout != 1.0:
                 lr_rnd = self.lr_rnds_dict[v.name]
                 v_diff *= lr_rnd
