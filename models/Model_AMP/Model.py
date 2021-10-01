@@ -624,51 +624,9 @@ class AMPModel(ModelBase):
                         generators_count=dst_generators_count )
                              ])
 
-            """SampleGeneratorFace(training_data_src_path, random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
-                        sample_process_options=SampleProcessor.Options(random_flip=self.random_src_flip),
-                        output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp, 
-                                                 'random_downsample': self.options['random_downsample'],
-                                                 'random_noise': self.options['random_noise'],
-                                                 'random_blur': self.options['random_blur'],
-                                                 'random_jpeg': self.options['random_jpeg'],
-                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,
-                                                 'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False
-                                                , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'ct_mode': ct_mode,
-                                                'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False,
-                                                'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,
-                                                'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE,'face_type':face_type,
-                                                'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False,
-                                                'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,
-                                                'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':face_type,
-                                                'data_format':nn.data_format, 'resolution': resolution},
-                                              ],
-                        uniform_yaw_distribution=self.options['uniform_yaw'],# or self.pretrain,
-                        generators_count=src_generators_count ),
-
-                    SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
-                        sample_process_options=SampleProcessor.Options(random_flip=self.random_dst_flip),
-                        output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp,
-                                                 'random_downsample': self.options['random_downsample'],
-                                                 'random_noise': self.options['random_noise'],
-                                                 'random_blur': self.options['random_blur'],
-                                                 'random_jpeg': self.options['random_jpeg'],
-                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,
-                                                 'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                             'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE,  'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.EYES_MOUTH, 'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                              ],
-                        uniform_yaw_distribution=self.options['uniform_yaw'],# or self.pretrain,
-                        generators_count=dst_generators_count )
-                             ])"""
-
             self.last_src_samples_loss = []
             self.last_dst_samples_loss = []
 
-    """
     def export_dfm (self):
         output_path=self.get_strpath_storage_for_file('model.dfm')
 
@@ -714,7 +672,7 @@ class AMPModel(ModelBase):
                 output_names=['out_face_mask:0','out_celeb_face:0','out_celeb_face_mask:0'],
                 opset=9,
                 output_path=output_path)
-"""
+
     #override
     def get_model_filename_list(self):
         return self.model_filename_list
