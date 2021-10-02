@@ -191,6 +191,7 @@ class ModelBase(object):
         self.random_flip = self.options.get('random_flip',True)
         self.random_src_flip = self.options.get('random_src_flip', False)
         self.random_dst_flip = self.options.get('random_dst_flip', True)
+        self.retraining_samples = self.options.get('retraining_samples', False)
         
         self.on_initialize()
         self.options['batch_size'] = self.batch_size
@@ -329,6 +330,10 @@ class ModelBase(object):
             batch_size = np.clip(batch_size, range[0], range[1])
 
         self.options['batch_size'] = self.batch_size = batch_size
+
+    def ask_retraining_samples(self, default_value=False):
+        default_retraining_samples = self.load_or_def_option('retraining_samples', default_value)
+        self.options['retraining_samples'] = io.input_bool("Retrain high loss samples", default_retraining_samples, help_message="Periodically retrains last 16 \"high-loss\" sample")
 
 
     #overridable

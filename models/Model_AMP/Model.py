@@ -16,6 +16,8 @@ class AMPModel(ModelBase):
 
     #override
     def on_initialize_options(self):
+        default_retraining_samples = self.options['retraining_samples'] = self.load_or_def_option('retraining_samples', False)
+        default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
         default_resolution         = self.options['resolution']         = self.load_or_def_option('resolution', 224)
         default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'wf')
         default_models_opt_on_gpu  = self.options['models_opt_on_gpu']  = self.load_or_def_option('models_opt_on_gpu', True)
@@ -54,9 +56,12 @@ class AMPModel(ModelBase):
             self.ask_autobackup_hour()
             self.ask_write_preview_history()
             self.ask_target_iter()
+            self.ask_retraining_samples()
             self.ask_random_src_flip()
             self.ask_random_dst_flip()
             self.ask_batch_size(8)
+            self.options['use_fp16'] = io.input_bool ("Use fp16", default_usefp16, help_message='Increases training/inference speed, reduces model size. Model may crash. Enable it after 1-5k iters.')
+
 
         if self.is_first_run():
             resolution = io.input_int("Resolution", default_resolution, add_info="64-640", help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 32 .")
@@ -154,10 +159,10 @@ class AMPModel(ModelBase):
         if ct_mode == 'none':
             ct_mode = None
 
-        use_fp16 = False
-        #if self.is_exporting:
-            #use_fp16 = io.input_bool ("Export quantized?", False, help_message='Makes the exported model faster. If you have problems, disable this option.')
-        
+        use_fp16 = self.options['use_fp16']
+        if self.is_exporting:
+            use_fp16 = io.input_bool ("Export quantized?", False, help_message='Makes the exported model faster. If you have problems, disable this option.')
+
         conv_dtype = tf.float16 if use_fp16 else tf.float32
 
         class Downscale(nn.ModelBase):
@@ -624,8 +629,9 @@ class AMPModel(ModelBase):
                         generators_count=dst_generators_count )
                              ])
 
-            self.last_src_samples_loss = []
-            self.last_dst_samples_loss = []
+            if self.options['retraining_samples']:
+                self.last_src_samples_loss = []
+                self.last_dst_samples_loss = []
 
     def export_dfm (self):
         output_path=self.get_strpath_storage_for_file('model.dfm')
@@ -696,25 +702,26 @@ class AMPModel(ModelBase):
 
         src_loss, dst_loss = self.train (warped_src, target_src, target_srcm, target_srcm_em, warped_dst, target_dst, target_dstm, target_dstm_em)
 
-        for i in range(bs):
-            self.last_src_samples_loss.append ( (src_loss[i], target_src[i], target_srcm[i], target_srcm_em[i]) )
-            self.last_dst_samples_loss.append ( (dst_loss[i], target_dst[i], target_dstm[i], target_dstm_em[i]) )
+        if self.options['retraining_samples']:
+            for i in range(bs):
+                self.last_src_samples_loss.append ( (src_loss[i], target_src[i], target_srcm[i], target_srcm_em[i]) )
+                self.last_dst_samples_loss.append ( (dst_loss[i], target_dst[i], target_dstm[i], target_dstm_em[i]) )
 
-        if len(self.last_src_samples_loss) >= bs*16:
-            src_samples_loss = sorted(self.last_src_samples_loss, key=operator.itemgetter(0), reverse=True)
-            dst_samples_loss = sorted(self.last_dst_samples_loss, key=operator.itemgetter(0), reverse=True)
+            if len(self.last_src_samples_loss) >= bs*16:
+                src_samples_loss = sorted(self.last_src_samples_loss, key=operator.itemgetter(0), reverse=True)
+                dst_samples_loss = sorted(self.last_dst_samples_loss, key=operator.itemgetter(0), reverse=True)
 
-            target_src        = np.stack( [ x[1] for x in src_samples_loss[:bs] ] )
-            target_srcm       = np.stack( [ x[2] for x in src_samples_loss[:bs] ] )
-            target_srcm_em    = np.stack( [ x[3] for x in src_samples_loss[:bs] ] )
+                target_src        = np.stack( [ x[1] for x in src_samples_loss[:bs] ] )
+                target_srcm       = np.stack( [ x[2] for x in src_samples_loss[:bs] ] )
+                target_srcm_em    = np.stack( [ x[3] for x in src_samples_loss[:bs] ] )
 
-            target_dst        = np.stack( [ x[1] for x in dst_samples_loss[:bs] ] )
-            target_dstm       = np.stack( [ x[2] for x in dst_samples_loss[:bs] ] )
-            target_dstm_em    = np.stack( [ x[3] for x in dst_samples_loss[:bs] ] )
+                target_dst        = np.stack( [ x[1] for x in dst_samples_loss[:bs] ] )
+                target_dstm       = np.stack( [ x[2] for x in dst_samples_loss[:bs] ] )
+                target_dstm_em    = np.stack( [ x[3] for x in dst_samples_loss[:bs] ] )
 
-            src_loss, dst_loss = self.train (target_src, target_src, target_srcm, target_srcm_em, target_dst, target_dst, target_dstm, target_dstm_em)
-            self.last_src_samples_loss = []
-            self.last_dst_samples_loss = []
+                src_loss, dst_loss = self.train (target_src, target_src, target_srcm, target_srcm_em, target_dst, target_dst, target_dstm, target_dstm_em)
+                self.last_src_samples_loss = []
+                self.last_dst_samples_loss = []
 
         if self.gan_power != 0:
             self.GAN_train (warped_src, target_src, target_srcm, target_srcm_em, warped_dst, target_dst, target_dstm, target_dstm_em)

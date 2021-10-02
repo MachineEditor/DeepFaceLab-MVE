@@ -26,7 +26,6 @@ class SAEHDModel(ModelBase):
         else:
             suggest_batch_size = 4
 
-        yn_str = {True:'y',False:'n'}
         min_res = 64
         max_res = 640
 
@@ -77,6 +76,7 @@ class SAEHDModel(ModelBase):
             self.ask_maximum_n_backups()
             self.ask_write_preview_history()
             self.ask_target_iter()
+            self.ask_retraining_samples()
             self.ask_random_src_flip()
             self.ask_random_dst_flip()
             self.ask_batch_size(suggest_batch_size)
@@ -113,7 +113,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                 if archi_opts is not None:
                     if len(archi_opts) == 0:
                         continue
-                    if len([ 1 for opt in archi_opts if opt not in ['u','d','t'] ]) != 0:
+                    if len([ 1 for opt in archi_opts if opt not in ['u','d','t','c'] ]) != 0:
                         continue
 
                     if 'd' in archi_opts:
@@ -253,7 +253,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
         adabelief = self.options['adabelief']
         
-        use_fp16 = False
+        use_fp16 = self.options['use_fp16']
         if self.is_exporting:
             use_fp16 = io.input_bool ("Export quantized?", False, help_message='Makes the exported model faster. If you have problems, disable this option.')
 
@@ -832,8 +832,9 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         generators_count=dst_generators_count )
                              ])
 
-            self.last_src_samples_loss = []
-            self.last_dst_samples_loss = []
+            if self.options['retraining_samples']:
+                self.last_src_samples_loss = []
+                self.last_dst_samples_loss = []
 
             if self.pretrain_just_disabled:
                 self.update_sample_for_preview(force_new=True)
@@ -909,8 +910,6 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         if self.get_iter() == 0 and not self.pretrain and not self.pretrain_just_disabled:
             io.log_info('You are training the model from scratch. It is strongly recommended to use a pretrained model to speed up the training and improve the quality.\n')
 
-        bs = self.get_batch_size()
-
         ( (warped_src, target_src, target_srcm, target_srcm_em), \
           (warped_dst, target_dst, target_dstm, target_dstm_em) ) = self.generate_next_samples()
 
@@ -920,21 +919,24 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             self.last_src_samples_loss.append (  (target_src[i], target_srcm[i], target_srcm_em[i], src_loss[i] )  )
             self.last_dst_samples_loss.append (  (target_dst[i], target_dstm[i], target_dstm_em[i], dst_loss[i] )  )
 
-        if len(self.last_src_samples_loss) >= bs*16:
-            src_samples_loss = sorted(self.last_src_samples_loss, key=operator.itemgetter(3), reverse=True)
-            dst_samples_loss = sorted(self.last_dst_samples_loss, key=operator.itemgetter(3), reverse=True)
+        if self.options['retraining_samples']:
+            bs = self.get_batch_size()
 
-            target_src        = np.stack( [ x[0] for x in src_samples_loss[:bs] ] )
-            target_srcm       = np.stack( [ x[1] for x in src_samples_loss[:bs] ] )
-            target_srcm_em = np.stack( [ x[2] for x in src_samples_loss[:bs] ] )
+            if len(self.last_src_samples_loss) >= bs*16:
+                src_samples_loss = sorted(self.last_src_samples_loss, key=operator.itemgetter(3), reverse=True)
+                dst_samples_loss = sorted(self.last_dst_samples_loss, key=operator.itemgetter(3), reverse=True)
 
-            target_dst        = np.stack( [ x[0] for x in dst_samples_loss[:bs] ] )
-            target_dstm       = np.stack( [ x[1] for x in dst_samples_loss[:bs] ] )
-            target_dstm_em = np.stack( [ x[2] for x in dst_samples_loss[:bs] ] )
+                target_src        = np.stack( [ x[0] for x in src_samples_loss[:bs] ] )
+                target_srcm       = np.stack( [ x[1] for x in src_samples_loss[:bs] ] )
+                target_srcm_em = np.stack( [ x[2] for x in src_samples_loss[:bs] ] )
 
-            src_loss, dst_loss = self.src_dst_train (target_src, target_src, target_srcm, target_srcm_em, target_dst, target_dst, target_dstm, target_dstm_em)
-            self.last_src_samples_loss = []
-            self.last_dst_samples_loss = []
+                target_dst        = np.stack( [ x[0] for x in dst_samples_loss[:bs] ] )
+                target_dstm       = np.stack( [ x[1] for x in dst_samples_loss[:bs] ] )
+                target_dstm_em = np.stack( [ x[2] for x in dst_samples_loss[:bs] ] )
+
+                src_loss, dst_loss = self.src_dst_train (target_src, target_src, target_srcm, target_srcm_em, target_dst, target_dst, target_dstm, target_dstm_em)
+                self.last_src_samples_loss = []
+                self.last_dst_samples_loss = []
 
         if self.options['true_face_power'] != 0 and not self.pretrain:
             self.D_train (warped_src, warped_dst)
