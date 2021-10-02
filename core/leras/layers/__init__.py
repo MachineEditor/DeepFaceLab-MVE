@@ -8,6 +8,7 @@ from .Dense import *
 from .BlurPool import *
 
 from .BatchNorm2D import *
+from .InstanceNorm2D import *
 from .FRNorm2D import *
 
 from .TLU import *
