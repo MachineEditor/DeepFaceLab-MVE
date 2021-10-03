@@ -1173,6 +1173,8 @@ class MainWindow(QXMainWindow):
         self.cached_images = {}
         self.cached_has_ie_polys = {}
 
+        self.spin_box = QSpinBox()
+
         self.initialize_ui()
 
         # Loader
@@ -1297,7 +1299,7 @@ class MainWindow(QXMainWindow):
 
     def process_prev_image(self):
         key_mods = QApplication.keyboardModifiers()
-        step = 5 if key_mods == Qt.ShiftModifier else 1
+        step = self.spin_box.value() if key_mods == Qt.ShiftModifier else 1
         only_has_polys = key_mods == Qt.ControlModifier
 
         if self.canvas.op.is_initialized():
@@ -1323,7 +1325,7 @@ class MainWindow(QXMainWindow):
     def process_next_image(self, first_initialization=False):
         key_mods = QApplication.keyboardModifiers()
 
-        step = 0 if first_initialization else 5 if key_mods == Qt.ShiftModifier else 1
+        step = 0 if first_initialization else self.spin_box.value() if key_mods == Qt.ShiftModifier else 1
         only_has_polys = False if first_initialization else key_mods == Qt.ControlModifier
 
         if self.canvas.op.is_initialized():
@@ -1373,6 +1375,13 @@ class MainWindow(QXMainWindow):
     
         pad_image = QWidget()
         pad_image.setFixedSize(QUIConfig.preview_bar_icon_q_size)
+
+        self.spin_box.setFocusPolicy(Qt.ClickFocus)
+        self.spin_box.setRange(5, 500)
+        self.spin_box.setSingleStep(1)
+        self.spin_box.installEventFilter(self)
+        self.spin_box.valueChanged.connect(self.on_spinbox_value_changed)
+        self.spin_box.setToolTip(QStringDB.spinner_label_tip)
         
         preview_image_bar_frame_l = QHBoxLayout()
         preview_image_bar_frame_l.setContentsMargins(0,0,0,0)
@@ -1404,14 +1413,25 @@ class MainWindow(QXMainWindow):
         preview_image_bar.setLayout(preview_image_bar_l)
 
         label_font = QFont('Courier New')
+
         self.filename_label = QLabel()
         self.filename_label.setFont(label_font)
 
         self.has_ie_polys_count_label = QLabel()
 
+        status_frame_1_2 = QHBoxLayout()
+        status_frame_1_2.setContentsMargins(0,0,0,0)
+
+        step_string_label = QLabel()
+        step_string_label.setFont(label_font)
+        step_string_label.setText(QStringDB.spinner_label)
+
+        status_frame_1_2.addWidget (step_string_label, alignment=Qt.AlignRight)
+        status_frame_1_2.addWidget (self.spin_box, alignment=Qt.AlignLeft)
+
         status_frame_l = QHBoxLayout()
         status_frame_l.setContentsMargins(0,0,0,0)
-        status_frame_l.addWidget ( QLabel(), alignment=Qt.AlignCenter)
+        status_frame_l.addLayout (status_frame_1_2)
         status_frame_l.addWidget (self.filename_label, alignment=Qt.AlignCenter)
         status_frame_l.addWidget (self.has_ie_polys_count_label, alignment=Qt.AlignCenter)
         status_frame = QFrame()
@@ -1437,6 +1457,21 @@ class MainWindow(QXMainWindow):
             self.restoreGeometry(geometry)
         else:
             self.move( QPoint(0,0))
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.KeyPress and obj is self.spin_box:
+            if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter and self.spin_box.hasFocus():
+                self.spin_box.clearFocus()
+
+        if event.type() == QEvent.MouseButtonPress and obj is self.spin_box:
+            if event.button() == Qt.LeftButton and self.spin_box.hasFocus():
+                self.spin_box.clearFocus()
+                
+        return super().eventFilter(obj, event)
+
+    def on_spinbox_value_changed(self, value):
+        if value == self.spin_box.maximum() or value == self.spin_box.minimum():
+            self.spin_box.clearFocus()
 
     def get_has_ie_polys_count(self):
         return self.has_ie_polys_count
