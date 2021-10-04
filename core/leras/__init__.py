@@ -1,4 +1,5 @@
 import numpy as np
+from .nn import nn
 from core.leras import nn
 tf = nn.tf
 from tensorflow.python.ops import array_ops, random_ops, math_ops, sparse_ops, gradients
