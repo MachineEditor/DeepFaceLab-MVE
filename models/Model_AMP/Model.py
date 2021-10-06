@@ -334,7 +334,7 @@ class AMPModel(ModelBase):
                 self.model_filename_list += [ (self.src_dst_opt, 'src_dst_opt.npy') ]
 
                 if gan_power != 0:
-                    self.GAN = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], name="GAN")
+                    self.GAN = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], use_fp16=use_fp16, name="GAN")
                     self.GAN_opt = nn.AdaBelief(lr=5e-5, lr_dropout=lr_dropout, clipnorm=clipnorm, name='GAN_opt')
                     self.GAN_opt.initialize_variables ( self.GAN.get_weights(), vars_on_cpu=optimizer_vars_on_cpu)
                     self.model_filename_list += [ [self.GAN, 'GAN.npy'],
@@ -676,7 +676,7 @@ class AMPModel(ModelBase):
                 name='AMP',
                 input_names=['in_face:0','morph_value:0'],
                 output_names=['out_face_mask:0','out_celeb_face:0','out_celeb_face_mask:0'],
-                opset=9,
+                opset=11,
                 output_path=output_path)
 
     #override

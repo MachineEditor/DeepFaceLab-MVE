@@ -343,10 +343,10 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             if self.is_training:
                 if gan_power != 0:
                     if self.options['gan_version'] == 2:
-                        self.D_src = nn.UNetPatchDiscriminatorV2(patch_size=resolution//16, in_ch=input_ch, name="D_src")
+                        self.D_src = nn.UNetPatchDiscriminatorV2(patch_size=resolution//16, in_ch=input_ch, name="D_src", use_fp16=self.options['use_fp16'])
                         self.model_filename_list += [ [self.D_src, 'D_src_v2.npy'] ]
                     else:
-                        self.D_src = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], name="D_src")
+                        self.D_src = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], use_fp16=self.options['use_fp16'], name="D_src")
                         self.model_filename_list += [ [self.D_src, 'GAN.npy'] ]
 
                 # Initialize optimizers
@@ -928,7 +928,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                 target_src        = np.stack( [ x[0] for x in src_samples_loss[:bs] ] )
                 target_srcm       = np.stack( [ x[1] for x in src_samples_loss[:bs] ] )
-                target_srcm_em = np.stack( [ x[2] for x in src_samples_loss[:bs] ] )
+                target_srcm_em    = np.stack( [ x[2] for x in src_samples_loss[:bs] ] )
 
                 target_dst        = np.stack( [ x[0] for x in dst_samples_loss[:bs] ] )
                 target_dstm       = np.stack( [ x[1] for x in dst_samples_loss[:bs] ] )
