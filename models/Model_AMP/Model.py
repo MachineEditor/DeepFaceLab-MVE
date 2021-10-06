@@ -29,6 +29,7 @@ class AMPModel(ModelBase):
         default_d_dims             = self.options['d_dims']             = self.options.get('d_dims', None)
         default_d_mask_dims        = self.options['d_mask_dims']        = self.options.get('d_mask_dims', None)
         default_morph_factor       = self.options['morph_factor']       = self.options.get('morph_factor', 0.5)
+        default_eyes_mouth_prio    = self.options['eyes_mouth_prio']    = self.load_or_def_option('eyes_mouth_prio', False)
         default_uniform_yaw        = self.options['uniform_yaw']        = self.load_or_def_option('uniform_yaw', False)
 
         # Uncomment it just if you want to impelement other loss functions
@@ -93,6 +94,9 @@ class AMPModel(ModelBase):
             self.options['morph_factor'] = morph_factor
 
         if self.is_first_run() or ask_override:
+
+
+            self.options['eyes_mouth_prio'] = io.input_bool ("Eyes and mouth priority", default_eyes_mouth_prio, help_message='Helps to fix eye problems during training like "alien eyes" and wrong eyes direction. Also makes the detail of the teeth higher.')
             self.options['uniform_yaw'] = io.input_bool ("Uniform yaw distribution of samples", default_uniform_yaw, help_message='Helps to fix blurry side faces due to small amount of them in the faceset.')
             
             self.options['blur_out_mask'] = io.input_bool ("Blur out mask", default_blur_out_mask, help_message='Blurs nearby area outside of applied face mask of training samples. The result is the background near the face is smoothed and less noticeable on swapped face. The exact xseg mask in src and dst faceset is required.')
@@ -152,6 +156,8 @@ class AMPModel(ModelBase):
         morph_factor = self.options['morph_factor']
         gan_power    = self.gan_power = self.options['gan_power']
         random_warp  = self.options['random_warp']
+        
+        eyes_mouth_prio = self.options['eyes_mouth_prio'] 
 
         blur_out_mask = self.options['blur_out_mask']
 
@@ -453,8 +459,9 @@ class AMPModel(ModelBase):
                     gpu_dst_loss += tf.reduce_mean (10*tf.square(gpu_target_dst_masked-gpu_pred_dst_dst_masked), axis=[1,2,3])
 
                     # Eyes+mouth prio loss
-                    gpu_src_loss += tf.reduce_mean (300*tf.abs (gpu_target_src*gpu_target_srcm_em-gpu_pred_src_src*gpu_target_srcm_em), axis=[1,2,3])
-                    gpu_dst_loss += tf.reduce_mean (300*tf.abs (gpu_target_dst*gpu_target_dstm_em-gpu_pred_dst_dst*gpu_target_dstm_em), axis=[1,2,3])
+                    if eyes_mouth_prio:
+                        gpu_src_loss += tf.reduce_mean (300*tf.abs (gpu_target_src*gpu_target_srcm_em-gpu_pred_src_src*gpu_target_srcm_em), axis=[1,2,3])
+                        gpu_dst_loss += tf.reduce_mean (300*tf.abs (gpu_target_dst*gpu_target_dstm_em-gpu_pred_dst_dst*gpu_target_dstm_em), axis=[1,2,3])
 
                     # Mask loss
                     gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )

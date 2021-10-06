@@ -1,4 +1,5 @@
 import numpy as np
+from .nn import nn
 from core.leras import nn
 from .nn import nn
 tf = nn.tf
