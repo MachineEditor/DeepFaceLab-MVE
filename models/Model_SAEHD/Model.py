@@ -1,6 +1,5 @@
 import multiprocessing
 import operator
-from functools import partial
 
 import numpy as np
 
@@ -946,7 +945,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
         return ( ('src_loss', np.mean(src_loss) ), ('dst_loss', np.mean(dst_loss) ), )
     #override
-    def onGetPreview(self, samples):
+    def onGetPreview(self, samples, for_history=False):
         ( (warped_src, target_src, target_srcm, target_srcm_em),
           (warped_dst, target_dst, target_dstm, target_dstm_em) ) = samples
 
