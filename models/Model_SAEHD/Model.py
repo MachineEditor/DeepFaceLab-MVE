@@ -799,7 +799,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
             self.set_training_data_generators ([
                     SampleGeneratorFace(training_data_src_path, random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
-                        sample_process_options=SampleProcessor.Options(random_flip=random_src_flip),
+                        sample_process_options=SampleProcessor.Options(scale_range=[-0.125, 0.125], random_flip=random_src_flip),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp,
                                                  'random_downsample': self.options['random_downsample'],
                                                  'random_noise': self.options['random_noise'],
@@ -815,7 +815,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         generators_count=src_generators_count ),
 
                     SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
-                        sample_process_options=SampleProcessor.Options(random_flip=random_dst_flip),
+                        sample_process_options=SampleProcessor.Options(scale_range=[-0.125, 0.125], random_flip=random_dst_flip),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp,
                                                  'random_downsample': self.options['random_downsample'],
                                                  'random_noise': self.options['random_noise'],
