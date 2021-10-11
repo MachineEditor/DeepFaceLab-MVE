@@ -23,7 +23,7 @@ class DeepFakeArchi(nn.ArchiBase):
         
         if 'c' in opts:
             def act(x, alpha=0.1):
-                return tf.nn.relu(x)
+                return x*tf.cos(x)
         else:
             def act(x, alpha=0.1):
                 return tf.nn.leaky_relu(x, alpha)
