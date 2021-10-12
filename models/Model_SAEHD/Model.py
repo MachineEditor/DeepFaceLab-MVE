@@ -229,7 +229,6 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         random_src_flip = self.random_src_flip if not self.pretrain else True
         random_dst_flip = self.random_dst_flip if not self.pretrain else True
         blur_out_mask = self.options['blur_out_mask']
-        learn_dst_bg = False#True
 
         if self.pretrain:
             self.options_show_override['gan_power'] = 0.0
@@ -409,7 +408,6 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                         gpu_pred_src_src, gpu_pred_src_srcm = self.decoder(gpu_src_code)
                         gpu_pred_dst_dst, gpu_pred_dst_dstm = self.decoder(gpu_dst_code)
-                        gpu_pred_dst_dst_no_code_grad, _ = self.decoder(tf.stop_gradient(gpu_dst_code))
                         gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder(gpu_src_dst_code)
                         gpu_pred_src_dst_no_code_grad, _ = self.decoder(tf.stop_gradient(gpu_src_dst_code))
 
@@ -426,27 +424,21 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     gpu_target_srcm_anti_blur = 1.0-gpu_target_srcm_blur
 
                     gpu_target_dstm_blur = nn.gaussian_blur(gpu_target_dstm,  max(1, resolution // 32) )
-                    gpu_target_dstm_style_blur = gpu_target_dstm_blur #default style mask is 0.5 on boundary
-                    gpu_target_dstm_style_anti_blur = 1.0 - gpu_target_dstm_style_blur
                     gpu_target_dstm_blur = tf.clip_by_value(gpu_target_dstm_blur, 0, 0.5) * 2
-                    gpu_target_dstm_anti_blur = 1.0-gpu_target_dstm_blur
-
-                    gpu_target_dst_masked            = gpu_target_dst*gpu_target_dstm_blur
-                    gpu_target_dst_style_masked      = gpu_target_dst*gpu_target_dstm_style_blur
-                    gpu_target_dst_style_anti_masked = gpu_target_dst*gpu_target_dstm_style_anti_blur
+                    
+                    gpu_style_mask_blur = nn.gaussian_blur(gpu_pred_src_dstm*gpu_pred_dst_dstm,  max(1, resolution // 32) )
+                    gpu_style_mask_blur = tf.stop_gradient(tf.clip_by_value(gpu_target_srcm_blur, 0, 1.0))
+                    gpu_style_mask_anti_blur = 1.0 - gpu_style_mask_blur
+            
+                    gpu_target_dst_masked = gpu_target_dst*gpu_target_dstm_blur
 
                     gpu_target_src_anti_masked = gpu_target_src*gpu_target_srcm_anti_blur
-                    gpu_target_dst_anti_masked = gpu_target_dst*gpu_target_dstm_anti_blur
                     gpu_pred_src_src_anti_masked = gpu_pred_src_src*gpu_target_srcm_anti_blur
-                    gpu_pred_dst_dst_anti_masked = gpu_pred_dst_dst*gpu_target_dstm_anti_blur
 
                     gpu_target_src_masked_opt  = gpu_target_src*gpu_target_srcm_blur if masked_training else gpu_target_src
                     gpu_target_dst_masked_opt  = gpu_target_dst_masked if masked_training else gpu_target_dst
                     gpu_pred_src_src_masked_opt = gpu_pred_src_src*gpu_target_srcm_blur if masked_training else gpu_pred_src_src
                     gpu_pred_dst_dst_masked_opt = gpu_pred_dst_dst*gpu_target_dstm_blur if masked_training else gpu_pred_dst_dst
-
-                    gpu_psd_target_dst_style_masked = gpu_pred_src_dst*gpu_target_dstm_style_blur
-                    gpu_psd_target_dst_style_anti_masked = gpu_pred_src_dst*gpu_target_dstm_style_anti_blur
 
                     if resolution < 256:
                         gpu_src_loss =  tf.reduce_mean ( 10*nn.dssim(gpu_target_src_masked_opt, gpu_pred_src_src_masked_opt, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
@@ -463,12 +455,14 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     face_style_power = self.options['face_style_power'] / 100.0
                     if face_style_power != 0 and not self.pretrain:
                         gpu_src_loss += nn.style_loss(gpu_pred_src_dst_no_code_grad*tf.stop_gradient(gpu_pred_src_dstm), tf.stop_gradient(gpu_pred_dst_dst*gpu_pred_dst_dstm), gaussian_blur_radius=resolution//8, loss_weight=10000*face_style_power)
-                        #gpu_src_loss += nn.style_loss(gpu_psd_target_dst_style_masked, gpu_target_dst_style_masked, gaussian_blur_radius=resolution//16, loss_weight=10000*face_style_power)
 
                     bg_style_power = self.options['bg_style_power'] / 100.0
                     if bg_style_power != 0 and not self.pretrain:
-                        gpu_src_loss += tf.reduce_mean( (10*bg_style_power)*nn.dssim( gpu_psd_target_dst_style_anti_masked,  gpu_target_dst_style_anti_masked, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
-                        gpu_src_loss += tf.reduce_mean( (10*bg_style_power)*tf.square(gpu_psd_target_dst_style_anti_masked - gpu_target_dst_style_anti_masked), axis=[1,2,3] )
+                        gpu_target_dst_style_anti_masked = gpu_target_dst*gpu_style_mask_anti_blur
+                        gpu_psd_style_anti_masked = gpu_pred_src_dst*gpu_style_mask_anti_blur
+                        
+                        gpu_src_loss += tf.reduce_mean( (10*bg_style_power)*nn.dssim( gpu_psd_style_anti_masked,  gpu_target_dst_style_anti_masked, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                        gpu_src_loss += tf.reduce_mean( (10*bg_style_power)*tf.square(gpu_psd_style_anti_masked - gpu_target_dst_style_anti_masked), axis=[1,2,3] )
 
                     if resolution < 256:
                         gpu_dst_loss = tf.reduce_mean ( 10*nn.dssim(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0, filter_size=int(resolution/11.6) ), axis=[1])
@@ -486,9 +480,6 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     gpu_dst_losses += [gpu_dst_loss]
 
                     gpu_G_loss = gpu_src_loss + gpu_dst_loss
-
-                    if learn_dst_bg and masked_training and 'liae' in archi_type:
-                        gpu_G_loss += tf.reduce_mean( tf.square(gpu_pred_dst_dst_no_code_grad*gpu_target_dstm_anti_blur-gpu_target_dst_anti_masked),axis=[1,2,3] )
 
                     def DLoss(labels,logits):
                         return tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits), axis=[1,2,3])
