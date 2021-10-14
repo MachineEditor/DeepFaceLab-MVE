@@ -308,7 +308,7 @@ class DFLJPG(object):
         mask_a = imagelib.normalize_channels(mask_a, 1)
         img_data = np.clip( mask_a*255, 0, 255 ).astype(np.uint8)
 
-        data_max_len = 8192
+        data_max_len = 50000
 
         ret, buf = cv2.imencode('.png', img_data)
 

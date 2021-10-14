@@ -184,8 +184,12 @@ def trainerThread (s2c, c2s, e,
                             is_reached_goal = True
                             io.log_info('You can use preview now.')
 
-                if not is_reached_goal and (time.time() - last_save_time) >= save_interval_min * 60:
-                    last_save_time += save_interval_min * 60
+                need_save = False
+                while time.time() - last_save_time >= save_interval_min*60:
+                    last_save_time += save_interval_min*60
+                    need_save = True
+                
+                if not is_reached_goal and need_save:
                     model_save()
                     send_preview()
 
