@@ -92,6 +92,7 @@ class SampleProcessor(object):
                 nearest_resize_to = opts.get('nearest_resize_to', None)
                 warp           = opts.get('warp', False)
                 transform      = opts.get('transform', False)
+                random_hsv_shift_amount = opts.get('random_hsv_shift_amount', 0)
                 normalize_tanh = opts.get('normalize_tanh', False)
                 ct_mode        = opts.get('ct_mode', None)
                 data_format    = opts.get('data_format', 'NHWC')
@@ -190,6 +191,15 @@ class SampleProcessor(object):
                             if ct_sample_bgr is None:
                                ct_sample_bgr = ct_sample.load_bgr()
                             img = imagelib.color_transfer (ct_mode, img, cv2.resize( ct_sample_bgr, (resolution,resolution), interpolation=cv2.INTER_LINEAR ) )
+                        
+                        if random_hsv_shift_amount != 0:
+                            a = random_hsv_shift_amount
+                            h_amount = max(1, int(360*a*0.5))
+                            img_h, img_s, img_v = cv2.split(cv2.cvtColor(img, cv2.COLOR_BGR2HSV))
+                            img_h = (img_h + rnd_state.randint(-h_amount, h_amount+1) ) % 360
+                            img_s = np.clip (img_s + (rnd_state.random()-0.5)*a, 0, 1 )
+                            img_v = np.clip (img_v + (rnd_state.random()-0.5)*a, 0, 1 )
+                            img = np.clip( cv2.cvtColor(cv2.merge([img_h, img_s, img_v]), cv2.COLOR_HSV2BGR) , 0, 1 )
 
                         img  = imagelib.warp_by_params (warp_params, img,  warp, transform, can_flip=True, border_replicate=border_replicate)
   
