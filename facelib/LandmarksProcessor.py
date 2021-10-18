@@ -302,8 +302,6 @@ def get_transform_mat (image_landmarks, output_size, face_type, scale=1.0):
         g_c += vec*vec_len*0.07
 
     elif face_type == FaceType.HEAD:
-        mat = umeyama( np.concatenate ( [ image_landmarks[17:49] , image_landmarks[54:55] ] ) , landmarks_2D_new, True)[0:2]
-        
         # assuming image_landmarks are 3D_Landmarks extracted for HEAD,
         # adjust horizontal offset according to estimated yaw        
         yaw = estimate_averaged_yaw(transform_points (image_landmarks, mat, False))
