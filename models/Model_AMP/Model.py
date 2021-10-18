@@ -292,20 +292,21 @@ class AMPModel(ModelBase):
             if self.is_training:
                 # Initialize optimizers
                 clipnorm = 1.0 if self.options['clipgrad'] else 0.0
-                lr_dropout = 0.3 if self.options['lr_dropout'] in ['y','cpu'] else 1.0
-
+                if self.options['lr_dropout'] in ['y','cpu'] and not self.pretrain:
+                    lr_cos = 500
+                    lr_dropout = 0.3
+                else:
+                    lr_cos = 0
+                    lr_dropout = 1.0
                 self.G_weights = self.encoder.get_weights() + self.decoder.get_weights()
 
-                #if random_warp:
-                #    self.G_weights += self.inter_src.get_weights() + self.inter_dst.get_weights()
-
-                self.src_dst_opt = nn.AdaBelief(lr=5e-5, lr_dropout=lr_dropout, clipnorm=clipnorm, name='src_dst_opt')
+                self.src_dst_opt = nn.AdaBelief(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='src_dst_opt')
                 self.src_dst_opt.initialize_variables (self.G_weights, vars_on_cpu=optimizer_vars_on_cpu)
                 self.model_filename_list += [ (self.src_dst_opt, 'src_dst_opt.npy') ]
 
                 if gan_power != 0:
                     self.GAN = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], name="GAN")
-                    self.GAN_opt = nn.AdaBelief(lr=5e-5, lr_dropout=lr_dropout, clipnorm=clipnorm, name='GAN_opt')
+                    self.GAN_opt = nn.AdaBelief(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='GAN_opt')
                     self.GAN_opt.initialize_variables ( self.GAN.get_weights(), vars_on_cpu=optimizer_vars_on_cpu)
                     self.model_filename_list += [ [self.GAN, 'GAN.npy'],
                                                   [self.GAN_opt, 'GAN_opt.npy'] ]
@@ -391,15 +392,15 @@ class AMPModel(ModelBase):
 
                     if blur_out_mask:
                         sigma = resolution / 128
-                        
+
                         x = nn.gaussian_blur(gpu_target_src*gpu_target_srcm_anti, sigma)
-                        y = 1-nn.gaussian_blur(gpu_target_srcm, sigma) 
-                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)                        
+                        y = 1-nn.gaussian_blur(gpu_target_srcm, sigma)
+                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
                         gpu_target_src = gpu_target_src*gpu_target_srcm + (x/y)*gpu_target_srcm_anti
-                        
+
                         x = nn.gaussian_blur(gpu_target_dst*gpu_target_dstm_anti, sigma)
-                        y = 1-nn.gaussian_blur(gpu_target_dstm, sigma) 
-                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)                        
+                        y = 1-nn.gaussian_blur(gpu_target_dstm, sigma)
+                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
                         gpu_target_dst = gpu_target_dst*gpu_target_dstm + (x/y)*gpu_target_dstm_anti
 
                     gpu_target_src_masked = gpu_target_src*gpu_target_srcm_blur
@@ -561,7 +562,7 @@ class AMPModel(ModelBase):
 
             self.set_training_data_generators ([
                     SampleGeneratorFace(training_data_src_path, random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
-                        sample_process_options=SampleProcessor.Options(scale_range=[-0.125, 0.125], random_flip=self.random_src_flip),
+                        sample_process_options=SampleProcessor.Options(scale_range=[-0.15, 0.15], random_flip=self.random_src_flip),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'ct_mode': ct_mode,                                         'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'ct_mode': ct_mode,                                         'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE,  'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
@@ -571,7 +572,7 @@ class AMPModel(ModelBase):
                         generators_count=src_generators_count ),
 
                     SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
-                        sample_process_options=SampleProcessor.Options(scale_range=[-0.125, 0.125], random_flip=self.random_dst_flip),
+                        sample_process_options=SampleProcessor.Options(scale_range=[-0.15, 0.15], random_flip=self.random_dst_flip),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                             'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                             'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE,  'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},

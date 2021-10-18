@@ -53,6 +53,7 @@ class SAEHDModel(ModelBase):
         default_lr_dropout         = self.options['lr_dropout'] = lr_dropout
 
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
+        default_random_hsv_power   = self.options['random_hsv_power']   = self.load_or_def_option('random_hsv_power', 0.0)
         default_true_face_power    = self.options['true_face_power']    = self.load_or_def_option('true_face_power', 0.0)
         default_face_style_power   = self.options['face_style_power']   = self.load_or_def_option('face_style_power', 0.0)
         default_bg_style_power     = self.options['bg_style_power']     = self.load_or_def_option('bg_style_power', 0.0)
@@ -152,6 +153,8 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
             self.options['random_warp'] = io.input_bool ("Enable random warp of samples", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness and reduce subpixel shake for less amount of iterations.")
 
+            self.options['random_hsv_power'] = np.clip ( io.input_number ("Random hue/saturation/light intensity", default_random_hsv_power, add_info="0.0 .. 0.3", help_message="Random hue/saturation/light intensity applied to the src face set only at the input of the neural network. Stabilizes color perturbations during face swapping. Reduces the quality of the color transfer by selecting the closest one in the src faceset. Thus the src faceset must be diverse enough. Typical fine value is 0.05"), 0.0, 0.3 )
+
             self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 5.0", help_message="Forces the neural network to learn small details of the face. Enable it only when the face is trained enough with lr_dropout(on) and random_warp(off), and don't disable. The higher the value, the higher the chances of artifacts. Typical fine value is 0.1"), 0.0, 5.0 )
 
             if self.options['gan_power'] != 0.0:
@@ -228,12 +231,14 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         random_warp = False if self.pretrain else self.options['random_warp']
         random_src_flip = self.random_src_flip if not self.pretrain else True
         random_dst_flip = self.random_dst_flip if not self.pretrain else True
+        random_hsv_power = self.options['random_hsv_power'] if not self.pretrain else 0.0
         blur_out_mask = self.options['blur_out_mask']
 
         if self.pretrain:
-            self.options_show_override['gan_power'] = 0.0
-            self.options_show_override['random_warp'] = False
             self.options_show_override['lr_dropout'] = 'n'
+            self.options_show_override['random_warp'] = False
+            self.options_show_override['gan_power'] = 0.0
+            self.options_show_override['random_hsv_power'] = 0.0
             self.options_show_override['face_style_power'] = 0.0
             self.options_show_override['bg_style_power'] = 0.0
             self.options_show_override['uniform_yaw'] = True
@@ -313,26 +318,36 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                 # Initialize optimizers
                 lr=5e-5
-                lr_dropout = 0.3 if self.options['lr_dropout'] in ['y','cpu'] and not self.pretrain else 1.0
+                if self.options['lr_dropout'] in ['y','cpu'] and not self.pretrain:
+                    lr_cos = 500
+                    lr_dropout = 0.3
+                else:
+                    lr_cos = 0
+                    lr_dropout = 1.0
                 OptimizerClass = nn.AdaBelief if adabelief else nn.RMSprop
                 clipnorm = 1.0 if self.options['clipgrad'] else 0.0
 
                 if 'df' in archi_type:
-                    self.src_dst_trainable_weights = self.encoder.get_weights() + self.inter.get_weights() + self.decoder_src.get_weights() + self.decoder_dst.get_weights()
+                    self.src_dst_saveable_weights = self.encoder.get_weights() + self.inter.get_weights() + self.decoder_src.get_weights() + self.decoder_dst.get_weights()
+                    self.src_dst_trainable_weights = self.src_dst_saveable_weights
                 elif 'liae' in archi_type:
-                    self.src_dst_trainable_weights = self.encoder.get_weights() + self.inter_AB.get_weights() + self.inter_B.get_weights() + self.decoder.get_weights()
+                    self.src_dst_saveable_weights = self.encoder.get_weights() + self.inter_AB.get_weights() + self.inter_B.get_weights() + self.decoder.get_weights()
+                    if random_warp:
+                        self.src_dst_trainable_weights = self.src_dst_saveable_weights
+                    else:
+                        self.src_dst_trainable_weights = self.encoder.get_weights() + self.inter_B.get_weights() + self.decoder.get_weights()
 
-                self.src_dst_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, clipnorm=clipnorm, name='src_dst_opt')
-                self.src_dst_opt.initialize_variables (self.src_dst_trainable_weights, vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')
+                self.src_dst_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='src_dst_opt')
+                self.src_dst_opt.initialize_variables (self.src_dst_saveable_weights, vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')
                 self.model_filename_list += [ (self.src_dst_opt, 'src_dst_opt.npy') ]
 
                 if self.options['true_face_power'] != 0:
-                    self.D_code_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, clipnorm=clipnorm, name='D_code_opt')
+                    self.D_code_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='D_code_opt')
                     self.D_code_opt.initialize_variables ( self.code_discriminator.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')
                     self.model_filename_list += [ (self.D_code_opt, 'D_code_opt.npy') ]
 
                 if gan_power != 0:
-                    self.D_src_dst_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, clipnorm=clipnorm, name='GAN_opt')
+                    self.D_src_dst_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='GAN_opt')
                     self.D_src_dst_opt.initialize_variables ( self.D_src.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')#+self.D_src_x2.get_weights()
                     self.model_filename_list += [ (self.D_src_dst_opt, 'GAN_opt.npy') ]
 
@@ -375,18 +390,18 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                     if blur_out_mask:
                         sigma = resolution / 128
-                        
+
                         x = nn.gaussian_blur(gpu_target_src*gpu_target_srcm_anti, sigma)
-                        y = 1-nn.gaussian_blur(gpu_target_srcm, sigma) 
-                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)                        
+                        y = 1-nn.gaussian_blur(gpu_target_srcm, sigma)
+                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
                         gpu_target_src = gpu_target_src*gpu_target_srcm + (x/y)*gpu_target_srcm_anti
-                        
+
                         x = nn.gaussian_blur(gpu_target_dst*gpu_target_dstm_anti, sigma)
-                        y = 1-nn.gaussian_blur(gpu_target_dstm, sigma) 
-                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)                        
+                        y = 1-nn.gaussian_blur(gpu_target_dstm, sigma)
+                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
                         gpu_target_dst = gpu_target_dst*gpu_target_dstm + (x/y)*gpu_target_dstm_anti
 
-                    
+
                     # process model tensors
                     if 'df' in archi_type:
                         gpu_src_code     = self.inter(self.encoder(gpu_warped_src))
@@ -395,7 +410,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         gpu_pred_dst_dst, gpu_pred_dst_dstm = self.decoder_dst(gpu_dst_code)
                         gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder_src(gpu_dst_code)
                         gpu_pred_src_dst_no_code_grad, _ = self.decoder_src(tf.stop_gradient(gpu_dst_code))
-                        
+
                     elif 'liae' in archi_type:
                         gpu_src_code = self.encoder (gpu_warped_src)
                         gpu_src_inter_AB_code = self.inter_AB (gpu_src_code)
@@ -425,11 +440,11 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
                     gpu_target_dstm_blur = nn.gaussian_blur(gpu_target_dstm,  max(1, resolution // 32) )
                     gpu_target_dstm_blur = tf.clip_by_value(gpu_target_dstm_blur, 0, 0.5) * 2
-                    
+
                     gpu_style_mask_blur = nn.gaussian_blur(gpu_pred_src_dstm*gpu_pred_dst_dstm,  max(1, resolution // 32) )
                     gpu_style_mask_blur = tf.stop_gradient(tf.clip_by_value(gpu_target_srcm_blur, 0, 1.0))
                     gpu_style_mask_anti_blur = 1.0 - gpu_style_mask_blur
-            
+
                     gpu_target_dst_masked = gpu_target_dst*gpu_target_dstm_blur
 
                     gpu_target_src_anti_masked = gpu_target_src*gpu_target_srcm_anti_blur
@@ -460,7 +475,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                     if bg_style_power != 0 and not self.pretrain:
                         gpu_target_dst_style_anti_masked = gpu_target_dst*gpu_style_mask_anti_blur
                         gpu_psd_style_anti_masked = gpu_pred_src_dst*gpu_style_mask_anti_blur
-                        
+
                         gpu_src_loss += tf.reduce_mean( (10*bg_style_power)*nn.dssim( gpu_psd_style_anti_masked,  gpu_target_dst_style_anti_masked, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
                         gpu_src_loss += tf.reduce_mean( (10*bg_style_power)*tf.square(gpu_psd_style_anti_masked - gpu_target_dst_style_anti_masked), axis=[1,2,3] )
 
@@ -659,8 +674,8 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
             self.set_training_data_generators ([
                     SampleGeneratorFace(training_data_src_path, random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
-                        sample_process_options=SampleProcessor.Options(scale_range=[-0.125, 0.125], random_flip=random_src_flip),
-                        output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'ct_mode': ct_mode,                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                        sample_process_options=SampleProcessor.Options(scale_range=[-0.15, 0.15], random_flip=random_src_flip),
+                        output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'ct_mode': ct_mode,   'random_hsv_shift_amount' : random_hsv_power,                                        'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'ct_mode': ct_mode,                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.EYES_MOUTH, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
@@ -669,7 +684,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         generators_count=src_generators_count ),
 
                     SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
-                        sample_process_options=SampleProcessor.Options(scale_range=[-0.125, 0.125], random_flip=random_dst_flip),
+                        sample_process_options=SampleProcessor.Options(scale_range=[-0.15, 0.15], random_flip=random_dst_flip),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                                'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
