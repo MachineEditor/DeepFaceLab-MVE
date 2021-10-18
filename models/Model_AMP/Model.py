@@ -292,7 +292,7 @@ class AMPModel(ModelBase):
             if self.is_training:
                 # Initialize optimizers
                 clipnorm = 1.0 if self.options['clipgrad'] else 0.0
-                if self.options['lr_dropout'] in ['y','cpu'] and not self.pretrain:
+                if self.options['lr_dropout'] in ['y','cpu']:
                     lr_cos = 500
                     lr_dropout = 0.3
                 else:
