@@ -4,7 +4,6 @@ from functools import partial
 
 import numpy as np
 
-from core import mathlib
 from core.interact import interact as io
 from core.leras import nn
 from facelib import FaceType
@@ -328,20 +327,22 @@ class AMPModel(ModelBase):
             if self.is_training:
                 # Initialize optimizers
                 clipnorm = 1.0 if self.options['clipgrad'] else 0.0
-                lr_dropout = 0.3 if self.options['lr_dropout'] in ['y','cpu'] else 1.0
 
+                if self.options['lr_dropout'] in ['y','cpu']:
+                    lr_cos = 500
+                    lr_dropout = 0.3
+                else:
+                    lr_cos = 0
+                    lr_dropout = 1.0
                 self.G_weights = self.encoder.get_weights() + self.decoder.get_weights()
 
-                #if random_warp:
-                #    self.G_weights += self.inter_src.get_weights() + self.inter_dst.get_weights()
-
-                self.src_dst_opt = nn.AdaBelief(lr=5e-5, lr_dropout=lr_dropout, clipnorm=clipnorm, name='src_dst_opt')
+                self.src_dst_opt = nn.AdaBelief(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='src_dst_opt')
                 self.src_dst_opt.initialize_variables (self.G_weights, vars_on_cpu=optimizer_vars_on_cpu)
                 self.model_filename_list += [ (self.src_dst_opt, 'src_dst_opt.npy') ]
 
                 if gan_power != 0:
                     self.GAN = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], use_fp16=use_fp16, name="GAN")
-                    self.GAN_opt = nn.AdaBelief(lr=5e-5, lr_dropout=lr_dropout, clipnorm=clipnorm, name='GAN_opt')
+                    self.GAN_opt = nn.AdaBelief(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='GAN_opt')
                     self.GAN_opt.initialize_variables ( self.GAN.get_weights(), vars_on_cpu=optimizer_vars_on_cpu)
                     self.model_filename_list += [ [self.GAN, 'GAN.npy'],
                                                   [self.GAN_opt, 'GAN_opt.npy'] ]
@@ -427,15 +428,15 @@ class AMPModel(ModelBase):
 
                     if blur_out_mask:
                         sigma = resolution / 128
-                        
+
                         x = nn.gaussian_blur(gpu_target_src*gpu_target_srcm_anti, sigma)
-                        y = 1-nn.gaussian_blur(gpu_target_srcm, sigma) 
-                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)                        
+                        y = 1-nn.gaussian_blur(gpu_target_srcm, sigma)
+                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
                         gpu_target_src = gpu_target_src*gpu_target_srcm + (x/y)*gpu_target_srcm_anti
                         
                         x = nn.gaussian_blur(gpu_target_dst*gpu_target_dstm_anti, sigma)
-                        y = 1-nn.gaussian_blur(gpu_target_dstm, sigma) 
-                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)                        
+                        y = 1-nn.gaussian_blur(gpu_target_dstm, sigma)
+                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
                         gpu_target_dst = gpu_target_dst*gpu_target_dstm + (x/y)*gpu_target_dstm_anti
 
                     gpu_target_src_masked = gpu_target_src*gpu_target_srcm_blur
