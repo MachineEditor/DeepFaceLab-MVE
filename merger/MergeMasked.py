@@ -170,7 +170,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
 
                 if 'seamless' not in cfg.mode and cfg.color_transfer_mode != 0:
                     if cfg.color_transfer_mode == 1: #rct
-                        prd_face_bgr = imagelib.reinhard_color_transfer ( prd_face_bgr*wrk_face_mask_area_a, dst_face_bgr*wrk_face_mask_area_a )
+                        prd_face_bgr = imagelib.reinhard_color_transfer (prd_face_bgr, dst_face_bgr, target_mask=wrk_face_mask_area_a, source_mask=wrk_face_mask_area_a)
                     elif cfg.color_transfer_mode == 2: #lct
                         prd_face_bgr = imagelib.linear_color_transfer (prd_face_bgr, dst_face_bgr)
                     elif cfg.color_transfer_mode == 3: #mkl
@@ -249,7 +249,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
 
                     if 'seamless' in cfg.mode and cfg.color_transfer_mode != 0:
                         if cfg.color_transfer_mode == 1:
-                            out_face_bgr = imagelib.reinhard_color_transfer (out_face_bgr*wrk_face_mask_area_a, dst_face_bgr*wrk_face_mask_area_a)
+                            out_face_bgr = imagelib.reinhard_color_transfer (out_face_bgr, dst_face_bgr, target_mask=wrk_face_mask_area_a, source_mask=wrk_face_mask_area_a)
                         elif cfg.color_transfer_mode == 2: #lct
                             out_face_bgr = imagelib.linear_color_transfer (out_face_bgr, dst_face_bgr)
                         elif cfg.color_transfer_mode == 3: #mkl

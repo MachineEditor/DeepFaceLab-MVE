@@ -36,6 +36,8 @@ class AMPModel(ModelBase):
 
         default_blur_out_mask      = self.options['blur_out_mask']      = self.load_or_def_option('blur_out_mask', False)
 
+        default_adabelief          = self.options['adabelief']          = self.load_or_def_option('adabelief', True)
+
         default_lr_dropout         = self.options['lr_dropout']         = self.load_or_def_option('lr_dropout', 'n')
 
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
@@ -109,6 +111,8 @@ class AMPModel(ModelBase):
         if self.is_first_run() or ask_override:
             self.options['models_opt_on_gpu'] = io.input_bool ("Place models and optimizer on GPU", default_models_opt_on_gpu, help_message="When you train on one GPU, by default model and optimizer weights are placed on GPU to accelerate the process. You can place they on CPU to free up extra VRAM, thus set bigger dimensions.")
 
+            self.options['adabelief'] = io.input_bool ("Use AdaBelief optimizer?", default_adabelief, help_message="Use AdaBelief optimizer. It requires more VRAM, but the accuracy and the generalization of the model is higher.")
+
             self.options['random_warp'] = io.input_bool ("Enable random warp of samples", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness and reduce subpixel shake for less amount of iterations.")
             self.options['random_downsample'] = io.input_bool("Enable random downsample of samples", default_random_downsample, help_message="")
             self.options['random_noise'] = io.input_bool("Enable random noise added to samples", default_random_noise, help_message="")
@@ -163,6 +167,8 @@ class AMPModel(ModelBase):
         ct_mode = self.options['ct_mode']
         if ct_mode == 'none':
             ct_mode = None
+
+        adabelief = self.options['adabelief']
 
         use_fp16 = self.options['use_fp16']
         if self.is_exporting:
@@ -336,13 +342,15 @@ class AMPModel(ModelBase):
                     lr_dropout = 1.0
                 self.G_weights = self.encoder.get_weights() + self.decoder.get_weights()
 
-                self.src_dst_opt = nn.AdaBelief(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='src_dst_opt')
+                OptimizerClass = nn.AdaBelief if adabelief else nn.RMSprop
+
+                self.src_dst_opt = OptimizerClass(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='src_dst_opt')
                 self.src_dst_opt.initialize_variables (self.G_weights, vars_on_cpu=optimizer_vars_on_cpu)
                 self.model_filename_list += [ (self.src_dst_opt, 'src_dst_opt.npy') ]
 
                 if gan_power != 0:
                     self.GAN = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], use_fp16=use_fp16, name="GAN")
-                    self.GAN_opt = nn.AdaBelief(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='GAN_opt')
+                    self.GAN_opt = OptimizerClass(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='GAN_opt')
                     self.GAN_opt.initialize_variables ( self.GAN.get_weights(), vars_on_cpu=optimizer_vars_on_cpu)
                     self.model_filename_list += [ [self.GAN, 'GAN.npy'],
                                                   [self.GAN_opt, 'GAN_opt.npy'] ]
