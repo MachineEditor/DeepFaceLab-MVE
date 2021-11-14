@@ -79,7 +79,7 @@ DeepFaceLab is used by such popular youtube channels as
 </td><td align="center">Contains new and prev releases.</td></tr>
 
 <tr><td align="right">
-<a href="https://github.com/chervonij/DFL-Colab">Google Colab (github)</a>
+<a href="https://github.com/Cioscos/DeepFaceLab-Colab">Google Colab (github)</a>
 </td><td align="center">Personal fork from @chervonij repository. You can train fakes for free using Google Colab.</td></tr>
 
 <tr><td align="right">
