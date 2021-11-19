@@ -12,7 +12,7 @@ from core.imagelib import sd
 from core.cv2ex import *
 from core.interact import interact as io
 from core.joblib import Subprocessor, SubprocessGenerator, ThisThreadGenerator
-from facelib import LandmarksProcessor
+from facelib import LandmarksProcessor, FaceType
 from samplelib import (SampleGeneratorBase, SampleLoader, SampleProcessor, SampleType)
 
 class SampleGeneratorFaceXSeg(SampleGeneratorBase):
@@ -96,7 +96,7 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
             else:
                 raise Exception(f'no mask in sample {sample.filename}')
 
-            if face_type == sample.face_type:
+            if face_type == sample.face_type and sample.face_type != FaceType.CUSTOM: # custom always valid for stuff like for wf custom equivivelnet
                 if w != resolution:
                     img = cv2.resize( img, (resolution, resolution), interpolation=cv2.INTER_LANCZOS4 )
                     mask = cv2.resize( mask, (resolution, resolution), interpolation=cv2.INTER_LANCZOS4 )
