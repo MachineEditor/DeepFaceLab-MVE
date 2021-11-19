@@ -173,7 +173,7 @@ class SampleProcessor(object):
                             img = imagelib.warp_by_params (params_per_resolution[resolution], img, warp, transform, can_flip=True, border_replicate=border_replicate, cv2_inter=cv2.INTER_LINEAR)
                             img = cv2.resize( img, (resolution,resolution), interpolation=cv2.INTER_LINEAR )
                         else:
-                            if face_type != sample_face_type:
+                            if face_type != sample_face_type and sample_face_type != FaceType.CUSTOM: # custom always valid for stuff like for wf custom equivivelnet 
                                 mat = LandmarksProcessor.get_transform_mat (sample_landmarks, resolution, face_type)
                                 img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_LINEAR )
                             else:
