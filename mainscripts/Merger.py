@@ -146,13 +146,26 @@ def main (model_class_name=None,
                 io.log_info ("Use 'recover original filename' to determine the exact duplicates.")
                 io.log_info ("")
 
-            frames = [ InteractiveMergerSubprocessor.Frame( frame_info=FrameInfo(filepath=Path(p),
-                                                                     landmarks_list=[alignments.get(Path(p).stem, None)[0][0]] if alignments.get(Path(p).stem, None) != None else None,
-                                                                     dfl_images_list=[alignments.get(Path(p).stem, None)[0][1]] if alignments.get(Path(p).stem, None) != None else None
-                                                                     # landmarks_list = alignments_orig.get(Path(p).stem, None)
-                                                                    )
-                                              )
-                       for p in input_path_image_paths ]
+            # build frames maunally
+            frames = []
+            for p in input_path_image_paths:
+                path = Path(p) 
+                data = alignments.get(path.stem, None)
+                if data == None:      
+                    frame = InteractiveMergerSubprocessor.Frame(FrameInfo(frame_info=frame_info))
+                else:
+                    landmarks_list = [d[0] for d in data]
+                    dfl_images_list = [d[1] for d in data]
+                    frame_info=FrameInfo(filepath=path, landmarks_list=landmarks_list, dfl_images_list=dfl_images_list)
+                    frame = InteractiveMergerSubprocessor.Frame(frame_info=frame_info)
+
+                frames.append(frame)
+
+            # frames = [ InteractiveMergerSubprocessor.Frame( frame_info=FrameInfo(filepath=Path(p),
+            #                                                          # landmarks_list = alignments_orig.get(Path(p).stem, None)
+            #                                                         )
+            #                                   )
+            #            for p in input_path_image_paths ]
 
             if multiple_faces_detected:
                 io.log_info ("Warning: multiple faces detected. Motion blur will not be used.")
