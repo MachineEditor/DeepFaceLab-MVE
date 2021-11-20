@@ -9,4 +9,4 @@ scipy==1.4.1
 colorama
 tensorflow-gpu==2.4.0
 pyqt5
-tf2onnx==1.8.4
+tf2onnx==1.9.2

@@ -625,7 +625,7 @@ class AMPModel(ModelBase):
                 name='AMP',
                 input_names=['in_face:0','morph_value:0'],
                 output_names=['out_face_mask:0','out_celeb_face:0','out_celeb_face_mask:0'],
-                opset=9,
+                opset=12,
                 output_path=output_path)
 
     #override
