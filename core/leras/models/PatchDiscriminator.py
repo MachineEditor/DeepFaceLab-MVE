@@ -174,6 +174,7 @@ class UNetPatchDiscriminator(nn.ModelBase):
     def forward(self, x):
         if self.use_fp16:
             x = tf.cast(x, tf.float16)
+            
         x = tf.nn.leaky_relu( self.in_conv(x), 0.2 )
 
         encs = []

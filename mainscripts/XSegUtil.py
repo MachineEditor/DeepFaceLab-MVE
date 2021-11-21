@@ -32,7 +32,7 @@ def apply_xseg(input_path, model_path):
         
         
     if face_type is None:
-        face_type = io.input_str ("XSeg model face type", 'same', ['h','mf','f','wf','head','same'], help_message="Specify face type of trained XSeg model. For example if XSeg model trained as WF, but faceset is HEAD, specify WF to apply xseg only on WF part of HEAD. Default is 'same'").lower()
+        face_type = io.input_str ("XSeg model face type", 'same', ['h','mf','f','wf','head','same', 'custom'], help_message="Specify face type of trained XSeg model. For example if XSeg model trained as WF, but faceset is HEAD, specify WF to apply xseg only on WF part of HEAD. Default is 'same'").lower()
         if face_type == 'same':
             face_type = None
     
@@ -41,6 +41,7 @@ def apply_xseg(input_path, model_path):
                      'mf' : FaceType.MID_FULL,
                      'f'  : FaceType.FULL,
                      'wf' : FaceType.WHOLE_FACE,
+                     'custom' : FaceType.CUSTOM,
                      'head' : FaceType.HEAD}[face_type]
                      
     io.log_info(f'Applying trained XSeg model to {input_path.name}/ folder.')
@@ -69,7 +70,7 @@ def apply_xseg(input_path, model_path):
         h,w,c = img.shape
         
         img_face_type = FaceType.fromString( dflimg.get_face_type() )
-        if face_type is not None and img_face_type != face_type:
+        if face_type is not None and img_face_type != face_type or img_face_type == FaceType.CUSTOM: # custom always goes for eqvivalents
             lmrks = dflimg.get_source_landmarks()
             
             fmat = LandmarksProcessor.get_transform_mat(lmrks, w, face_type)
@@ -91,7 +92,7 @@ def apply_xseg(input_path, model_path):
     
         mask = xseg.extract(img)
         
-        if face_type is not None and img_face_type != face_type:
+        if face_type is not None and img_face_type != face_type or img_face_type == FaceType.CUSTOM:
             mask = cv2.resize(mask, (w, w), interpolation=cv2.INTER_LANCZOS4)
             mask = cv2.warpAffine( mask, mat, (w,w), np.zeros( (h,w,c), dtype=np.float), cv2.WARP_INVERSE_MAP | cv2.INTER_LANCZOS4)
             mask = cv2.resize(mask, (xseg_res, xseg_res), interpolation=cv2.INTER_LANCZOS4)

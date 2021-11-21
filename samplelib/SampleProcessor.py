@@ -90,7 +90,6 @@ class SampleProcessor(object):
 
             if debug and is_face_sample:
                 LandmarksProcessor.draw_landmarks (sample_bgr, sample_landmarks, (0, 1, 0))
-
             outputs_sample = []
             for opts in output_sample_types:
                 resolution     = opts.get('resolution', 0)
@@ -168,7 +167,7 @@ class SampleProcessor(object):
                             mat  = LandmarksProcessor.get_transform_mat (sample_landmarks, warp_resolution, face_type)
                             img = cv2.warpAffine( img, mat, (warp_resolution, warp_resolution), flags=cv2.INTER_LINEAR )
                         else:
-                            if face_type != sample_face_type:
+                            if face_type != sample_face_type and sample_face_type != FaceType.CUSTOM: # custom always valid for stuff like for wf custom equivivelnet 
                                 mat = LandmarksProcessor.get_transform_mat (sample_landmarks, resolution, face_type)
                                 img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_LINEAR )
                             else:

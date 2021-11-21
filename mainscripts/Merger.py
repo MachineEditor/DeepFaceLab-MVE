@@ -122,7 +122,7 @@ def main (model_class_name=None,
                     alignments[ source_filename_stem ] = []
 
                 alignments_ar = alignments[ source_filename_stem ]
-                alignments_ar.append ( (dflimg.get_source_landmarks(), filepath, source_filepath ) )
+                alignments_ar.append ( (dflimg.get_source_landmarks(), filepath, source_filepath, dflimg ) )
 
                 if len(alignments_ar) > 1:
                     multiple_faces_detected = True
@@ -135,22 +135,37 @@ def main (model_class_name=None,
             for a_key in list(alignments.keys()):
                 a_ar = alignments[a_key]
                 if len(a_ar) > 1:
-                    for _, filepath, source_filepath in a_ar:
+                    for _, filepath, source_filepath, _ in a_ar:
                         io.log_info (f"alignment {filepath.name} refers to {source_filepath.name} ")
                     io.log_info ("")
 
-                alignments[a_key] = [ a[0] for a in a_ar]
+                alignments[a_key] = [ [a[0], a[3]] for a in a_ar]
 
             if multiple_faces_detected:
                 io.log_info ("It is strongly recommended to process the faces separatelly.")
                 io.log_info ("Use 'recover original filename' to determine the exact duplicates.")
                 io.log_info ("")
 
-            frames = [ InteractiveMergerSubprocessor.Frame( frame_info=FrameInfo(filepath=Path(p),
-                                                                     landmarks_list=alignments.get(Path(p).stem, None)
-                                                                    )
-                                              )
-                       for p in input_path_image_paths ]
+            # build frames maunally
+            frames = []
+            for p in input_path_image_paths:
+                path = Path(p) 
+                data = alignments.get(path.stem, None)
+                if data == None:      
+                    frame = InteractiveMergerSubprocessor.Frame(FrameInfo(frame_info=frame_info))
+                else:
+                    landmarks_list = [d[0] for d in data]
+                    dfl_images_list = [d[1] for d in data]
+                    frame_info=FrameInfo(filepath=path, landmarks_list=landmarks_list, dfl_images_list=dfl_images_list)
+                    frame = InteractiveMergerSubprocessor.Frame(frame_info=frame_info)
+
+                frames.append(frame)
+
+            # frames = [ InteractiveMergerSubprocessor.Frame( frame_info=FrameInfo(filepath=Path(p),
+            #                                                          # landmarks_list = alignments_orig.get(Path(p).stem, None)
+            #                                                         )
+            #                                   )
+            #            for p in input_path_image_paths ]
 
             if multiple_faces_detected:
                 io.log_info ("Warning: multiple faces detected. Motion blur will not be used.")

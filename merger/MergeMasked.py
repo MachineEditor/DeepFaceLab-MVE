@@ -15,7 +15,7 @@ xseg_input_size = 256
 def MergeMaskedFace (predictor_func, predictor_input_shape,
                      face_enhancer_func,
                      xseg_256_extract_func,
-                     cfg, frame_info, img_bgr_uint8, img_bgr, img_face_landmarks):
+                     cfg, frame_info, img_bgr_uint8, img_bgr, img_face_landmarks, dfl_img):
 
     img_size = img_bgr.shape[1], img_bgr.shape[0]
     img_face_mask_a = LandmarksProcessor.get_image_hull_mask (img_bgr.shape, img_face_landmarks)
@@ -26,13 +26,34 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
     if cfg.super_resolution_power != 0:
         output_size *= 4
 
-    face_mat        = LandmarksProcessor.get_transform_mat (img_face_landmarks, output_size, face_type=cfg.face_type)
-    face_output_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, output_size, face_type=cfg.face_type, scale= 1.0 + 0.01*cfg.output_face_scale)
+    if cfg.face_type == FaceType.CUSTOM:
+        # resize
+        face_image_size = dfl_img.get_shape()[0]
+        frame_points = LandmarksProcessor.transform_points ( np.float32([(0, 0), (face_image_size, 0), (face_image_size, face_image_size)]),
+            dfl_img.get_image_to_face_mat(), True)
+        face_mat = cv2.getAffineTransform(frame_points, np.float32(( (0,0),(output_size,0),(output_size,output_size) )))
+
+        scale_offset = 0.01 * cfg.output_face_scale
+        face_output_mat = cv2.getAffineTransform(frame_points, np.float32(( (0  + scale_offset,0  + scale_offset),
+            (output_size - scale_offset,0 + scale_offset),(output_size - scale_offset,output_size - scale_offset) )))
+    else:
+        face_mat        = LandmarksProcessor.get_transform_mat (img_face_landmarks, output_size, face_type=cfg.face_type)
+        face_output_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, output_size, face_type=cfg.face_type, scale= 1.0 + 0.01*cfg.output_face_scale)
 
     if mask_subres_size == output_size:
         face_mask_output_mat = face_output_mat
     else:
-        face_mask_output_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, mask_subres_size, face_type=cfg.face_type, scale= 1.0 + 0.01*cfg.output_face_scale)
+        if cfg.face_type == FaceType.CUSTOM:
+            # resize
+            face_image_size = dfl_img.get_shape()[0]
+            frame_points = LandmarksProcessor.transform_points ( np.float32([(0, 0), (face_image_size, 0), (face_image_size, face_image_size)]),
+            dfl_img.get_image_to_face_mat(), True)
+
+            scale_offset = 0.01 * cfg.output_face_scale
+            face_mask_output_mat = cv2.getAffineTransform(frame_points, np.float32(( (0  + scale_offset,0  + scale_offset),
+            (mask_subres_size - scale_offset,0 + scale_offset),(mask_subres_size - scale_offset,mask_subres_size - scale_offset) )))
+        else:
+            face_mask_output_mat = LandmarksProcessor.get_transform_mat (img_face_landmarks, mask_subres_size, face_type=cfg.face_type, scale= 1.0 + 0.01*cfg.output_face_scale)
 
     dst_face_bgr      = cv2.warpAffine( img_bgr        , face_mat, (output_size, output_size), flags=cv2.INTER_CUBIC )
     dst_face_bgr      = np.clip(dst_face_bgr, 0, 1)
@@ -327,7 +348,7 @@ def MergeMasked (predictor_func,
 
     outs = []
     for face_num, img_landmarks in enumerate( frame_info.landmarks_list ):
-        out_img, out_img_merging_mask = MergeMaskedFace (predictor_func, predictor_input_shape, face_enhancer_func, xseg_256_extract_func, cfg, frame_info, img_bgr_uint8, img_bgr, img_landmarks)
+        out_img, out_img_merging_mask = MergeMaskedFace (predictor_func, predictor_input_shape, face_enhancer_func, xseg_256_extract_func, cfg, frame_info, img_bgr_uint8, img_bgr, img_landmarks, frame_info.dfl_images_list[face_num])
         outs += [ (out_img, out_img_merging_mask) ]
 
     #Combining multiple face outputs
