@@ -85,6 +85,16 @@ class QStringDB():
                                             'zh' : '保存并转到下一张图片\n按住SHIFT : 加快\n按住CTRL : 跳过未标记的\n',
                                            }[lang]  
         
+        QStringDB.spinner_label = { 'en' : 'Step size',
+                                    'ru' : 'Размер шага',
+                                    'zh' : '台阶大小'
+                                    }[lang]
+
+        QStringDB.spinner_label_tip = { 'en' : 'Minimum 5\nMaximum 500',
+                                        'ru' : 'Минимум 5\nМаксимум 500',
+                                        'zh' : '最少5个\n最多500'
+                                        }[lang]
+
         QStringDB.btn_delete_image_tip = {  'en' : 'Move to _trash and Next image\n',
                                             'ru' : 'Переместить в _trash и следующее изображение\n',
                                             'zh' : '移至_trash，转到下一张图片 ',

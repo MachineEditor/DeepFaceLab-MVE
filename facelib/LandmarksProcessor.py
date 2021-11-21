@@ -382,10 +382,8 @@ def expand_eyebrows(lmrks, eyebrows_expand_mod=1.0):
     # Adjust eyebrow arrays
     lmrks[17:22] = top_l + eyebrows_expand_mod * 0.5 * (top_l - bot_l)
     lmrks[22:27] = top_r + eyebrows_expand_mod * 0.5 * (top_r - bot_r)
+
     return lmrks
-
-
-
 
 def get_image_hull_mask (image_shape, image_landmarks, eyebrows_expand_mod=1.0 ):
     hull_mask = np.zeros(image_shape[0:2]+(1,),dtype=np.float32)
@@ -441,7 +439,7 @@ def get_image_mouth_mask (image_shape, image_landmarks):
 
     image_landmarks = image_landmarks.astype(np.int)
 
-    cv2.fillConvexPoly( hull_mask, cv2.convexHull( image_landmarks[60:]), (1,) )
+    cv2.fillConvexPoly( hull_mask, cv2.convexHull( image_landmarks[48:60]), (1,) )
 
     dilate = h // 32
     hull_mask = cv2.dilate(hull_mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(dilate,dilate)), iterations = 1 )

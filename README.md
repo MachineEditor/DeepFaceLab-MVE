@@ -1,4 +1,4 @@
-﻿<table align="center" border="0">
+<table align="center" border="0">
 
 <tr><td colspan=2 align="center">
 
@@ -53,133 +53,13 @@ DeepFaceLab is used by such popular youtube channels as
 </td></tr>
 
 <tr><td colspan=2 align="center">
+  <tr><td colspan=2 align="center">
 
-# What can I do using DeepFaceLab?
-
-</td></tr>
-<tr><td colspan=2 align="center">
-
-## Replace the face
-
-<img src="doc/replace_the_face.jpg" align="center">
-
-</td></tr>
+# CHANGELOG 
+### [View most recent changes](CHANGELOG.md)
 
 <tr><td colspan=2 align="center">
-
-## De-age the face
-
-</td></tr>
-
-<tr><td align="center" width="50%">
-
-<img src="doc/deage_0_1.jpg" align="center">
-
-</td>
-<td align="center" width="50%">
-
-<img src="doc/deage_0_2.jpg" align="center">
-
-</td></tr>
-
-<tr><td colspan=2 align="center">
-
-![](doc/youtube_icon.png) https://www.youtube.com/watch?v=Ddx5B-84ebo
-
-</td></tr>
-
-<tr><td colspan=2 align="center">
-
-## Replace the head
-
-</td></tr>
-
-
-<tr><td align="center" width="50%">
-
-<img src="doc/head_replace_0_1.jpg" align="center">
-
-</td>
-<td align="center" width="50%">
-
-<img src="doc/head_replace_0_2.jpg" align="center">
-
-</td></tr>
-
-<tr><td colspan=2 align="center">
-
-![](doc/youtube_icon.png) https://www.youtube.com/watch?v=xr5FHd0AdlQ
-
-</td></tr>
-
-<tr><td align="center" width="50%">
-
-<img src="doc/head_replace_1_1.jpg" align="center">
-
-</td>
-<td align="center" width="50%">
-
-<img src="doc/head_replace_1_2.jpg" align="center">
-
-</td></tr>
-
-<tr><td colspan=2 align="center">
-
-![](doc/youtube_icon.png) https://www.youtube.com/watch?v=RTjgkhMugVw
-
-</td></tr>
-
-<tr><td align="center" width="50%">
-
-<img src="doc/head_replace_2_1.jpg" align="center">
-
-</td>
-<td align="center" width="50%">
-
-<img src="doc/head_replace_2_2.jpg" align="center">
-
-</td></tr>
-
-<tr><td colspan=2  align="center">
-
-![](doc/youtube_icon.png) https://www.youtube.com/watch?v=R9f7WD0gKPo
-
-</td></tr>
-
-
-<tr><td colspan=2 align="center">
-
-## Manipulate politicians lips
-(voice replacement is not included!)
-(also requires a skill in video editors such as *Adobe After Effects* or *Davinci Resolve*)
-
-<img src="doc/political_speech2.jpg" align="center">
-
-![](doc/youtube_icon.png) https://www.youtube.com/watch?v=IvY-Abd2FfM
-
-<img src="doc/political_speech3.jpg" align="center">
-
-![](doc/youtube_icon.png) https://www.youtube.com/watch?v=ERQlaJ_czHU
-
-</td></tr>
-<tr><td colspan=2 align="center">
-
-# Deepfake native resolution progress
-
-</td></tr>
-<tr><td colspan=2 align="center">
-
-<img src="doc/deepfake_progress.png" align="center">
-
-</td></tr>
-<tr><td colspan=2 align="center">
-
-<img src="doc/make_everything_ok.png" align="center">
-
-Unfortunately, there is no "make everything ok" button in DeepFaceLab. You should spend time studying the workflow and growing your skills. A skill in programs such as *AfterEffects* or *Davinci Resolve* is also desirable.
-
-</td></tr>
-<tr><td colspan=2 align="center">
+  <tr><td colspan=2 align="center">
 
 ## Mini tutorial
 
@@ -205,8 +85,8 @@ Unfortunately, there is no "make everything ok" button in DeepFaceLab. You shoul
 </td><td align="center">Contains new and prev releases.</td></tr>
 
 <tr><td align="right">
-<a href="https://github.com/chervonij/DFL-Colab">Google Colab (github)</a>
-</td><td align="center">by @chervonij . You can train fakes for free using Google Colab.</td></tr>
+<a href="https://github.com/Cioscos/DeepFaceLab-Colab">Google Colab (github)</a>
+</td><td align="center">Personal fork from @chervonij repository. You can train fakes for free using Google Colab.</td></tr>
 
 <tr><td align="right">
 <a href="https://github.com/nagadit/DeepFaceLab_Linux">Linux (github)</a>

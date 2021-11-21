@@ -1,6 +1,9 @@
 import cv2
 import numexpr as ne
 import numpy as np
+from numpy import linalg as npla
+import random
+from scipy.stats import special_ortho_group
 import scipy as sp
 from numpy import linalg as npla
 
@@ -9,14 +12,12 @@ def color_transfer_sot(src,trg, steps=10, batch_size=5, reg_sigmaXY=16.0, reg_si
     """
     Color Transform via Sliced Optimal Transfer
     ported by @iperov from https://github.com/dcoeurjo/OTColorTransfer
-
     src         - any float range any channel image
     dst         - any float range any channel image, same shape as src
     steps       - number of solver steps
     batch_size  - solver batch size
     reg_sigmaXY - apply regularization and sigmaXY of filter, otherwise set to 0.0
     reg_sigmaV  - sigmaV of filter
-
     return value - clip it manually
     """
     if not np.issubdtype(src.dtype, np.floating):
@@ -334,3 +335,72 @@ def color_transfer(ct_mode, img_src, img_trg):
     else:
         raise ValueError(f"unknown ct_mode {ct_mode}")
     return out
+
+
+# imported from faceswap
+def color_augmentation(img, seed=None):
+    """ Color adjust RGB image """
+    img = img.astype(np.float32)
+    face = img
+    face = np.clip(face*255.0, 0, 255).astype(np.uint8)
+    face = random_clahe(face, seed)
+    face = random_lab(face, seed)
+    img[:, :, :3] = face
+    return (face / 255.0).astype(np.float32)
+
+def random_lab_rotation(image, seed=None):
+    """
+    Randomly rotates image color around the L axis in LAB colorspace,
+    keeping perceptual lightness constant.
+    """
+    image = cv2.cvtColor(image.astype(np.float32), cv2.COLOR_BGR2LAB)
+    M = np.eye(3)
+    M[1:, 1:] = special_ortho_group.rvs(2, 1, seed)
+    image = image.dot(M)
+    l, a, b = cv2.split(image)
+    l = np.clip(l, 0, 100)
+    a = np.clip(a, -127, 127)
+    b = np.clip(b, -127, 127)
+    image = cv2.merge([l, a, b])
+    image = cv2.cvtColor(image.astype(np.float32), cv2.COLOR_LAB2BGR)
+    np.clip(image, 0, 1, out=image)
+    return image
+
+def random_lab(image, seed=None):
+    """ Perform random color/lightness adjustment in L*a*b* colorspace """
+    random.seed(seed)
+    amount_l = 30 / 100
+    amount_ab = 8 / 100
+    randoms = [(random.random() * amount_l * 2) - amount_l,  # L adjust
+                (random.random() * amount_ab * 2) - amount_ab,  # A adjust
+                (random.random() * amount_ab * 2) - amount_ab]  # B adjust
+    image = cv2.cvtColor(  # pylint:disable=no-member
+    image, cv2.COLOR_BGR2LAB).astype("float32") / 255.0  # pylint:disable=no-member
+
+    for idx, adjustment in enumerate(randoms):
+        if adjustment >= 0:
+            image[:, :, idx] = ((1 - image[:, :, idx]) * adjustment) + image[:, :, idx]
+        else:
+            image[:, :, idx] = image[:, :, idx] * (1 + adjustment)
+    image = cv2.cvtColor((image * 255.0).astype("uint8"),  # pylint:disable=no-member
+                        cv2.COLOR_LAB2BGR)  # pylint:disable=no-member
+    return image
+
+def random_clahe(image, seed=None):
+    """ Randomly perform Contrast Limited Adaptive Histogram Equalization """
+    random.seed(seed)
+    contrast_random = random.random()
+    if contrast_random > 50 / 100:
+        return image
+
+    # base_contrast = image.shape[0] // 128
+    base_contrast = 1 # testing because it breaks on small sizes
+    grid_base = random.random() * 4
+    contrast_adjustment = int(grid_base * (base_contrast / 2))
+    grid_size = base_contrast + contrast_adjustment
+
+    clahe = cv2.createCLAHE(clipLimit=2.0,  # pylint: disable=no-member
+                            tileGridSize=(grid_size, grid_size))
+    for chan in range(3):
+        image[:, :, chan] = clahe.apply(image[:, :, chan])
+    return image

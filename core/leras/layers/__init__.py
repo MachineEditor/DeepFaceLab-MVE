@@ -16,3 +16,5 @@ from .ScaleAdd import *
 from .DenseNorm import *
 from .AdaIN import *
 from .TanhPolar import *
+from .MsSsim import *
+from .TanhPolar import *

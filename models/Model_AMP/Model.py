@@ -4,7 +4,6 @@ from functools import partial
 
 import numpy as np
 
-from core import mathlib
 from core.interact import interact as io
 from core.leras import nn
 from facelib import FaceType
@@ -16,6 +15,8 @@ class AMPModel(ModelBase):
 
     #override
     def on_initialize_options(self):
+        default_retraining_samples = self.options['retraining_samples'] = self.load_or_def_option('retraining_samples', False)
+        # default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
         default_resolution         = self.options['resolution']         = self.load_or_def_option('resolution', 224)
         default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'wf')
         default_models_opt_on_gpu  = self.options['models_opt_on_gpu']  = self.load_or_def_option('models_opt_on_gpu', True)
@@ -27,11 +28,28 @@ class AMPModel(ModelBase):
         default_d_dims             = self.options['d_dims']             = self.options.get('d_dims', None)
         default_d_mask_dims        = self.options['d_mask_dims']        = self.options.get('d_mask_dims', None)
         default_morph_factor       = self.options['morph_factor']       = self.options.get('morph_factor', 0.5)
+        default_eyes_mouth_prio    = self.options['eyes_mouth_prio']    = self.load_or_def_option('eyes_mouth_prio', False)
         default_uniform_yaw        = self.options['uniform_yaw']        = self.load_or_def_option('uniform_yaw', False)
+
+        # Uncomment it just if you want to impelement other loss functions
+        #default_loss_function      = self.options['loss_function']      = self.load_or_def_option('loss_function', 'SSIM')
+
         default_blur_out_mask      = self.options['blur_out_mask']      = self.load_or_def_option('blur_out_mask', False)
+
+        default_adabelief          = self.options['adabelief']          = self.load_or_def_option('adabelief', True)
+
         default_lr_dropout         = self.options['lr_dropout']         = self.load_or_def_option('lr_dropout', 'n')
+
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
+        default_random_downsample  = self.options['random_downsample']  = self.load_or_def_option('random_downsample', False)
+        default_random_noise       = self.options['random_noise']       = self.load_or_def_option('random_noise', False)
+        default_random_blur        = self.options['random_blur']        = self.load_or_def_option('random_blur', False)
+        default_random_jpeg        = self.options['random_jpeg']        = self.load_or_def_option('random_jpeg', False)
+
+        # Uncomment it just if you want to impelement other loss functions
+        #default_background_power   = self.options['background_power']   = self.load_or_def_option('background_power', 0.0)
         default_ct_mode            = self.options['ct_mode']            = self.load_or_def_option('ct_mode', 'none')
+        default_random_color       = self.options['random_color']       = self.load_or_def_option('random_color', False)
         default_clipgrad           = self.options['clipgrad']           = self.load_or_def_option('clipgrad', False)
 
         ask_override = self.ask_override()
@@ -39,9 +57,12 @@ class AMPModel(ModelBase):
             self.ask_autobackup_hour()
             self.ask_write_preview_history()
             self.ask_target_iter()
+            self.ask_retraining_samples()
             self.ask_random_src_flip()
             self.ask_random_dst_flip()
             self.ask_batch_size(8)
+            # self.options['use_fp16'] = io.input_bool ("Use fp16", default_usefp16, help_message='Increases training/inference speed, reduces model size. Model may crash. Enable it after 1-5k iters.')
+
 
         if self.is_first_run():
             resolution = io.input_int("Resolution", default_resolution, add_info="64-640", help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 32 .")
@@ -73,8 +94,11 @@ class AMPModel(ModelBase):
             self.options['morph_factor'] = morph_factor
 
         if self.is_first_run() or ask_override:
+            self.options['eyes_mouth_prio'] = io.input_bool ("Eyes and mouth priority", default_eyes_mouth_prio, help_message='Helps to fix eye problems during training like "alien eyes" and wrong eyes direction. Also makes the detail of the teeth higher.')
             self.options['uniform_yaw'] = io.input_bool ("Uniform yaw distribution of samples", default_uniform_yaw, help_message='Helps to fix blurry side faces due to small amount of them in the faceset.')
+            
             self.options['blur_out_mask'] = io.input_bool ("Blur out mask", default_blur_out_mask, help_message='Blurs nearby area outside of applied face mask of training samples. The result is the background near the face is smoothed and less noticeable on swapped face. The exact xseg mask in src and dst faceset is required.')
+            
             self.options['lr_dropout']  = io.input_str (f"Use learning rate dropout", default_lr_dropout, ['n','y','cpu'], help_message="When the face is trained enough, you can enable this option to get extra sharpness and reduce subpixel shake for less amount of iterations. Enabled it before `disable random warp` and before GAN. \nn - disabled.\ny - enabled\ncpu - enabled on CPU. This allows not to use extra VRAM, sacrificing 20% time of iteration.")
 
         default_gan_power          = self.options['gan_power']          = self.load_or_def_option('gan_power', 0.0)
@@ -84,7 +108,13 @@ class AMPModel(ModelBase):
         if self.is_first_run() or ask_override:
             self.options['models_opt_on_gpu'] = io.input_bool ("Place models and optimizer on GPU", default_models_opt_on_gpu, help_message="When you train on one GPU, by default model and optimizer weights are placed on GPU to accelerate the process. You can place they on CPU to free up extra VRAM, thus set bigger dimensions.")
 
+            self.options['adabelief'] = io.input_bool ("Use AdaBelief optimizer?", default_adabelief, help_message="Use AdaBelief optimizer. It requires more VRAM, but the accuracy and the generalization of the model is higher.")
+
             self.options['random_warp'] = io.input_bool ("Enable random warp of samples", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness and reduce subpixel shake for less amount of iterations.")
+            self.options['random_downsample'] = io.input_bool("Enable random downsample of samples", default_random_downsample, help_message="")
+            self.options['random_noise'] = io.input_bool("Enable random noise added to samples", default_random_noise, help_message="")
+            self.options['random_blur'] = io.input_bool("Enable random blur of samples", default_random_blur, help_message="")
+            self.options['random_jpeg'] = io.input_bool("Enable random jpeg compression of samples", default_random_jpeg, help_message="")
 
             self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 5.0", help_message="Forces the neural network to learn small details of the face. Enable it only when the face is trained enough with random_warp(off), and don't disable. The higher the value, the higher the chances of artifacts. Typical fine value is 0.1"), 0.0, 5.0 )
 
@@ -95,7 +125,11 @@ class AMPModel(ModelBase):
                 gan_dims = np.clip ( io.input_int("GAN dimensions", default_gan_dims, add_info="4-512", help_message="The dimensions of the GAN network. The higher dimensions, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is 16." ), 4, 512 )
                 self.options['gan_dims'] = gan_dims
 
-            self.options['ct_mode'] = io.input_str (f"Color transfer for src faceset", default_ct_mode, ['none','rct','lct','mkl','idt','sot'], help_message="Change color distribution of src samples close to dst samples. If src faceset is deverse enough, then lct mode is fine in most cases.")
+            #self.options['background_power'] = np.clip ( io.input_number("Background power", default_background_power, add_info="0.0..1.0", help_message="Learn the area outside of the mask. Helps smooth out area near the mask boundaries. Can be used at any time"), 0.0, 1.0 )
+
+            self.options['ct_mode'] = io.input_str (f"Color transfer for src faceset", default_ct_mode, ['none','rct','lct','mkl','idt','sot', 'fs-aug'], help_message="Change color distribution of src samples close to dst samples. Try all modes to find the best.")
+            self.options['random_color'] = io.input_bool ("Random color", default_random_color, help_message="Samples are randomly rotated around the L axis in LAB colorspace, helps generalize training")
+
             self.options['clipgrad'] = io.input_bool ("Enable gradient clipping", default_clipgrad, help_message="Gradient clipping reduces chance of model collapse, sacrificing speed of training.")
 
         self.gan_model_changed = (default_gan_patch_size != self.options['gan_patch_size']) or (default_gan_dims != self.options['gan_dims'])
@@ -122,6 +156,8 @@ class AMPModel(ModelBase):
         morph_factor = self.options['morph_factor']
         gan_power    = self.gan_power = self.options['gan_power']
         random_warp  = self.options['random_warp']
+        
+        eyes_mouth_prio = self.options['eyes_mouth_prio'] 
 
         blur_out_mask = self.options['blur_out_mask']
 
@@ -129,7 +165,9 @@ class AMPModel(ModelBase):
         if ct_mode == 'none':
             ct_mode = None
 
-        use_fp16 = False
+        adabelief = self.options['adabelief']
+
+        # use_fp16 = self.options['use_fp16']
         if self.is_exporting:
             use_fp16 = io.input_bool ("Export quantized?", False, help_message='Makes the exported model faster. If you have problems, disable this option.')
 
@@ -300,13 +338,15 @@ class AMPModel(ModelBase):
                     lr_dropout = 1.0
                 self.G_weights = self.encoder.get_weights() + self.decoder.get_weights()
 
-                self.src_dst_opt = nn.AdaBelief(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='src_dst_opt')
+                OptimizerClass = nn.AdaBelief if adabelief else nn.RMSprop
+
+                self.src_dst_opt = OptimizerClass(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='src_dst_opt')
                 self.src_dst_opt.initialize_variables (self.G_weights, vars_on_cpu=optimizer_vars_on_cpu)
                 self.model_filename_list += [ (self.src_dst_opt, 'src_dst_opt.npy') ]
 
                 if gan_power != 0:
-                    self.GAN = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], name="GAN")
-                    self.GAN_opt = nn.AdaBelief(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='GAN_opt')
+                    self.GAN = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], use_fp16=use_fp16, name="GAN")
+                    self.GAN_opt = OptimizerClass(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='GAN_opt')
                     self.GAN_opt.initialize_variables ( self.GAN.get_weights(), vars_on_cpu=optimizer_vars_on_cpu)
                     self.model_filename_list += [ [self.GAN, 'GAN.npy'],
                                                   [self.GAN_opt, 'GAN_opt.npy'] ]
@@ -397,7 +437,7 @@ class AMPModel(ModelBase):
                         y = 1-nn.gaussian_blur(gpu_target_srcm, sigma)
                         y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
                         gpu_target_src = gpu_target_src*gpu_target_srcm + (x/y)*gpu_target_srcm_anti
-
+                        
                         x = nn.gaussian_blur(gpu_target_dst*gpu_target_dstm_anti, sigma)
                         y = 1-nn.gaussian_blur(gpu_target_dstm, sigma)
                         y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
@@ -424,8 +464,9 @@ class AMPModel(ModelBase):
                     gpu_dst_loss += tf.reduce_mean (10*tf.square(gpu_target_dst_masked-gpu_pred_dst_dst_masked), axis=[1,2,3])
 
                     # Eyes+mouth prio loss
-                    gpu_src_loss += tf.reduce_mean (300*tf.abs (gpu_target_src*gpu_target_srcm_em-gpu_pred_src_src*gpu_target_srcm_em), axis=[1,2,3])
-                    gpu_dst_loss += tf.reduce_mean (300*tf.abs (gpu_target_dst*gpu_target_dstm_em-gpu_pred_dst_dst*gpu_target_dstm_em), axis=[1,2,3])
+                    if eyes_mouth_prio:
+                        gpu_src_loss += tf.reduce_mean (300*tf.abs (gpu_target_src*gpu_target_srcm_em-gpu_pred_src_src*gpu_target_srcm_em), axis=[1,2,3])
+                        gpu_dst_loss += tf.reduce_mean (300*tf.abs (gpu_target_dst*gpu_target_dstm_em-gpu_pred_dst_dst*gpu_target_dstm_em), axis=[1,2,3])
 
                     # Mask loss
                     gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
@@ -558,29 +599,51 @@ class AMPModel(ModelBase):
             if ct_mode is not None:
                 src_generators_count = int(src_generators_count * 1.5)
 
+            fs_aug = None
+            if ct_mode == 'fs-aug':
+                fs_aug = 'fs-aug'
 
+            channel_type = SampleProcessor.ChannelType.LAB_RAND_TRANSFORM if self.options['random_color'] else SampleProcessor.ChannelType.BGR
 
             self.set_training_data_generators ([
                     SampleGeneratorFace(training_data_src_path, random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
-                        sample_process_options=SampleProcessor.Options(scale_range=[-0.15, 0.15], random_flip=self.random_src_flip),
-                        output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'ct_mode': ct_mode,                                         'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'ct_mode': ct_mode,                                         'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE,  'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.EYES_MOUTH, 'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                        sample_process_options=SampleProcessor.Options(scale_range=[-0.125, 0.125], random_flip=self.random_src_flip),
+                        output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp,
+                                                 'random_downsample': self.options['random_downsample'],
+                                                 'random_noise': self.options['random_noise'],
+                                                 'random_blur': self.options['random_blur'],
+                                                 'random_jpeg': self.options['random_jpeg'],
+                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,
+                                                 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False,
+                                                'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,
+                                                'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                               ],
-                        uniform_yaw_distribution=self.options['uniform_yaw'],# or self.pretrain,
+                        uniform_yaw_distribution=self.options['uniform_yaw'], #or self.pretrain
                         generators_count=src_generators_count ),
 
                     SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
-                        sample_process_options=SampleProcessor.Options(scale_range=[-0.15, 0.15], random_flip=self.random_dst_flip),
-                        output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                             'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                             'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE,  'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.EYES_MOUTH, 'face_type':face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                        sample_process_options=SampleProcessor.Options(scale_range=[-0.125, 0.125], random_flip=self.random_dst_flip),
+                        output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp,
+                                                 'random_downsample': self.options['random_downsample'],
+                                                 'random_noise': self.options['random_noise'],
+                                                 'random_blur': self.options['random_blur'],
+                                                 'random_jpeg': self.options['random_jpeg'],
+                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,
+                                                 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,                                            'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                               ],
-                        uniform_yaw_distribution=self.options['uniform_yaw'],# or self.pretrain,
+                        uniform_yaw_distribution=self.options['uniform_yaw'], #or self.pretrain,
                         generators_count=dst_generators_count )
                              ])
+
+            if self.options['retraining_samples']:
+                self.last_src_samples_loss = []
+                self.last_dst_samples_loss = []
 
     def export_dfm (self):
         output_path=self.get_strpath_storage_for_file('model.dfm')
@@ -650,6 +713,27 @@ class AMPModel(ModelBase):
           (warped_dst, target_dst, target_dstm, target_dstm_em) ) = self.generate_next_samples()
 
         src_loss, dst_loss = self.train (warped_src, target_src, target_srcm, target_srcm_em, warped_dst, target_dst, target_dstm, target_dstm_em)
+
+        if self.options['retraining_samples']:
+            for i in range(bs):
+                self.last_src_samples_loss.append ( (src_loss[i], target_src[i], target_srcm[i], target_srcm_em[i]) )
+                self.last_dst_samples_loss.append ( (dst_loss[i], target_dst[i], target_dstm[i], target_dstm_em[i]) )
+
+            if len(self.last_src_samples_loss) >= bs*16:
+                src_samples_loss = sorted(self.last_src_samples_loss, key=operator.itemgetter(0), reverse=True)
+                dst_samples_loss = sorted(self.last_dst_samples_loss, key=operator.itemgetter(0), reverse=True)
+
+                target_src        = np.stack( [ x[1] for x in src_samples_loss[:bs] ] )
+                target_srcm       = np.stack( [ x[2] for x in src_samples_loss[:bs] ] )
+                target_srcm_em    = np.stack( [ x[3] for x in src_samples_loss[:bs] ] )
+
+                target_dst        = np.stack( [ x[1] for x in dst_samples_loss[:bs] ] )
+                target_dstm       = np.stack( [ x[2] for x in dst_samples_loss[:bs] ] )
+                target_dstm_em    = np.stack( [ x[3] for x in dst_samples_loss[:bs] ] )
+
+                src_loss, dst_loss = self.train (target_src, target_src, target_srcm, target_srcm_em, target_dst, target_dst, target_dstm, target_dstm_em)
+                self.last_src_samples_loss = []
+                self.last_dst_samples_loss = []
 
         if self.gan_power != 0:
             self.GAN_train (warped_src, target_src, target_srcm, target_srcm_em, warped_dst, target_dst, target_dstm, target_dstm_em)
