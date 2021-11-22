@@ -124,6 +124,25 @@ def trainerThread (s2c, c2s, e,
             def model_backup():
                 if not debug and not is_reached_goal:
                     model.create_backup()
+                    
+            def log_step(step, step_time, src_loss, dst_loss):
+                c2s.put({ 
+                    'op': 'tb', 
+                    'action': 'step', 
+                    'step': step,
+                    'step_time': step_time,
+                    'src_loss': src_loss,
+                    'dst_loss': dst_loss
+                })
+            
+            def log_previews(step, previews, static_previews):
+                c2s.put({
+                    'op': 'tb',
+                    'action': 'preview',
+                    'step': step,
+                    'previews': previews,
+                    'static_previews': static_previews
+                })
 
             def send_preview():
                 if not debug:
