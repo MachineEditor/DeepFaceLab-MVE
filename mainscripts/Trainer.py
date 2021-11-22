@@ -603,7 +603,7 @@ def main(**kwargs):
                         selected_preview = selected_preview % len(previews)
                         update_preview = True
                 elif op == 'tb':
-                    handle_tensorboard_op(input)
+                    handle_tensorboard_op(item)
                 elif op == 'close':
                     break
 
