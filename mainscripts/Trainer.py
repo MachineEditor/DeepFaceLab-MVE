@@ -341,8 +341,7 @@ def handle_tensorboard_op(input):
                 log_tensorboard_previews(step, previews, 'preview', train_summary_writer)
             if static_previews is not None:
                 log_tensorboard_previews(step, static_previews, 'static_preview', train_summary_writer)
-    c2s.put({'op': 'close'})
-
+    
 
 class Zoom(Enum):
     ZOOM_25 = (1 / 4, '25%')
