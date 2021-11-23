@@ -25,11 +25,15 @@ class TensorBoardTool:
     def run(self):
         from tensorboard import default
         from tensorboard import program
+        from tensorboard import version as tb_version
         # remove http messages
         log = logging.getLogger('werkzeug').setLevel(logging.ERROR)
         # Start tensorboard server
         tb = program.TensorBoard(default.get_plugins())
-        tb.configure(argv=[None, '--logdir', self.dir_path, '--port', '6006', '--bind_all'])
+        tb_argv = [None, '--logdir', self.dir_path, '--port', '6006']
+        if int(tb_version.VERSION[0])>=2:
+            tb_argv.append("--bind_all")
+        tb.configure(argv=tb_argv)
         url = tb.launch()
         print('Launched TensorBoard at {}'.format(url))
 
