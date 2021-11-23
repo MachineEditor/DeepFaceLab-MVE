@@ -35,7 +35,7 @@ class TensorBoardTool:
             tb_argv.append("--bind_all")
         tb.configure(argv=tb_argv)
         url = tb.launch()
-        print('Launched TensorBoard at {}'.format(url))
+        io.log_info('Launched TensorBoard at {}\n'.format(url))
 
 def process_img_for_tensorboard(input_img):
     # convert format from bgr to rgb
