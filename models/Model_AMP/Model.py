@@ -29,7 +29,8 @@ class AMPModel(ModelBase):
         default_d_mask_dims        = self.options['d_mask_dims']        = self.options.get('d_mask_dims', None)
         default_morph_factor       = self.options['morph_factor']       = self.load_or_def_option('morph_factor', 0.5)
         default_masked_training    = self.options['masked_training']    = self.load_or_def_option('masked_training', True)
-        default_eyes_mouth_prio    = self.options['eyes_mouth_prio']    = self.load_or_def_option('eyes_mouth_prio', False)
+        default_eyes_prio          = self.options['eyes_prio']          = self.load_or_def_option('eyes_prio', False)
+        default_mouth_prio         = self.options['mouth_prio']         = self.load_or_def_option('mouth_prio', False)
         default_uniform_yaw        = self.options['uniform_yaw']        = self.load_or_def_option('uniform_yaw', False)
 
         # Uncomment it just if you want to impelement other loss functions
@@ -101,7 +102,9 @@ class AMPModel(ModelBase):
             if self.options['face_type'] == 'wf' or self.options['face_type'] == 'head':
                     self.options['masked_training']  = io.input_bool ("Masked training", default_masked_training, help_message="This option is available only for 'whole_face' or 'head' type. Masked training clips training area to full_face mask or XSeg mask, thus network will train the faces properly.")
 
-            self.options['eyes_mouth_prio'] = io.input_bool ("Eyes and mouth priority", default_eyes_mouth_prio, help_message='Helps to fix eye problems during training like "alien eyes" and wrong eyes direction. Also makes the detail of the teeth higher.')
+            self.options['eyes_prio'] = io.input_bool ("Eyes priority", default_eyes_prio, help_message='Helps to fix eye problems during training like "alien eyes" and wrong eyes direction ( especially on HD architectures ) by forcing the neural network to train eyes with higher priority. before/after https://i.imgur.com/YQHOuSR.jpg ')
+            self.options['mouth_prio'] = io.input_bool ("Mouth priority", default_mouth_prio, help_message='Helps to fix mouth problems during training by forcing the neural network to train mouth with higher priority similar to eyes ')
+
             self.options['uniform_yaw'] = io.input_bool ("Uniform yaw distribution of samples", default_uniform_yaw, help_message='Helps to fix blurry side faces due to small amount of them in the faceset.')
             if self.options['masked_training']:
                 self.options['blur_out_mask'] = io.input_bool ("Blur out mask", default_blur_out_mask, help_message='Blurs nearby area outside of applied face mask of training samples. The result is the background near the face is smoothed and less noticeable on swapped face. The exact xseg mask in src and dst faceset is required.')
@@ -182,7 +185,8 @@ class AMPModel(ModelBase):
         random_warp  = self.options['random_warp']
         random_hsv_power = self.options['random_hsv_power']
         
-        eyes_mouth_prio = self.options['eyes_mouth_prio'] 
+        eyes_prio = self.options['eyes_prio']
+        mouth_prio = self.options['mouth_prio']
         masked_training = self.options['masked_training'] 
         blur_out_mask = self.options['blur_out_mask'] if masked_training else False
 
@@ -423,10 +427,13 @@ class AMPModel(ModelBase):
                         gpu_warped_dst      = self.warped_dst [batch_slice,:,:,:]
                         gpu_target_src      = self.target_src [batch_slice,:,:,:]
                         gpu_target_dst      = self.target_dst [batch_slice,:,:,:]
-                        gpu_target_srcm     = self.target_srcm[batch_slice,:,:,:]
+                        gpu_target_srcm_all     = self.target_srcm[batch_slice,:,:,:]
                         gpu_target_srcm_em  = self.target_srcm_em[batch_slice,:,:,:]
-                        gpu_target_dstm     = self.target_dstm[batch_slice,:,:,:]
+                        gpu_target_dstm_all     = self.target_dstm[batch_slice,:,:,:]
                         gpu_target_dstm_em  = self.target_dstm_em[batch_slice,:,:,:]
+                        
+                    gpu_target_srcm_anti = 1-gpu_target_srcm_all
+                    gpu_target_dstm_anti = 1-gpu_target_dstm_all
 
                     # process model tensors
                     gpu_src_code = self.encoder (gpu_warped_src)
@@ -457,30 +464,43 @@ class AMPModel(ModelBase):
                     gpu_pred_dst_dst_list.append(gpu_pred_dst_dst), gpu_pred_dst_dstm_list.append(gpu_pred_dst_dstm)
                     gpu_pred_src_dst_list.append(gpu_pred_src_dst), gpu_pred_src_dstm_list.append(gpu_pred_src_dstm)
 
-                    gpu_target_srcm_anti = 1-gpu_target_srcm
-                    gpu_target_dstm_anti = 1-gpu_target_dstm
 
-                    gpu_target_srcm_gblur = nn.gaussian_blur(gpu_target_srcm, resolution // 32)
-                    gpu_target_dstm_gblur = nn.gaussian_blur(gpu_target_dstm, resolution // 32)
-
-                    gpu_target_srcm_blur = tf.clip_by_value(gpu_target_srcm_gblur, 0, 0.5) * 2
-                    gpu_target_dstm_blur = tf.clip_by_value(gpu_target_dstm_gblur, 0, 0.5) * 2
-                    gpu_target_srcm_anti_blur = 1.0-gpu_target_srcm_blur
-                    gpu_target_dstm_anti_blur = 1.0-gpu_target_dstm_blur
 
                     if blur_out_mask:
                         sigma = resolution / 128
 
                         x = nn.gaussian_blur(gpu_target_src*gpu_target_srcm_anti, sigma)
-                        y = 1-nn.gaussian_blur(gpu_target_srcm, sigma)
+                        y = 1-nn.gaussian_blur(gpu_target_srcm_all, sigma)
                         y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
-                        gpu_target_src = gpu_target_src*gpu_target_srcm + (x/y)*gpu_target_srcm_anti
+                        gpu_target_src = gpu_target_src*gpu_target_srcm_all + (x/y)*gpu_target_srcm_anti
                         
                         x = nn.gaussian_blur(gpu_target_dst*gpu_target_dstm_anti, sigma)
-                        y = 1-nn.gaussian_blur(gpu_target_dstm, sigma)
+                        y = 1-nn.gaussian_blur(gpu_target_dstm_all, sigma)
                         y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
-                        gpu_target_dst = gpu_target_dst*gpu_target_dstm + (x/y)*gpu_target_dstm_anti
+                        gpu_target_dst = gpu_target_dst*gpu_target_dstm_all + (x/y)*gpu_target_dstm_anti
 
+                    # unpack masks from one combined mask
+                    gpu_target_srcm      = tf.clip_by_value (gpu_target_srcm_all, 0, 1)
+                    gpu_target_dstm      = tf.clip_by_value (gpu_target_dstm_all, 0, 1)
+                    gpu_target_srcm_eye_mouth = tf.clip_by_value (gpu_target_srcm_em-1, 0, 1)
+                    gpu_target_dstm_eye_mouth = tf.clip_by_value (gpu_target_dstm_em-1, 0, 1)
+                    gpu_target_srcm_mouth = tf.clip_by_value (gpu_target_srcm_em-2, 0, 1)
+                    gpu_target_dstm_mouth = tf.clip_by_value (gpu_target_dstm_em-2, 0, 1)
+                    gpu_target_srcm_eyes = tf.clip_by_value (gpu_target_srcm_eye_mouth-gpu_target_srcm_mouth, 0, 1)
+                    gpu_target_dstm_eyes = tf.clip_by_value (gpu_target_dstm_eye_mouth-gpu_target_dstm_mouth, 0, 1)
+                    
+                                        
+
+                    gpu_target_srcm_gblur = nn.gaussian_blur(gpu_target_srcm, resolution // 32)
+                    gpu_target_dstm_gblur = nn.gaussian_blur(gpu_target_dstm, resolution // 32)
+                    
+                    
+                    gpu_target_srcm_blur = tf.clip_by_value(gpu_target_srcm_gblur, 0, 0.5) * 2
+                    gpu_target_dstm_blur = tf.clip_by_value(gpu_target_dstm_gblur, 0, 0.5) * 2
+                    
+                    gpu_target_srcm_anti_blur = 1.0-gpu_target_srcm_blur
+                    gpu_target_dstm_anti_blur = 1.0-gpu_target_dstm_blur
+                    
                     gpu_target_src_masked = gpu_target_src*gpu_target_srcm_blur if masked_training else gpu_target_src
                     gpu_target_dst_masked = gpu_target_dst*gpu_target_dstm_blur if masked_training else gpu_target_dst
                     gpu_target_src_anti_masked = gpu_target_src*gpu_target_srcm_anti_blur if masked_training else gpu_pred_src_src
@@ -515,13 +535,27 @@ class AMPModel(ModelBase):
                         gpu_dst_loss += tf.reduce_mean (10*tf.square(gpu_target_dst_masked-gpu_pred_dst_dst_masked), axis=[1,2,3])
                     
                     # Eyes+mouth prio loss
-                    if eyes_mouth_prio:
-                        gpu_src_loss += tf.reduce_mean (300*tf.abs (gpu_target_src*gpu_target_srcm_em-gpu_pred_src_src*gpu_target_srcm_em), axis=[1,2,3])
-                        gpu_dst_loss += tf.reduce_mean (300*tf.abs (gpu_target_dst*gpu_target_dstm_em-gpu_pred_dst_dst*gpu_target_dstm_em), axis=[1,2,3])
+                    # if eyes_mouth_prio:
+                        # gpu_src_loss += tf.reduce_mean (300*tf.abs (gpu_target_src*gpu_target_srcm_em-gpu_pred_src_src*gpu_target_srcm_em), axis=[1,2,3])
+                        # gpu_dst_loss += tf.reduce_mean (300*tf.abs (gpu_target_dst*gpu_target_dstm_em-gpu_pred_dst_dst*gpu_target_dstm_em), axis=[1,2,3])
+                    
+                    if eyes_prio or mouth_prio:
+                        if eyes_prio and mouth_prio:
+                            gpu_target_part_mask_src = gpu_target_srcm_eye_mouth
+                            gpu_target_part_mask_dst = gpu_target_dstm_eye_mouth
+                        elif eyes_prio:
+                            gpu_target_part_mask_src = gpu_target_srcm_eyes
+                            gpu_target_part_mask_dst = gpu_target_dstm_eyes
+                        elif mouth_prio:
+                            gpu_target_part_mask_src = gpu_target_srcm_mouth
+                            gpu_target_part_mask_dst = gpu_target_dstm_mouth
+                            
+                        gpu_src_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_src*gpu_target_part_mask_src - gpu_pred_src_src*gpu_target_part_mask_src ), axis=[1,2,3])
+                        gpu_dst_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_dst*gpu_target_part_mask_dst - gpu_pred_dst_dst*gpu_target_part_mask_dst ), axis=[1,2,3])
 
                     # Mask loss
-                    gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
-                    gpu_dst_loss += tf.reduce_mean ( 10*tf.square( gpu_target_dstm - gpu_pred_dst_dstm ),axis=[1,2,3] )
+                    gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm_all - gpu_pred_src_srcm ),axis=[1,2,3] )
+                    gpu_dst_loss += tf.reduce_mean ( 10*tf.square( gpu_target_dstm_all - gpu_pred_dst_dstm ),axis=[1,2,3] )
 
                     gpu_src_losses += [gpu_src_loss]
                     gpu_dst_losses += [gpu_dst_loss]
