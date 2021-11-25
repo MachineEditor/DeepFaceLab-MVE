@@ -67,7 +67,8 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
 
     predictor_input_bgr      = cv2.resize (dst_face_bgr, (input_size,input_size) )
 
-    predicted = predictor_func (predictor_input_bgr)
+    
+    predicted = predictor_func (predictor_input_bgr, func_morph_factor = cfg.morph_power/100.0) if cfg.is_morphable else predictor_func (predictor_input_bgr)
     prd_face_bgr          = np.clip (predicted[0], 0, 1.0)
     prd_face_mask_a_0     = np.clip (predicted[1], 0, 1.0)
     prd_face_dst_mask_a_0 = np.clip (predicted[2], 0, 1.0)

@@ -115,6 +115,8 @@ class MergerConfigMasked(MergerConfig):
                        bicubic_degrade_power = 0,
                        color_degrade_power = 0,
                        pre_sharpen_power = 0,
+                       morph_power = 100,
+                       is_morphable = False,
                        **kwargs
                        ):
 
@@ -144,6 +146,8 @@ class MergerConfigMasked(MergerConfig):
         self.bicubic_degrade_power = bicubic_degrade_power
         self.color_degrade_power = color_degrade_power
         self.pre_sharpen_power = pre_sharpen_power
+        self.morph_power = morph_power
+        self.is_morphable = is_morphable
 
     def copy(self):
         return copy.copy(self)
@@ -192,6 +196,10 @@ class MergerConfigMasked(MergerConfig):
         
     def add_pre_sharpen_power(self, diff):
         self.pre_sharpen_power = np.clip ( self.pre_sharpen_power+diff, 0, 200)
+        
+    def add_morph_power(self, diff):
+        if self.is_morphable:
+            self.morph_power = np.clip ( self.morph_power+diff , 0, 100)
 
     def ask_settings(self):
         s = """Choose mode: \n"""
@@ -221,6 +229,9 @@ class MergerConfigMasked(MergerConfig):
             self.motion_blur_power = np.clip ( io.input_int ("Choose motion blur power", 0, add_info="0..100"), 0, 100)
 
         self.pre_sharpen_power = np.clip (io.input_int ("Choose pre_sharpen power", 0, help_message="Can enhance results by pre sharping before feeding it to the network.", add_info="0..100" ), 0, 200)
+        
+        if self.is_morphable:
+            self.morph_power = np.clip (io.input_int ("Choose morph_power for moprhable models", 100, add_info="0..100" ), 0, 100)
 
 
         self.output_face_scale = np.clip (io.input_int ("Choose output face scale modifier", 0, add_info="-50..50" ), -50, 50)
@@ -258,7 +269,9 @@ class MergerConfigMasked(MergerConfig):
                    self.image_denoise_power == other.image_denoise_power and \
                    self.bicubic_degrade_power == other.bicubic_degrade_power and \
                    self.color_degrade_power == other.color_degrade_power and \
-                   self.pre_sharpen_power == other.pre_sharpen_power
+                   self.pre_sharpen_power == other.pre_sharpen_power and \
+                   self.morph_power == other.morph_power and \
+                   self.is_morphable == other.is_morphable 
 
         return False
 
@@ -295,6 +308,8 @@ class MergerConfigMasked(MergerConfig):
                   f"""color_degrade_power: {self.color_degrade_power}\n""")
         
         r += f"""pre_sharpen_power: {self.pre_sharpen_power}\n"""
+        r += f"""morph_power: {self.morph_power}\n"""
+        r += f"""is_morphable: {self.is_morphable}\n"""
         
         r += "================"
 
