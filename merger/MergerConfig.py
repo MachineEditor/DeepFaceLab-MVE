@@ -114,6 +114,7 @@ class MergerConfigMasked(MergerConfig):
                        image_denoise_power = 0,
                        bicubic_degrade_power = 0,
                        color_degrade_power = 0,
+                       pre_sharpen_power = 0,
                        **kwargs
                        ):
 
@@ -142,6 +143,7 @@ class MergerConfigMasked(MergerConfig):
         self.image_denoise_power = image_denoise_power
         self.bicubic_degrade_power = bicubic_degrade_power
         self.color_degrade_power = color_degrade_power
+        self.pre_sharpen_power = pre_sharpen_power
 
     def copy(self):
         return copy.copy(self)
@@ -187,6 +189,9 @@ class MergerConfigMasked(MergerConfig):
 
     def add_bicubic_degrade_power(self, diff):
         self.bicubic_degrade_power = np.clip ( self.bicubic_degrade_power+diff, 0, 100)
+        
+    def add_pre_sharpen_power(self, diff):
+        self.pre_sharpen_power = np.clip ( self.pre_sharpen_power+diff, 0, 200)
 
     def ask_settings(self):
         s = """Choose mode: \n"""
@@ -214,6 +219,9 @@ class MergerConfigMasked(MergerConfig):
             self.erode_mask_modifier = np.clip ( io.input_int ("Choose erode mask modifier", 0, add_info="-400..400"), -400, 400)
             self.blur_mask_modifier =  np.clip ( io.input_int ("Choose blur mask modifier", 0, add_info="0..400"), 0, 400)
             self.motion_blur_power = np.clip ( io.input_int ("Choose motion blur power", 0, add_info="0..100"), 0, 100)
+
+        self.pre_sharpen_power = np.clip (io.input_int ("Choose pre_sharpen power", 0, help_message="Can enhance results by pre sharping before feeding it to the network.", add_info="0..100" ), 0, 200)
+
 
         self.output_face_scale = np.clip (io.input_int ("Choose output face scale modifier", 0, add_info="-50..50" ), -50, 50)
 
@@ -249,7 +257,8 @@ class MergerConfigMasked(MergerConfig):
                    self.super_resolution_power == other.super_resolution_power and \
                    self.image_denoise_power == other.image_denoise_power and \
                    self.bicubic_degrade_power == other.bicubic_degrade_power and \
-                   self.color_degrade_power == other.color_degrade_power
+                   self.color_degrade_power == other.color_degrade_power and \
+                   self.pre_sharpen_power == other.pre_sharpen_power
 
         return False
 
@@ -284,7 +293,9 @@ class MergerConfigMasked(MergerConfig):
             r += (f"""image_denoise_power: {self.image_denoise_power}\n"""
                   f"""bicubic_degrade_power: {self.bicubic_degrade_power}\n"""
                   f"""color_degrade_power: {self.color_degrade_power}\n""")
-
+        
+        r += f"""pre_sharpen_power: {self.pre_sharpen_power}\n"""
+        
         r += "================"
 
         return r
