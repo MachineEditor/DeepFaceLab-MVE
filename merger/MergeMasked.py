@@ -62,16 +62,29 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
     dst_face_mask_a_0 = np.clip(dst_face_mask_a_0, 0, 1)
     
     if cfg.pre_sharpen_power != 0:
-        dst_face_bgr      = cv2.addWeighted(dst_face_bgr, 1.0 + (0.05 * cfg.pre_sharpen_power), cv2.GaussianBlur(dst_face_bgr, (0, 0), 1.0), -(0.05 * cfg.pre_sharpen_power), 0)
-        dst_face_bgr      = np.clip(dst_face_bgr, 0, 1, out=dst_face_bgr)
+        if cfg.pre_sharpen_mode:
+            dst_face_bgr = imagelib.gaussian_sharpen(dst_face_bgr, amount=cfg.pre_sharpen_power)
+        else:
+            dst_face_bgr = imagelib.unsharpen_mask(dst_face_bgr, amount=cfg.pre_sharpen_power)
+
+        #dst_face_bgr      = cv2.addWeighted(dst_face_bgr, 1.0 + (0.05 * cfg.pre_sharpen_power), cv2.GaussianBlur(dst_face_bgr, (0, 0), 1.0), -(0.05 * cfg.pre_sharpen_power), 0)
+        #dst_face_bgr      = np.clip(dst_face_bgr, 0, 1, out=dst_face_bgr)
 
     predictor_input_bgr      = cv2.resize (dst_face_bgr, (input_size,input_size) )
 
     
     predicted = predictor_func (predictor_input_bgr, func_morph_factor = cfg.morph_power/100.0) if cfg.is_morphable else predictor_func (predictor_input_bgr)
+
+    
     prd_face_bgr          = np.clip (predicted[0], 0, 1.0)
     prd_face_mask_a_0     = np.clip (predicted[1], 0, 1.0)
     prd_face_dst_mask_a_0 = np.clip (predicted[2], 0, 1.0)
+    
+    if cfg.two_pass:
+        predicted_2 = predictor_func (prd_face_bgr, func_morph_factor = 1.0) if cfg.is_morphable else predictor_func (prd_face_bgr)
+        prd_face_bgr = np.clip (predicted_2[0], 0, 1.0)
+        prd_face_mask_a_0     = np.clip (predicted_2[1], 0, 1.0)
+        prd_face_dst_mask_a_0 = np.clip (predicted_2[2], 0, 1.0)
 
     if cfg.super_resolution_power != 0:
         prd_face_bgr_enhanced = face_enhancer_func(prd_face_bgr, is_tanh=True, preserve_size=False)
