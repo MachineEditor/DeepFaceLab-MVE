@@ -61,14 +61,13 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
     dst_face_mask_a_0 = cv2.warpAffine( img_face_mask_a, face_mat, (output_size, output_size), flags=cv2.INTER_CUBIC )
     dst_face_mask_a_0 = np.clip(dst_face_mask_a_0, 0, 1)
     
-    if cfg.pre_sharpen_power != 0:
-        if cfg.pre_sharpen_mode:
+    if cfg.pre_sharpen_mode > 0 and cfg.pre_sharpen_power != 0:
+        if cfg.pre_sharpen_mode==1:
             dst_face_bgr = imagelib.gaussian_sharpen(dst_face_bgr, amount=cfg.pre_sharpen_power)
-        else:
+        elif cfg.pre_sharpen_mode==2:
             dst_face_bgr = imagelib.unsharpen_mask(dst_face_bgr, amount=cfg.pre_sharpen_power)
 
-        #dst_face_bgr      = cv2.addWeighted(dst_face_bgr, 1.0 + (0.05 * cfg.pre_sharpen_power), cv2.GaussianBlur(dst_face_bgr, (0, 0), 1.0), -(0.05 * cfg.pre_sharpen_power), 0)
-        #dst_face_bgr      = np.clip(dst_face_bgr, 0, 1, out=dst_face_bgr)
+        dst_face_bgr = np.clip(dst_face_bgr, 0, 1, out=dst_face_bgr)
 
     predictor_input_bgr      = cv2.resize (dst_face_bgr, (input_size,input_size) )
 

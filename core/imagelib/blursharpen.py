@@ -39,7 +39,7 @@ def blursharpen (img, sharpen_mode=0, kernel_size=3, amount=100):
     
 def gaussian_sharpen(img, amount=100, sigma=1.0):
     img =  cv2.addWeighted(img, 1.0 + (0.05 * amount), cv2.GaussianBlur(img, (0, 0), sigma), -(0.05 * amount), 0)
-    return np.clip(img, 0, 1, out=img)
+    return img
     
 def unsharpen_mask(img, amount=100, sigma=0.0, threshold = (5.0 / 255.0)):
     radius = max(1, round(img.shape[0] * (amount / 100)))
