@@ -16,7 +16,7 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
                      face_enhancer_func,
                      xseg_256_extract_func,
                      cfg, frame_info, img_bgr_uint8, img_bgr, img_face_landmarks, dfl_img):
-
+                     
     img_size = img_bgr.shape[1], img_bgr.shape[0]
     img_face_mask_a = LandmarksProcessor.get_image_hull_mask (img_bgr.shape, img_face_landmarks)
 
@@ -61,12 +61,13 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
     dst_face_mask_a_0 = cv2.warpAffine( img_face_mask_a, face_mat, (output_size, output_size), flags=cv2.INTER_CUBIC )
     dst_face_mask_a_0 = np.clip(dst_face_mask_a_0, 0, 1)
     
+    
     if cfg.pre_sharpen_mode > 0 and cfg.pre_sharpen_power != 0:
         if cfg.pre_sharpen_mode==1:
             dst_face_bgr = imagelib.gaussian_sharpen(dst_face_bgr, amount=cfg.pre_sharpen_power)
         elif cfg.pre_sharpen_mode==2:
             dst_face_bgr = imagelib.unsharpen_mask(dst_face_bgr, amount=cfg.pre_sharpen_power)
-
+        
         dst_face_bgr = np.clip(dst_face_bgr, 0, 1, out=dst_face_bgr)
 
     predictor_input_bgr      = cv2.resize (dst_face_bgr, (input_size,input_size) )
@@ -79,11 +80,16 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
     prd_face_mask_a_0     = np.clip (predicted[1], 0, 1.0)
     prd_face_dst_mask_a_0 = np.clip (predicted[2], 0, 1.0)
     
+    
+    
     if cfg.two_pass:
-        predicted_2 = predictor_func (prd_face_bgr, func_morph_factor = 1.0) if cfg.is_morphable else predictor_func (prd_face_bgr)
+        predicted_2 = predictor_func (prd_face_bgr, func_morph_factor = 1) if cfg.is_morphable else predictor_func (prd_face_bgr)
         prd_face_bgr = np.clip (predicted_2[0], 0, 1.0)
         prd_face_mask_a_0     = np.clip (predicted_2[1], 0, 1.0)
         prd_face_dst_mask_a_0 = np.clip (predicted_2[2], 0, 1.0)
+        
+    if cfg.debug_mode:
+        prd_face_bgr_unchanged = prd_face_bgr.copy()
 
     if cfg.super_resolution_power != 0:
         prd_face_bgr_enhanced = face_enhancer_func(prd_face_bgr, is_tanh=True, preserve_size=False)
@@ -349,6 +355,15 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
 
     if out_img is None:
         out_img = img_bgr.copy()
+        
+        
+    if 'raw' not in cfg.mode and cfg.debug_mode:
+        ph, pw = predictor_input_bgr.shape[:2]
+        oh, ow = out_img.shape[:2]
+        out_img[oh-ph:,ow-pw:] =  predictor_input_bgr
+        ph, pw = prd_face_bgr_unchanged.shape[:2]
+        out_img[oh-ph:,0:pw] =  prd_face_bgr_unchanged
+    
         
     return out_img, out_merging_mask_a
 

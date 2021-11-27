@@ -22,6 +22,8 @@ def blursharpen (img, sharpen_mode=0, kernel_size=3, amount=100):
             blur = cv2.GaussianBlur(img, (kernel_size, kernel_size) , 0)
             img = cv2.addWeighted(img, 1.0 + (0.5 * amount), blur, -(0.5 * amount), 0)
             return img
+        elif sharpen_mode == 3: #unsharpen_mask
+            img = unsharpen_mask(img, amount=amount)
     elif amount < 0:
         n = -amount
         while n > 0:

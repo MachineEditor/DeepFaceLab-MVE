@@ -21,7 +21,7 @@ class MergerConfig(object):
                        ):
         self.type = type
 
-        self.sharpen_dict = {0:"None", 1:'box', 2:'gaussian'}
+        self.sharpen_dict = {0:"None", 1:'box', 2:'gaussian', 3:'unsharpen'}
 
         #default changeable params
         self.sharpen_mode = sharpen_mode
@@ -122,6 +122,7 @@ class MergerConfigMasked(MergerConfig):
                        two_pass = False, 
                        morph_power = 100,
                        is_morphable = False,
+                       debug_mode = False,
                        **kwargs
                        ):
 
@@ -155,6 +156,7 @@ class MergerConfigMasked(MergerConfig):
         self.pre_sharpen_mode = pre_sharpen_mode
         self.morph_power = morph_power
         self.is_morphable = is_morphable
+        self.debug_mode = debug_mode
 
     def copy(self):
         return copy.copy(self)
@@ -168,6 +170,9 @@ class MergerConfigMasked(MergerConfig):
             
     def toggle_two_pass(self):
         self.two_pass = not self.two_pass
+        
+    def toggle_debug_mode(self):
+        self.debug_mode = not self.debug_mode
         
                 
     def toggle_sharpen_mode_multi(self, pre_sharpen=False):
@@ -296,7 +301,8 @@ class MergerConfigMasked(MergerConfig):
                    self.pre_sharpen_mode == other.pre_sharpen_mode and \
                    self.two_pass == other.two_pass and \
                    self.morph_power == other.morph_power and \
-                   self.is_morphable == other.is_morphable 
+                   self.is_morphable == other.is_morphable and \
+                   self.debug_mode == other.debug_mode 
 
         return False
 
@@ -337,6 +343,7 @@ class MergerConfigMasked(MergerConfig):
         r += f"""two_pass: {self.two_pass}\n"""
         r += f"""morph_power: {self.morph_power}\n"""
         #r += f"""is_morphable: {self.is_morphable}\n"""
+        r += f"""debug_mode: {self.debug_mode}\n"""
         
         r += "================"
 
