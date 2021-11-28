@@ -806,7 +806,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                                                  'random_noise': self.options['random_noise'],
                                                  'random_blur': self.options['random_blur'],
                                                  'random_jpeg': self.options['random_jpeg'],
-                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,
+                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode, 'random_hsv_shift_amount' : random_hsv_power,    
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
