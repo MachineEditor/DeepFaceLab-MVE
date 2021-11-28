@@ -51,6 +51,7 @@ class AMPModel(ModelBase):
         default_ct_mode            = self.options['ct_mode']            = self.load_or_def_option('ct_mode', 'none')
         default_random_color       = self.options['random_color']       = self.load_or_def_option('random_color', False)
         default_clipgrad           = self.options['clipgrad']           = self.load_or_def_option('clipgrad', False)
+        default_use_fp16           = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
 
         ask_override = self.ask_override()
         if self.is_first_run() or ask_override:
@@ -167,7 +168,7 @@ class AMPModel(ModelBase):
 
         adabelief = self.options['adabelief']
 
-        # use_fp16 = self.options['use_fp16']
+        use_fp16 = self.options['use_fp16']
         if self.is_exporting:
             use_fp16 = io.input_bool ("Export quantized?", False, help_message='Makes the exported model faster. If you have problems, disable this option.')
 

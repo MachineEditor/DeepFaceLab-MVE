@@ -393,6 +393,9 @@ class ModelBase(object):
 
     def get_previews(self):
         return self.onGetPreview ( self.last_sample )
+    
+    def get_static_previews(self):
+        return self.onGetPreview (self.sample_for_preview)
 
     def get_history_previews(self):
         return self.onGetPreview (self.sample_for_preview, for_history=True)
