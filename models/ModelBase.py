@@ -10,6 +10,7 @@ import tempfile
 import time
 import datetime
 from pathlib import Path
+import yaml
 
 import cv2
 import numpy as np
@@ -35,6 +36,7 @@ class ModelBase(object):
                        cpu_only=False,
                        debug=False,
                        force_model_class_name=None,
+                       config_training_file=None,
                        silent_start=False,
                        **kwargs):
         self.is_training = is_training
@@ -140,14 +142,35 @@ class ModelBase(object):
         self.sample_for_preview = None
         self.choosed_gpu_indexes = None
 
+        # MODIFY HERE!!! ---------------------------------------------------------------------------------------
         model_data = {}
+        self.config_file_exists = False
+        self.read_from_conf = False
+        #check if config_training_file mode is enabled
+        if config_training_file is not None:
+            self.config_file_path = Path(config_training_file)
+            if self.config_file_path.exists():
+                self.read_from_conf = io.input_bool(
+                    f'Do you want to read training options from {self.config_file_path.stem} file?',
+                    False,
+                    'Read options from configuration file instead of asking one by one each option'
+                )
+
+                if self.read_from_conf:
+                    self.options = self.read_from_config_file()
+                    self.config_file_exists = True
+            else:
+                io.log_info(f"Configuration file doesn't exist. A standard configuration file will be created.")
+
+
         self.model_data_path = Path( self.get_strpath_storage_for_file('data.dat') )
         if self.model_data_path.exists():
             io.log_info (f"Loading {self.model_name} model...")
             model_data = pickle.loads ( self.model_data_path.read_bytes() )
             self.iter = model_data.get('iter',0)
             if self.iter != 0:
-                self.options = model_data['options']
+                if not self.config_file_exists:
+                    self.options = model_data['options']
                 self.loss_history = model_data.get('loss_history', [])
                 self.sample_for_preview = model_data.get('sample_for_preview', None)
                 self.choosed_gpu_indexes = model_data.get('choosed_gpu_indexes', None)
@@ -183,6 +206,9 @@ class ModelBase(object):
         if self.is_first_run():
             # save as default options only for first run model initialize
             self.default_options_path.write_bytes( pickle.dumps (self.options) )
+            # save config file
+            self.save_config_file()
+
         self.session_name = self.options.get('session_name', "")
         self.autobackup_hour = self.options.get('autobackup_hour', 0)
         self.maximum_n_backups = self.options.get('maximum_n_backups', 24)
@@ -426,6 +452,29 @@ class ModelBase(object):
                 self.autobackup_start_time += self.autobackup_hour*3600
                 self.create_backup()
 
+    def read_from_config_file(self):
+        with open(self.config_file_path, 'r') as file:
+            data = yaml.safe_load(file)
+
+        for key, value in data.items():
+            if isinstance(value, int):
+                data[key] = np.int32(value)
+            elif isinstance(value, float):
+                data[key] = np.float64(value)
+
+        return data
+
+    def save_config_file(self):
+        saving_dict = {}
+        for key, value in self.options.items():
+            if isinstance(value, np.int32) or isinstance(value, np.float64):
+                saving_dict[key] = value.item()
+            else:
+                saving_dict[key] = value
+
+        with open(self.config_file_path, 'w') as file:
+            yaml.dump(saving_dict, file)
+
     def create_backup(self):
         io.log_info ("Creating backup...", end='\r')
 
@@ -557,6 +606,8 @@ class ModelBase(object):
 
     def get_strpath_storage_for_file(self, filename):
         return str( self.saved_models_path / ( self.get_model_name() + '_' + filename) )
+
+    
 
     def get_summary_path(self):
         return self.get_strpath_storage_for_file('summary.txt')
