@@ -142,9 +142,10 @@ class ModelBase(object):
         self.sample_for_preview = None
         self.choosed_gpu_indexes = None
 
-        # MODIFY HERE!!! ---------------------------------------------------------------------------------------
         model_data = {}
+        # True if yaml conf file exists 
         self.config_file_exists = False
+        # True if user chooses to read options from conf file
         self.read_from_conf = False
         #check if config_training_file mode is enabled
         if config_training_file is not None:
@@ -169,6 +170,7 @@ class ModelBase(object):
             model_data = pickle.loads ( self.model_data_path.read_bytes() )
             self.iter = model_data.get('iter',0)
             if self.iter != 0:
+                # read options from the .dat file only if the user chooses not to read options from the yaml file
                 if not self.config_file_exists:
                     self.options = model_data['options']
                 self.loss_history = model_data.get('loss_history', [])
@@ -419,6 +421,9 @@ class ModelBase(object):
 
     def get_previews(self):
         return self.onGetPreview ( self.last_sample )
+    
+    def get_static_previews(self):
+        return self.onGetPreview (self.sample_for_preview)
 
     def get_history_previews(self):
         return self.onGetPreview (self.sample_for_preview, for_history=True)
@@ -453,10 +458,17 @@ class ModelBase(object):
                 self.create_backup()
 
     def read_from_config_file(self):
+        """
+        Read yaml config file and saves it into a dictionary
+        Returns:
+            [type]: [description]
+        """
         with open(self.config_file_path, 'r') as file:
             data = yaml.safe_load(file)
 
         for key, value in data.items():
+            if isinstance(value, bool):
+                continue
             if isinstance(value, int):
                 data[key] = np.int32(value)
             elif isinstance(value, float):
@@ -465,6 +477,9 @@ class ModelBase(object):
         return data
 
     def save_config_file(self):
+        """
+        Saves options dictionary in a yaml file
+        """
         saving_dict = {}
         for key, value in self.options.items():
             if isinstance(value, np.int32) or isinstance(value, np.float64):
@@ -473,7 +488,7 @@ class ModelBase(object):
                 saving_dict[key] = value
 
         with open(self.config_file_path, 'w') as file:
-            yaml.dump(saving_dict, file)
+            yaml.dump(saving_dict, file, sort_keys=False)
 
     def create_backup(self):
         io.log_info ("Creating backup...", end='\r')
@@ -606,8 +621,6 @@ class ModelBase(object):
 
     def get_strpath_storage_for_file(self, filename):
         return str( self.saved_models_path / ( self.get_model_name() + '_' + filename) )
-
-    
 
     def get_summary_path(self):
         return self.get_strpath_storage_for_file('summary.txt')
