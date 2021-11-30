@@ -150,7 +150,9 @@ class ModelBase(object):
         #check if config_training_file mode is enabled
         if config_training_file is not None:
             self.config_file_path = Path(config_training_file)
-            if self.config_file_path.exists():
+            if not self.config_file_path.exists():
+                os.mkdir(self.config_file_path)
+            if Path(self.get_strpath_configuration_path()).exists():
                 self.read_from_conf = io.input_bool(
                     f'Do you want to read training options from {self.config_file_path.stem} file?',
                     False,
@@ -463,7 +465,7 @@ class ModelBase(object):
         Returns:
             [type]: [description]
         """
-        with open(self.config_file_path, 'r') as file:
+        with open(self.get_strpath_configuration_path(), 'r') as file:
             data = yaml.safe_load(file)
 
         for key, value in data.items():
@@ -487,7 +489,7 @@ class ModelBase(object):
             else:
                 saving_dict[key] = value
 
-        with open(self.config_file_path, 'w') as file:
+        with open(self.get_strpath_configuration_path(), 'w') as file:
             yaml.dump(saving_dict, file, sort_keys=False)
 
     def create_backup(self):
@@ -621,6 +623,9 @@ class ModelBase(object):
 
     def get_strpath_storage_for_file(self, filename):
         return str( self.saved_models_path / ( self.get_model_name() + '_' + filename) )
+
+    def get_strpath_configuration_path(self):
+        return str(self.config_file_path / 'configuration_file.yaml')
 
     def get_summary_path(self):
         return self.get_strpath_storage_for_file('summary.txt')

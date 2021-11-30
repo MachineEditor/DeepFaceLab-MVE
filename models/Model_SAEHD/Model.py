@@ -28,7 +28,7 @@ class SAEHDModel(ModelBase):
         min_res = 64
         max_res = 640
 
-        default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
+        #default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
         default_resolution         = self.options['resolution']         = self.load_or_def_option('resolution', 128)
         default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'f')
         default_models_opt_on_gpu  = self.options['models_opt_on_gpu']  = self.load_or_def_option('models_opt_on_gpu', True)
@@ -68,7 +68,7 @@ class SAEHDModel(ModelBase):
         default_random_color       = self.options['random_color']       = self.load_or_def_option('random_color', False)
         default_clipgrad           = self.options['clipgrad']           = self.load_or_def_option('clipgrad', False)
         default_pretrain           = self.options['pretrain']           = self.load_or_def_option('pretrain', False)
-        default_use_fp16           = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
+        #default_use_fp16           = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
 
         ask_override = False if self.read_from_conf else self.ask_override()
         if self.is_first_run() or ask_override:
@@ -82,7 +82,7 @@ class SAEHDModel(ModelBase):
                 self.ask_random_src_flip()
                 self.ask_random_dst_flip()
                 self.ask_batch_size(suggest_batch_size)
-                self.options['use_fp16'] = io.input_bool ("Use fp16", default_usefp16, help_message='Increases training/inference speed, reduces model size. Model may crash. Enable it after 1-5k iters.')
+                #self.options['use_fp16'] = io.input_bool ("Use fp16", default_usefp16, help_message='Increases training/inference speed, reduces model size. Model may crash. Enable it after 1-5k iters.')
 
         if self.is_first_run():
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
@@ -184,23 +184,23 @@ class SAEHDModel(ModelBase):
 
                 self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 10.0", help_message="Train the network in Generative Adversarial manner. Forces the neural network to learn small details of the face. Enable it only when the face is trained enough and don't disable. Typical value is 0.1"), 0.0, 10.0 )
 
-            if self.options['gan_power'] != 0.0:
-                self.options['gan_version'] = np.clip (io.input_int("GAN version", default_gan_version, add_info="2 or 3", help_message="Choose GAN version (v2: 7/16/2020, v3: 1/3/2021):"), 2, 3)
+                if self.options['gan_power'] != 0.0:
+                    self.options['gan_version'] = np.clip (io.input_int("GAN version", default_gan_version, add_info="2 or 3", help_message="Choose GAN version (v2: 7/16/2020, v3: 1/3/2021):"), 2, 3)
 
-                if self.options['gan_version'] == 3:
-                    gan_patch_size = np.clip ( io.input_int("GAN patch size", default_gan_patch_size, add_info="3-640", help_message="The higher patch size, the higher the quality, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is resolution / 8." ), 3, 640 )
-                    self.options['gan_patch_size'] = gan_patch_size
+                    if self.options['gan_version'] == 3:
+                        gan_patch_size = np.clip ( io.input_int("GAN patch size", default_gan_patch_size, add_info="3-640", help_message="The higher patch size, the higher the quality, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is resolution / 8." ), 3, 640 )
+                        self.options['gan_patch_size'] = gan_patch_size
 
-                    gan_dims = np.clip ( io.input_int("GAN dimensions", default_gan_dims, add_info="4-64", help_message="The dimensions of the GAN network. The higher dimensions, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is 16." ), 4, 64 )
-                    self.options['gan_dims'] = gan_dims
+                        gan_dims = np.clip ( io.input_int("GAN dimensions", default_gan_dims, add_info="4-64", help_message="The dimensions of the GAN network. The higher dimensions, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is 16." ), 4, 64 )
+                        self.options['gan_dims'] = gan_dims
 
-                    self.options['gan_smoothing'] = np.clip ( io.input_number("GAN label smoothing", default_gan_smoothing, add_info="0 - 0.5", help_message="Uses soft labels with values slightly off from 0/1 for GAN, has a regularizing effect"), 0, 0.5)
-                    self.options['gan_noise'] = np.clip ( io.input_number("GAN noisy labels", default_gan_noise, add_info="0 - 0.5", help_message="Marks some images with the wrong label, helps prevent collapse"), 0, 0.5)
+                        self.options['gan_smoothing'] = np.clip ( io.input_number("GAN label smoothing", default_gan_smoothing, add_info="0 - 0.5", help_message="Uses soft labels with values slightly off from 0/1 for GAN, has a regularizing effect"), 0, 0.5)
+                        self.options['gan_noise'] = np.clip ( io.input_number("GAN noisy labels", default_gan_noise, add_info="0 - 0.5", help_message="Marks some images with the wrong label, helps prevent collapse"), 0, 0.5)
 
-                if 'df' in self.options['archi']:
-                    self.options['true_face_power'] = np.clip ( io.input_number ("'True face' power.", default_true_face_power, add_info="0.0000 .. 1.0", help_message="Experimental option. Discriminates result face to be more like src face. Higher value - stronger discrimination. Typical value is 0.01 . Comparison - https://i.imgur.com/czScS9q.png"), 0.0, 1.0 )
-                else:
-                    self.options['true_face_power'] = 0.0
+                    if 'df' in self.options['archi']:
+                        self.options['true_face_power'] = np.clip ( io.input_number ("'True face' power.", default_true_face_power, add_info="0.0000 .. 1.0", help_message="Experimental option. Discriminates result face to be more like src face. Higher value - stronger discrimination. Typical value is 0.01 . Comparison - https://i.imgur.com/czScS9q.png"), 0.0, 1.0 )
+                    else:
+                        self.options['true_face_power'] = 0.0
 
                 self.options['background_power'] = np.clip ( io.input_number("Background power", default_background_power, add_info="0.0..1.0", help_message="Learn the area outside of the mask. Helps smooth out area near the mask boundaries. Can be used at any time"), 0.0, 1.0 )
 
