@@ -155,7 +155,7 @@ class ModelBase(object):
             if Path(self.get_strpath_configuration_path()).exists():
                 self.read_from_conf = io.input_bool(
                     f'Do you want to read training options from {self.config_file_path.stem} file?',
-                    False,
+                    True,
                     'Read options from configuration file instead of asking one by one each option'
                 )
 
