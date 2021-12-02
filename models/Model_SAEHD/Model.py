@@ -28,7 +28,7 @@ class SAEHDModel(ModelBase):
         min_res = 64
         max_res = 640
 
-        #default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
+        default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
         default_resolution         = self.options['resolution']         = self.load_or_def_option('resolution', 128)
         default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'f')
         default_models_opt_on_gpu  = self.options['models_opt_on_gpu']  = self.load_or_def_option('models_opt_on_gpu', True)
@@ -82,7 +82,7 @@ class SAEHDModel(ModelBase):
                 self.ask_random_src_flip()
                 self.ask_random_dst_flip()
                 self.ask_batch_size(suggest_batch_size)
-                #self.options['use_fp16'] = io.input_bool ("Use fp16", default_usefp16, help_message='Increases training/inference speed, reduces model size. Model may crash. Enable it after 1-5k iters.')
+                self.options['use_fp16'] = io.input_bool ("Use fp16", default_usefp16, help_message='Increases training/inference speed, reduces model size. Model may crash. Enable it after 1-5k iters.')
 
         if self.is_first_run():
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:

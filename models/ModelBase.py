@@ -211,7 +211,8 @@ class ModelBase(object):
             # save as default options only for first run model initialize
             self.default_options_path.write_bytes( pickle.dumps (self.options) )
             # save config file
-            self.save_config_file()
+            if config_training_file is not None:
+                self.save_config_file()
 
         self.session_name = self.options.get('session_name', "")
         self.autobackup_hour = self.options.get('autobackup_hour', 0)
