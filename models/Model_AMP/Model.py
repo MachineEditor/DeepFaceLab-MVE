@@ -20,7 +20,7 @@ class AMPModel(ModelBase):
         default_retraining_samples = self.options['retraining_samples'] = self.load_or_def_option('retraining_samples', False)
         # default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
         default_resolution         = self.options['resolution']         = self.load_or_def_option('resolution', 224)
-        default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'wf')
+        default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'f')
         default_models_opt_on_gpu  = self.options['models_opt_on_gpu']  = self.load_or_def_option('models_opt_on_gpu', True)
 
         default_ae_dims            = self.options['ae_dims']            = self.load_or_def_option('ae_dims', 256)
@@ -29,12 +29,14 @@ class AMPModel(ModelBase):
         default_e_dims             = self.options['e_dims']             = self.load_or_def_option('e_dims', 64)
         default_d_dims             = self.options['d_dims']             = self.options.get('d_dims', None)
         default_d_mask_dims        = self.options['d_mask_dims']        = self.options.get('d_mask_dims', None)
-        default_morph_factor       = self.options['morph_factor']       = self.options.get('morph_factor', 0.5)
-        default_eyes_mouth_prio    = self.options['eyes_mouth_prio']    = self.load_or_def_option('eyes_mouth_prio', False)
+        default_morph_factor       = self.options['morph_factor']       = self.load_or_def_option('morph_factor', 0.5)
+        default_masked_training    = self.options['masked_training']    = self.load_or_def_option('masked_training', True)
+        default_eyes_prio          = self.options['eyes_prio']          = self.load_or_def_option('eyes_prio', False)
+        default_mouth_prio         = self.options['mouth_prio']         = self.load_or_def_option('mouth_prio', False)
         default_uniform_yaw        = self.options['uniform_yaw']        = self.load_or_def_option('uniform_yaw', False)
 
         # Uncomment it just if you want to impelement other loss functions
-        #default_loss_function      = self.options['loss_function']      = self.load_or_def_option('loss_function', 'SSIM')
+        default_loss_function      = self.options['loss_function']      = self.load_or_def_option('loss_function', 'SSIM')
 
         default_blur_out_mask      = self.options['blur_out_mask']      = self.load_or_def_option('blur_out_mask', False)
 
@@ -43,13 +45,14 @@ class AMPModel(ModelBase):
         default_lr_dropout         = self.options['lr_dropout']         = self.load_or_def_option('lr_dropout', 'n')
 
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
+        default_random_hsv_power   = self.options['random_hsv_power']   = self.load_or_def_option('random_hsv_power', 0.0)
         default_random_downsample  = self.options['random_downsample']  = self.load_or_def_option('random_downsample', False)
         default_random_noise       = self.options['random_noise']       = self.load_or_def_option('random_noise', False)
         default_random_blur        = self.options['random_blur']        = self.load_or_def_option('random_blur', False)
         default_random_jpeg        = self.options['random_jpeg']        = self.load_or_def_option('random_jpeg', False)
 
         # Uncomment it just if you want to impelement other loss functions
-        #default_background_power   = self.options['background_power']   = self.load_or_def_option('background_power', 0.0)
+        default_background_power   = self.options['background_power']   = self.load_or_def_option('background_power', 0.0)
         default_ct_mode            = self.options['ct_mode']            = self.load_or_def_option('ct_mode', 'none')
         default_random_color       = self.options['random_color']       = self.load_or_def_option('random_color', False)
         default_clipgrad           = self.options['clipgrad']           = self.load_or_def_option('clipgrad', False)
@@ -73,7 +76,8 @@ class AMPModel(ModelBase):
                 resolution = io.input_int("Resolution", default_resolution, add_info="64-640", help_message="More resolution requires more VRAM and time to train. Value will be adjusted to multiple of 32 .")
                 resolution = np.clip ( (resolution // 32) * 32, 64, 640)
                 self.options['resolution'] = resolution
-                self.options['face_type'] = io.input_str ("Face type", default_face_type, ['f','wf','head'], help_message="whole face / head").lower()
+                self.options['face_type'] = io.input_str ("Face type", default_face_type, ['h','mf','f','wf','head', 'custom'], help_message="Half / mid face / full face / whole face / head / custom. Half face has better resolution, but covers less area of cheeks. Mid face is 30% wider than half face. 'Whole face' covers full area of face include forehead. 'head' covers full head, but requires XSeg for src and dst faceset.").lower()
+
 
 
         default_d_dims             = self.options['d_dims']             = self.load_or_def_option('d_dims', 64)
@@ -96,22 +100,32 @@ class AMPModel(ModelBase):
                 d_mask_dims = np.clip ( io.input_int("Decoder mask dimensions", default_d_mask_dims, add_info="16-256", help_message="Typical mask dimensions = decoder dimensions / 3. If you manually cut out obstacles from the dst mask, you can increase this parameter to achieve better quality." ), 16, 256 )
                 self.options['d_mask_dims'] = d_mask_dims + d_mask_dims % 2
 
-                morph_factor = np.clip ( io.input_number ("Morph factor.", default_morph_factor, add_info="0.1 .. 0.5", help_message="Typical fine value is 0.5"), 0.1, 0.5 )
-                self.options['morph_factor'] = morph_factor
-
         if self.is_first_run() or ask_override:
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
-                self.options['eyes_mouth_prio'] = io.input_bool ("Eyes and mouth priority", default_eyes_mouth_prio, help_message='Helps to fix eye problems during training like "alien eyes" and wrong eyes direction. Also makes the detail of the teeth higher.')
+   
+                morph_factor = np.clip ( io.input_number ("Morph factor.", default_morph_factor, add_info="0.1 .. 0.5", help_message="Typical fine value is 0.5"), 0.1, 0.5 )
+                self.options['morph_factor'] = morph_factor
+            
+                if self.options['face_type'] == 'wf' or self.options['face_type'] == 'head':
+                        self.options['masked_training']  = io.input_bool ("Masked training", default_masked_training, help_message="This option is available only for 'whole_face' or 'head' type. Masked training clips training area to full_face mask or XSeg mask, thus network will train the faces properly.")
+
+                self.options['eyes_prio'] = io.input_bool ("Eyes priority", default_eyes_prio, help_message='Helps to fix eye problems during training like "alien eyes" and wrong eyes direction ( especially on HD architectures ) by forcing the neural network to train eyes with higher priority. before/after https://i.imgur.com/YQHOuSR.jpg ')
+                self.options['mouth_prio'] = io.input_bool ("Mouth priority", default_mouth_prio, help_message='Helps to fix mouth problems during training by forcing the neural network to train mouth with higher priority similar to eyes ')
+
                 self.options['uniform_yaw'] = io.input_bool ("Uniform yaw distribution of samples", default_uniform_yaw, help_message='Helps to fix blurry side faces due to small amount of them in the faceset.')
+                if self.options['masked_training']:
+                    self.options['blur_out_mask'] = io.input_bool ("Blur out mask", default_blur_out_mask, help_message='Blurs nearby area outside of applied face mask of training samples. The result is the background near the face is smoothed and less noticeable on swapped face. The exact xseg mask in src and dst faceset is required.')
                 
-                self.options['blur_out_mask'] = io.input_bool ("Blur out mask", default_blur_out_mask, help_message='Blurs nearby area outside of applied face mask of training samples. The result is the background near the face is smoothed and less noticeable on swapped face. The exact xseg mask in src and dst faceset is required.')
-                
+                self.options['loss_function'] = io.input_str(f"Loss function", default_loss_function, ['SSIM', 'MS-SSIM', 'MS-SSIM+L1'], help_message="Change loss function used for image quality assessment.")
                 self.options['lr_dropout']  = io.input_str (f"Use learning rate dropout", default_lr_dropout, ['n','y','cpu'], help_message="When the face is trained enough, you can enable this option to get extra sharpness and reduce subpixel shake for less amount of iterations. Enabled it before `disable random warp` and before GAN. \nn - disabled.\ny - enabled\ncpu - enabled on CPU. This allows not to use extra VRAM, sacrificing 20% time of iteration.")
 
         default_gan_power          = self.options['gan_power']          = self.load_or_def_option('gan_power', 0.0)
+        default_gan_version        = self.options['gan_version']        = self.load_or_def_option('gan_version', 2)        
         default_gan_patch_size     = self.options['gan_patch_size']     = self.load_or_def_option('gan_patch_size', self.options['resolution'] // 8)
         default_gan_dims           = self.options['gan_dims']           = self.load_or_def_option('gan_dims', 16)
-
+        default_gan_smoothing      = self.options['gan_smoothing']      = self.load_or_def_option('gan_smoothing', 0.1)
+        default_gan_noise          = self.options['gan_noise']          = self.load_or_def_option('gan_noise', 0.0)
+        
         if self.is_first_run() or ask_override:
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
                 self.options['models_opt_on_gpu'] = io.input_bool ("Place models and optimizer on GPU", default_models_opt_on_gpu, help_message="When you train on one GPU, by default model and optimizer weights are placed on GPU to accelerate the process. You can place they on CPU to free up extra VRAM, thus set bigger dimensions.")
@@ -123,17 +137,28 @@ class AMPModel(ModelBase):
                 self.options['random_noise'] = io.input_bool("Enable random noise added to samples", default_random_noise, help_message="")
                 self.options['random_blur'] = io.input_bool("Enable random blur of samples", default_random_blur, help_message="")
                 self.options['random_jpeg'] = io.input_bool("Enable random jpeg compression of samples", default_random_jpeg, help_message="")
+                
+                self.options['random_hsv_power'] = np.clip ( io.input_number ("Random hue/saturation/light intensity", default_random_hsv_power, add_info="0.0 .. 0.3", help_message="Random hue/saturation/light intensity applied to the src face set only at the input of the neural network. Stabilizes color perturbations during face swapping. Reduces the quality of the color transfer by selecting the closest one in the src faceset. Thus the src faceset must be diverse enough. Typical fine value is 0.05"), 0.0, 0.3 )
 
                 self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 5.0", help_message="Forces the neural network to learn small details of the face. Enable it only when the face is trained enough with random_warp(off), and don't disable. The higher the value, the higher the chances of artifacts. Typical fine value is 0.1"), 0.0, 5.0 )
 
+
                 if self.options['gan_power'] != 0.0:
-                    gan_patch_size = np.clip ( io.input_int("GAN patch size", default_gan_patch_size, add_info="3-640", help_message="The higher patch size, the higher the quality, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is resolution / 8." ), 3, 640 )
-                    self.options['gan_patch_size'] = gan_patch_size
+                    self.options['gan_version'] = np.clip (io.input_int("GAN version", default_gan_version, add_info="2 or 3", help_message="Choose GAN version (v2: 7/16/2020, v3: 1/3/2021):"), 2, 3)
 
-                    gan_dims = np.clip ( io.input_int("GAN dimensions", default_gan_dims, add_info="4-512", help_message="The dimensions of the GAN network. The higher dimensions, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is 16." ), 4, 512 )
-                    self.options['gan_dims'] = gan_dims
+                    if self.options['gan_version'] == 3:
+                        gan_patch_size = np.clip ( io.input_int("GAN patch size", default_gan_patch_size, add_info="3-640", help_message="The higher patch size, the higher the quality, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is resolution / 8." ), 3, 640 )
+                        self.options['gan_patch_size'] = gan_patch_size
 
-                #self.options['background_power'] = np.clip ( io.input_number("Background power", default_background_power, add_info="0.0..1.0", help_message="Learn the area outside of the mask. Helps smooth out area near the mask boundaries. Can be used at any time"), 0.0, 1.0 )
+                        gan_dims = np.clip ( io.input_int("GAN dimensions", default_gan_dims, add_info="4-64", help_message="The dimensions of the GAN network. The higher dimensions, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is 16." ), 4, 64 )
+                        self.options['gan_dims'] = gan_dims
+
+                    self.options['gan_smoothing'] = np.clip ( io.input_number("GAN label smoothing", default_gan_smoothing, add_info="0 - 0.5", help_message="Uses soft labels with values slightly off from 0/1 for GAN, has a regularizing effect"), 0, 0.5)
+                    self.options['gan_noise'] = np.clip ( io.input_number("GAN noisy labels", default_gan_noise, add_info="0 - 0.5", help_message="Marks some images with the wrong label, helps prevent collapse"), 0, 0.5)
+
+
+                self.options['background_power'] = np.clip ( io.input_number("Background power", default_background_power, add_info="0.0..1.0", help_message="Learn the area outside of the mask. Helps smooth out area near the mask boundaries. Can be used at any time"), 0.0, 1.0 )
+
 
                 self.options['ct_mode'] = io.input_str (f"Color transfer for src faceset", default_ct_mode, ['none','rct','lct','mkl','idt','sot', 'fs-aug'], help_message="Change color distribution of src samples close to dst samples. Try all modes to find the best.")
                 self.options['random_color'] = io.input_bool ("Random color", default_random_color, help_message="Samples are randomly rotated around the L axis in LAB colorspace, helps generalize training")
@@ -158,16 +183,26 @@ class AMPModel(ModelBase):
         inter_res   = self.inter_res = resolution // 32
         d_dims      = self.options['d_dims']
         d_mask_dims = self.options['d_mask_dims']
-        face_type   = self.face_type = {'f'    : FaceType.FULL,
-                                        'wf'   : FaceType.WHOLE_FACE,
-                                        'head' : FaceType.HEAD}[ self.options['face_type'] ]
+        self.face_type = {'h'  : FaceType.HALF,
+                          'mf' : FaceType.MID_FULL,
+                          'f'  : FaceType.FULL,
+                          'wf' : FaceType.WHOLE_FACE,
+                          'custom' : FaceType.CUSTOM,
+                          'head' : FaceType.HEAD}[ self.options['face_type'] ]
         morph_factor = self.options['morph_factor']
         gan_power    = self.gan_power = self.options['gan_power']
         random_warp  = self.options['random_warp']
+        random_hsv_power = self.options['random_hsv_power']
         
-        eyes_mouth_prio = self.options['eyes_mouth_prio'] 
-
-        blur_out_mask = self.options['blur_out_mask']
+        if 'eyes_mouth_prio' in self.options:
+            self.options.pop('eyes_mouth_prio')
+            
+        bg_factor = self.options['background_power']
+        
+        eyes_prio = self.options['eyes_prio']
+        mouth_prio = self.options['mouth_prio']
+        masked_training = self.options['masked_training'] 
+        blur_out_mask = self.options['blur_out_mask'] if masked_training else False
 
         ct_mode = self.options['ct_mode']
         if ct_mode == 'none':
@@ -336,6 +371,14 @@ class AMPModel(ModelBase):
                                             [self.decoder , 'decoder.npy'] ]
 
             if self.is_training:
+                if gan_power != 0:
+                    if self.options['gan_version'] == 2:
+                        self.GAN = nn.UNetPatchDiscriminatorV2(patch_size=resolution//16, in_ch=input_ch, name="D_src", use_fp16=self.options['use_fp16'])
+                        self.model_filename_list += [ [self.GAN, 'D_src_v2.npy'] ]
+                    else:
+                        self.GAN = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], use_fp16=self.options['use_fp16'], name="D_src")
+                        self.model_filename_list += [ [self.GAN, 'GAN.npy'] ]
+            
                 # Initialize optimizers
                 clipnorm = 1.0 if self.options['clipgrad'] else 0.0
                 if self.options['lr_dropout'] in ['y','cpu']:
@@ -347,17 +390,19 @@ class AMPModel(ModelBase):
                 self.G_weights = self.encoder.get_weights() + self.decoder.get_weights()
 
                 OptimizerClass = nn.AdaBelief if adabelief else nn.RMSprop
-
-                self.src_dst_opt = OptimizerClass(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='src_dst_opt')
+                self.src_dst_opt = OptimizerClass(lr=5e-5, lr_dropout=lr_dropout, clipnorm=clipnorm, name='src_dst_opt')
                 self.src_dst_opt.initialize_variables (self.G_weights, vars_on_cpu=optimizer_vars_on_cpu)
                 self.model_filename_list += [ (self.src_dst_opt, 'src_dst_opt.npy') ]
 
                 if gan_power != 0:
-                    self.GAN = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], use_fp16=use_fp16, name="GAN")
-                    self.GAN_opt = OptimizerClass(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='GAN_opt')
-                    self.GAN_opt.initialize_variables ( self.GAN.get_weights(), vars_on_cpu=optimizer_vars_on_cpu)
-                    self.model_filename_list += [ [self.GAN, 'GAN.npy'],
-                                                  [self.GAN_opt, 'GAN_opt.npy'] ]
+                    if self.options['gan_version'] == 2:
+                        self.GAN_opt = OptimizerClass(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='D_src_dst_opt')
+                        self.GAN_opt.initialize_variables ( self.GAN.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')#+self.D_src_x2.get_weights()
+                        self.model_filename_list += [ (self.GAN_opt, 'D_src_v2_opt.npy') ]
+                    else:
+                        self.GAN_opt = OptimizerClass(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='GAN_opt')
+                        self.GAN_opt.initialize_variables ( self.GAN.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')#+self.D_src_x2.get_weights()
+                        self.model_filename_list += [ (self.GAN_opt, 'GAN_opt.npy') ]
 
         if self.is_training:
             # Adjust batch size for multiple GPU
@@ -378,6 +423,9 @@ class AMPModel(ModelBase):
             gpu_G_loss_gradients = []
             gpu_GAN_loss_gradients = []
 
+            def DLoss(labels,logits):
+                return tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits), axis=[1,2,3])
+            
             def DLossOnes(logits):
                 return tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(logits), logits=logits), axis=[1,2,3])
 
@@ -393,10 +441,13 @@ class AMPModel(ModelBase):
                         gpu_warped_dst      = self.warped_dst [batch_slice,:,:,:]
                         gpu_target_src      = self.target_src [batch_slice,:,:,:]
                         gpu_target_dst      = self.target_dst [batch_slice,:,:,:]
-                        gpu_target_srcm     = self.target_srcm[batch_slice,:,:,:]
+                        gpu_target_srcm_all     = self.target_srcm[batch_slice,:,:,:]
                         gpu_target_srcm_em  = self.target_srcm_em[batch_slice,:,:,:]
-                        gpu_target_dstm     = self.target_dstm[batch_slice,:,:,:]
+                        gpu_target_dstm_all     = self.target_dstm[batch_slice,:,:,:]
                         gpu_target_dstm_em  = self.target_dstm_em[batch_slice,:,:,:]
+                        
+                    gpu_target_srcm_anti = 1-gpu_target_srcm_all
+                    gpu_target_dstm_anti = 1-gpu_target_dstm_all
 
                     # process model tensors
                     gpu_src_code = self.encoder (gpu_warped_src)
@@ -427,58 +478,119 @@ class AMPModel(ModelBase):
                     gpu_pred_dst_dst_list.append(gpu_pred_dst_dst), gpu_pred_dst_dstm_list.append(gpu_pred_dst_dstm)
                     gpu_pred_src_dst_list.append(gpu_pred_src_dst), gpu_pred_src_dstm_list.append(gpu_pred_src_dstm)
 
-                    gpu_target_srcm_anti = 1-gpu_target_srcm
-                    gpu_target_dstm_anti = 1-gpu_target_dstm
 
-                    gpu_target_srcm_gblur = nn.gaussian_blur(gpu_target_srcm, resolution // 32)
-                    gpu_target_dstm_gblur = nn.gaussian_blur(gpu_target_dstm, resolution // 32)
-
-                    gpu_target_srcm_blur = tf.clip_by_value(gpu_target_srcm_gblur, 0, 0.5) * 2
-                    gpu_target_dstm_blur = tf.clip_by_value(gpu_target_dstm_gblur, 0, 0.5) * 2
-                    gpu_target_srcm_anti_blur = 1.0-gpu_target_srcm_blur
-                    gpu_target_dstm_anti_blur = 1.0-gpu_target_dstm_blur
 
                     if blur_out_mask:
                         sigma = resolution / 128
 
                         x = nn.gaussian_blur(gpu_target_src*gpu_target_srcm_anti, sigma)
-                        y = 1-nn.gaussian_blur(gpu_target_srcm, sigma)
+                        y = 1-nn.gaussian_blur(gpu_target_srcm_all, sigma)
                         y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
-                        gpu_target_src = gpu_target_src*gpu_target_srcm + (x/y)*gpu_target_srcm_anti
+                        gpu_target_src = gpu_target_src*gpu_target_srcm_all + (x/y)*gpu_target_srcm_anti
                         
                         x = nn.gaussian_blur(gpu_target_dst*gpu_target_dstm_anti, sigma)
-                        y = 1-nn.gaussian_blur(gpu_target_dstm, sigma)
+                        y = 1-nn.gaussian_blur(gpu_target_dstm_all, sigma)
                         y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
-                        gpu_target_dst = gpu_target_dst*gpu_target_dstm + (x/y)*gpu_target_dstm_anti
+                        gpu_target_dst = gpu_target_dst*gpu_target_dstm_all + (x/y)*gpu_target_dstm_anti
 
-                    gpu_target_src_masked = gpu_target_src*gpu_target_srcm_blur
-                    gpu_target_dst_masked = gpu_target_dst*gpu_target_dstm_blur
-                    gpu_target_src_anti_masked = gpu_target_src*gpu_target_srcm_anti_blur
-                    gpu_target_dst_anti_masked = gpu_target_dst*gpu_target_dstm_anti_blur
+                    # unpack masks from one combined mask
+                    gpu_target_srcm      = tf.clip_by_value (gpu_target_srcm_all, 0, 1)
+                    gpu_target_dstm      = tf.clip_by_value (gpu_target_dstm_all, 0, 1)
+                    gpu_target_srcm_eye_mouth = tf.clip_by_value (gpu_target_srcm_em-1, 0, 1)
+                    gpu_target_dstm_eye_mouth = tf.clip_by_value (gpu_target_dstm_em-1, 0, 1)
+                    gpu_target_srcm_mouth = tf.clip_by_value (gpu_target_srcm_em-2, 0, 1)
+                    gpu_target_dstm_mouth = tf.clip_by_value (gpu_target_dstm_em-2, 0, 1)
+                    gpu_target_srcm_eyes = tf.clip_by_value (gpu_target_srcm_eye_mouth-gpu_target_srcm_mouth, 0, 1)
+                    gpu_target_dstm_eyes = tf.clip_by_value (gpu_target_dstm_eye_mouth-gpu_target_dstm_mouth, 0, 1)
+                    
+                                        
+
+                    gpu_target_srcm_gblur = nn.gaussian_blur(gpu_target_srcm, resolution // 32)
+                    gpu_target_dstm_gblur = nn.gaussian_blur(gpu_target_dstm, resolution // 32)
+                    
+                    
+                    gpu_target_srcm_blur = tf.clip_by_value(gpu_target_srcm_gblur, 0, 0.5) * 2
+                    gpu_target_dstm_blur = tf.clip_by_value(gpu_target_dstm_gblur, 0, 0.5) * 2
+                    
+                    gpu_target_srcm_anti_blur = 1.0-gpu_target_srcm_blur
+                    gpu_target_dstm_anti_blur = 1.0-gpu_target_dstm_blur
+                    
+                    gpu_target_src_masked = gpu_target_src*gpu_target_srcm_blur if masked_training else gpu_target_src
+                    gpu_target_dst_masked = gpu_target_dst*gpu_target_dstm_blur if masked_training else gpu_target_dst
+                    gpu_target_src_anti_masked = gpu_target_src*gpu_target_srcm_anti_blur if masked_training else gpu_pred_src_src
+                    gpu_target_dst_anti_masked = gpu_target_dst*gpu_target_dstm_anti_blur if masked_training else gpu_pred_dst_dst
 
                     gpu_pred_src_src_masked = gpu_pred_src_src*gpu_target_srcm_blur
                     gpu_pred_dst_dst_masked = gpu_pred_dst_dst*gpu_target_dstm_blur
                     gpu_pred_src_src_anti_masked = gpu_pred_src_src*gpu_target_srcm_anti_blur
                     gpu_pred_dst_dst_anti_masked = gpu_pred_dst_dst*gpu_target_dstm_anti_blur
 
-                    # Structural loss
-                    gpu_src_loss =  tf.reduce_mean (5*nn.dssim(gpu_target_src_masked, gpu_pred_src_src_masked, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
-                    gpu_src_loss += tf.reduce_mean (5*nn.dssim(gpu_target_src_masked, gpu_pred_src_src_masked, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
-                    gpu_dst_loss =  tf.reduce_mean (5*nn.dssim(gpu_target_dst_masked, gpu_pred_dst_dst_masked, max_val=1.0, filter_size=int(resolution/11.6) ), axis=[1])
-                    gpu_dst_loss += tf.reduce_mean (5*nn.dssim(gpu_target_dst_masked, gpu_pred_dst_dst_masked, max_val=1.0, filter_size=int(resolution/23.2) ), axis=[1])
+                    if self.options['loss_function'] == 'MS-SSIM':   
+                        gpu_src_loss =  10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_src_masked, gpu_pred_src_src_masked, max_val=1.0)
+                        gpu_src_loss += tf.reduce_mean ( 10*tf.square ( gpu_target_src_masked - gpu_pred_src_src_masked ), axis=[1,2,3])
+                        gpu_dst_loss  =  10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_dst_masked, gpu_pred_dst_dst_masked, max_val=1.0)
+                        gpu_dst_loss += tf.reduce_mean ( 10*tf.square ( gpu_target_dst_masked - gpu_pred_dst_dst_masked ), axis=[1,2,3])
+                        
+                        if bg_factor  > 0:
+                            gpu_dst_loss += bg_factor * 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0)
+                            gpu_dst_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_dst - gpu_pred_dst_dst ), axis=[1,2,3])
+                            gpu_src_loss += bg_factor * 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_src, gpu_pred_src_src, max_val=1.0)
+                            gpu_src_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_src - gpu_pred_src_src ), axis=[1,2,3])
+                            
+                    elif self.options['loss_function'] == 'MS-SSIM+L1':
+                    
+                        gpu_src_loss = 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution, use_l1=True)(gpu_target_src_masked, gpu_pred_src_src_masked, max_val=1.0)
+                        gpu_dst_loss = 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution, use_l1=True)(gpu_target_dst_masked, gpu_pred_dst_dst_masked, max_val=1.0)
 
-                    # Pixel loss
-                    gpu_src_loss += tf.reduce_mean (10*tf.square(gpu_target_src_masked-gpu_pred_src_src_masked), axis=[1,2,3])
-                    gpu_dst_loss += tf.reduce_mean (10*tf.square(gpu_target_dst_masked-gpu_pred_dst_dst_masked), axis=[1,2,3])
-
+                        if bg_factor > 0:
+                            gpu_dst_loss += bg_factor * 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution, use_l1=True)(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0)
+                            gpu_src_loss += bg_factor * 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution, use_l1=True)(gpu_target_src, gpu_pred_src_src, max_val=1.0)
+    
+                    else:
+                        gpu_src_loss =  tf.reduce_mean (5*nn.dssim(gpu_target_src_masked, gpu_pred_src_src_masked, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                        gpu_src_loss += tf.reduce_mean (5*nn.dssim(gpu_target_src_masked, gpu_pred_src_src_masked, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
+                        
+                        gpu_dst_loss =  tf.reduce_mean (5*nn.dssim(gpu_target_dst_masked, gpu_pred_dst_dst_masked, max_val=1.0, filter_size=int(resolution/11.6) ), axis=[1])
+                        gpu_dst_loss += tf.reduce_mean (5*nn.dssim(gpu_target_dst_masked, gpu_pred_dst_dst_masked, max_val=1.0, filter_size=int(resolution/23.2) ), axis=[1])
+                        
+                        # Pixel loss
+                        gpu_dst_loss += tf.reduce_mean (10*tf.square(gpu_target_dst_masked-gpu_pred_dst_dst_masked), axis=[1,2,3])
+                        gpu_src_loss += tf.reduce_mean (10*tf.square(gpu_target_src_masked-gpu_pred_src_src_masked), axis=[1,2,3])
+                        
+                        if bg_factor > 0:
+                            gpu_dst_loss +=  bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                            gpu_dst_loss += bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
+                            gpu_src_loss +=  bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_src, gpu_pred_src_src, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                            gpu_src_loss += bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_src, gpu_pred_src_src, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
+                                               
+                    if bg_factor > 0:
+                        gpu_dst_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_dst - gpu_pred_dst_dst ), axis=[1,2,3])
+                        gpu_src_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_src - gpu_pred_src_src ), axis=[1,2,3])
+                            
+                    
+                    
                     # Eyes+mouth prio loss
-                    if eyes_mouth_prio:
-                        gpu_src_loss += tf.reduce_mean (300*tf.abs (gpu_target_src*gpu_target_srcm_em-gpu_pred_src_src*gpu_target_srcm_em), axis=[1,2,3])
-                        gpu_dst_loss += tf.reduce_mean (300*tf.abs (gpu_target_dst*gpu_target_dstm_em-gpu_pred_dst_dst*gpu_target_dstm_em), axis=[1,2,3])
+                    # if eyes_mouth_prio:
+                        # gpu_src_loss += tf.reduce_mean (300*tf.abs (gpu_target_src*gpu_target_srcm_em-gpu_pred_src_src*gpu_target_srcm_em), axis=[1,2,3])
+                        # gpu_dst_loss += tf.reduce_mean (300*tf.abs (gpu_target_dst*gpu_target_dstm_em-gpu_pred_dst_dst*gpu_target_dstm_em), axis=[1,2,3])
+                    
+                    if eyes_prio or mouth_prio:
+                        if eyes_prio and mouth_prio:
+                            gpu_target_part_mask_src = gpu_target_srcm_eye_mouth
+                            gpu_target_part_mask_dst = gpu_target_dstm_eye_mouth
+                        elif eyes_prio:
+                            gpu_target_part_mask_src = gpu_target_srcm_eyes
+                            gpu_target_part_mask_dst = gpu_target_dstm_eyes
+                        elif mouth_prio:
+                            gpu_target_part_mask_src = gpu_target_srcm_mouth
+                            gpu_target_part_mask_dst = gpu_target_dstm_mouth
+                            
+                        gpu_src_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_src*gpu_target_part_mask_src - gpu_pred_src_src*gpu_target_part_mask_src ), axis=[1,2,3])
+                        gpu_dst_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_dst*gpu_target_part_mask_dst - gpu_pred_dst_dst*gpu_target_part_mask_dst ), axis=[1,2,3])
 
                     # Mask loss
-                    gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
-                    gpu_dst_loss += tf.reduce_mean ( 10*tf.square( gpu_target_dstm - gpu_pred_dst_dstm ),axis=[1,2,3] )
+                    gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm_all - gpu_pred_src_srcm ),axis=[1,2,3] )
+                    gpu_dst_loss += tf.reduce_mean ( 10*tf.square( gpu_target_dstm_all - gpu_pred_dst_dstm ),axis=[1,2,3] )
 
                     gpu_src_losses += [gpu_src_loss]
                     gpu_dst_losses += [gpu_dst_loss]
@@ -489,26 +601,50 @@ class AMPModel(ModelBase):
 
 
                     if gan_power != 0:
+                        
                         gpu_pred_src_src_d, gpu_pred_src_src_d2 = self.GAN(gpu_pred_src_src_masked)
-                        gpu_pred_dst_dst_d, gpu_pred_dst_dst_d2 = self.GAN(gpu_pred_dst_dst_masked)
-                        gpu_target_src_d, gpu_target_src_d2 = self.GAN(gpu_target_src_masked)
-                        gpu_target_dst_d, gpu_target_dst_d2 = self.GAN(gpu_target_dst_masked)
 
-                        gpu_GAN_loss = (DLossOnes (gpu_target_src_d)   + DLossOnes (gpu_target_src_d2) + \
-                                        DLossZeros(gpu_pred_src_src_d) + DLossZeros(gpu_pred_src_src_d2) + \
-                                        DLossOnes (gpu_target_dst_d)   + DLossOnes (gpu_target_dst_d2) + \
-                                        DLossZeros(gpu_pred_dst_dst_d) + DLossZeros(gpu_pred_dst_dst_d2)
-                                        ) * (1.0 / 8)
+                        def get_smooth_noisy_labels(label, tensor, smoothing=0.1, noise=0.05):
+                            num_labels = self.batch_size
+                            for d in tensor.get_shape().as_list()[1:]:
+                                num_labels *= d
+
+                            probs = tf.math.log([[noise, 1-noise]]) if label == 1 else tf.math.log([[1-noise, noise]])
+                            x = tf.random.categorical(probs, num_labels)
+                            x = tf.cast(x, tf.float32)
+                            x = tf.math.scalar_mul(1-smoothing, x)
+                            # x = x + (smoothing/num_labels)
+                            x = tf.reshape(x, (self.batch_size,) + tuple(tensor.get_shape().as_list()[1:]))
+                            return x
+
+                        smoothing = self.options['gan_smoothing']
+                        noise = self.options['gan_noise']
+
+                        gpu_pred_src_src_d_ones = tf.ones_like(gpu_pred_src_src_d)
+                        gpu_pred_src_src_d2_ones = tf.ones_like(gpu_pred_src_src_d2)
+
+                        gpu_pred_src_src_d_smooth_zeros = get_smooth_noisy_labels(0, gpu_pred_src_src_d, smoothing=smoothing, noise=noise)
+                        gpu_pred_src_src_d2_smooth_zeros = get_smooth_noisy_labels(0, gpu_pred_src_src_d2, smoothing=smoothing, noise=noise)
+
+                        gpu_target_src_d, gpu_target_src_d2 = self.GAN(gpu_target_src_masked)
+
+                        gpu_target_src_d_smooth_ones = get_smooth_noisy_labels(1, gpu_target_src_d, smoothing=smoothing, noise=noise)
+                        gpu_target_src_d2_smooth_ones = get_smooth_noisy_labels(1, gpu_target_src_d2, smoothing=smoothing, noise=noise)
+
+                        gpu_GAN_loss = DLoss(gpu_target_src_d_smooth_ones, gpu_target_src_d) \
+                                             + DLoss(gpu_pred_src_src_d_smooth_zeros, gpu_pred_src_src_d) \
+                                             + DLoss(gpu_target_src_d2_smooth_ones, gpu_target_src_d2) \
+                                             + DLoss(gpu_pred_src_src_d2_smooth_zeros, gpu_pred_src_src_d2)
 
                         gpu_GAN_loss_gradients += [ nn.gradients (gpu_GAN_loss, self.GAN.get_weights() ) ]
 
-                        gpu_G_loss += (DLossOnes(gpu_pred_src_src_d) + DLossOnes(gpu_pred_src_src_d2) + \
-                                       DLossOnes(gpu_pred_dst_dst_d) + DLossOnes(gpu_pred_dst_dst_d2)
-                                      ) * gan_power
-
-                        # Minimal src-src-bg rec with total_variation_mse to suppress random bright dots from gan
-                        gpu_G_loss += 0.000001*nn.total_variation_mse(gpu_pred_src_src)
-                        gpu_G_loss += 0.02*tf.reduce_mean(tf.square(gpu_pred_src_src_anti_masked-gpu_target_src_anti_masked),axis=[1,2,3] )
+                        gpu_G_loss += gan_power*(DLoss(gpu_pred_src_src_d_ones, gpu_pred_src_src_d)  + \
+                                                 DLoss(gpu_pred_src_src_d2_ones, gpu_pred_src_src_d2))
+                        
+                        if masked_training:
+                            # Minimal src-src-bg rec with total_variation_mse to suppress random bright dots from gan
+                            gpu_G_loss += 0.000001*nn.total_variation_mse(gpu_pred_src_src)
+                            gpu_G_loss += 0.02*tf.reduce_mean(tf.square(gpu_pred_src_src_anti_masked-gpu_target_src_anti_masked),axis=[1,2,3] )
 
                     gpu_G_loss_gradients += [ nn.gradients ( gpu_G_loss, self.G_weights ) ]
 
@@ -622,6 +758,7 @@ class AMPModel(ModelBase):
                                                  'random_blur': self.options['random_blur'],
                                                  'random_jpeg': self.options['random_jpeg'],
                                                  'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,
+                                                 'random_hsv_shift_amount' : random_hsv_power,
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False,
                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,
