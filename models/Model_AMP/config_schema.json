@@ -122,11 +122,6 @@
           "minimum": 0.0,
           "maximum": 1.0
         },
-        "true_face_power": {
-          "type": "number",
-          "minimum": 0.0,
-          "maximum": 1.0
-        },
         "ct_mode": {
           "type": "string",
           "enum": [
@@ -251,7 +246,6 @@
         "retraining_samples",
         "session_name",
         "target_iter",
-        "true_face_power",
         "uniform_yaw",
         "use_fp16",
         "write_preview_history"
