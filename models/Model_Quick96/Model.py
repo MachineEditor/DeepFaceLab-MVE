@@ -14,6 +14,13 @@ from pathlib import Path
 
 class QModel(ModelBase):
     #override
+    def on_initialize_options(self):
+        ask_override = False if self.read_from_conf else self.ask_override()
+        if self.is_first_run() or ask_override:
+            if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
+                self.ask_batch_size()
+
+    #override
     def on_initialize(self):
         device_config = nn.getCurrentDeviceConfig()
         devices = device_config.devices
@@ -82,7 +89,7 @@ class QModel(ModelBase):
         if self.is_training:
             # Adjust batch size for multiple GPU
             gpu_count = max(1, len(devices) )
-            bs_per_gpu = max(1, 4 // gpu_count)
+            bs_per_gpu = max(1, self.get_batch_size() // gpu_count)
             self.set_batch_size( gpu_count*bs_per_gpu)
 
             # Compute losses per GPU
