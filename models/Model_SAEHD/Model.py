@@ -68,6 +68,7 @@ class SAEHDModel(ModelBase):
         default_random_color       = self.options['random_color']       = self.load_or_def_option('random_color', False)
         default_clipgrad           = self.options['clipgrad']           = self.load_or_def_option('clipgrad', False)
         default_pretrain           = self.options['pretrain']           = self.load_or_def_option('pretrain', False)
+        default_use_fp16           = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
 
         ask_override = self.ask_override()
         if self.is_first_run() or ask_override:
@@ -151,6 +152,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             self.options['blur_out_mask'] = io.input_bool ("Blur out mask", default_blur_out_mask, help_message='Blurs nearby area outside of applied face mask of training samples. The result is the background near the face is smoothed and less noticeable on swapped face. The exact xseg mask in src and dst faceset is required.')
 
         default_gan_power          = self.options['gan_power']          = self.load_or_def_option('gan_power', 0.0)
+        default_gan_version        = self.options['gan_version']        = self.load_or_def_option('gan_version', 2)
         default_gan_patch_size     = self.options['gan_patch_size']     = self.load_or_def_option('gan_patch_size', self.options['resolution'] // 8)
         default_gan_dims           = self.options['gan_dims']           = self.load_or_def_option('gan_dims', 16)
         default_gan_smoothing      = self.options['gan_smoothing']      = self.load_or_def_option('gan_smoothing', 0.1)
@@ -178,6 +180,8 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 10.0", help_message="Train the network in Generative Adversarial manner. Forces the neural network to learn small details of the face. Enable it only when the face is trained enough and don't disable. Typical value is 0.1"), 0.0, 10.0 )
 
             if self.options['gan_power'] != 0.0:
+                self.options['gan_version'] = np.clip (io.input_int("GAN version", default_gan_version, add_info="2 or 3", help_message="Choose GAN version (v2: 7/16/2020, v3: 1/3/2021):"), 2, 3)
+
                 if self.options['gan_version'] == 3:
                     gan_patch_size = np.clip ( io.input_int("GAN patch size", default_gan_patch_size, add_info="3-640", help_message="The higher patch size, the higher the quality, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is resolution / 8." ), 3, 640 )
                     self.options['gan_patch_size'] = gan_patch_size
@@ -250,10 +254,6 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         adabelief = self.options['adabelief']
         
         use_fp16 = self.options['use_fp16']
-        if self.is_exporting:
-            use_fp16 = io.input_bool ("Export quantized?", False, help_message='Makes the exported model faster. If you have problems, disable this option.')
-
-        use_fp16 = False
         if self.is_exporting:
             use_fp16 = io.input_bool ("Export quantized?", False, help_message='Makes the exported model faster. If you have problems, disable this option.')
 
@@ -439,22 +439,6 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                         y = 1-nn.gaussian_blur(gpu_target_dstm_all, sigma)
                         y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
                         gpu_target_dst = gpu_target_dst*gpu_target_dstm_all + (x/y)*gpu_target_dstm_anti
-
-                    gpu_target_srcm_anti = 1-gpu_target_srcm
-                    gpu_target_dstm_anti = 1-gpu_target_dstm
-
-                    if blur_out_mask:
-                        sigma = resolution / 128
-
-                        x = nn.gaussian_blur(gpu_target_src*gpu_target_srcm_anti, sigma)
-                        y = 1-nn.gaussian_blur(gpu_target_srcm, sigma)
-                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
-                        gpu_target_src = gpu_target_src*gpu_target_srcm + (x/y)*gpu_target_srcm_anti
-
-                        x = nn.gaussian_blur(gpu_target_dst*gpu_target_dstm_anti, sigma)
-                        y = 1-nn.gaussian_blur(gpu_target_dstm, sigma)
-                        y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
-                        gpu_target_dst = gpu_target_dst*gpu_target_dstm + (x/y)*gpu_target_dstm_anti
 
 
                     # process model tensors
@@ -822,7 +806,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
                                                  'random_noise': self.options['random_noise'],
                                                  'random_blur': self.options['random_blur'],
                                                  'random_jpeg': self.options['random_jpeg'],
-                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,
+                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode, 'random_hsv_shift_amount' : random_hsv_power,    
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
