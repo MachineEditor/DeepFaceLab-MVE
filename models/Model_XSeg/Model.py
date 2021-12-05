@@ -11,6 +11,8 @@ from facelib import FaceType, XSegNet
 from models import ModelBase
 from samplelib import *
 
+from pathlib import Path
+
 class XSegModel(ModelBase):
 
     def __init__(self, *args, **kwargs):
@@ -279,5 +281,10 @@ class XSegModel(ModelBase):
                 output_names=['out_mask:0'],
                 opset=13,
                 output_path=output_path)
+    
+    #override
+    def get_config_schema_path(self):
+        config_path = Path(__file__).parent.absolute() / Path("config_schema.json")
+        return config_path
                 
 Model = XSegModel

@@ -185,7 +185,8 @@
           "type": "boolean"
         },
         "batch_size": {
-          "type": "integer"
+          "type": "integer",
+		  "minimum": 1
         },
         "gan_power": {
           "type": "number",

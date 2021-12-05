@@ -10,6 +10,8 @@ from facelib import FaceType
 from models import ModelBase
 from samplelib import *
 
+from pathlib import Path
+
 class QModel(ModelBase):
     #override
     def on_initialize(self):
@@ -317,5 +319,9 @@ class QModel(ModelBase):
         return self.predictor_func, (self.resolution, self.resolution, 3), merger.MergerConfigMasked(face_type=self.face_type,
                                      default_mode = 'overlay',
                                     )
+    #override
+    def get_config_schema_path(self):
+        config_path = Path(__file__).parent.absolute() / Path("config_schema.json")
+        return config_path
 
 Model = QModel
