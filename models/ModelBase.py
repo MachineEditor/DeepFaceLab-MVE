@@ -494,14 +494,12 @@ class ModelBase(object):
 
         try:
             with open(fun(), 'r') as file, open(models.get_config_schema_path(), 'r') as schema:
-                
-
                 data = yaml.safe_load(file)
                 validate(data, yaml.safe_load(schema))
         except FileNotFoundError:
             return {}
         except ValidationError as ve:
-            io.log_err("%s"%ve)
+            io.log_err(f"{ve}")
             return None
 
         for key, value in data.items():
