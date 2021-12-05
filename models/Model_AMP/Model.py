@@ -62,13 +62,14 @@ class AMPModel(ModelBase):
         if self.is_first_run() or ask_override:
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
                 self.ask_autobackup_hour()
+                self.ask_maximum_n_backups()
                 self.ask_write_preview_history()
                 self.ask_target_iter()
                 self.ask_retraining_samples()
                 self.ask_random_src_flip()
                 self.ask_random_dst_flip()
                 self.ask_batch_size(8)
-                # self.options['use_fp16'] = io.input_bool ("Use fp16", default_usefp16, help_message='Increases training/inference speed, reduces model size. Model may crash. Enable it after 1-5k iters.')
+                self.options['use_fp16'] = io.input_bool ("Use fp16", default_usefp16, help_message='Increases training/inference speed, reduces model size. Model may crash. Enable it after 1-5k iters.')
 
 
         if self.is_first_run():
