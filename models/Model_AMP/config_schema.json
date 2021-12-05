@@ -4,7 +4,7 @@
   "definitions": {
     "dfl_config": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "use_fp16": {
           "type": "boolean"
@@ -127,11 +127,6 @@
           "minimum": 0.0,
           "maximum": 1.0
         },
-        "face_style_power": {
-          "type": "number",
-          "minimum": 0.0,
-          "maximum": 100.0
-        },
         "ct_mode": {
           "type": "string",
           "enum": [
@@ -229,7 +224,6 @@
         "inter_dims",
         "morph_factor",
         "eyes_prio",
-        "face_style_power",
         "face_type",
         "gan_dims",
         "gan_noise",
