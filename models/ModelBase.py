@@ -433,6 +433,10 @@ class ModelBase(object):
         #return predictor_func, predictor_input_shape, MergerConfig() for the model
         raise NotImplementedError
 
+    #overridable
+    def get_config_schema_path(self):
+        raise NotImplementedError
+
     def get_pretraining_data_path(self):
         return self.pretraining_data_path
 
@@ -493,7 +497,7 @@ class ModelBase(object):
         fun = self.get_strpath_configuration_path if not auto_gen else self.get_model_conf_path
 
         try:
-            with open(fun(), 'r') as file, open(models.get_config_schema_path(), 'r') as schema:
+            with open(fun(), 'r') as file, open(self.get_config_schema_path(), 'r') as schema:
                 data = yaml.safe_load(file)
                 validate(data, yaml.safe_load(schema))
         except FileNotFoundError:

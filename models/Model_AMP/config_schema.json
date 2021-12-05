@@ -4,14 +4,15 @@
   "definitions": {
     "dfl_config": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "use_fp16": {
           "type": "boolean"
         },
-        "archi": {
-          "type": "string",
-          "pattern": "^(df|liae)-(\\b(?!\\w*(\\w)\\w*\\1)[udtc]+\\b)+|^(df|liae)$"
+        "morph_factor": {
+          "type": "number",
+          "minimum":0.0,
+          "maximum":1.0
         },
         "resolution": {
           "type": "integer",
@@ -42,6 +43,12 @@
           "type": "integer",
           "minimum": 16,
           "maximum": 256,
+          "multipleOf": 2
+        },
+        "inter_dims": {
+          "type": "integer",
+          "minimum": 32,
+          "maximum": 2048,
           "multipleOf": 2
         },
         "d_dims": {
@@ -214,7 +221,6 @@
       "required": [
         "adabelief",
         "ae_dims",
-        "archi",
         "autobackup_hour",
         "background_power",
         "batch_size",
@@ -225,6 +231,8 @@
         "d_dims",
         "d_mask_dims",
         "e_dims",
+        "inter_dims",
+        "morph_factor",
         "eyes_prio",
         "face_style_power",
         "face_type",

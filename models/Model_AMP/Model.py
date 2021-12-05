@@ -11,6 +11,8 @@ from models import ModelBase
 from samplelib import *
 from core.cv2ex import *
 
+from pathlib import Path
+
 class AMPModel(ModelBase):
 
     #override
@@ -811,5 +813,11 @@ class AMPModel(ModelBase):
 
         import merger
         return predictor_morph, (self.options['resolution'], self.options['resolution'], 3), merger.MergerConfigMasked(face_type=self.face_type, default_mode = 'overlay')
+
+    #override
+    def get_config_schema_path(self):
+        config_path = Path(__file__).parent.absolute() / Path("config_schema.json")
+        return config_path
+
 
 Model = AMPModel
