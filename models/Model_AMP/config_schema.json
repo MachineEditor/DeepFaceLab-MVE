@@ -4,7 +4,7 @@
   "definitions": {
     "dfl_config": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "use_fp16": {
           "type": "boolean"
@@ -12,7 +12,7 @@
         "morph_factor": {
           "type": "number",
           "minimum":0.0,
-          "maximum":1.0
+          "maximum":0.5
         },
         "resolution": {
           "type": "integer",
@@ -122,21 +122,6 @@
           "minimum": 0.0,
           "maximum": 1.0
         },
-        "true_face_power": {
-          "type": "number",
-          "minimum": 0.0,
-          "maximum": 1.0
-        },
-        "face_style_power": {
-          "type": "number",
-          "minimum": 0.0,
-          "maximum": 100.0
-        },
-        "bg_style_power": {
-          "type": "number",
-          "minimum": 0.0,
-          "maximum": 100.0
-        },
         "ct_mode": {
           "type": "string",
           "enum": [
@@ -186,7 +171,7 @@
         },
         "batch_size": {
           "type": "integer",
-		  "minimum": 1
+          "minimum": 1
         },
         "gan_power": {
           "type": "number",
@@ -225,7 +210,6 @@
         "autobackup_hour",
         "background_power",
         "batch_size",
-        "bg_style_power",
         "blur_out_mask",
         "clipgrad",
         "ct_mode",
@@ -235,7 +219,6 @@
         "inter_dims",
         "morph_factor",
         "eyes_prio",
-        "face_style_power",
         "face_type",
         "gan_dims",
         "gan_noise",
@@ -263,7 +246,6 @@
         "retraining_samples",
         "session_name",
         "target_iter",
-        "true_face_power",
         "uniform_yaw",
         "use_fp16",
         "write_preview_history"
