@@ -522,7 +522,7 @@ class ModelBase(object):
             with open(fun(), 'w') as file:
                 yaml.dump(saving_dict, file, sort_keys=False)
         except OSError as exception:
-            print('Impossible to write YAML configuration file -> ', exception)
+            io.log_info('Impossible to write YAML configuration file -> ', exception)
 
     def create_backup(self):
         io.log_info ("Creating backup...", end='\r')
