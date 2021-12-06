@@ -18,7 +18,6 @@ class AMPModel(ModelBase):
     #override
     def on_initialize_options(self):
         default_retraining_samples = self.options['retraining_samples'] = self.load_or_def_option('retraining_samples', False)
-        # default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
         default_resolution         = self.options['resolution']         = self.load_or_def_option('resolution', 224)
         default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'f')
         default_models_opt_on_gpu  = self.options['models_opt_on_gpu']  = self.load_or_def_option('models_opt_on_gpu', True)
@@ -56,12 +55,13 @@ class AMPModel(ModelBase):
         default_ct_mode            = self.options['ct_mode']            = self.load_or_def_option('ct_mode', 'none')
         default_random_color       = self.options['random_color']       = self.load_or_def_option('random_color', False)
         default_clipgrad           = self.options['clipgrad']           = self.load_or_def_option('clipgrad', False)
-        default_use_fp16           = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
+        default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
 
         ask_override = False if self.read_from_conf else self.ask_override()
         if self.is_first_run() or ask_override:
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
                 self.ask_autobackup_hour()
+                self.ask_session_name()
                 self.ask_maximum_n_backups()
                 self.ask_write_preview_history()
                 self.ask_target_iter()
@@ -70,6 +70,7 @@ class AMPModel(ModelBase):
                 self.ask_random_dst_flip()
                 self.ask_batch_size(8)
                 self.options['use_fp16'] = io.input_bool ("Use fp16", default_usefp16, help_message='Increases training/inference speed, reduces model size. Model may crash. Enable it after 1-5k iters.')
+
 
 
         if self.is_first_run():
