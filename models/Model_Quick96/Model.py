@@ -10,7 +10,16 @@ from facelib import FaceType
 from models import ModelBase
 from samplelib import *
 
+from pathlib import Path
+
 class QModel(ModelBase):
+    #override
+    def on_initialize_options(self):
+        ask_override = False if self.read_from_conf else self.ask_override()
+        if self.is_first_run() or ask_override:
+            if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
+                self.ask_batch_size()
+
     #override
     def on_initialize(self):
         device_config = nn.getCurrentDeviceConfig()
@@ -80,7 +89,7 @@ class QModel(ModelBase):
         if self.is_training:
             # Adjust batch size for multiple GPU
             gpu_count = max(1, len(devices) )
-            bs_per_gpu = max(1, 4 // gpu_count)
+            bs_per_gpu = max(1, self.get_batch_size() // gpu_count)
             self.set_batch_size( gpu_count*bs_per_gpu)
 
             # Compute losses per GPU
@@ -317,5 +326,9 @@ class QModel(ModelBase):
         return self.predictor_func, (self.resolution, self.resolution, 3), merger.MergerConfigMasked(face_type=self.face_type,
                                      default_mode = 'overlay',
                                     )
+    #override
+    def get_config_schema_path(self):
+        config_path = Path(__file__).parent.absolute() / Path("config_schema.json")
+        return config_path
 
 Model = QModel
