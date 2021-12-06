@@ -14,3 +14,4 @@ Flask==1.1.1
 flask-socketio==4.2.1
 tensorboardX
 crc32c
+jsonschema

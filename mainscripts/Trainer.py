@@ -71,6 +71,7 @@ def trainerThread (s2c, c2s, e,
                     debug=False,
                     tensorboard_dir=None,
                     start_tensorboard=False,
+                    config_training_file=None,
                     dump_ckpt=False,
                     **kwargs):
     while True:
@@ -101,6 +102,8 @@ def trainerThread (s2c, c2s, e,
                         force_gpu_idxs=force_gpu_idxs,
                         cpu_only=cpu_only,
                         silent_start=silent_start,
+                        config_training_file=config_training_file,
+                        auto_gen_config=kwargs.get("auto_gen_config", False),
                         debug=debug)
 
             is_reached_goal = model.is_reached_iter_goal()
