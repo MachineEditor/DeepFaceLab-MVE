@@ -983,8 +983,12 @@ class SAEHDModel(ModelBase):
             st_m = []
             for i in range(n_samples):
                 SD_mask = DDM[i]*SDM[i] if self.face_type < FaceType.HEAD else SDM[i]
-
-                ar = S[i]*target_srcm[i], SS[i]*SSM[i], D[i]*target_dstm[i], DD[i]*DDM[i], SD[i]*SD_mask
+                SM = S[i]*target_srcm[i]
+                DM = D[i]*target_dstm[i]
+                if filenames is not None and len(filenames) > 0:
+                    SM = label_face_filename(SM, filenames[0][i])
+                    DM = label_face_filename(DM, filenames[0][i])
+                ar = SM, SS[i]*SSM[i], DM, DD[i]*DDM[i], SD[i]*SD_mask
                 st_m.append ( np.concatenate ( ar, axis=1) )
 
             result += [ ('SAEHD masked', np.concatenate (st_m, axis=0 )), ]

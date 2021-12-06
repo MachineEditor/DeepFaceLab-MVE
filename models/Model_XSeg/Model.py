@@ -198,7 +198,7 @@ class XSegModel(ModelBase):
         return ( ('loss', np.mean(loss) ), )
 
     #override
-    def onGetPreview(self, samples, for_history=False):
+    def onGetPreview(self, samples, for_history=False, filenames=None):
         n_samples = min(4, self.get_batch_size(), 800 // self.resolution )
         
         if self.pretrain:

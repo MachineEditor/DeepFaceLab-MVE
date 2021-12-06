@@ -307,7 +307,12 @@ class QModel(ModelBase):
 
         st_m = []
         for i in range(n_samples):
-            ar = S[i]*target_srcm[i], SS[i], D[i]*target_dstm[i], DD[i]*DDM[i], SD[i]*(DDM[i]*SDM[i])
+            SM = S[i]*target_srcm[i]
+            DM = D[i]*target_dstm[i]
+            if filenames is not None and len(filenames) > 0:
+                SM = label_face_filename(SM, filenames[0][i])
+                DM = label_face_filename(DM, filenames[0][i])
+            ar = SM, SS[i], DM, DD[i]*DDM[i], SD[i]*(DDM[i]*SDM[i])
             st_m.append ( np.concatenate ( ar, axis=1) )
 
         result += [ ('Quick96 masked', np.concatenate (st_m, axis=0 )), ]
