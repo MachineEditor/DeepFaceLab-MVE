@@ -59,6 +59,7 @@ class AMPModel(ModelBase):
         ask_override = self.ask_override()
         if self.is_first_run() or ask_override:
             self.ask_autobackup_hour()
+            self.ask_session_name()
             self.ask_maximum_n_backups()
             self.ask_write_preview_history()
             self.ask_target_iter()
