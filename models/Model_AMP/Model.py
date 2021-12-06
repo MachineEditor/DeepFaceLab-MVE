@@ -944,19 +944,16 @@ class AMPModel(ModelBase):
 
     #override
     def get_MergerConfig(self):
-        morph_factor = np.clip ( io.input_number ("Morph factor", 1.0, add_info="0.0 .. 1.0"), 0.0, 1.0 )
-
-        def predictor_morph(face):
-            return self.predictor_func(face, morph_factor)
-
+            
+        def predictor_morph(face, func_morph_factor=1.0):
+            return self.predictor_func(face, func_morph_factor)
 
         import merger
-        return predictor_morph, (self.options['resolution'], self.options['resolution'], 3), merger.MergerConfigMasked(face_type=self.face_type, default_mode = 'overlay')
-
+        return predictor_morph, (self.options['resolution'], self.options['resolution'], 3), merger.MergerConfigMasked(face_type=self.face_type, default_mode = 'overlay', is_morphable=True)
+    
     #override
     def get_config_schema_path(self):
         config_path = Path(__file__).parent.absolute() / Path("config_schema.json")
         return config_path
-
 
 Model = AMPModel

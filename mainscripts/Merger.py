@@ -146,17 +146,20 @@ def main (model_class_name=None,
                 io.log_info ("Use 'recover original filename' to determine the exact duplicates.")
                 io.log_info ("")
 
+
+
             # build frames maunally
             frames = []
             for p in input_path_image_paths:
-                path = Path(p) 
-                data = alignments.get(path.stem, None)
-                if data == None:      
-                    frame = InteractiveMergerSubprocessor.Frame(FrameInfo(frame_info=frame_info))
+                cur_path = Path(p)
+                data = alignments.get(cur_path.stem, None)
+                if data == None:
+                    frame_info=FrameInfo(filepath=cur_path)
+                    frame = InteractiveMergerSubprocessor.Frame(frame_info=frame_info)
                 else:
                     landmarks_list = [d[0] for d in data]
                     dfl_images_list = [d[1] for d in data]
-                    frame_info=FrameInfo(filepath=path, landmarks_list=landmarks_list, dfl_images_list=dfl_images_list)
+                    frame_info=FrameInfo(filepath=cur_path, landmarks_list=landmarks_list, dfl_images_list=dfl_images_list)
                     frame = InteractiveMergerSubprocessor.Frame(frame_info=frame_info)
 
                 frames.append(frame)
