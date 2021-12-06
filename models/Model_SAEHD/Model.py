@@ -12,6 +12,8 @@ from samplelib import *
 
 from pathlib import Path
 
+from utils.label_face import label_face_filename
+
 class SAEHDModel(ModelBase):
 
     #override
@@ -953,7 +955,7 @@ class SAEHDModel(ModelBase):
 
         return ( ('src_loss', np.mean(src_loss) ), ('dst_loss', np.mean(dst_loss) ), )
     #override
-    def onGetPreview(self, samples, for_history=False):
+    def onGetPreview(self, samples, for_history=False, filenames=None):
         ( (warped_src, target_src, target_srcm, target_srcm_em),
           (warped_dst, target_dst, target_dstm, target_dstm_em) ) = samples
 
@@ -964,6 +966,11 @@ class SAEHDModel(ModelBase):
         target_srcm, target_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format) for x in ([target_srcm, target_dstm] )]
 
         n_samples = min(4, self.get_batch_size(), 800 // self.resolution )
+
+        if filenames is not None and len(filenames) > 0:
+            for i in range(n_samples):
+                S[i] = label_face_filename(S[i], filenames[0][i])
+                D[i] = label_face_filename(D[i], filenames[1][i])
 
         if self.resolution <= 256:
             result = []
