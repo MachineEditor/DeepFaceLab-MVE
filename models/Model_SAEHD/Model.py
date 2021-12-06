@@ -9,6 +9,7 @@ from core.leras import nn
 from facelib import FaceType
 from models import ModelBase
 from samplelib import *
+from utils.label_face import label_face_filename
 
 class SAEHDModel(ModelBase):
 
@@ -786,7 +787,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
             random_ct_samples_path=training_data_dst_path if ct_mode is not None and not self.pretrain else None
 
-            cpu_count = multiprocessing.cpu_count()
+            cpu_count = min(multiprocessing.cpu_count(), 4)
             src_generators_count = cpu_count // 2
             dst_generators_count = cpu_count // 2
             if ct_mode is not None:
@@ -946,7 +947,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
 
         return ( ('src_loss', np.mean(src_loss) ), ('dst_loss', np.mean(dst_loss) ), )
     #override
-    def onGetPreview(self, samples, for_history=False):
+    def onGetPreview(self, samples, for_history=False, filenames=None):
         ( (warped_src, target_src, target_srcm, target_srcm_em),
           (warped_dst, target_dst, target_dstm, target_dstm_em) ) = samples
 
@@ -957,6 +958,11 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
         target_srcm, target_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format) for x in ([target_srcm, target_dstm] )]
 
         n_samples = min(4, self.get_batch_size(), 800 // self.resolution )
+
+        if filenames is not None and len(filenames) > 0:
+            for i in range(n_samples):
+                S[i] = label_face_filename(S[i], filenames[0][i])
+                D[i] = label_face_filename(D[i], filenames[1][i])
 
         if self.resolution <= 256:
             result = []
@@ -977,7 +983,7 @@ Examples: df, liae, df-d, df-ud, liae-ud, ...
             for i in range(n_samples):
                 SD_mask = DDM[i]*SDM[i] if self.face_type < FaceType.HEAD else SDM[i]
 
-                ar = S[i]*target_srcm[i], SS[i]*SSM[i], D[i]*target_dstm[i], DD[i]*DDM[i], SD[i]*SD_mask
+                ar = label_face_filename(S[i]*target_srcm[i], filenames[0][i]), SS[i]*SSM[i], label_face_filename(D[i]*target_dstm[i], filenames[1][i]), DD[i]*DDM[i], SD[i]*SD_mask
                 st_m.append ( np.concatenate ( ar, axis=1) )
 
             result += [ ('SAEHD masked', np.concatenate (st_m, axis=0 )), ]
