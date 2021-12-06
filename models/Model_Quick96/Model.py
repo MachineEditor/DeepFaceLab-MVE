@@ -9,7 +9,6 @@ from core.leras import nn
 from facelib import FaceType
 from models import ModelBase
 from samplelib import *
-from utils.label_face import label_face_filename
 
 from pathlib import Path
 
@@ -288,7 +287,7 @@ class QModel(ModelBase):
         return ( ('src_loss', src_loss), ('dst_loss', dst_loss), )
 
     #override
-    def onGetPreview(self, samples, for_history=False, filenames=None):
+    def onGetPreview(self, samples, for_history=False):
         ( (warped_src, target_src, target_srcm),
           (warped_dst, target_dst, target_dstm) ) = samples
 
@@ -298,12 +297,6 @@ class QModel(ModelBase):
         target_srcm, target_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format) for x in ([target_srcm, target_dstm] )]
 
         n_samples = min(4, self.get_batch_size() )
-        
-        if filenames is not None and len(filenames) > 0:
-            for i in range(n_samples):
-                S[i] = label_face_filename(S[i], filenames[0][i])
-                D[i] = label_face_filename(D[i], filenames[1][i])
-
         result = []
         st = []
         for i in range(n_samples):
@@ -314,7 +307,7 @@ class QModel(ModelBase):
 
         st_m = []
         for i in range(n_samples):
-            ar = label_face_filename(S[i]*target_srcm[i], filenames[0][i]), SS[i], label_face_filename(D[i]*target_dstm[i], filenames[1][i]), DD[i]*DDM[i], SD[i]*(DDM[i]*SDM[i])
+            ar = S[i]*target_srcm[i], SS[i], D[i]*target_dstm[i], DD[i]*DDM[i], SD[i]*(DDM[i]*SDM[i])
             st_m.append ( np.concatenate ( ar, axis=1) )
 
         result += [ ('Quick96 masked', np.concatenate (st_m, axis=0 )), ]

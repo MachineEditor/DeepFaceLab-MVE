@@ -415,7 +415,7 @@ class ModelBase(object):
         return ( ('loss_src', 0), ('loss_dst', 0) )
 
     #overridable
-    def onGetPreview(self, sample, for_history=False, filenames=None):
+    def onGetPreview(self, sample, for_history=False):
         #you can return multiple previews
         #return [ ('preview_name',preview_rgb), ... ]
         return []
@@ -447,7 +447,7 @@ class ModelBase(object):
         return self.target_iter != 0 and self.iter >= self.target_iter
 
     def get_previews(self):
-        return self.onGetPreview ( self.last_sample, filenames=self.last_sample_filenames)
+        return self.onGetPreview ( self.last_sample )
     
     def get_static_previews(self):
         return self.onGetPreview (self.sample_for_preview)
@@ -585,19 +585,12 @@ class ModelBase(object):
 
     def generate_next_samples(self):
         sample = []
-        sample_filenames = []
         for generator in self.generator_list:
             if generator.is_initialized():
-                batch = generator.generate_next()
-                if type(batch) is tuple:
-                    sample.append ( batch[0] )
-                    sample_filenames.append( batch[1] )
-                else:
-                    sample.append ( batch )
+                sample.append ( generator.generate_next() )
             else:
                 sample.append ( [] )
         self.last_sample = sample
-        self.last_sample_filenames = sample_filenames
         return sample
 
     #overridable

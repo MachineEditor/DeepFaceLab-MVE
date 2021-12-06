@@ -10,7 +10,6 @@ from facelib import FaceType
 from models import ModelBase
 from samplelib import *
 from core.cv2ex import *
-from utils.label_face import label_face_filename
 
 from pathlib import Path
 
@@ -889,7 +888,7 @@ class AMPModel(ModelBase):
         return ( ('src_loss', np.mean(src_loss) ), ('dst_loss', np.mean(dst_loss) ), )
 
     #override
-    def onGetPreview(self, samples, for_history=False, filenames=None):
+    def onGetPreview(self, samples, for_history=False):
         ( (warped_src, target_src, target_srcm, target_srcm_em),
           (warped_dst, target_dst, target_dstm, target_dstm_em) ) = samples
 
@@ -920,10 +919,6 @@ class AMPModel(ModelBase):
         result = []
 
         i = np.random.randint(n_samples) if not for_history else 0
-
-        if filenames is not None and len(filenames) > 0:
-            S[i] = label_face_filename(S[i], filenames[0][i])
-            D[i] = label_face_filename(D[i], filenames[1][i])
 
         st =  [ np.concatenate ((S[i],  D[i],  DD[i]*DDM_000[i]), axis=1) ]
         st += [ np.concatenate ((SS[i], DD[i], SD_100[i] ), axis=1) ]
