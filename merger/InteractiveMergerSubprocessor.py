@@ -330,7 +330,13 @@ class InteractiveMergerSubprocessor(Subprocessor):
                     'z' : lambda cfg,shift_pressed: cfg.toggle_masked_hist_match(),
                     'x' : lambda cfg,shift_pressed: cfg.toggle_mask_mode(),
                     'c' : lambda cfg,shift_pressed: cfg.toggle_color_transfer_mode(),
-                    'n' : lambda cfg,shift_pressed: cfg.toggle_sharpen_mode(),
+                    'n' : lambda cfg,shift_pressed: cfg.toggle_sharpen_mode_multi(shift_pressed),
+                    '9' : lambda cfg,shift_pressed: cfg.add_pre_sharpen_power(1),
+                    '8' : lambda cfg,shift_pressed: cfg.add_pre_sharpen_power(-1),
+                    '(' : lambda cfg,shift_pressed: cfg.add_morph_power(1),
+                    '*' : lambda cfg,shift_pressed: cfg.add_morph_power(-1),
+                    'b' : lambda cfg,shift_pressed: cfg.toggle_two_pass(),
+                    '7' : lambda cfg,shift_pressed: cfg.toggle_debug_mode(),
                     }
             self.masked_keys = list(self.masked_keys_funcs.keys())
 
