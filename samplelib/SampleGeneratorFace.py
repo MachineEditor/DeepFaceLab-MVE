@@ -115,9 +115,9 @@ class SampleGeneratorFace(SampleGeneratorBase):
         samples, index_host, ct_samples, ct_index_host = param
  
         bs = self.batch_size
-        filenames = []
         while True:
             batches = None
+            filenames = []
 
             indexes = index_host.multi_get(bs)
             ct_indexes = ct_index_host.multi_get(bs) if ct_samples is not None else None
