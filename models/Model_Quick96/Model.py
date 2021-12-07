@@ -319,7 +319,7 @@ class QModel(ModelBase):
             DM = D[i]*target_dstm[i]
             if filenames is not None and len(filenames) > 0:
                 SM = label_face_filename(SM, filenames[0][i])
-                DM = label_face_filename(DM, filenames[0][i])
+                DM = label_face_filename(DM, filenames[1][i])
             ar = SM, SS[i], DM, DD[i]*DDM[i], SD[i]*(DDM[i]*SDM[i])
             st_m.append ( np.concatenate ( ar, axis=1) )
 
