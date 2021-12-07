@@ -994,7 +994,7 @@ class SAEHDModel(ModelBase):
                 DM = D[i]*target_dstm[i]
                 if filenames is not None and len(filenames) > 0:
                     SM = label_face_filename(SM, filenames[0][i])
-                    DM = label_face_filename(DM, filenames[0][i])
+                    DM = label_face_filename(DM, filenames[1][i])
                 ar = SM, SS[i]*SSM[i], DM, DD[i]*DDM[i], SD[i]*SD_mask
                 st_m.append ( np.concatenate ( ar, axis=1) )
 
