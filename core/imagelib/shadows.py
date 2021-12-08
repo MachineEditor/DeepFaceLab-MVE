@@ -7,7 +7,7 @@ def shadow_highlights_augmentation(img, seed=None):
     rnd_state = np.random.RandomState (seed)
 
     high_ratio = (1, 2)
-    low_ratio = (0.01, 0.5)
+    low_ratio = (0.2, 0.5)
     left_low_ratio = (0.4, 0.6)
     left_high_ratio = (0, 0.2)
     right_low_ratio = (0.4, 0.6)
