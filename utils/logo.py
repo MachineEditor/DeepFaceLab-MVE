@@ -1,6 +1,8 @@
 
 
 def print_community_info():
+    print ('')
+
     print ('You are using Machine Video Editor comunity fork')
 
     print_logo()
