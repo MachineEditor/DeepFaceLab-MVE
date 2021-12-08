@@ -360,7 +360,7 @@ if __name__ == "__main__":
         exit(0)
     parser.set_defaults(func=bad_args)
 
-    from logo import print_community_info
+    from utils.logo import print_community_info
     print_community_info()
 
     arguments = parser.parse_args()
