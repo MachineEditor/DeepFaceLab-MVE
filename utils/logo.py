@@ -13,6 +13,8 @@ def print_community_info():
 
     print_recruitment_info()
 
+    print('')
+
 def print_discord_info():
     print ('Join us in discord, inivite link https://discord.gg/BSnt5Fv')
 
