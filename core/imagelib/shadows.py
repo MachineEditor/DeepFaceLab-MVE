@@ -1,3 +1,4 @@
+from typing import Counter
 import numpy as np
 import cv2
 
@@ -6,11 +7,11 @@ import cv2
 def shadow_highlights_augmentation(img, seed=None):
     rnd_state = np.random.RandomState (seed)
 
-    high_ratio = (1, 2)
-    low_ratio = (0.2, 0.5)
-    left_low_ratio = (0.4, 0.6)
+    high_ratio = (1, 3)
+    low_ratio = (0.2, 0.6)
+    left_low_ratio = (0.4, 0.7)
     left_high_ratio = (0, 0.2)
-    right_low_ratio = (0.4, 0.6)
+    right_low_ratio = (0.4, 0.7)
     right_high_ratio = (0, 0.2)
 
     # check
@@ -26,13 +27,16 @@ def shadow_highlights_augmentation(img, seed=None):
     right_low_factor = rnd_state.uniform(right_low_ratio[0]*h, right_low_ratio[1]*h)
     right_high_factor = rnd_state.uniform(right_high_ratio[0]*h, right_high_ratio[1]*h)
 
-    tl = (0, left_high_factor)
-    bl = (0, left_high_factor+left_low_factor)
+    tl = (-20, left_high_factor)
+    bl = (-20, left_high_factor+left_low_factor)
 
     tr = (w, right_high_factor)
     br = (w, right_high_factor+right_low_factor)
 
     contour = np.array([tl, tr, br, bl], dtype=np.int32)
+
+    rnd_angle = rnd_state.uniform(0, 359)
+    contour = rotate_contour(contour, rnd_angle)
 
     mask = np.zeros(img.shape, dtype=img.dtype)
     cv2.fillPoly(mask, [contour], (255, 255, 255))
@@ -52,3 +56,41 @@ def shadow_highlights_augmentation(img, seed=None):
     img = np.clip(img/255.0, 0, 1).astype(np.float32)
 
     return img
+
+
+def cart2pol(x, y):
+    theta = np.arctan2(y, x)
+    rho = np.hypot(x, y)
+    return theta, rho
+
+
+def pol2cart(theta, rho):
+    x = rho * np.cos(theta)
+    y = rho * np.sin(theta)
+    return x, y
+
+
+def rotate_contour(cnt, angle):
+    # cnt = cv2.fromarray(cnt.copy())
+    M = cv2.moments(cnt)
+    cx = int(M['m10']/M['m00'])
+    cy = int(M['m01']/M['m00'])
+
+    cnt_norm = cnt - [cx, cy]
+    coordinates = cnt_norm[:, :]
+    xs, ys = coordinates[:, 0], coordinates[:, 1]
+    thetas, rhos = cart2pol(xs, ys)
+    
+    thetas = np.rad2deg(thetas)
+    thetas = (thetas + angle) % 360
+    thetas = np.deg2rad(thetas)
+    
+    xs, ys = pol2cart(thetas, rhos)
+    
+    cnt_norm[:, 0] = xs
+    cnt_norm[:, 1] = ys
+
+    cnt_rotated = cnt_norm + [cx, cy]
+    cnt_rotated = cnt_rotated.astype(np.int32)
+
+    return cnt_rotated
