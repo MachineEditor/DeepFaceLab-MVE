@@ -9,6 +9,7 @@ from samplelib import Sample
 from core import pathex
 
 import zipfile
+import hashlib
 try:
     import zlib
     compression = zipfile.ZIP_DEFLATED
@@ -119,6 +120,7 @@ class PackedFaceset():
             of.seek(0,2)
             of.close()
         elif "zip" == ext:
+            zipObj.comment = hashlib.md5(str(zipObj.namelist()).encode()).digest()
             zipObj.close()
           
         
@@ -178,11 +180,20 @@ class PackedFaceset():
             ext = "zip"
             samples_dat_path = samples_path / packed_faceset_filename_zip
             samples = []
+            
+      
             with zipfile.ZipFile(samples_dat_path, 'r') as zipObj:
+                rebuild_zip = False 
+                if zipObj.comment != hashlib.md5(str(zipObj.namelist()).encode()).digest():
+                    io.log_err("Corrupted zip, checking each file index. Unzip and pack again!")
+                    rebuild_zip = True
                 samples_configs = pickle.loads(zipObj.read(packed_faceset_filename_config))
                 for sample_config in samples_configs:
                     sample_config = pickle.loads(pickle.dumps (sample_config))
                     sample = Sample (**sample_config) 
+                    if rebuild_zip:
+                        if sample.filename not in zipObj.namelist():
+                            continue
                     sample.set_filename_offset_size(str(samples_dat_path), -1, -1)
                     samples.append(sample)
             return samples
