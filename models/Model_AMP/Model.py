@@ -58,6 +58,7 @@ class AMPModel(ModelBase):
         default_random_color       = self.options['random_color']       = self.load_or_def_option('random_color', False)
         default_clipgrad           = self.options['clipgrad']           = self.load_or_def_option('clipgrad', False)
         default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
+        default_cpu_cap            = self.options['cpu_cap']            = self.load_or_def_option('default_cpu_cap', 8)
 
         ask_override = False if self.read_from_conf else self.ask_override()
         if self.is_first_run() or ask_override:
@@ -72,6 +73,7 @@ class AMPModel(ModelBase):
                 self.ask_random_dst_flip()
                 self.ask_batch_size(8)
                 self.options['use_fp16'] = io.input_bool ("Use fp16", default_usefp16, help_message='Increases training/inference speed, reduces model size. Model may crash. Enable it after 1-5k iters.')
+                self.options['cpu_cap'] = np.clip ( io.input_int ("Max cpu cores to use.", default_cpu_cap, add_info="1 - 256", help_message="Typical fine value is 0.5"), 1, 256 )
 
 
 
@@ -106,6 +108,8 @@ class AMPModel(ModelBase):
 
         if self.is_first_run() or ask_override:
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
+            
+
    
                 morph_factor = np.clip ( io.input_number ("Morph factor.", default_morph_factor, add_info="0.1 .. 0.5", help_message="Typical fine value is 0.5"), 0.1, 0.5 )
                 self.options['morph_factor'] = morph_factor
@@ -142,7 +146,7 @@ class AMPModel(ModelBase):
                 self.options['random_blur'] = io.input_bool("Enable random blur of samples", default_random_blur, help_message="")
                 self.options['random_jpeg'] = io.input_bool("Enable random jpeg compression of samples", default_random_jpeg, help_message="")
                 
-                self.options['random_hsv_power'] = np.clip ( io.input_number ("Random hue/saturation/light intensity", default_random_hsv_power, add_info="0.0 .. 0.3", help_message="Random hue/saturation/light intensity applied to the src face set only at the input of the neural network. Stabilizes color perturbations during face swapping. Reduces the quality of the color transfer by selecting the closest one in the src faceset. Thus the src faceset must be diverse enough. Typical fine value is 0.05"), 0.0, 0.3 )
+                #self.options['random_hsv_power'] = np.clip ( io.input_number ("Random hue/saturation/light intensity", default_random_hsv_power, add_info="0.0 .. 0.3", help_message="Random hue/saturation/light intensity applied to the src face set only at the input of the neural network. Stabilizes color perturbations during face swapping. Reduces the quality of the color transfer by selecting the closest one in the src faceset. Thus the src faceset must be diverse enough. Typical fine value is 0.05"), 0.0, 0.3 )
 
                 self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 5.0", help_message="Forces the neural network to learn small details of the face. Enable it only when the face is trained enough with random_warp(off), and don't disable. The higher the value, the higher the chances of artifacts. Typical fine value is 0.1"), 0.0, 5.0 )
 
@@ -196,7 +200,7 @@ class AMPModel(ModelBase):
         morph_factor = self.options['morph_factor']
         gan_power    = self.gan_power = self.options['gan_power']
         random_warp  = self.options['random_warp']
-        random_hsv_power = self.options['random_hsv_power']
+        #random_hsv_power = self.options['random_hsv_power']
         
         if 'eyes_mouth_prio' in self.options:
             self.options.pop('eyes_mouth_prio')
@@ -741,7 +745,7 @@ class AMPModel(ModelBase):
 
             random_ct_samples_path=training_data_dst_path if ct_mode is not None else None #and not self.pretrain
 
-            cpu_count = multiprocessing.cpu_count()
+            cpu_count = min(multiprocessing.cpu_count(), self.options['cpu_cap'])
             src_generators_count = cpu_count // 2
             dst_generators_count = cpu_count // 2
             if ct_mode is not None:
@@ -762,7 +766,7 @@ class AMPModel(ModelBase):
                                                  'random_blur': self.options['random_blur'],
                                                  'random_jpeg': self.options['random_jpeg'],
                                                  'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,
-                                                 'random_hsv_shift_amount' : random_hsv_power,
+                                                 #'random_hsv_shift_amount' : random_hsv_power,
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False,
                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,

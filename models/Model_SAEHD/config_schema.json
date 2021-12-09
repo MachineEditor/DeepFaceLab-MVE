@@ -4,7 +4,7 @@
   "definitions": {
     "dfl_config": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "use_fp16": {
           "type": "boolean"
@@ -12,6 +12,11 @@
         "archi": {
           "type": "string",
           "pattern": "^(df|liae)-(\\b(?!\\w*(\\w)\\w*\\1)[udtc]+\\b)+|^(df|liae)$"
+        },
+        "cpu_cap": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
         },
         "resolution": {
           "type": "integer",
@@ -213,6 +218,7 @@
         }
       },
       "required": [
+        "cpu_cap",
         "adabelief",
         "ae_dims",
         "archi",
@@ -246,7 +252,6 @@
         "random_color",
         "random_downsample",
         "random_dst_flip",
-        "random_hsv_power",
         "random_jpeg",
         "random_noise",
         "random_src_flip",
