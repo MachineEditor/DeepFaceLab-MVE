@@ -938,28 +938,36 @@ class AMPModel(ModelBase):
 
         result = []
 
-        i = np.random.randint(n_samples) if not for_history else 0
+        #i = np.random.randint(n_samples) if not for_history else 0
 
         for i in range(n_samples if not for_history else 1):
             if filenames is not None and len(filenames) > 0:
                 S[i] = label_face_filename(S[i], filenames[0][i])
                 D[i] = label_face_filename(D[i], filenames[1][i])
-        st = []        
-        for i in range(n_samples):
-            st +=  [ np.concatenate ((S[i],  D[i],  DD[i]*DDM_000[i]), axis=1) ]
-            st += [ np.concatenate ((SS[i], DD[i], SD_100[i] ), axis=1) ]
-
-        result += [ ('AMP morph 1.0', np.concatenate (st, axis=0 )), ]
-        st = []    
-        for i in range(n_samples):
-            st +=  [ np.concatenate ((DD[i], SD_025[i],  SD_050[i]), axis=1) ]
+        st = []
+        temp_r = []        
+        for i in range(n_samples if not for_history else 1):
+            st =  [ np.concatenate ((S[i], SS[i],  D[i]), axis=1) ]
+            st += [ np.concatenate ((DD[i], DD[i]*DDM_000[i], SD_100[i] ), axis=1) ]
+            temp_r += [ np.concatenate (st, axis=1) ]
+        result += [ ('AMP morph 1.0', np.concatenate (temp_r, axis=0 )), ]
+       # result += [ ('AMP morph 1.0', np.concatenate (st, axis=0 )), ]
+        st = []  
+        temp_r = []      
+        for i in range(n_samples if not for_history else 1):
+            st =  [ np.concatenate ((DD[i], SD_025[i],  SD_050[i]), axis=1) ]
             st += [ np.concatenate ((SD_065[i], SD_075[i], SD_100[i]), axis=1) ]
-        result += [ ('AMP morph list', np.concatenate (st, axis=0 )), ]
-        st = []    
-        for i in range(n_samples):
-            st += [ np.concatenate ((DD[i], SD_025[i]*DDM_025[i]*SDM_025[i],  SD_050[i]*DDM_050[i]*SDM_050[i]), axis=1) ]
+            temp_r += [ np.concatenate (st, axis=1) ]
+        result += [ ('AMP morph list', np.concatenate (temp_r, axis=0 )), ]
+        #result += [ ('AMP morph list', np.concatenate (st, axis=0 )), ]
+        st = []
+        temp_r = []        
+        for i in range(n_samples if not for_history else 1):
+            st = [ np.concatenate ((DD[i], SD_025[i]*DDM_025[i]*SDM_025[i],  SD_050[i]*DDM_050[i]*SDM_050[i]), axis=1) ]
             st += [ np.concatenate ((SD_065[i]*DDM_065[i]*SDM_065[i], SD_075[i]*DDM_075[i]*SDM_075[i], SD_100[i]*DDM_100[i]*SDM_100[i]), axis=1) ]
-        result += [ ('AMP morph list masked', np.concatenate (st, axis=0 )), ]
+            temp_r += [ np.concatenate (st, axis=1) ]
+        result += [ ('AMP morph list masked', np.concatenate (temp_r, axis=0 )), ]
+        #result += [ ('AMP morph list masked', np.concatenate (st, axis=0 )), ]
 
         return result
 
