@@ -4,10 +4,15 @@
   "definitions": {
     "dfl_config": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "use_fp16": {
           "type": "boolean"
+        },
+        "cpu_cap": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
         },
         "morph_factor": {
           "type": "number",
@@ -97,13 +102,13 @@
             "MS-SSIM+L1"
           ]
         },
+        "lr_modifier": {
+          "type": "integer",
+          "minimum": -100,
+          "maximum": 100
+        },
         "random_warp": {
           "type": "boolean"
-        },
-        "random_hsv_power": {
-          "type": "number",
-          "minimum": 0.0,
-          "maximum": 0.3
         },
         "random_downsample": {
           "type": "boolean"
@@ -169,6 +174,11 @@
         "random_dst_flip": {
           "type": "boolean"
         },
+        "preview_samples": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
         "batch_size": {
           "type": "integer",
           "minimum": 1
@@ -205,6 +215,7 @@
         }
       },
       "required": [
+        "cpu_cap",
         "adabelief",
         "ae_dims",
         "autobackup_hour",
@@ -228,16 +239,15 @@
         "gan_version",
         "loss_function",
         "lr_dropout",
+        "lr_modifier",
         "masked_training",
         "maximum_n_backups",
         "models_opt_on_gpu",
         "mouth_prio",
-        "pretrain",
         "random_blur",
         "random_color",
         "random_downsample",
         "random_dst_flip",
-        "random_hsv_power",
         "random_jpeg",
         "random_noise",
         "random_src_flip",

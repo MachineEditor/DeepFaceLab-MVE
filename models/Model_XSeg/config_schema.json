@@ -31,7 +31,7 @@
       "required": [
         "batch_size",
         "face_type",
-        "pretrain",
+        "pretrain"
       ],
       "title": "dfl_config"
     }

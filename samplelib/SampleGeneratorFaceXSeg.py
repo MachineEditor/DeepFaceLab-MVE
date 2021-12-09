@@ -209,7 +209,7 @@ class SegmentedSampleFilterSubprocessor(Subprocessor):
 
     #override
     def process_info_generator(self):
-        for i in range(multiprocessing.cpu_count()):
+        for i in range(min(multiprocessing.cpu_count(),8)):
             yield 'CPU%d' % (i), {}, {'samples':self.samples, 'count_xseg_mask':self.count_xseg_mask}
 
     #override

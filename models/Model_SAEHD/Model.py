@@ -58,7 +58,6 @@ class SAEHDModel(ModelBase):
         default_loss_function      = self.options['loss_function']      = self.load_or_def_option('loss_function', 'SSIM')
 
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
-        default_random_hsv_power   = self.options['random_hsv_power']   = self.load_or_def_option('random_hsv_power', 0.0)
         default_random_downsample  = self.options['random_downsample']  = self.load_or_def_option('random_downsample', False)
         default_random_noise       = self.options['random_noise']       = self.load_or_def_option('random_noise', False)
         default_random_blur        = self.options['random_blur']        = self.load_or_def_option('random_blur', False)
@@ -72,7 +71,10 @@ class SAEHDModel(ModelBase):
         default_random_color       = self.options['random_color']       = self.load_or_def_option('random_color', False)
         default_clipgrad           = self.options['clipgrad']           = self.load_or_def_option('clipgrad', False)
         default_pretrain           = self.options['pretrain']           = self.load_or_def_option('pretrain', False)
-        #default_use_fp16           = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
+        default_cpu_cap            = self.options['cpu_cap']            = self.load_or_def_option('cpu_cap', 8)
+        default_preview_samples    = self.options['preview_samples']    = self.load_or_def_option('preview_samples', 4)
+        default_full_preview       = self.options['force_full_preview'] = self.load_or_def_option('force_full_preview', False)
+        default_lr_modifier        = self.options['lr_modifier']        = self.load_or_def_option('lr_modifier', 0)
 
         ask_override = False if self.read_from_conf else self.ask_override()
         if self.is_first_run() or ask_override:
@@ -81,12 +83,15 @@ class SAEHDModel(ModelBase):
                 self.ask_autobackup_hour()
                 self.ask_maximum_n_backups()
                 self.ask_write_preview_history()
+                self.options['preview_samples'] = np.clip ( io.input_int ("Number of samples to preview", default_preview_samples, add_info="1 - 16", help_message="Typical fine value is 4"), 1, 16 )
                 self.ask_target_iter()
                 self.ask_retraining_samples()
                 self.ask_random_src_flip()
                 self.ask_random_dst_flip()
                 self.ask_batch_size(suggest_batch_size)
                 self.options['use_fp16'] = io.input_bool ("Use fp16", default_usefp16, help_message='Increases training/inference speed, reduces model size. Model may crash. Enable it after 1-5k iters.')
+                self.options['cpu_cap'] = np.clip ( io.input_int ("Max cpu cores to use.", default_cpu_cap, add_info="1 - 256", help_message="Typical fine value is 8"), 1, 256 )
+
 
         if self.is_first_run():
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
@@ -176,10 +181,10 @@ class SAEHDModel(ModelBase):
 
                 self.options['loss_function'] = io.input_str(f"Loss function", default_loss_function, ['SSIM', 'MS-SSIM', 'MS-SSIM+L1'],
                                                             help_message="Change loss function used for image quality assessment.")
+                
+                self.options['lr_modifier'] = np.clip (io.input_int("Learningrate factor", default_lr_modifier, add_info="-100 .. 100", help_message="Modify the Learning rate: 100 == multipy by 4, -100 == divide by 4"), -100, 100)
 
                 self.options['random_warp'] = io.input_bool ("Enable random warp of samples", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness and reduce subpixel shake for less amount of iterations.")
-
-                self.options['random_hsv_power'] = np.clip ( io.input_number ("Random hue/saturation/light intensity", default_random_hsv_power, add_info="0.0 .. 0.3", help_message="Random hue/saturation/light intensity applied to the src face set only at the input of the neural network. Stabilizes color perturbations during face swapping. Reduces the quality of the color transfer by selecting the closest one in the src faceset. Thus the src faceset must be diverse enough. Typical fine value is 0.05"), 0.0, 0.3 )
 
                 self.options['random_downsample'] = io.input_bool("Enable random downsample of samples", default_random_downsample, help_message="")
                 self.options['random_noise'] = io.input_bool("Enable random noise added to samples", default_random_noise, help_message="")
@@ -270,14 +275,12 @@ class SAEHDModel(ModelBase):
         random_warp = False if self.pretrain else self.options['random_warp']
         random_src_flip = self.random_src_flip if not self.pretrain else True
         random_dst_flip = self.random_dst_flip if not self.pretrain else True
-        random_hsv_power = self.options['random_hsv_power'] if not self.pretrain else 0.0
         blur_out_mask = self.options['blur_out_mask']
         
         if self.pretrain:
             self.options_show_override['lr_dropout'] = 'n'
             self.options_show_override['random_warp'] = False
             self.options_show_override['gan_power'] = 0.0
-            self.options_show_override['random_hsv_power'] = 0.0
             self.options_show_override['face_style_power'] = 0.0
             self.options_show_override['bg_style_power'] = 0.0
             self.options_show_override['uniform_yaw'] = True
@@ -360,7 +363,14 @@ class SAEHDModel(ModelBase):
                         self.model_filename_list += [ [self.D_src, 'GAN.npy'] ]
 
                 # Initialize optimizers
-                lr=5e-5
+                lr_modifier = self.options['lr_modifier']
+                if lr_modifier == 0:
+                    lr = 5e-5 
+                elif lr_modifier < 0:
+                    lr = 5e-5 / abs( lr_modifier * 4/100 ) 
+                else:
+                    lr = 5e-5 * abs( lr_modifier * 4/100 ) 
+                
                 if self.options['lr_dropout'] in ['y','cpu'] and not self.pretrain:
                     lr_cos = 500
                     lr_dropout = 0.3
@@ -795,7 +805,7 @@ class SAEHDModel(ModelBase):
 
             random_ct_samples_path=training_data_dst_path if ct_mode is not None and not self.pretrain else None
 
-            cpu_count = multiprocessing.cpu_count()
+            cpu_count = min(multiprocessing.cpu_count(), self.options['cpu_cap'])
             src_generators_count = cpu_count // 2
             dst_generators_count = cpu_count // 2
             if ct_mode is not None:
@@ -815,7 +825,7 @@ class SAEHDModel(ModelBase):
                                                  'random_noise': self.options['random_noise'],
                                                  'random_blur': self.options['random_blur'],
                                                  'random_jpeg': self.options['random_jpeg'],
-                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode, 'random_hsv_shift_amount' : random_hsv_power,    
+                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,  
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
@@ -965,14 +975,14 @@ class SAEHDModel(ModelBase):
 
         target_srcm, target_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format) for x in ([target_srcm, target_dstm] )]
 
-        n_samples = min(4, self.get_batch_size(), 800 // self.resolution )
+        n_samples = min(self.get_batch_size(), self.options['preview_samples'])
 
         if filenames is not None and len(filenames) > 0:
             for i in range(n_samples):
                 S[i] = label_face_filename(S[i], filenames[0][i])
                 D[i] = label_face_filename(D[i], filenames[1][i])
 
-        if self.resolution <= 256:
+        if self.resolution <= 256 or self.options['force_full_preview'] == True:
             result = []
 
             st = []

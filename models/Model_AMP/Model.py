@@ -46,7 +46,6 @@ class AMPModel(ModelBase):
         default_lr_dropout         = self.options['lr_dropout']         = self.load_or_def_option('lr_dropout', 'n')
 
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
-        default_random_hsv_power   = self.options['random_hsv_power']   = self.load_or_def_option('random_hsv_power', 0.0)
         default_random_downsample  = self.options['random_downsample']  = self.load_or_def_option('random_downsample', False)
         default_random_noise       = self.options['random_noise']       = self.load_or_def_option('random_noise', False)
         default_random_blur        = self.options['random_blur']        = self.load_or_def_option('random_blur', False)
@@ -58,6 +57,9 @@ class AMPModel(ModelBase):
         default_random_color       = self.options['random_color']       = self.load_or_def_option('random_color', False)
         default_clipgrad           = self.options['clipgrad']           = self.load_or_def_option('clipgrad', False)
         default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
+        default_cpu_cap            = self.options['cpu_cap']            = self.load_or_def_option('default_cpu_cap', 8)
+        default_preview_samples    = self.options['preview_samples']    = self.load_or_def_option('preview_samples', 4)
+        default_lr_modifier        = self.options['lr_modifier']        = self.load_or_def_option('lr_modifier', 0)
 
         ask_override = False if self.read_from_conf else self.ask_override()
         if self.is_first_run() or ask_override:
@@ -66,12 +68,14 @@ class AMPModel(ModelBase):
                 self.ask_session_name()
                 self.ask_maximum_n_backups()
                 self.ask_write_preview_history()
+                self.options['preview_samples'] = np.clip ( io.input_int ("Number of samples to preview", default_preview_samples, add_info="1 - 16", help_message="Typical fine value is 4"), 1, 16 )
                 self.ask_target_iter()
                 self.ask_retraining_samples()
                 self.ask_random_src_flip()
                 self.ask_random_dst_flip()
                 self.ask_batch_size(8)
                 self.options['use_fp16'] = io.input_bool ("Use fp16", default_usefp16, help_message='Increases training/inference speed, reduces model size. Model may crash. Enable it after 1-5k iters.')
+                self.options['cpu_cap'] = np.clip ( io.input_int ("Max cpu cores to use.", default_cpu_cap, add_info="1 - 256", help_message="Typical fine value is 0.5"), 1, 256 )
 
 
 
@@ -106,6 +110,8 @@ class AMPModel(ModelBase):
 
         if self.is_first_run() or ask_override:
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
+            
+
    
                 morph_factor = np.clip ( io.input_number ("Morph factor.", default_morph_factor, add_info="0.1 .. 0.5", help_message="Typical fine value is 0.5"), 0.1, 0.5 )
                 self.options['morph_factor'] = morph_factor
@@ -121,6 +127,8 @@ class AMPModel(ModelBase):
                     self.options['blur_out_mask'] = io.input_bool ("Blur out mask", default_blur_out_mask, help_message='Blurs nearby area outside of applied face mask of training samples. The result is the background near the face is smoothed and less noticeable on swapped face. The exact xseg mask in src and dst faceset is required.')
                 
                 self.options['loss_function'] = io.input_str(f"Loss function", default_loss_function, ['SSIM', 'MS-SSIM', 'MS-SSIM+L1'], help_message="Change loss function used for image quality assessment.")
+                self.options['lr_modifier'] = np.clip (io.input_int("Learningrate factor", default_lr_modifier, add_info="-100 .. 100", help_message="Modify the Learning rate: 100 == multipy by 4, -100 == divide by 4"), -100, 100)
+
                 self.options['lr_dropout']  = io.input_str (f"Use learning rate dropout", default_lr_dropout, ['n','y','cpu'], help_message="When the face is trained enough, you can enable this option to get extra sharpness and reduce subpixel shake for less amount of iterations. Enabled it before `disable random warp` and before GAN. \nn - disabled.\ny - enabled\ncpu - enabled on CPU. This allows not to use extra VRAM, sacrificing 20% time of iteration.")
 
         default_gan_power          = self.options['gan_power']          = self.load_or_def_option('gan_power', 0.0)
@@ -142,8 +150,6 @@ class AMPModel(ModelBase):
                 self.options['random_blur'] = io.input_bool("Enable random blur of samples", default_random_blur, help_message="")
                 self.options['random_jpeg'] = io.input_bool("Enable random jpeg compression of samples", default_random_jpeg, help_message="")
                 
-                self.options['random_hsv_power'] = np.clip ( io.input_number ("Random hue/saturation/light intensity", default_random_hsv_power, add_info="0.0 .. 0.3", help_message="Random hue/saturation/light intensity applied to the src face set only at the input of the neural network. Stabilizes color perturbations during face swapping. Reduces the quality of the color transfer by selecting the closest one in the src faceset. Thus the src faceset must be diverse enough. Typical fine value is 0.05"), 0.0, 0.3 )
-
                 self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 5.0", help_message="Forces the neural network to learn small details of the face. Enable it only when the face is trained enough with random_warp(off), and don't disable. The higher the value, the higher the chances of artifacts. Typical fine value is 0.1"), 0.0, 5.0 )
 
 
@@ -196,7 +202,6 @@ class AMPModel(ModelBase):
         morph_factor = self.options['morph_factor']
         gan_power    = self.gan_power = self.options['gan_power']
         random_warp  = self.options['random_warp']
-        random_hsv_power = self.options['random_hsv_power']
         
         if 'eyes_mouth_prio' in self.options:
             self.options.pop('eyes_mouth_prio')
@@ -384,6 +389,13 @@ class AMPModel(ModelBase):
                         self.model_filename_list += [ [self.GAN, 'GAN.npy'] ]
             
                 # Initialize optimizers
+                lr_modifier = self.options['lr_modifier']
+                if lr_modifier == 0:
+                    lr = 5e-5 
+                elif lr_modifier < 0:
+                    lr = 5e-5 / abs( lr_modifier * 4/100 ) 
+                else:
+                    lr = 5e-5 * abs( lr_modifier * 4/100 ) 
                 clipnorm = 1.0 if self.options['clipgrad'] else 0.0
                 if self.options['lr_dropout'] in ['y','cpu']:
                     lr_cos = 500
@@ -394,17 +406,17 @@ class AMPModel(ModelBase):
                 self.G_weights = self.encoder.get_weights() + self.decoder.get_weights()
 
                 OptimizerClass = nn.AdaBelief if adabelief else nn.RMSprop
-                self.src_dst_opt = OptimizerClass(lr=5e-5, lr_dropout=lr_dropout, clipnorm=clipnorm, name='src_dst_opt')
+                self.src_dst_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, clipnorm=clipnorm, name='src_dst_opt')
                 self.src_dst_opt.initialize_variables (self.G_weights, vars_on_cpu=optimizer_vars_on_cpu)
                 self.model_filename_list += [ (self.src_dst_opt, 'src_dst_opt.npy') ]
 
                 if gan_power != 0:
                     if self.options['gan_version'] == 2:
-                        self.GAN_opt = OptimizerClass(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='D_src_dst_opt')
+                        self.GAN_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='D_src_dst_opt')
                         self.GAN_opt.initialize_variables ( self.GAN.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')#+self.D_src_x2.get_weights()
                         self.model_filename_list += [ (self.GAN_opt, 'D_src_v2_opt.npy') ]
                     else:
-                        self.GAN_opt = OptimizerClass(lr=5e-5, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='GAN_opt')
+                        self.GAN_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='GAN_opt')
                         self.GAN_opt.initialize_variables ( self.GAN.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')#+self.D_src_x2.get_weights()
                         self.model_filename_list += [ (self.GAN_opt, 'GAN_opt.npy') ]
 
@@ -741,7 +753,7 @@ class AMPModel(ModelBase):
 
             random_ct_samples_path=training_data_dst_path if ct_mode is not None else None #and not self.pretrain
 
-            cpu_count = multiprocessing.cpu_count()
+            cpu_count = min(multiprocessing.cpu_count(), self.options['cpu_cap'])
             src_generators_count = cpu_count // 2
             dst_generators_count = cpu_count // 2
             if ct_mode is not None:
@@ -762,7 +774,6 @@ class AMPModel(ModelBase):
                                                  'random_blur': self.options['random_blur'],
                                                  'random_jpeg': self.options['random_jpeg'],
                                                  'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,
-                                                 'random_hsv_shift_amount' : random_hsv_power,
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False,
                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,
@@ -916,28 +927,40 @@ class AMPModel(ModelBase):
 
         target_srcm, target_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format) for x in ([target_srcm, target_dstm] )]
 
-        n_samples = min(4, self.get_batch_size(), 800 // self.resolution )
+        n_samples = min(self.get_batch_size(), self.options['preview_samples'])
 
         result = []
 
-        i = np.random.randint(n_samples) if not for_history else 0
+        #i = np.random.randint(n_samples) if not for_history else 0
 
-        if filenames is not None and len(filenames) > 0:
-            S[i] = label_face_filename(S[i], filenames[0][i])
-            D[i] = label_face_filename(D[i], filenames[1][i])
-
-        st =  [ np.concatenate ((S[i],  D[i],  DD[i]*DDM_000[i]), axis=1) ]
-        st += [ np.concatenate ((SS[i], DD[i], SD_100[i] ), axis=1) ]
-
-        result += [ ('AMP morph 1.0', np.concatenate (st, axis=0 )), ]
-
-        st =  [ np.concatenate ((DD[i], SD_025[i],  SD_050[i]), axis=1) ]
-        st += [ np.concatenate ((SD_065[i], SD_075[i], SD_100[i]), axis=1) ]
-        result += [ ('AMP morph list', np.concatenate (st, axis=0 )), ]
-
-        st =  [ np.concatenate ((DD[i], SD_025[i]*DDM_025[i]*SDM_025[i],  SD_050[i]*DDM_050[i]*SDM_050[i]), axis=1) ]
-        st += [ np.concatenate ((SD_065[i]*DDM_065[i]*SDM_065[i], SD_075[i]*DDM_075[i]*SDM_075[i], SD_100[i]*DDM_100[i]*SDM_100[i]), axis=1) ]
-        result += [ ('AMP morph list masked', np.concatenate (st, axis=0 )), ]
+        for i in range(n_samples if not for_history else 1):
+            if filenames is not None and len(filenames) > 0:
+                S[i] = label_face_filename(S[i], filenames[0][i])
+                D[i] = label_face_filename(D[i], filenames[1][i])
+        st = []
+        temp_r = []        
+        for i in range(n_samples if not for_history else 1):
+            st =  [ np.concatenate ((S[i], SS[i],  D[i]), axis=1) ]
+            st += [ np.concatenate ((DD[i], DD[i]*DDM_000[i], SD_100[i] ), axis=1) ]
+            temp_r += [ np.concatenate (st, axis=1) ]
+        result += [ ('AMP morph 1.0', np.concatenate (temp_r, axis=0 )), ]
+       # result += [ ('AMP morph 1.0', np.concatenate (st, axis=0 )), ]
+        st = []  
+        temp_r = []      
+        for i in range(n_samples if not for_history else 1):
+            st =  [ np.concatenate ((DD[i], SD_025[i],  SD_050[i]), axis=1) ]
+            st += [ np.concatenate ((SD_065[i], SD_075[i], SD_100[i]), axis=1) ]
+            temp_r += [ np.concatenate (st, axis=1) ]
+        result += [ ('AMP morph list', np.concatenate (temp_r, axis=0 )), ]
+        #result += [ ('AMP morph list', np.concatenate (st, axis=0 )), ]
+        st = []
+        temp_r = []        
+        for i in range(n_samples if not for_history else 1):
+            st = [ np.concatenate ((DD[i], SD_025[i]*DDM_025[i]*SDM_025[i],  SD_050[i]*DDM_050[i]*SDM_050[i]), axis=1) ]
+            st += [ np.concatenate ((SD_065[i]*DDM_065[i]*SDM_065[i], SD_075[i]*DDM_075[i]*SDM_075[i], SD_100[i]*DDM_100[i]*SDM_100[i]), axis=1) ]
+            temp_r += [ np.concatenate (st, axis=1) ]
+        result += [ ('AMP morph list masked', np.concatenate (temp_r, axis=0 )), ]
+        #result += [ ('AMP morph list masked', np.concatenate (st, axis=0 )), ]
 
         return result
 
