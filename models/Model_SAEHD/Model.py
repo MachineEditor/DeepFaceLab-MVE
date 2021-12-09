@@ -58,7 +58,6 @@ class SAEHDModel(ModelBase):
         default_loss_function      = self.options['loss_function']      = self.load_or_def_option('loss_function', 'SSIM')
 
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
-        default_random_hsv_power   = self.options['random_hsv_power']   = self.load_or_def_option('random_hsv_power', 0.0)
         default_random_downsample  = self.options['random_downsample']  = self.load_or_def_option('random_downsample', False)
         default_random_noise       = self.options['random_noise']       = self.load_or_def_option('random_noise', False)
         default_random_blur        = self.options['random_blur']        = self.load_or_def_option('random_blur', False)
@@ -187,8 +186,6 @@ class SAEHDModel(ModelBase):
 
                 self.options['random_warp'] = io.input_bool ("Enable random warp of samples", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness and reduce subpixel shake for less amount of iterations.")
 
-                #self.options['random_hsv_power'] = np.clip ( io.input_number ("Random hue/saturation/light intensity", default_random_hsv_power, add_info="0.0 .. 0.3", help_message="Random hue/saturation/light intensity applied to the src face set only at the input of the neural network. Stabilizes color perturbations during face swapping. Reduces the quality of the color transfer by selecting the closest one in the src faceset. Thus the src faceset must be diverse enough. Typical fine value is 0.05"), 0.0, 0.3 )
-
                 self.options['random_downsample'] = io.input_bool("Enable random downsample of samples", default_random_downsample, help_message="")
                 self.options['random_noise'] = io.input_bool("Enable random noise added to samples", default_random_noise, help_message="")
                 self.options['random_blur'] = io.input_bool("Enable random blur of samples", default_random_blur, help_message="")
@@ -278,14 +275,12 @@ class SAEHDModel(ModelBase):
         random_warp = False if self.pretrain else self.options['random_warp']
         random_src_flip = self.random_src_flip if not self.pretrain else True
         random_dst_flip = self.random_dst_flip if not self.pretrain else True
-        #random_hsv_power = self.options['random_hsv_power'] if not self.pretrain else 0.0
         blur_out_mask = self.options['blur_out_mask']
         
         if self.pretrain:
             self.options_show_override['lr_dropout'] = 'n'
             self.options_show_override['random_warp'] = False
             self.options_show_override['gan_power'] = 0.0
-            #self.options_show_override['random_hsv_power'] = 0.0
             self.options_show_override['face_style_power'] = 0.0
             self.options_show_override['bg_style_power'] = 0.0
             self.options_show_override['uniform_yaw'] = True
@@ -830,7 +825,7 @@ class SAEHDModel(ModelBase):
                                                  'random_noise': self.options['random_noise'],
                                                  'random_blur': self.options['random_blur'],
                                                  'random_jpeg': self.options['random_jpeg'],
-                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode, #'random_hsv_shift_amount' : random_hsv_power,    
+                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,  
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},

@@ -110,11 +110,6 @@
         "random_warp": {
           "type": "boolean"
         },
-        "random_hsv_power": {
-          "type": "number",
-          "minimum": 0.0,
-          "maximum": 0.3
-        },
         "random_downsample": {
           "type": "boolean"
         },
