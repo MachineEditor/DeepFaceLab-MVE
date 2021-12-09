@@ -132,7 +132,6 @@ class AMPModel(ModelBase):
                 self.options['lr_dropout']  = io.input_str (f"Use learning rate dropout", default_lr_dropout, ['n','y','cpu'], help_message="When the face is trained enough, you can enable this option to get extra sharpness and reduce subpixel shake for less amount of iterations. Enabled it before `disable random warp` and before GAN. \nn - disabled.\ny - enabled\ncpu - enabled on CPU. This allows not to use extra VRAM, sacrificing 20% time of iteration.")
 
         default_gan_power          = self.options['gan_power']          = self.load_or_def_option('gan_power', 0.0)
-        default_gan_version        = self.options['gan_version']        = self.load_or_def_option('gan_version', 2)        
         default_gan_patch_size     = self.options['gan_patch_size']     = self.load_or_def_option('gan_patch_size', self.options['resolution'] // 8)
         default_gan_dims           = self.options['gan_dims']           = self.load_or_def_option('gan_dims', 16)
         default_gan_smoothing      = self.options['gan_smoothing']      = self.load_or_def_option('gan_smoothing', 0.1)
@@ -154,14 +153,12 @@ class AMPModel(ModelBase):
 
 
                 if self.options['gan_power'] != 0.0:
-                    self.options['gan_version'] = np.clip (io.input_int("GAN version", default_gan_version, add_info="2 or 3", help_message="Choose GAN version (v2: 7/16/2020, v3: 1/3/2021):"), 2, 3)
 
-                    if self.options['gan_version'] == 3:
-                        gan_patch_size = np.clip ( io.input_int("GAN patch size", default_gan_patch_size, add_info="3-640", help_message="The higher patch size, the higher the quality, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is resolution / 8." ), 3, 640 )
-                        self.options['gan_patch_size'] = gan_patch_size
+                    gan_patch_size = np.clip ( io.input_int("GAN patch size", default_gan_patch_size, add_info="3-640", help_message="The higher patch size, the higher the quality, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is resolution / 8." ), 3, 640 )
+                    self.options['gan_patch_size'] = gan_patch_size
 
-                        gan_dims = np.clip ( io.input_int("GAN dimensions", default_gan_dims, add_info="4-64", help_message="The dimensions of the GAN network. The higher dimensions, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is 16." ), 4, 64 )
-                        self.options['gan_dims'] = gan_dims
+                    gan_dims = np.clip ( io.input_int("GAN dimensions", default_gan_dims, add_info="4-64", help_message="The dimensions of the GAN network. The higher dimensions, the more VRAM is required. You can get sharper edges even at the lowest setting. Typical fine value is 16." ), 4, 64 )
+                    self.options['gan_dims'] = gan_dims
 
                     self.options['gan_smoothing'] = np.clip ( io.input_number("GAN label smoothing", default_gan_smoothing, add_info="0 - 0.5", help_message="Uses soft labels with values slightly off from 0/1 for GAN, has a regularizing effect"), 0, 0.5)
                     self.options['gan_noise'] = np.clip ( io.input_number("GAN noisy labels", default_gan_noise, add_info="0 - 0.5", help_message="Marks some images with the wrong label, helps prevent collapse"), 0, 0.5)
@@ -381,12 +378,8 @@ class AMPModel(ModelBase):
 
             if self.is_training:
                 if gan_power != 0:
-                    if self.options['gan_version'] == 2:
-                        self.GAN = nn.UNetPatchDiscriminatorV2(patch_size=resolution//16, in_ch=input_ch, name="D_src", use_fp16=self.options['use_fp16'])
-                        self.model_filename_list += [ [self.GAN, 'D_src_v2.npy'] ]
-                    else:
-                        self.GAN = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], use_fp16=self.options['use_fp16'], name="D_src")
-                        self.model_filename_list += [ [self.GAN, 'GAN.npy'] ]
+                    self.GAN = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], use_fp16=self.options['use_fp16'], name="D_src")
+                    self.model_filename_list += [ [self.GAN, 'GAN.npy'] ]
             
                 # Initialize optimizers
                 lr_modifier = self.options['lr_modifier']
@@ -411,14 +404,9 @@ class AMPModel(ModelBase):
                 self.model_filename_list += [ (self.src_dst_opt, 'src_dst_opt.npy') ]
 
                 if gan_power != 0:
-                    if self.options['gan_version'] == 2:
-                        self.GAN_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='D_src_dst_opt')
-                        self.GAN_opt.initialize_variables ( self.GAN.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')#+self.D_src_x2.get_weights()
-                        self.model_filename_list += [ (self.GAN_opt, 'D_src_v2_opt.npy') ]
-                    else:
-                        self.GAN_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='GAN_opt')
-                        self.GAN_opt.initialize_variables ( self.GAN.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')#+self.D_src_x2.get_weights()
-                        self.model_filename_list += [ (self.GAN_opt, 'GAN_opt.npy') ]
+                    self.GAN_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='GAN_opt')
+                    self.GAN_opt.initialize_variables ( self.GAN.get_weights(), vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')#+self.D_src_x2.get_weights()
+                    self.model_filename_list += [ (self.GAN_opt, 'GAN_opt.npy') ]
 
         if self.is_training:
             # Adjust batch size for multiple GPU

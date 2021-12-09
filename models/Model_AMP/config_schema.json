@@ -188,11 +188,6 @@
           "minimum": 0.0,
           "maximum": 5.0
         },
-        "gan_version": {
-          "type": "integer",
-          "minimum": 2,
-          "maximum": 3
-        },
         "gan_patch_size": {
           "type": "integer",
           "minimum": 3,
@@ -236,7 +231,6 @@
         "gan_patch_size",
         "gan_power",
         "gan_smoothing",
-        "gan_version",
         "loss_function",
         "lr_dropout",
         "lr_modifier",
