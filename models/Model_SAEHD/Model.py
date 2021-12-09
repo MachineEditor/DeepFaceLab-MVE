@@ -979,10 +979,10 @@ class SAEHDModel(ModelBase):
 
         target_srcm, target_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format) for x in ([target_srcm, target_dstm] )]
 
-        if self.options['preview_samples'] is None:
+        if self.options['force_preview_samples_num'] is None:
             n_samples = min(4, self.get_batch_size(), 800 // self.resolution )
         else:
-            n_samples = min(self.get_batch_size(), self.options['preview_samples'])
+            n_samples = min(self.get_batch_size(), self.options['force_preview_samples_num'])
 
         if filenames is not None and len(filenames) > 0:
             for i in range(n_samples):

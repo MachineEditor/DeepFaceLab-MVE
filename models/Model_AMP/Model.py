@@ -933,8 +933,10 @@ class AMPModel(ModelBase):
 
         target_srcm, target_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format) for x in ([target_srcm, target_dstm] )]
 
-        #n_samples = min(4, self.get_batch_size(), 800 // self.resolution )
-        n_samples = min(self.get_batch_size(), self.options['preview_samples'])
+        if self.options['force_preview_samples_num'] is None:
+            n_samples = min(4, self.get_batch_size(), 800 // self.resolution )
+        else:
+            n_samples = min(self.get_batch_size(), self.options['force_preview_samples_num'])
 
         result = []
 
