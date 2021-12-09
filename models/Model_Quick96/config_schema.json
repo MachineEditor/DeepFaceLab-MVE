@@ -12,7 +12,7 @@
         }
       },
       "required": [
-        "batch_size",
+        "batch_size"
       ],
       "title": "dfl_config"
     }
