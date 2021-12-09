@@ -69,7 +69,7 @@ class AMPModel(ModelBase):
                 self.ask_session_name()
                 self.ask_maximum_n_backups()
                 self.ask_write_preview_history()
-                self.options['preview_samples'] = np.clip ( io.input_int ("Number of samples to preview", default_cpu_cap, add_info="1 - 16", help_message="Typical fine value is 4"), 1, 16 )
+                self.options['preview_samples'] = np.clip ( io.input_int ("Number of samples to preview", default_preview_samples, add_info="1 - 16", help_message="Typical fine value is 4"), 1, 16 )
                 self.ask_target_iter()
                 self.ask_retraining_samples()
                 self.ask_random_src_flip()
@@ -933,10 +933,7 @@ class AMPModel(ModelBase):
 
         target_srcm, target_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format) for x in ([target_srcm, target_dstm] )]
 
-        if self.options['force_preview_samples_num'] is None:
-            n_samples = min(4, self.get_batch_size(), 800 // self.resolution )
-        else:
-            n_samples = min(self.get_batch_size(), self.options['force_preview_samples_num'])
+        n_samples = min(self.get_batch_size(), self.options['preview_samples'])
 
         result = []
 
