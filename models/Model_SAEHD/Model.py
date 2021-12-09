@@ -73,7 +73,7 @@ class SAEHDModel(ModelBase):
         default_clipgrad           = self.options['clipgrad']           = self.load_or_def_option('clipgrad', False)
         default_pretrain           = self.options['pretrain']           = self.load_or_def_option('pretrain', False)
         default_cpu_cap            = self.options['cpu_cap']            = self.load_or_def_option('cpu_cap', 8)
-        default_preview_samples    = self.options['default_preview_samples'] = self.load_or_def_option('preview_samples', 4)
+        default_preview_samples    = self.options['preview_samples']    = self.load_or_def_option('preview_samples', 4)
         default_lr_modifier        = self.options['lr_modifier']        = self.load_or_def_option('lr_modifier', 0)
 
         ask_override = False if self.read_from_conf else self.ask_override()

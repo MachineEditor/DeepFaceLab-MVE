@@ -95,6 +95,11 @@
             "MS-SSIM+L1"
           ]
         },
+        "lr_modifier": {
+          "type": "integer",
+          "minimum": -100,
+          "maximum": 100
+        },
         "random_warp": {
           "type": "boolean"
         },
@@ -154,6 +159,11 @@
         },
         "pretrain": {
           "type": "boolean"
+        },
+        "preview_samples": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
         },
         "session_name": {
           "type": "string"
@@ -243,11 +253,13 @@
         "gan_version",
         "loss_function",
         "lr_dropout",
+        "lr_modifier",
         "masked_training",
         "maximum_n_backups",
         "models_opt_on_gpu",
         "mouth_prio",
         "pretrain",
+        "preview_samples",
         "random_blur",
         "random_color",
         "random_downsample",

@@ -102,6 +102,11 @@
             "MS-SSIM+L1"
           ]
         },
+        "lr_modifier": {
+          "type": "integer",
+          "minimum": -100,
+          "maximum": 100
+        },
         "random_warp": {
           "type": "boolean"
         },
@@ -234,6 +239,7 @@
         "gan_version",
         "loss_function",
         "lr_dropout",
+        "lr_modifier",
         "masked_training",
         "maximum_n_backups",
         "models_opt_on_gpu",
