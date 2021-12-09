@@ -160,7 +160,7 @@
         "pretrain": {
           "type": "boolean"
         },
-        "force_preview_samples_num": {
+        "preview_samples": {
           "type": "integer",
           "minimum": 1,
           "maximum": 64
