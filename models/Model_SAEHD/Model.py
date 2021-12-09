@@ -74,6 +74,7 @@ class SAEHDModel(ModelBase):
         default_pretrain           = self.options['pretrain']           = self.load_or_def_option('pretrain', False)
         default_cpu_cap            = self.options['cpu_cap']            = self.load_or_def_option('cpu_cap', 8)
         default_preview_samples    = self.options['preview_samples']    = self.load_or_def_option('preview_samples', 4)
+        default_full_preview       = self.options['force_full_preview'] = self.load_or_def_option('force_full_preview', False)
         default_lr_modifier        = self.options['lr_modifier']        = self.load_or_def_option('lr_modifier', 0)
 
         ask_override = False if self.read_from_conf else self.ask_override()
@@ -986,7 +987,7 @@ class SAEHDModel(ModelBase):
                 S[i] = label_face_filename(S[i], filenames[0][i])
                 D[i] = label_face_filename(D[i], filenames[1][i])
 
-        if self.resolution <= 256 or self.options['preview_samples'] == True:
+        if self.resolution <= 256 or self.options['force_full_preview'] == True:
             result = []
 
             st = []

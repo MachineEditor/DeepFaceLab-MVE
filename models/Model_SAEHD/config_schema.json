@@ -165,7 +165,7 @@
           "minimum": 1,
           "maximum": 64
         },
-        "force_complete_preview": {
+        "force_full_preview": {
           "type": "boolean"
         },
         "session_name": {
