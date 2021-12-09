@@ -989,7 +989,7 @@ class SAEHDModel(ModelBase):
                 S[i] = label_face_filename(S[i], filenames[0][i])
                 D[i] = label_face_filename(D[i], filenames[1][i])
 
-        if self.resolution <= 256:
+        if self.resolution <= 256 or self.options['preview_samples'] == True:
             result = []
 
             st = []
