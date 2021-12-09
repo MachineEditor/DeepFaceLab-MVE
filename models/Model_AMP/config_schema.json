@@ -4,10 +4,15 @@
   "definitions": {
     "dfl_config": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "use_fp16": {
           "type": "boolean"
+        },
+        "cpu_cap": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
         },
         "morph_factor": {
           "type": "number",
@@ -205,6 +210,7 @@
         }
       },
       "required": [
+        "cpu_cap",
         "adabelief",
         "ae_dims",
         "autobackup_hour",
@@ -232,12 +238,10 @@
         "maximum_n_backups",
         "models_opt_on_gpu",
         "mouth_prio",
-        "pretrain",
         "random_blur",
         "random_color",
         "random_downsample",
         "random_dst_flip",
-        "random_hsv_power",
         "random_jpeg",
         "random_noise",
         "random_src_flip",
