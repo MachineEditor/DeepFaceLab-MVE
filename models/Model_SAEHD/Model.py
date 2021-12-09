@@ -370,7 +370,7 @@ class SAEHDModel(ModelBase):
                 lr_modifier = self.options['lr_modifier']
                 if lr_modifier == 0:
                     lr = 5e-5 
-                elif lr_modifier > 0:
+                elif lr_modifier < 0:
                     lr = 5e-5 / abs( lr_modifier * 4/100 ) 
                 else:
                     lr = 5e-5 * abs( lr_modifier * 4/100 ) 
