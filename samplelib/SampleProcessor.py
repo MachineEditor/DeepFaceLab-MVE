@@ -266,6 +266,8 @@ class SampleProcessor(object):
                             img_v = np.clip (img_v + (rnd_state.random()-0.5)*a, 0, 1 )
                             img = np.clip( cv2.cvtColor(cv2.merge([img_h, img_s, img_v]), cv2.COLOR_HSV2BGR) , 0, 1 )
                         
+                        img  = imagelib.warp_by_params (warp_params, img,  warp, transform, can_flip=True, border_replicate=border_replicate)
+                        img = np.clip(img.astype(np.float32), 0, 1)
 
                         # Transform from BGR to desired channel_type
                         if channel_type == SPCT.BGR:
