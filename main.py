@@ -92,13 +92,13 @@ if __name__ == "__main__":
         if arguments.pack_faceset:
             io.log_info ("Performing faceset packing...\r\n")
             from samplelib import PackedFaceset
-            PackedFaceset.pack( Path(arguments.input_dir) )
+            PackedFaceset.pack( Path(arguments.input_dir), ext=arguments.archive_type)
 
         if arguments.unpack_faceset:
             io.log_info ("Performing faceset unpacking...\r\n")
             from samplelib import PackedFaceset
             PackedFaceset.unpack( Path(arguments.input_dir) )
-
+            
     p = subparsers.add_parser( "util", help="Utilities.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
     p.add_argument('--add-landmarks-debug-images', action="store_true", dest="add_landmarks_debug_images", default=False, help="Add landmarks debug image for aligned faces.")
@@ -107,6 +107,7 @@ if __name__ == "__main__":
     p.add_argument('--restore-faceset-metadata', action="store_true", dest="restore_faceset_metadata", default=False, help="Restore faceset metadata to file. Image filenames must be the same as used with save.")
     p.add_argument('--pack-faceset', action="store_true", dest="pack_faceset", default=False, help="")
     p.add_argument('--unpack-faceset', action="store_true", dest="unpack_faceset", default=False, help="")
+    p.add_argument('--archive-type', dest="archive_type", choices=['zip', 'pak'], default=None)
 
     p.set_defaults (func=process_util)
 

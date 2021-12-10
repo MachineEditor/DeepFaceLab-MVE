@@ -9,6 +9,8 @@ from facelib import LandmarksProcessor
 from core import imagelib
 from core.imagelib import SegIEPolys
 
+import zipfile
+
 class SampleType(IntEnum):
     IMAGE = 0 #raw image
 
@@ -101,9 +103,13 @@ class Sample(object):
     def read_raw_file(self, filename=None):
         if self._filename_offset_size is not None:
             filename, offset, size = self._filename_offset_size
-            with open(filename, "rb") as f:
-                f.seek( offset, 0)
-                return f.read (size)
+            if filename.endswith(".zip"):
+                with zipfile.ZipFile(filename, 'r') as zipObj:
+                    return zipObj.read(self.filename)
+            else:
+                with open(filename, "rb") as f:
+                    f.seek( offset, 0)
+                    return f.read (size)
         else:
             with open(filename, "rb") as f:
                 return f.read()
