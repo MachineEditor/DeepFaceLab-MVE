@@ -1075,4 +1075,9 @@ class SAEHDModel(ModelBase):
         config_path = Path(__file__).parent.absolute() / Path("config_schema.json")
         return config_path
 
+    #override
+    def get_formatted_configuration_path(self):
+        config_path = Path(__file__).parent.absolute() / Path("formatted_config.yaml")
+        return config_path
+
 Model = SAEHDModel

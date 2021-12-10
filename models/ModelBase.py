@@ -171,7 +171,7 @@ class ModelBase(object):
                 if self.read_from_conf:
                     # Try to read dictionary from external of internal yaml file according
                     # to the value of auto_gen_config
-                    self.options = self.read_from_config_file(self.auto_gen_config)
+                    self.options = self.read_from_config_file(self.get_strpath_configuration_path if not self.auto_gen_config else self.get_model_conf_path)
                     # If options dict is empty, options will be loaded from dat file
                     if self.options is None:
                         io.log_info(f"Config file validation error, check your config")
@@ -230,7 +230,7 @@ class ModelBase(object):
 
         # save config file
         if self.read_from_conf and not self.config_file_exists and not config_error:
-            self.save_config_file(self.auto_gen_config)
+            self.save_config_file(self.get_strpath_configuration_path if not self.auto_gen_config else self.get_model_conf_path)
 
         self.session_name = self.options.get('session_name', "")
         self.autobackup_hour = self.options.get('autobackup_hour', 0)
@@ -435,6 +435,11 @@ class ModelBase(object):
     def get_config_schema_path(self):
         raise NotImplementedError
 
+    #overridable
+    def get_formatted_configuration_path(self):
+        return "None"
+        #raise NotImplementedError
+
     def get_pretraining_data_path(self):
         return self.pretraining_data_path
 
@@ -482,39 +487,35 @@ class ModelBase(object):
                 self.autobackup_start_time += self.autobackup_hour*3600
                 self.create_backup()
 
-    def __convert_type_read(self, v):
-        if isinstance(v, bool):
-            pass
-        if isinstance(v, int):
-            return np.int32(v)
-        elif isinstance(v, float):
-            return np.float64(v)
 
-    def __convert_type_write(self, d):
-        for key, value in d.items():
-            if type(value) is dict:
-                self.__convert_type_write(value)
-            else:
-                if isinstance(value, np.int32) or isinstance(value, np.float64):
-                    d[key] = value.item()
-                else:
-                    d[key] = value
+    def __convert_type_write(self, value):
+        if isinstance(value, np.int32) or isinstance(value, np.float64):
+            return value.item()
+        else:
+            return value
 
-    def __update_dict(self, key, value, dictionary):
-        if key in dictionary.keys():
-            dictionary[key] = value
-            return
-        dic_aux = []
-        for val_aux in dictionary.values():
-            if isinstance(val_aux,dict):
-                dic_aux.append(val_aux)
-        for i in dic_aux:
-            self.__update_dict(key,value,i)
-        for [key2,val_aux2] in dictionary.items():
-            if isinstance(val_aux2,dict):
-                dictionary[key2] = val_aux2
+    def __update_nested_dict(self, nested_dict, key, val):
+        if key in nested_dict:
+            nested_dict[key] = self.__convert_type_write(val)
+            return True
+        for k,v in nested_dict.items():
+              if isinstance(v, dict):
+                  if self.__update_nested_dict(v, key, val):
+                      return True
+        return False
+              
 
-    def read_from_config_file(self, auto_gen=False):
+    def __iterate_read_dict(self, nested_dict, new_dict=None):
+        if new_dict == None:
+            new_dict = {}
+        for k,v in nested_dict.items():        
+            if isinstance(v, dict):
+                new_dict.update(self.__iterate_read_dict(v, new_dict))
+            else:            
+                new_dict[k] = v
+        return new_dict
+
+    def read_from_config_file(self, fun, keep_nested=False, validation=True):
         """
         Read yaml config file and saves it into a dictionary
 
@@ -524,58 +525,40 @@ class ModelBase(object):
         Returns:
             [dict]: Returns the options dictionary if everything is alright otherwise an empty dictionary.
         """
-        fun = self.get_strpath_configuration_path if not auto_gen else self.get_model_conf_path
-        temp_options = {}
-
-        # Creates formatted options configuration dictionary
-        try:
-            with open(self.get_strpath_def_conf_file(), 'r') as file:
-                self.formatted_dictionary = yaml.safe_load(file)
-                # validate(self.formatted_dictionary, yaml.safe_load(schema))
-        except FileNotFoundError:
-            return {}
-        except ValidationError as ve:
-            io.log_err(f"{ve}")
-            return None
-
+        #fun = self.get_strpath_configuration_path if not auto_gen else self.get_model_conf_path
+        data = {}
         try:
             with open(fun(), 'r') as file, open(self.get_config_schema_path(), 'r') as schema:
                 data = yaml.safe_load(file)
-                validate(data, yaml.safe_load(schema))
+                if not keep_nested:
+                    data = self.__iterate_read_dict(data)
+                if validation:
+                    validate(data, yaml.safe_load(schema))
         except FileNotFoundError:
             return {}
         except ValidationError as ve:
             io.log_err(f"{ve}")
             return None
 
-        # Converts the yaml formatted like dictionary to DFL options like dictionary
-        for _, options in self.formatted_dictionary.items():
-            for option, value in options.items():
-                if isinstance(value, dict):
-                    for k, v in value.items():
-                        temp_options[k] = self.__convert_type_read(v)
-                else:
-                    temp_options[option] = self.__convert_type_read(value)
+        return data
 
-        return temp_options
-
-    def save_config_file(self, auto_gen=False):
+    def save_config_file(self, fun):
         """
         Saves options dictionary in a yaml file.
 
         Args:
             auto_gen ([bool], optional): True if you want that a yaml file is generated inside model folder for each model. Defaults to None.
         """
-        fun = self.get_strpath_configuration_path if not auto_gen else self.get_model_conf_path
+
+        formatted_dict = self.read_from_config_file(self.get_formatted_configuration_path, keep_nested=True, validation=False)
 
         for key, value in self.options.items():
-            self.__update_dict(key, value, self.formatted_dictionary)
-
-        self.__convert_type_write(self.formatted_dictionary)
+            if not self.__update_nested_dict(formatted_dict, key, value):
+                formatted_dict[key] = self.__convert_type_write(value)
 
         try:
             with open(fun(), 'w') as file:
-                yaml.dump(self.formatted_dictionary, file, sort_keys=False)
+                yaml.dump(formatted_dict, file, sort_keys=False)
         except OSError as exception:
             io.log_info('Impossible to write YAML configuration file -> ', exception)
 
