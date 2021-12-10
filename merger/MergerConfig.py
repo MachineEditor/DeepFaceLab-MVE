@@ -21,7 +21,7 @@ class MergerConfig(object):
                        ):
         self.type = type
 
-        self.sharpen_dict = {0:"None", 1:'box', 2:'gaussian', 3:'unsharpen'}
+        self.sharpen_dict = dict({0:"None", 1:'box', 2:'gaussian'})#, 3:'unsharpen'}
 
         #default changeable params
         self.sharpen_mode = sharpen_mode
@@ -97,7 +97,7 @@ mask_mode_dict = {0:'full',
 ctm_dict = { 0: "None", 1:"rct", 2:"lct", 3:"mkl", 4:"mkl-m", 5:"idt", 6:"idt-m", 7:"sot-m", 8:"mix-m" }
 ctm_str_dict = {None:0, "rct":1, "lct":2, "mkl":3, "mkl-m":4, "idt":5, "idt-m":6, "sot-m":7, "mix-m":8 }
 
-pre_sharpen_dict = {0:"None", 1:'gaussian'}, # 2:'unsharpen_mask'}
+pre_sharpen_dict = dict({0:"None", 1:'gaussian'})#, 2:'unsharpen_mask'}
 
 
 class MergerConfigMasked(MergerConfig):
