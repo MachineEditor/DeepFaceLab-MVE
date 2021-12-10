@@ -60,7 +60,7 @@ class AMPModel(ModelBase):
         default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
         default_cpu_cap            = self.options['cpu_cap']            = self.load_or_def_option('default_cpu_cap', 8)
         default_preview_samples    = self.options['preview_samples']    = self.load_or_def_option('preview_samples', 4)
-        default_lr_modifier        = self.options['lr_modifier']        = self.load_or_def_option('lr_modifier', 0)
+        default_lr                 = self.options['lr']                 = self.load_or_def_option('lr', 5e-5)
 
         ask_override = False if self.read_from_conf else self.ask_override()
         if self.is_first_run() or ask_override:
@@ -128,7 +128,7 @@ class AMPModel(ModelBase):
                     self.options['blur_out_mask'] = io.input_bool ("Blur out mask", default_blur_out_mask, help_message='Blurs nearby area outside of applied face mask of training samples. The result is the background near the face is smoothed and less noticeable on swapped face. The exact xseg mask in src and dst faceset is required.')
                 
                 self.options['loss_function'] = io.input_str(f"Loss function", default_loss_function, ['SSIM', 'MS-SSIM', 'MS-SSIM+L1'], help_message="Change loss function used for image quality assessment.")
-                self.options['lr_modifier'] = np.clip (io.input_int("Learningrate factor", default_lr_modifier, add_info="-100 .. 100", help_message="Modify the Learning rate: 100 == multipy by 4, -100 == divide by 4"), -100, 100)
+                self.options['lr'] = np.clip (io.input_number("Learning rate", default_lr, add_info="0.0 .. 1.0", help_message="Learning rate: typical fine value 5e-5"), 0.0, 1)
 
                 self.options['lr_dropout']  = io.input_str (f"Use learning rate dropout", default_lr_dropout, ['n','y','cpu'], help_message="When the face is trained enough, you can enable this option to get extra sharpness and reduce subpixel shake for less amount of iterations. Enabled it before `disable random warp` and before GAN. \nn - disabled.\ny - enabled\ncpu - enabled on CPU. This allows not to use extra VRAM, sacrificing 20% time of iteration.")
 
@@ -385,13 +385,8 @@ class AMPModel(ModelBase):
                     self.model_filename_list += [ [self.GAN, 'GAN.npy'] ]
             
                 # Initialize optimizers
-                lr_modifier = self.options['lr_modifier']
-                if lr_modifier == 0:
-                    lr = 5e-5 
-                elif lr_modifier < 0:
-                    lr = 5e-5 / abs( lr_modifier * 4/100 ) 
-                else:
-                    lr = 5e-5 * abs( lr_modifier * 4/100 ) 
+                lr = self.options['lr']
+               
                 clipnorm = 1.0 if self.options['clipgrad'] else 0.0
                 if self.options['lr_dropout'] in ['y','cpu']:
                     lr_cos = 500
