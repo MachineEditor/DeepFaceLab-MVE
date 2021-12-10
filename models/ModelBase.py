@@ -1,20 +1,16 @@
 import colorsys
 import inspect
-from io import FileIO
-import json
 import multiprocessing
 import operator
 import os
 import pickle
 import shutil
-import tempfile
 import time
 import datetime
 from pathlib import Path
 import yaml
 from jsonschema import validate, ValidationError
 import models
-import pprint
 
 import cv2
 import numpy as np
@@ -233,7 +229,7 @@ class ModelBase(object):
             self.default_options_path.write_bytes( pickle.dumps (self.options) )
 
         # save config file
-        if self.config_training_file is not None and not self.config_file_exists and not config_error:
+        if self.read_from_conf and not self.config_file_exists and not config_error:
             self.save_config_file(self.auto_gen_config)
 
         self.session_name = self.options.get('session_name', "")
@@ -504,6 +500,20 @@ class ModelBase(object):
                 else:
                     d[key] = value
 
+    def __update_dict(self, key, value, dictionary):
+        if key in dictionary.keys():
+            dictionary[key] = value
+            return
+        dic_aux = []
+        for val_aux in dictionary.values():
+            if isinstance(val_aux,dict):
+                dic_aux.append(val_aux)
+        for i in dic_aux:
+            self.__update_dict(key,value,i)
+        for [key2,val_aux2] in dictionary.items():
+            if isinstance(val_aux2,dict):
+                dictionary[key2] = val_aux2
+
     def read_from_config_file(self, auto_gen=False):
         """
         Read yaml config file and saves it into a dictionary
@@ -557,6 +567,9 @@ class ModelBase(object):
             auto_gen ([bool], optional): True if you want that a yaml file is generated inside model folder for each model. Defaults to None.
         """
         fun = self.get_strpath_configuration_path if not auto_gen else self.get_model_conf_path
+
+        for key, value in self.options.items():
+            self.__update_dict(key, value, self.formatted_dictionary)
 
         self.__convert_type_write(self.formatted_dictionary)
 
