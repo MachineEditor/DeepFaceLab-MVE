@@ -1,6 +1,7 @@
 import collections
 import math
 from enum import IntEnum
+from core.imagelib.shadows import shadow_highlights_augmentation
 
 import cv2
 import numpy as np
@@ -103,6 +104,7 @@ class SampleProcessor(object):
                 random_noise = opts.get('random_noise', False)
                 random_blur = opts.get('random_blur', False)
                 random_jpeg = opts.get('random_jpeg', False)
+                random_shadow = opts.get('random_shadow', False)
                 normalize_tanh = opts.get('normalize_tanh', False)
                 ct_mode        = opts.get('ct_mode', None)
                 data_format    = opts.get('data_format', 'NHWC')
@@ -266,6 +268,8 @@ class SampleProcessor(object):
                             img_v = np.clip (img_v + (rnd_state.random()-0.5)*a, 0, 1 )
                             img = np.clip( cv2.cvtColor(cv2.merge([img_h, img_s, img_v]), cv2.COLOR_HSV2BGR) , 0, 1 )
                         
+                        if random_shadow == True and sample_rnd_seed % 10 / 10 < 0.5:
+                            img = shadow_highlights_augmentation(img, sample_rnd_seed)
                         img  = imagelib.warp_by_params (warp_params, img,  warp, transform, can_flip=True, border_replicate=border_replicate)
                         img = np.clip(img.astype(np.float32), 0, 1)
 
