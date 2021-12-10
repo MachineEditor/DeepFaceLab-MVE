@@ -1,13 +1,10 @@
 import colorsys
 import inspect
-from io import FileIO
-import json
 import multiprocessing
 import operator
 import os
 import pickle
 import shutil
-import tempfile
 import time
 import datetime
 from pathlib import Path
@@ -52,6 +49,7 @@ class ModelBase(object):
         self.pretrained_model_path = pretrained_model_path
         self.config_training_file = config_training_file
         self.auto_gen_config = auto_gen_config
+        self.config_file_path = None
         self.no_preview = no_preview
         self.debug = debug
 
@@ -143,6 +141,7 @@ class ModelBase(object):
 
         self.iter = 0
         self.options = {}
+        self.formatted_dictionary = {}
         self.options_show_override = {}
         self.loss_history = []
         self.sample_for_preview = None
@@ -156,34 +155,33 @@ class ModelBase(object):
         config_error = False
         #check if config_training_file mode is enabled
         if config_training_file is not None:
-            self.config_file_path = Path(config_training_file)
-            # Creates folder if folder doesn't exist
-            if not self.config_file_path.exists():
-                os.makedirs(self.config_file_path, exist_ok=True)
-            # Ask if user wants to read options from external or internal conf file only if external conf file exists
-            # or auto_gen_config is true
-            if Path(self.get_strpath_configuration_path()).exists() or self.auto_gen_config:
-                self.read_from_conf = io.input_bool(
-                    f'Do you want to read training options from {"external" if self.auto_gen_config else "internal"} file?',
-                    True,
-                    'Read options from configuration file instead of asking one by one each option'
-                )
-
-                # If user decides to read from external or internal conf file
-                if self.read_from_conf:
-                    # Try to read dictionary from external of internal yaml file according
-                    # to the value of auto_gen_config
-                    self.options = self.read_from_config_file(auto_gen=self.auto_gen_config)
-                    # If options dict is empty options will be loaded from dat file
-                    if self.options is None:
-                        io.log_info(f"Config file validation error, check your config")
-                        config_error = True
-                    elif not self.options.keys():
-                        io.log_info(f"Configuration file doesn't exist. A standard configuration file will be created.")
-                    else:
-                        self.config_file_exists = True
+            if not Path(config_training_file).exists():
+                 io.log_err(f"{config_training_file} does not exists, not using config!")
             else:
-                io.log_info(f"Configuration file doesn't exist. A standard configuration file will be created.")
+                self.config_file_path = Path(config_training_file)
+        elif self.auto_gen_config:
+             self.config_file_path = Path(self.get_model_conf_path())
+
+        if self.config_file_path is not None:
+            self.read_from_conf = io.input_bool(
+                f'Do you want to read training options from file?',
+                True,
+                'Read options from configuration file instead of asking one by one each option'
+            )
+
+            # If user decides to read from external or internal conf file
+            if self.read_from_conf:
+                # Try to read dictionary from external of internal yaml file according
+                # to the value of auto_gen_config
+                self.options = self.read_from_config_file(self.config_file_path)
+                # If options dict is empty, options will be loaded from dat file
+                if self.options is None:
+                    io.log_info(f"Config file validation error, check your config")
+                    config_error = True
+                elif not self.options.keys():
+                    io.log_info(f"Configuration file doesn't exist. A standard configuration file will be created.")
+                else:
+                    self.config_file_exists = True
 
         self.model_data_path = Path( self.get_strpath_storage_for_file('data.dat') )
         if self.model_data_path.exists():
@@ -231,8 +229,8 @@ class ModelBase(object):
             self.default_options_path.write_bytes( pickle.dumps (self.options) )
 
         # save config file
-        if self.config_training_file is not None and not self.config_file_exists and not config_error:
-            self.save_config_file(self.auto_gen_config)
+        if self.read_from_conf and not self.config_file_exists and not config_error and not self.config_file_path is None:
+            self.save_config_file(self.config_file_path)
 
         self.session_name = self.options.get('session_name', "")
         self.autobackup_hour = self.options.get('autobackup_hour', 0)
@@ -437,6 +435,11 @@ class ModelBase(object):
     def get_config_schema_path(self):
         raise NotImplementedError
 
+    #overridable
+    def get_formatted_configuration_path(self):
+        return "None"
+        #raise NotImplementedError
+
     def get_pretraining_data_path(self):
         return self.pretraining_data_path
 
@@ -484,7 +487,35 @@ class ModelBase(object):
                 self.autobackup_start_time += self.autobackup_hour*3600
                 self.create_backup()
 
-    def read_from_config_file(self, auto_gen=False):
+
+    def __convert_type_write(self, value):
+        if isinstance(value, np.int32) or isinstance(value, np.float64):
+            return value.item()
+        else:
+            return value
+
+    def __update_nested_dict(self, nested_dict, key, val):
+        if key in nested_dict:
+            nested_dict[key] = self.__convert_type_write(val)
+            return True
+        for k,v in nested_dict.items():
+              if isinstance(v, dict):
+                  if self.__update_nested_dict(v, key, val):
+                      return True
+        return False
+              
+
+    def __iterate_read_dict(self, nested_dict, new_dict=None):
+        if new_dict == None:
+            new_dict = {}
+        for k,v in nested_dict.items():        
+            if isinstance(v, dict):
+                new_dict.update(self.__iterate_read_dict(v, new_dict))
+            else:            
+                new_dict[k] = v
+        return new_dict
+
+    def read_from_config_file(self, filepath, keep_nested=False, validation=True):
         """
         Read yaml config file and saves it into a dictionary
 
@@ -494,47 +525,40 @@ class ModelBase(object):
         Returns:
             [dict]: Returns the options dictionary if everything is alright otherwise an empty dictionary.
         """
-        fun = self.get_strpath_configuration_path if not auto_gen else self.get_model_conf_path
-
+        #fun = self.get_strpath_configuration_path if not auto_gen else self.get_model_conf_path
+        data = {}
         try:
-            with open(fun(), 'r') as file, open(self.get_config_schema_path(), 'r') as schema:
+            with open(filepath, 'r') as file, open(self.get_config_schema_path(), 'r') as schema:
                 data = yaml.safe_load(file)
-                validate(data, yaml.safe_load(schema))
+                if not keep_nested:
+                    data = self.__iterate_read_dict(data)
+                if validation:
+                    validate(data, yaml.safe_load(schema))
         except FileNotFoundError:
             return {}
         except ValidationError as ve:
             io.log_err(f"{ve}")
             return None
 
-        for key, value in data.items():
-            if isinstance(value, bool):
-                continue
-            if isinstance(value, int):
-                data[key] = np.int32(value)
-            elif isinstance(value, float):
-                data[key] = np.float64(value)
-
         return data
 
-    def save_config_file(self, auto_gen=False):
+    def save_config_file(self, filepath):
         """
         Saves options dictionary in a yaml file.
 
         Args:
             auto_gen ([bool], optional): True if you want that a yaml file is generated inside model folder for each model. Defaults to None.
         """
-        saving_dict = {}
-        for key, value in self.options.items():
-            if isinstance(value, np.int32) or isinstance(value, np.float64):
-                saving_dict[key] = value.item()
-            else:
-                saving_dict[key] = value
 
-        fun = self.get_strpath_configuration_path if not auto_gen else self.get_model_conf_path
+        formatted_dict = self.read_from_config_file(self.get_formatted_configuration_path(), keep_nested=True, validation=False)
+
+        for key, value in self.options.items():
+            if not self.__update_nested_dict(formatted_dict, key, value):
+                formatted_dict[key] = self.__convert_type_write(value)
 
         try:
-            with open(fun(), 'w') as file:
-                yaml.dump(saving_dict, file, sort_keys=False)
+            with open(filepath, 'w') as file:
+                yaml.dump(formatted_dict, file, sort_keys=False)
         except OSError as exception:
             io.log_info('Impossible to write YAML configuration file -> ', exception)
 
@@ -678,7 +702,10 @@ class ModelBase(object):
         return str( self.saved_models_path / ( self.get_model_name() + '_' + filename) )
 
     def get_strpath_configuration_path(self):
-        return str(self.config_file_path / 'configuration_file.yaml')
+        return str(self.config_file_path)
+
+    def get_strpath_def_conf_file(self):
+        return str(self.config_file_path / 'def_conf_file.yaml')
 
     def get_summary_path(self):
         return self.get_strpath_storage_for_file('summary.txt')
