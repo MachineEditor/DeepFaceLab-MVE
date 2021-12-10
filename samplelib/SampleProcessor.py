@@ -270,7 +270,6 @@ class SampleProcessor(object):
                         
                         if random_shadow == True and sample_rnd_seed % 10 / 10 < 0.5:
                             img = shadow_highlights_augmentation(img, sample_rnd_seed)
-
                         img  = imagelib.warp_by_params (warp_params, img,  warp, transform, can_flip=True, border_replicate=border_replicate)
                         img = np.clip(img.astype(np.float32), 0, 1)
 

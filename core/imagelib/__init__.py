@@ -18,7 +18,7 @@ from .common import random_crop, normalize_channels, cut_odd_image, overlay_alph
 
 from .SegIEPolys import *
 
-from .blursharpen import LinearMotionBlur, blursharpen
+from .blursharpen import LinearMotionBlur, blursharpen, gaussian_sharpen, unsharpen_mask
 
 from .filters import apply_random_rgb_levels, \
                      apply_random_overlay_triangle, \

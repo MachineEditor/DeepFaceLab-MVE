@@ -10,7 +10,18 @@ from facelib import FaceType
 from models import ModelBase
 from samplelib import *
 
+from pathlib import Path
+
+from utils.label_face import label_face_filename
+
 class QModel(ModelBase):
+    #override
+    def on_initialize_options(self):
+        ask_override = False if self.read_from_conf else self.ask_override()
+        if self.is_first_run() or ask_override:
+            if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
+                self.ask_batch_size()
+
     #override
     def on_initialize(self):
         device_config = nn.getCurrentDeviceConfig()
@@ -80,7 +91,7 @@ class QModel(ModelBase):
         if self.is_training:
             # Adjust batch size for multiple GPU
             gpu_count = max(1, len(devices) )
-            bs_per_gpu = max(1, 4 // gpu_count)
+            bs_per_gpu = max(1, self.get_batch_size() // gpu_count)
             self.set_batch_size( gpu_count*bs_per_gpu)
 
             # Compute losses per GPU
@@ -278,7 +289,7 @@ class QModel(ModelBase):
         return ( ('src_loss', src_loss), ('dst_loss', dst_loss), )
 
     #override
-    def onGetPreview(self, samples, for_history=False):
+    def onGetPreview(self, samples, for_history=False, filenames=None):
         ( (warped_src, target_src, target_srcm),
           (warped_dst, target_dst, target_dstm) ) = samples
 
@@ -288,6 +299,12 @@ class QModel(ModelBase):
         target_srcm, target_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format) for x in ([target_srcm, target_dstm] )]
 
         n_samples = min(4, self.get_batch_size() )
+
+        if filenames is not None and len(filenames) > 0:
+            for i in range(n_samples):
+                S[i] = label_face_filename(S[i], filenames[0][i])
+                D[i] = label_face_filename(D[i], filenames[1][i])
+
         result = []
         st = []
         for i in range(n_samples):
@@ -298,7 +315,12 @@ class QModel(ModelBase):
 
         st_m = []
         for i in range(n_samples):
-            ar = S[i]*target_srcm[i], SS[i], D[i]*target_dstm[i], DD[i]*DDM[i], SD[i]*(DDM[i]*SDM[i])
+            SM = S[i]*target_srcm[i]
+            DM = D[i]*target_dstm[i]
+            if filenames is not None and len(filenames) > 0:
+                SM = label_face_filename(SM, filenames[0][i])
+                DM = label_face_filename(DM, filenames[1][i])
+            ar = SM, SS[i], DM, DD[i]*DDM[i], SD[i]*(DDM[i]*SDM[i])
             st_m.append ( np.concatenate ( ar, axis=1) )
 
         result += [ ('Quick96 masked', np.concatenate (st_m, axis=0 )), ]
@@ -317,5 +339,9 @@ class QModel(ModelBase):
         return self.predictor_func, (self.resolution, self.resolution, 3), merger.MergerConfigMasked(face_type=self.face_type,
                                      default_mode = 'overlay',
                                     )
+    #override
+    def get_config_schema_path(self):
+        config_path = Path(__file__).parent.absolute() / Path("config_schema.json")
+        return config_path
 
 Model = QModel

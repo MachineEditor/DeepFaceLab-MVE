@@ -131,6 +131,8 @@ if __name__ == "__main__":
                   'start_tensorboard'        : arguments.start_tensorboard,
                   'dump_ckpt'                : arguments.dump_ckpt,
                   'flask_preview'            : arguments.flask_preview,
+                  'config_training_file'     : arguments.config_training_file,
+                  'auto_gen_config'          : arguments.auto_gen_config
                   }
         from mainscripts import Trainer
         Trainer.main(**kwargs)
@@ -150,6 +152,8 @@ if __name__ == "__main__":
     p.add_argument('--silent-start', action="store_true", dest="silent_start", default=False, help="Silent start. Automatically chooses Best GPU and last used model.")
     p.add_argument('--tensorboard-logdir', action=fixPathAction, dest="tensorboard_dir", help="Directory of the tensorboard output files")
     p.add_argument('--start-tensorboard', action="store_true", dest="start_tensorboard", default=False, help="Automatically start the tensorboard server preconfigured to the tensorboard-logdir")
+    p.add_argument('--config-training-file', action=fixPathAction, dest="config_training_file", help="Path to custom yaml configuration file")
+    p.add_argument('--auto-gen-config', action="store_true", dest="auto_gen_config", default=False, help="Saves a configuration file for each model used in the trainer. It'll have the same model name")
     
 
     p.add_argument('--dump-ckpt', action="store_true", dest="dump_ckpt", default=False, help="Dump the model to ckpt format.")
@@ -359,6 +363,9 @@ if __name__ == "__main__":
         parser.print_help()
         exit(0)
     parser.set_defaults(func=bad_args)
+
+    from utils.logo import print_community_info
+    print_community_info()
 
     arguments = parser.parse_args()
     arguments.func(arguments)

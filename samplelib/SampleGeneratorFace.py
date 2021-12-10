@@ -117,6 +117,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
         bs = self.batch_size
         while True:
             batches = None
+            filenames = []
 
             indexes = index_host.multi_get(bs)
             ct_indexes = ct_index_host.multi_get(bs) if ct_samples is not None else None
@@ -141,4 +142,6 @@ class SampleGeneratorFace(SampleGeneratorBase):
                 for i in range(len(x)):
                     batches[i].append ( x[i] )
 
-            yield [ np.array(batch) for batch in batches]
+                filenames.append(sample.filename)
+
+            yield ([ np.array(batch) for batch in batches], filenames)
