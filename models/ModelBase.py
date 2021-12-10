@@ -471,6 +471,10 @@ class ModelBase(object):
 
         self.onSave()
 
+        if self.auto_gen_config:
+            path = Path(self.get_model_conf_path())
+            self.save_config_file(path)
+
         model_data = {
             'iter': self.iter,
             'options': self.options,
