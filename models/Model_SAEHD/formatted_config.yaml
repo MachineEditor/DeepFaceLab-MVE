@@ -50,6 +50,7 @@ augmentations:
   random_noise: false
   random_blur: false
   random_jpeg: false
+  random_shadow: false
 color_augs:
   random_hsv_power: 0.0
   ct_mode: none
