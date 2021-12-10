@@ -115,6 +115,9 @@
         "random_jpeg": {
           "type": "boolean"
         },
+        "random_shadow": {
+          "type": "boolean"
+        },
         "background_power": {
           "type": "number",
           "minimum": 0.0,

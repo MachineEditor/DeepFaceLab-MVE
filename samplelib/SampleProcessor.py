@@ -51,7 +51,6 @@ class SampleProcessor(object):
         SPCT = SampleProcessor.ChannelType
         SPFMT = SampleProcessor.FaceMaskType
 
-        
         outputs = []
         for sample in samples:
             sample_rnd_seed = np.random.randint(0x80000000)
@@ -108,7 +107,6 @@ class SampleProcessor(object):
                 normalize_tanh = opts.get('normalize_tanh', False)
                 ct_mode        = opts.get('ct_mode', None)
                 data_format    = opts.get('data_format', 'NHWC')
-
                 rnd_seed_shift      = opts.get('rnd_seed_shift', 0)
                 warp_rnd_seed_shift = opts.get('warp_rnd_seed_shift', rnd_seed_shift)
 

@@ -190,7 +190,8 @@ class SAEHDModel(ModelBase):
                 self.options['random_noise'] = io.input_bool("Enable random noise added to samples", default_random_noise, help_message="")
                 self.options['random_blur'] = io.input_bool("Enable random blur of samples", default_random_blur, help_message="")
                 self.options['random_jpeg'] = io.input_bool("Enable random jpeg compression of samples", default_random_jpeg, help_message="")
-
+                self.options['random_shadow'] = io.input_bool("Enable random shadows and highlights of samples", default_random_shadow, help_message="")
+        
                 self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 10.0", help_message="Train the network in Generative Adversarial manner. Forces the neural network to learn small details of the face. Enable it only when the face is trained enough and don't disable. Typical value is 0.1"), 0.0, 10.0 )
 
                 if self.options['gan_power'] != 0.0:
@@ -806,7 +807,7 @@ class SAEHDModel(ModelBase):
                 fs_aug = 'fs-aug'
 
             channel_type = SampleProcessor.ChannelType.LAB_RAND_TRANSFORM if self.options['random_color'] else SampleProcessor.ChannelType.BGR
-
+            print (self.options['random_shadow'])
             self.set_training_data_generators ([
                     SampleGeneratorFace(training_data_src_path, random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(scale_range=[-0.15, 0.15], random_flip=random_src_flip),
@@ -818,7 +819,7 @@ class SAEHDModel(ModelBase):
                                                  'random_shadow': self.options['random_shadow'],
                                                  'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,  
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode, 'random_shadow': self.options['random_shadow'], 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                               ],
@@ -835,7 +836,7 @@ class SAEHDModel(ModelBase):
                                                  'random_shadow': self.options['random_shadow'],
                                                  'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,                                                                 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug, 'random_shadow': self.options['random_shadow'], 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                               ],

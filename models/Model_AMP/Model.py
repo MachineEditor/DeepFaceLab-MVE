@@ -149,7 +149,9 @@ class AMPModel(ModelBase):
                 self.options['random_noise'] = io.input_bool("Enable random noise added to samples", default_random_noise, help_message="")
                 self.options['random_blur'] = io.input_bool("Enable random blur of samples", default_random_blur, help_message="")
                 self.options['random_jpeg'] = io.input_bool("Enable random jpeg compression of samples", default_random_jpeg, help_message="")
-                
+                self.options['random_shadow'] = io.input_bool("Enable random shadows and highlights of samples", default_random_shadow, help_message="")
+
+
                 self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 5.0", help_message="Forces the neural network to learn small details of the face. Enable it only when the face is trained enough with random_warp(off), and don't disable. The higher the value, the higher the chances of artifacts. Typical fine value is 0.1"), 0.0, 5.0 )
 
 
