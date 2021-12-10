@@ -5,7 +5,7 @@ basic_param:
   e_dims: 64
   d_dims: 64
   d_mask_dims: 22
-  face_type: f
+  face_type: wf
 model_properties:
   morph_factor: 0.5
   session_name: ''
