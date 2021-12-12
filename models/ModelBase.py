@@ -158,7 +158,7 @@ class ModelBase(object):
             if not Path(config_training_file).exists():
                  io.log_err(f"{config_training_file} does not exists, not using config!")
             else:
-                self.config_file_path = Path(config_training_file)
+                self.config_file_path = Path(self.get_strpath_def_conf_file())
         elif self.auto_gen_config:
              self.config_file_path = Path(self.get_model_conf_path())
 
@@ -709,7 +709,7 @@ class ModelBase(object):
         return str(self.config_file_path)
 
     def get_strpath_def_conf_file(self):
-        return str(self.config_file_path / 'def_conf_file.yaml')
+        return str(Path(self.config_training_file) / 'def_conf_file.yaml')
 
     def get_summary_path(self):
         return self.get_strpath_storage_for_file('summary.txt')
