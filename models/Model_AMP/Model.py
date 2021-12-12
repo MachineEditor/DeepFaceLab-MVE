@@ -46,6 +46,7 @@ class AMPModel(ModelBase):
         default_lr_dropout         = self.options['lr_dropout']         = self.load_or_def_option('lr_dropout', 'n')
 
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
+        default_random_hsv_power   = self.options['random_hsv_power']   = self.load_or_def_option('random_hsv_power', 0.0)
         default_random_downsample  = self.options['random_downsample']  = self.load_or_def_option('random_downsample', False)
         default_random_noise       = self.options['random_noise']       = self.load_or_def_option('random_noise', False)
         default_random_blur        = self.options['random_blur']        = self.load_or_def_option('random_blur', False)
@@ -150,7 +151,7 @@ class AMPModel(ModelBase):
                 self.options['random_blur'] = io.input_bool("Enable random blur of samples", default_random_blur, help_message="")
                 self.options['random_jpeg'] = io.input_bool("Enable random jpeg compression of samples", default_random_jpeg, help_message="")
                 self.options['random_shadow'] = io.input_bool("Enable random shadows and highlights of samples", default_random_shadow, help_message="")
-
+                self.options['random_hsv_power'] = np.clip ( io.input_number ("Random hue/saturation/light intensity", default_random_hsv_power, add_info="0.0 .. 0.3", help_message="Random hue/saturation/light intensity applied to the src face set only at the input of the neural network. Stabilizes color perturbations during face swapping. Reduces the quality of the color transfer by selecting the closest one in the src faceset. Thus the src faceset must be diverse enough. Typical fine value is 0.05"), 0.0, 0.3 )
 
                 self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 5.0", help_message="Forces the neural network to learn small details of the face. Enable it only when the face is trained enough with random_warp(off), and don't disable. The higher the value, the higher the chances of artifacts. Typical fine value is 0.1"), 0.0, 5.0 )
 
@@ -202,6 +203,7 @@ class AMPModel(ModelBase):
         morph_factor = self.options['morph_factor']
         gan_power    = self.gan_power = self.options['gan_power']
         random_warp  = self.options['random_warp']
+        random_hsv_power = self.options['random_hsv_power']
         
         if 'eyes_mouth_prio' in self.options:
             self.options.pop('eyes_mouth_prio')
@@ -761,6 +763,7 @@ class AMPModel(ModelBase):
                                                  'random_jpeg': self.options['random_jpeg'],
                                                  'random_shadow': self.options['random_shadow'],
                                                  'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,
+                                                 'random_hsv_shift_amount' : random_hsv_power,
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False,
                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,

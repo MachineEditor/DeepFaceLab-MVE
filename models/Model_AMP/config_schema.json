@@ -125,6 +125,11 @@
         "random_shadow": {
           "type": "boolean"
         },
+        "random_hsv_power": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.3
+        },
         "background_power": {
           "type": "number",
           "minimum": 0.0,
@@ -243,6 +248,7 @@
         "mouth_prio",
         "random_blur",
         "random_color",
+        "random_hsv_power",
         "random_downsample",
         "random_dst_flip",
         "random_jpeg",

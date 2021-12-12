@@ -103,6 +103,11 @@
         "random_warp": {
           "type": "boolean"
         },
+        "random_hsv_power": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 0.3
+        },
         "random_downsample": {
           "type": "boolean"
         },
@@ -257,6 +262,7 @@
         "preview_samples",
         "random_blur",
         "random_color",
+        "random_hsv_power",
         "random_downsample",
         "random_dst_flip",
         "random_jpeg",
