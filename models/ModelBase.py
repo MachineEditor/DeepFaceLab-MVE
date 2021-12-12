@@ -11,7 +11,6 @@ from pathlib import Path
 import yaml
 from jsonschema import validate, ValidationError
 import models
-import pprint
 
 import cv2
 import numpy as np
@@ -517,13 +516,6 @@ class ModelBase(object):
             else:            
                 new_dict[k] = v
         return new_dict
-
-    def __iterate_print_dict(self, d):
-        for k, v in d.items():
-            if isinstance(v, dict):
-                self.__iterate_print_dict(v)
-            else:            
-                print('key -->', k, 'value -->', d[k], 'type -->', type(d[k]))
 
     def read_from_config_file(self, filepath, keep_nested=False, validation=True):
         """
