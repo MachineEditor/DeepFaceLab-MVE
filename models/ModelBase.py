@@ -491,9 +491,8 @@ class ModelBase(object):
                 self.autobackup_start_time += self.autobackup_hour*3600
                 self.create_backup()
 
-
     def __convert_type_write(self, value):
-        if isinstance(value, np.int32) or isinstance(value, np.float64):
+        if isinstance(value, (np.int32, np.float64, np.int64)):
             return value.item()
         else:
             return value
@@ -502,17 +501,16 @@ class ModelBase(object):
         if key in nested_dict:
             nested_dict[key] = self.__convert_type_write(val)
             return True
-        for k,v in nested_dict.items():
+        for k, v in nested_dict.items():
               if isinstance(v, dict):
                   if self.__update_nested_dict(v, key, val):
                       return True
         return False
-              
 
     def __iterate_read_dict(self, nested_dict, new_dict=None):
         if new_dict == None:
             new_dict = {}
-        for k,v in nested_dict.items():        
+        for k,v in nested_dict.items():
             if isinstance(v, dict):
                 new_dict.update(self.__iterate_read_dict(v, new_dict))
             else:            
@@ -521,13 +519,15 @@ class ModelBase(object):
 
     def read_from_config_file(self, filepath, keep_nested=False, validation=True):
         """
-        Read yaml config file and saves it into a dictionary
+        Reads options from configuration yaml file.
 
         Args:
-            auto_gen (bool, optional): True if you want that a yaml file is readed from model folder. Defaults to False.
+            filepath (str|Path): Path where to read configuration file.
+            keep_nested (bool, optional): If false dictionary is keep nested, otherwise not. Defaults to False.
+            validation (bool, optional): If true dictionary is valideted. Defaults to True.
 
         Returns:
-            [dict]: Returns the options dictionary if everything is alright otherwise an empty dictionary.
+            [dict]: A dictionary of options.
         """
         #fun = self.get_strpath_configuration_path if not auto_gen else self.get_model_conf_path
         data = {}
@@ -548,10 +548,10 @@ class ModelBase(object):
 
     def save_config_file(self, filepath):
         """
-        Saves options dictionary in a yaml file.
+        Saves options to configuration yaml file
 
         Args:
-            auto_gen ([bool], optional): True if you want that a yaml file is generated inside model folder for each model. Defaults to None.
+            filepath (str|Path): Path where to save configuration file.
         """
 
         formatted_dict = self.read_from_config_file(self.get_formatted_configuration_path(), keep_nested=True, validation=False)
