@@ -61,6 +61,7 @@ class AMPModel(ModelBase):
         default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
         default_cpu_cap            = self.options['cpu_cap']            = self.load_or_def_option('default_cpu_cap', 8)
         default_preview_samples    = self.options['preview_samples']    = self.load_or_def_option('preview_samples', 4)
+        default_full_preview       = self.options['force_full_preview'] = self.load_or_def_option('force_full_preview', False)
         default_lr                 = self.options['lr']                 = self.load_or_def_option('lr', 5e-5)
 
         ask_override = False if self.read_from_conf else self.ask_override()
@@ -71,6 +72,9 @@ class AMPModel(ModelBase):
                 self.ask_maximum_n_backups()
                 self.ask_write_preview_history()
                 self.options['preview_samples'] = np.clip ( io.input_int ("Number of samples to preview", default_preview_samples, add_info="1 - 16", help_message="Typical fine value is 4"), 1, 16 )
+                self.options['force_full_preview'] = io.input_bool ("Use old preview panel", default_full_preview)
+
+
                 self.ask_target_iter()
                 self.ask_retraining_samples()
                 self.ask_random_src_flip()
@@ -922,36 +926,53 @@ class AMPModel(ModelBase):
 
         result = []
 
-        #i = np.random.randint(n_samples) if not for_history else 0
 
-        for i in range(n_samples if not for_history else 1):
-            if filenames is not None and len(filenames) > 0:
-                S[i] = label_face_filename(S[i], filenames[0][i])
-                D[i] = label_face_filename(D[i], filenames[1][i])
-        st = []
-        temp_r = []        
-        for i in range(n_samples if not for_history else 1):
-            st =  [ np.concatenate ((S[i], SS[i],  D[i]), axis=1) ]
-            st += [ np.concatenate ((DD[i], DD[i]*DDM_000[i], SD_100[i] ), axis=1) ]
-            temp_r += [ np.concatenate (st, axis=1) ]
-        result += [ ('AMP morph 1.0', np.concatenate (temp_r, axis=0 )), ]
-       # result += [ ('AMP morph 1.0', np.concatenate (st, axis=0 )), ]
-        st = []  
-        temp_r = []      
-        for i in range(n_samples if not for_history else 1):
+        if self.options['force_full_preview'] == True:
+            i = np.random.randint(n_samples) if not for_history else 0
+
+            st =  [ np.concatenate ((S[i],  D[i],  DD[i]*DDM_000[i]), axis=1) ]
+            st += [ np.concatenate ((SS[i], DD[i], SD_075[i] ), axis=1) ]
+
+            result += [ ('AMP morph 0.75', np.concatenate (st, axis=0 )), ]
+
             st =  [ np.concatenate ((DD[i], SD_025[i],  SD_050[i]), axis=1) ]
             st += [ np.concatenate ((SD_065[i], SD_075[i], SD_100[i]), axis=1) ]
-            temp_r += [ np.concatenate (st, axis=1) ]
-        result += [ ('AMP morph list', np.concatenate (temp_r, axis=0 )), ]
-        #result += [ ('AMP morph list', np.concatenate (st, axis=0 )), ]
-        st = []
-        temp_r = []        
-        for i in range(n_samples if not for_history else 1):
-            st = [ np.concatenate ((DD[i], SD_025[i]*DDM_025[i]*SDM_025[i],  SD_050[i]*DDM_050[i]*SDM_050[i]), axis=1) ]
+            result += [ ('AMP morph list', np.concatenate (st, axis=0 )), ]
+
+
+            st =  [ np.concatenate ((DD[i], SD_025[i]*DDM_025[i]*SDM_025[i],  SD_050[i]*DDM_050[i]*SDM_050[i]), axis=1) ]
             st += [ np.concatenate ((SD_065[i]*DDM_065[i]*SDM_065[i], SD_075[i]*DDM_075[i]*SDM_075[i], SD_100[i]*DDM_100[i]*SDM_100[i]), axis=1) ]
-            temp_r += [ np.concatenate (st, axis=1) ]
-        result += [ ('AMP morph list masked', np.concatenate (temp_r, axis=0 )), ]
-        #result += [ ('AMP morph list masked', np.concatenate (st, axis=0 )), ]
+            result += [ ('AMP morph list masked', np.concatenate (st, axis=0 )), ]
+
+        else:
+            for i in range(n_samples if not for_history else 1):
+                if filenames is not None and len(filenames) > 0:
+                    S[i] = label_face_filename(S[i], filenames[0][i])
+                    D[i] = label_face_filename(D[i], filenames[1][i])
+            st = []
+            temp_r = []        
+            for i in range(n_samples if not for_history else 1):
+                st =  [ np.concatenate ((S[i], SS[i],  D[i]), axis=1) ]
+                st += [ np.concatenate ((DD[i], DD[i]*DDM_000[i], SD_100[i] ), axis=1) ]
+                temp_r += [ np.concatenate (st, axis=1) ]
+            result += [ ('AMP morph 1.0', np.concatenate (temp_r, axis=0 )), ]
+            # result += [ ('AMP morph 1.0', np.concatenate (st, axis=0 )), ]
+            st = []  
+            temp_r = []      
+            for i in range(n_samples if not for_history else 1):
+                st =  [ np.concatenate ((DD[i], SD_025[i],  SD_050[i]), axis=1) ]
+                st += [ np.concatenate ((SD_065[i], SD_075[i], SD_100[i]), axis=1) ]
+                temp_r += [ np.concatenate (st, axis=1) ]
+            result += [ ('AMP morph list', np.concatenate (temp_r, axis=0 )), ]
+            #result += [ ('AMP morph list', np.concatenate (st, axis=0 )), ]
+            st = []
+            temp_r = []        
+            for i in range(n_samples if not for_history else 1):
+                st = [ np.concatenate ((DD[i], SD_025[i]*DDM_025[i]*SDM_025[i],  SD_050[i]*DDM_050[i]*SDM_050[i]), axis=1) ]
+                st += [ np.concatenate ((SD_065[i]*DDM_065[i]*SDM_065[i], SD_075[i]*DDM_075[i]*SDM_075[i], SD_100[i]*DDM_100[i]*SDM_100[i]), axis=1) ]
+                temp_r += [ np.concatenate (st, axis=1) ]
+            result += [ ('AMP morph list masked', np.concatenate (temp_r, axis=0 )), ]
+            #result += [ ('AMP morph list masked', np.concatenate (st, axis=0 )), ]
 
         return result
 
