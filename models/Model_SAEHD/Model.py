@@ -86,6 +86,8 @@ class SAEHDModel(ModelBase):
                 self.ask_maximum_n_backups()
                 self.ask_write_preview_history()
                 self.options['preview_samples'] = np.clip ( io.input_int ("Number of samples to preview", default_preview_samples, add_info="1 - 16", help_message="Typical fine value is 4"), 1, 16 )
+                self.options['force_full_preview'] = io.input_bool ("Use old preview panel", default_full_preview)
+                
                 self.ask_target_iter()
                 self.ask_retraining_samples()
                 self.ask_random_src_flip()
