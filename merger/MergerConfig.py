@@ -98,7 +98,7 @@ ctm_dict = { 0: "None", 1:"rct", 2:"lct", 3:"mkl", 4:"mkl-m", 5:"idt", 6:"idt-m"
 ctm_str_dict = {None:0, "rct":1, "lct":2, "mkl":3, "mkl-m":4, "idt":5, "idt-m":6, "sot-m":7, "mix-m":8 }
 
 pre_sharpen_dict = dict({0:"None", 1:'gaussian'})#, 2:'unsharpen_mask'}
-
+two_pass_dict = dict({0:"None", 1:'face', 2:'face+mask'})
 
 class MergerConfigMasked(MergerConfig):
 
@@ -119,7 +119,7 @@ class MergerConfigMasked(MergerConfig):
                        color_degrade_power = 0,
                        pre_sharpen_power = 0,
                        pre_sharpen_mode=0,
-                       two_pass = False, 
+                       two_pass_mode = 0, 
                        morph_power = 100,
                        is_morphable = False,
                        debug_mode = False,
@@ -151,7 +151,7 @@ class MergerConfigMasked(MergerConfig):
         self.image_denoise_power = image_denoise_power
         self.bicubic_degrade_power = bicubic_degrade_power
         self.color_degrade_power = color_degrade_power
-        self.two_pass = two_pass
+        self.two_pass_mode = two_pass_mode
         self.pre_sharpen_power = pre_sharpen_power
         self.pre_sharpen_mode = pre_sharpen_mode
         self.morph_power = morph_power
@@ -168,8 +168,9 @@ class MergerConfigMasked(MergerConfig):
         if self.mode == 'hist-match':
             self.masked_hist_match = not self.masked_hist_match
             
-    def toggle_two_pass(self):
-        self.two_pass = not self.two_pass
+    def toggle_two_pass_mode(self):
+        a = list( two_pass_dict.keys() )
+        self.two_pass_mode = a[ (a.index(self.two_pass_mode)+1) % len(a) ]
         
     def toggle_debug_mode(self):
         self.debug_mode = not self.debug_mode
@@ -255,7 +256,13 @@ class MergerConfigMasked(MergerConfig):
             self.blur_mask_modifier =  np.clip ( io.input_int ("Choose blur mask modifier", 0, add_info="0..400"), 0, 400)
             self.motion_blur_power = np.clip ( io.input_int ("Choose motion blur power", 0, add_info="0..100"), 0, 100)
         
-        self.two_pass = io.input_bool("Use two pass mode?", False, help_message="Can enhance results by feeding network output again to network.")
+
+        s = """Choose two pass mode: \n"""
+        for key in two_pass_dict.keys():
+            s += f"""({key}) {two_pass_dict[key]}\n"""
+        io.log_info(s)
+        self.two_pass_mode = io.input_int ("", 0, valid_list=two_pass_dict.keys() )
+
         self.pre_sharpen_power = np.clip (io.input_int ("Choose pre_sharpen power", 0, help_message="Can enhance results by pre sharping before feeding it to the network.", add_info="0..100" ), 0, 200)
         
         if self.is_morphable:
@@ -299,7 +306,7 @@ class MergerConfigMasked(MergerConfig):
                    self.color_degrade_power == other.color_degrade_power and \
                    self.pre_sharpen_power == other.pre_sharpen_power and \
                    self.pre_sharpen_mode == other.pre_sharpen_mode and \
-                   self.two_pass == other.two_pass and \
+                   self.two_pass_mode == other.two_pass_mode and \
                    self.morph_power == other.morph_power and \
                    self.is_morphable == other.is_morphable and \
                    self.debug_mode == other.debug_mode 
@@ -340,7 +347,7 @@ class MergerConfigMasked(MergerConfig):
         
         r += f"""pre_sharpen_power: {self.pre_sharpen_power}\n"""
         r += f"""pre_sharpen_mode: {pre_sharpen_dict[self.pre_sharpen_mode]}\n"""
-        r += f"""two_pass: {self.two_pass}\n"""
+        r += f"""two_pass: {self.two_pass_mode}\n"""
         r += f"""morph_power: {self.morph_power}\n"""
         #r += f"""is_morphable: {self.is_morphable}\n"""
         r += f"""debug_mode: {self.debug_mode}\n"""

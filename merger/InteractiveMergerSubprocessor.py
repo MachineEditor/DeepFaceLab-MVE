@@ -335,7 +335,7 @@ class InteractiveMergerSubprocessor(Subprocessor):
                     '8' : lambda cfg,shift_pressed: cfg.add_pre_sharpen_power(-1),
                     '(' : lambda cfg,shift_pressed: cfg.add_morph_power(1),
                     '*' : lambda cfg,shift_pressed: cfg.add_morph_power(-1),
-                    'b' : lambda cfg,shift_pressed: cfg.toggle_two_pass(),
+                    'b' : lambda cfg,shift_pressed: cfg.toggle_two_pass_mode(),
                     '7' : lambda cfg,shift_pressed: cfg.toggle_debug_mode(),
                     }
             self.masked_keys = list(self.masked_keys_funcs.keys())

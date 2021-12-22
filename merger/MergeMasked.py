@@ -82,11 +82,12 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
     
     
     
-    if cfg.two_pass:
+    if cfg.two_pass_mode > 0:
         predicted_2 = predictor_func (prd_face_bgr, func_morph_factor = 1) if cfg.is_morphable else predictor_func (prd_face_bgr)
         prd_face_bgr = np.clip (predicted_2[0], 0, 1.0)
-        prd_face_mask_a_0     = np.clip (predicted_2[1], 0, 1.0)
-        prd_face_dst_mask_a_0 = np.clip (predicted_2[2], 0, 1.0)
+        if cfg.two_pass_mode > 1:
+            prd_face_mask_a_0     = np.clip (predicted_2[1], 0, 1.0)
+            prd_face_dst_mask_a_0 = np.clip (predicted_2[2], 0, 1.0)
         
     if cfg.debug_mode:
         prd_face_bgr_unchanged = prd_face_bgr.copy()
