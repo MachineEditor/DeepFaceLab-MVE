@@ -167,7 +167,7 @@ class ModelBase(object):
                 f'Do you want to read training options from file?',
                 True,
                 'Read options from configuration file instead of asking one by one each option'
-            )
+            ) if not silent_start else True
 
             # If user decides to read from external or internal conf file
             if self.read_from_conf:
