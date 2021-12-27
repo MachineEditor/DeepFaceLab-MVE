@@ -181,6 +181,7 @@ class ModelBase(object):
                 elif not self.options.keys():
                     io.log_info(f"Configuration file doesn't exist. A standard configuration file will be created.")
                 else:
+                    io.log_info(f"Using config file from {self.config_file_path}")
                     self.config_file_exists = True
 
         self.model_data_path = Path( self.get_strpath_storage_for_file('data.dat') )
