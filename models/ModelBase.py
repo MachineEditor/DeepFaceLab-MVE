@@ -710,7 +710,7 @@ class ModelBase(object):
         return str(self.config_file_path)
 
     def get_strpath_def_conf_file(self):
-        return str(Path(self.config_training_file))# / 'def_conf_file.yaml')
+        return str(Path(self.config_training_file) / 'def_conf_file.yaml')
 
     def get_summary_path(self):
         return self.get_strpath_storage_for_file('summary.txt')
