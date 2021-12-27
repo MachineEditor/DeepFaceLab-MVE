@@ -710,8 +710,12 @@ class ModelBase(object):
         return str(self.config_file_path)
 
     def get_strpath_def_conf_file(self):
-        return str(Path(self.config_training_file) / 'def_conf_file.yaml')
-
+        if Path(self.config_training_file).is_file():
+            return str(Path(self.config_training_file))
+        elif Path(self.config_training_file).is_dir(): #left for workspace bat backwards compatibility 
+            return str(Path(self.config_training_file) / 'def_conf_file.yaml')
+        else: return None
+            
     def get_summary_path(self):
         return self.get_strpath_storage_for_file('summary.txt')
 
