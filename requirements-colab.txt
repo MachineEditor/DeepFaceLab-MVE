@@ -12,3 +12,4 @@ tf2onnx==1.9.3
 tensorboardX
 crc32c
 jsonschema
+PyYAML==6.0
