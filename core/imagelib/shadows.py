@@ -43,6 +43,9 @@ def shadow_highlights_augmentation(img, seed=None):
     mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
     inverted_mask = cv2.bitwise_not(mask)
 
+    # blur inverted mask with random intensity
+    inverted_mask = cv2.GaussianBlur(inverted_mask, (0,0), sigmaX=rnd_state.randint(2, 6), borderType = cv2.BORDER_DEFAULT)
+    
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     hsv[..., 2] = cv2.multiply(hsv[..., 2], high_bright_factor)
     high_brightness = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
