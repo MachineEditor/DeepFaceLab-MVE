@@ -63,7 +63,7 @@ class SAEHDModel(ModelBase):
         default_random_noise       = self.options['random_noise']       = self.load_or_def_option('random_noise', False)
         default_random_blur        = self.options['random_blur']        = self.load_or_def_option('random_blur', False)
         default_random_jpeg        = self.options['random_jpeg']        = self.load_or_def_option('random_jpeg', False)
-        default_random_shadow      = self.options['random_shadow']      = self.load_or_def_option('random_shadow', False)
+        default_random_shadow      = self.options['random_shadow']      = self.load_or_def_option('random_shadow', 'none')
 
         default_background_power   = self.options['background_power']   = self.load_or_def_option('background_power', 0.0)
         default_true_face_power    = self.options['true_face_power']    = self.load_or_def_option('true_face_power', 0.0)
@@ -195,7 +195,7 @@ class SAEHDModel(ModelBase):
                 self.options['random_noise'] = io.input_bool("Enable random noise added to samples", default_random_noise, help_message="")
                 self.options['random_blur'] = io.input_bool("Enable random blur of samples", default_random_blur, help_message="")
                 self.options['random_jpeg'] = io.input_bool("Enable random jpeg compression of samples", default_random_jpeg, help_message="")
-                self.options['random_shadow'] = io.input_bool("Enable random shadows and highlights of samples", default_random_shadow, help_message="")
+                self.options['random_shadow'] = io.input_str('Enable random shadows and highlights of samples', default_random_shadow, ['none','src','dst','all'], help_message="Helps to create shadows in dataset. Use src if you src dataset has lack of shadows/different lighting situations; dst to help generalization; all for both reason.")
         
                 self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 10.0", help_message="Train the network in Generative Adversarial manner. Forces the neural network to learn small details of the face. Enable it only when the face is trained enough and don't disable. Typical value is 0.1"), 0.0, 10.0 )
 
@@ -296,6 +296,8 @@ class SAEHDModel(ModelBase):
         if ct_mode == 'none':
             ct_mode = None
 
+        random_shadow_src = True if self.options['random_shadow'] in ['all', 'src'] else False
+        random_shadow_dst = True if self.options['random_shadow'] in ['all', 'dst'] else False
 
         models_opt_on_gpu = False if len(devices) == 0 else self.options['models_opt_on_gpu']
         models_opt_device = nn.tf_default_device_name if models_opt_on_gpu and self.is_training else '/CPU:0'
@@ -807,6 +809,8 @@ class SAEHDModel(ModelBase):
             if ct_mode == 'fs-aug':
                 fs_aug = 'fs-aug'
 
+            
+
             channel_type = SampleProcessor.ChannelType.LAB_RAND_TRANSFORM if self.options['random_color'] else SampleProcessor.ChannelType.BGR
 
             self.set_training_data_generators ([
@@ -817,16 +821,37 @@ class SAEHDModel(ModelBase):
                                                  'random_noise': self.options['random_noise'],
                                                  'random_blur': self.options['random_blur'],
                                                  'random_jpeg': self.options['random_jpeg'],
-                                                 'random_shadow': self.options['random_shadow'],
+                                                 'random_shadow': random_shadow_src,
                                                  'random_hsv_shift_amount' : random_hsv_power,
                                                  'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,  
-                                                 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode, 'random_hsv_shift_amount' : random_hsv_power, 'random_shadow': self.options['random_shadow'], 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution
+                                                 },
+                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False,
+                                                'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,
+                                                'random_hsv_shift_amount' : random_hsv_power,
+                                                'random_shadow': random_shadow_src,
+                                                'face_type':self.face_type,
+                                                'data_format':nn.data_format,
+                                                'resolution': resolution
+                                                },
+                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False,
+                                                'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,
+                                                'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE,
+                                                'face_type':self.face_type,
+                                                'data_format':nn.data_format,
+                                                'resolution': resolution
+                                                },
+                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False,
+                                                'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,
+                                                'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES,
+                                                'face_type':self.face_type,
+                                                'data_format':nn.data_format,
+                                                'resolution': resolution
+                                                },
                                               ],
                         uniform_yaw_distribution=self.options['uniform_yaw'] or self.pretrain,
-                        generators_count=src_generators_count ),
+                        generators_count=src_generators_count 
+                    ),
 
                     SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(scale_range=[-0.15, 0.15], random_flip=random_dst_flip),
@@ -835,16 +860,36 @@ class SAEHDModel(ModelBase):
                                                  'random_noise': self.options['random_noise'],
                                                  'random_blur': self.options['random_blur'],
                                                  'random_jpeg': self.options['random_jpeg'],
-                                                 'random_shadow': self.options['random_shadow'],
+                                                 'random_shadow': random_shadow_dst,
                                                  'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug, 'random_shadow': self.options['random_shadow'], 'random_hsv_shift_amount' : random_hsv_power, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False,
+                                                'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,
+                                                'random_shadow': random_shadow_dst,
+                                                'random_hsv_shift_amount' : random_hsv_power,
+                                                'face_type':self.face_type,
+                                                'data_format':nn.data_format,
+                                                'resolution': resolution
+                                                },
+                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False,
+                                                'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,
+                                                'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE,
+                                                'face_type':self.face_type,
+                                                'data_format':nn.data_format,
+                                                'resolution': resolution
+                                                },
+                                                {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False,
+                                                'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,
+                                                'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES,
+                                                'face_type':self.face_type,
+                                                'data_format':nn.data_format,
+                                                'resolution': resolution
+                                                },
                                               ],
                         uniform_yaw_distribution=self.options['uniform_yaw'] or self.pretrain,
-                        generators_count=dst_generators_count )
-                             ])
+                        generators_count=dst_generators_count
+                    )
+            ])
 
             if self.options['retraining_samples']:
                 self.last_src_samples_loss = []

@@ -121,7 +121,13 @@
           "type": "boolean"
         },
         "random_shadow": {
-          "type": "boolean"
+          "type": "string",
+          "enum": [
+            "none",
+            "all",
+            "src",
+            "dst"
+          ]
         },
         "background_power": {
           "type": "number",
