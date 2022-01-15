@@ -77,7 +77,7 @@ def trainerThread (s2c, c2s, e,
         try:
             start_time = time.time()
 
-            save_interval_min = kwargs['saving_time']
+            save_interval_min = kwargs.get('saving_time', 25)
             tensorboard_preview_interval_min = 5
 
             if not training_data_src_path.exists():
