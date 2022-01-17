@@ -59,7 +59,7 @@ class AMPModel(ModelBase):
         default_random_color       = self.options['random_color']       = self.load_or_def_option('random_color', False)
         default_clipgrad           = self.options['clipgrad']           = self.load_or_def_option('clipgrad', False)
         default_usefp16            = self.options['use_fp16']           = self.load_or_def_option('use_fp16', False)
-        default_cpu_cap            = self.options['cpu_cap']            = self.load_or_def_option('default_cpu_cap', 8)
+        default_cpu_cap            = self.options['cpu_cap']            = self.load_or_def_option('cpu_cap', 8)
         default_preview_samples    = self.options['preview_samples']    = self.load_or_def_option('preview_samples', 4)
         default_full_preview       = self.options['force_full_preview'] = self.load_or_def_option('force_full_preview', False)
         default_lr                 = self.options['lr']                 = self.load_or_def_option('lr', 5e-5)
