@@ -72,13 +72,12 @@ def trainerThread (s2c, c2s, e,
                     tensorboard_dir=None,
                     start_tensorboard=False,
                     config_training_file=None,
-                    dump_ckpt=False,
                     **kwargs):
     while True:
         try:
             start_time = time.time()
 
-            save_interval_min = 15
+            save_interval_min = kwargs.get('saving_time', 25)
             tensorboard_preview_interval_min = 5
 
             if not training_data_src_path.exists():
