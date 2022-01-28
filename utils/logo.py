@@ -19,7 +19,7 @@ def print_community_info():
     print('')
 
 def print_discord_info():
-    print ('Join us in discord, inivite link https://discord.gg/BSnt5Fv')
+    print ('Join us in discord, invite link https://discord.gg/KBQB8x9K5c')
 
 def print_commercial_contact():
     print ('Commercial inquires send to ognjen@syntheticfactory.com (shared with the group)')
