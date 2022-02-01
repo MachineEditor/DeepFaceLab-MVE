@@ -537,6 +537,10 @@ class ModelBase(object):
                 data = yaml.safe_load(file)
                 if not keep_nested:
                     data = self.__iterate_read_dict(data)
+                import pprint
+                pp = pprint.PrettyPrinter()
+                pp.pprint(data)
+                input()
                 if validation:
                     validate(data, yaml.safe_load(schema))
         except FileNotFoundError:
@@ -725,6 +729,19 @@ class ModelBase(object):
     def get_summary_text(self):
         visible_options = self.options.copy()
         visible_options.update(self.options_show_override)
+
+        if all(any(i in j for j in visible_options.keys()) for i in ['random_shadow_src', 'random_shadow_dst']):
+            if isinstance(visible_options['random_shadow_src'], list):
+                for opt in visible_options['random_shadow_src']:
+                    if 'enabled' in opt.keys():
+                        visible_options['random_shadow_src'] = opt['enabled']
+                        break
+
+            if isinstance(visible_options['random_shadow_dst'], list):
+                for opt in visible_options['random_shadow_dst']:
+                    if 'enabled' in opt.keys():
+                        visible_options['random_shadow_dst'] = opt['enabled']
+                        break
 
         ###Generate text summary of model hyperparameters
         #Find the longest key name and value string. Used as column widths.

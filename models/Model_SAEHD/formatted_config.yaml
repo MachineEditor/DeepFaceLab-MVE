@@ -50,10 +50,19 @@ augmentations:
   random_noise: false
   random_blur: false
   random_jpeg: false
-  random_shadow: none
+  random_shadow_src:
+  - enabled: false
+  - shadow_low: 0.2
+  - shadow_high: 0.6
+  - high_bright_low: 1
+  - high_bright_high: 3
+  random_shadow_dst:
+  - enabled: false
+  - shadow_low: 0.2
+  - shadow_high: 0.6
+  - high_bright_low: 1
+  - high_bright_high: 3
 color_augs:
   random_hsv_power: 0.0
   ct_mode: none
   random_color: false
-  
-  
