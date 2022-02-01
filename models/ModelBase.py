@@ -537,10 +537,6 @@ class ModelBase(object):
                 data = yaml.safe_load(file)
                 if not keep_nested:
                     data = self.__iterate_read_dict(data)
-                import pprint
-                pp = pprint.PrettyPrinter()
-                pp.pprint(data)
-                input()
                 if validation:
                     validate(data, yaml.safe_load(schema))
         except FileNotFoundError:
