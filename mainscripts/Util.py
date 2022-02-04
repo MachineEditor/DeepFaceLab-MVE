@@ -8,10 +8,14 @@ from facelib import LandmarksProcessor, FaceType
 from core.interact import interact as io
 from core import pathex
 from core.cv2ex import *
-
+from samplelib import PackedFaceset
 
 def save_faceset_metadata_folder(input_path):
     input_path = Path(input_path)
+
+    if PackedFaceset.path_contains(input_path):
+        io.log_info (f'\n{input_path} contains packed faceset! Unpack it first.\n')
+        return
 
     metadata_filepath = input_path / 'meta.dat'
 
@@ -41,6 +45,10 @@ def save_faceset_metadata_folder(input_path):
 
 def restore_faceset_metadata_folder(input_path):
     input_path = Path(input_path)
+
+    if PackedFaceset.path_contains(input_path):
+        io.log_info (f'\n{input_path} contains packed faceset! Unpack it first.\n')
+        return
 
     metadata_filepath = input_path / 'meta.dat'
     io.log_info (f"Restoring metadata from {str(metadata_filepath)}.\r\n")
@@ -78,6 +86,11 @@ def restore_faceset_metadata_folder(input_path):
     metadata_filepath.unlink()
 
 def add_landmarks_debug_images(input_path):
+
+    if PackedFaceset.path_contains(input_path):
+        io.log_info (f'\n{input_path} contains packed faceset! Unpack it first.\n')
+        return
+
     io.log_info ("Adding landmarks debug images...")
 
     for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path), "Processing"):
@@ -107,6 +120,11 @@ def add_landmarks_debug_images(input_path):
             cv2_imwrite(output_file, img, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )
 
 def recover_original_aligned_filename(input_path):
+
+    if PackedFaceset.path_contains(input_path):
+        io.log_info (f'\n{input_path} contains packed faceset! Unpack it first.\n')
+        return
+
     io.log_info ("Recovering original aligned filename...")
 
     files = []
