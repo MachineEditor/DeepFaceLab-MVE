@@ -8,6 +8,7 @@ from core.interact import interact as io
 from core.joblib import Subprocessor
 from DFLIMG import *
 from facelib import FaceType, LandmarksProcessor
+from samplelib import PackedFaceset
 
 
 class FacesetResizerSubprocessor(Subprocessor):
@@ -164,7 +165,11 @@ class FacesetResizerSubprocessor(Subprocessor):
 
             return (0, filepath, None)
 
-def process_folder ( dirpath):
+def process_folder (dirpath):
+
+    if PackedFaceset.path_contains(dirpath):
+        io.log_info (f'\n{dirpath} contains packed faceset! Unpack it first.\n')
+        return
     
     image_size = io.input_int(f"New image size", 512, valid_range=[128,2048])
     
