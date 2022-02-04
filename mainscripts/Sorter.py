@@ -1,24 +1,21 @@
 import math
 import multiprocessing
 import operator
-import os
-import sys
 import tempfile
 from functools import cmp_to_key
 from pathlib import Path
 
 import cv2
 import numpy as np
-from numpy import linalg as npla
 
-from core import imagelib, mathlib, pathex
+from core import mathlib, pathex
 from core.cv2ex import *
 from core.imagelib import estimate_sharpness
 from core.interact import interact as io
 from core.joblib import Subprocessor
-from core.leras import nn
 from DFLIMG import *
 from facelib import LandmarksProcessor
+from samplelib import PackedFaceset
 
 
 class BlurEstimatorSubprocessor(Subprocessor):
@@ -915,6 +912,10 @@ sort_func_methods = {
 
 def main (input_path, sort_by_method=None):
     io.log_info ("Running sort tool.\r\n")
+
+    if PackedFaceset.path_contains(input_path):
+        io.log_info (f'\n{input_path} contains packed faceset! Unpack it first.\n')
+        return
 
     if sort_by_method is None:
         io.log_info(f"Choose sorting method:")
