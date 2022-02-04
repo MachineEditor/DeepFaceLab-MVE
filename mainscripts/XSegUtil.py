@@ -11,7 +11,14 @@ from core.interact import interact as io
 from core.leras import nn
 from DFLIMG import *
 from facelib import XSegNet, LandmarksProcessor, FaceType
+from samplelib import PackedFaceset
 import pickle
+
+
+def is_packed(input_path):
+    if PackedFaceset.path_contains(input_path):
+        io.log_info (f'\n{input_path} contains packed faceset! Unpack it first.\n')
+        return True
 
 def apply_xseg(input_path, model_path):
     if not input_path.exists():
@@ -19,6 +26,8 @@ def apply_xseg(input_path, model_path):
 
     if not model_path.exists():
         raise ValueError(f'{model_path} not found. Please ensure it exists.')
+
+    if is_packed(input_path) : return
         
     face_type = None
     
@@ -100,12 +109,12 @@ def apply_xseg(input_path, model_path):
         mask[mask >= 0.5]=1    
         dflimg.set_xseg_mask(mask)
         dflimg.save()
-
-
         
 def fetch_xseg(input_path):
     if not input_path.exists():
         raise ValueError(f'{input_path} not found. Please ensure it exists.')
+
+    if is_packed(input_path) : return
     
     output_path = input_path.parent / (input_path.name + '_xseg')
     output_path.mkdir(exist_ok=True, parents=True)
@@ -134,11 +143,12 @@ def fetch_xseg(input_path):
     if is_delete:
         for filepath in files_copied:
             Path(filepath).unlink()
-            
-    
+               
 def remove_xseg(input_path):
     if not input_path.exists():
         raise ValueError(f'{input_path} not found. Please ensure it exists.')
+
+    if is_packed(input_path) : return
     
     io.log_info(f'Processing folder {input_path}')
     io.log_info('!!! WARNING : APPLIED XSEG MASKS WILL BE REMOVED FROM THE FRAMES !!!')
@@ -164,6 +174,8 @@ def remove_xseg(input_path):
 def remove_xseg_labels(input_path):
     if not input_path.exists():
         raise ValueError(f'{input_path} not found. Please ensure it exists.')
+
+    if is_packed(input_path) : return
     
     io.log_info(f'Processing folder {input_path}')
     io.log_info('!!! WARNING : LABELED XSEG POLYGONS WILL BE REMOVED FROM THE FRAMES !!!')
