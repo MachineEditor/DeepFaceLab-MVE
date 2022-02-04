@@ -7,6 +7,7 @@ from core.joblib import Subprocessor
 from core.leras import nn
 from core import pathex
 from core.cv2ex import *
+from samplelib import PackedFaceset
 
 
 class FacesetEnhancerSubprocessor(Subprocessor):
@@ -123,6 +124,11 @@ class FacesetEnhancerSubprocessor(Subprocessor):
             return (0, filepath, None)
 
 def process_folder ( dirpath, cpu_only=False, force_gpu_idxs=None ):
+
+    if PackedFaceset.path_contains(dirpath):
+        io.log_info (f'\n{dirpath} contains packed faceset! Unpack it first.\n')
+        return
+
     device_config = nn.DeviceConfig.GPUIndexes( force_gpu_idxs or nn.ask_choose_device_idxs(suggest_all_gpu=True) ) \
                     if not cpu_only else nn.DeviceConfig.CPU()
 
