@@ -283,6 +283,8 @@ class MergerConfigMasked(MergerConfig):
             self.image_denoise_power = np.clip ( io.input_int ("Choose image degrade by denoise power", 0, add_info="0..500"), 0, 500)
             self.bicubic_degrade_power = np.clip ( io.input_int ("Choose image degrade by bicubic rescale power", 0, add_info="0..100"), 0, 100)
             self.color_degrade_power = np.clip (  io.input_int ("Degrade color power of final image", 0, add_info="0..100"), 0, 100)
+        
+            self.debug_mode = io.input_bool("Debug mode?", False, help_message="Shows raw model output in the left and model input (dst face) in the left")
 
         io.log_info ("")
 
@@ -345,10 +347,13 @@ class MergerConfigMasked(MergerConfig):
                   f"""bicubic_degrade_power: {self.bicubic_degrade_power}\n"""
                   f"""color_degrade_power: {self.color_degrade_power}\n""")
         
-        r += f"""pre_sharpen_power: {self.pre_sharpen_power}\n"""
+       
         r += f"""pre_sharpen_mode: {pre_sharpen_dict[self.pre_sharpen_mode]}\n"""
-        r += f"""two_pass: {self.two_pass_mode}\n"""
-        r += f"""morph_power: {self.morph_power}\n"""
+        r += f"""pre_sharpen_power: {self.pre_sharpen_power}\n"""
+        
+        r += f"""two_pass-mode: {two_pass_dict[self.two_pass_mode]}\n"""
+        if self.is_morphable:
+            r += f"""morph_power: {self.morph_power}\n"""
         #r += f"""is_morphable: {self.is_morphable}\n"""
         r += f"""debug_mode: {self.debug_mode}\n"""
         
