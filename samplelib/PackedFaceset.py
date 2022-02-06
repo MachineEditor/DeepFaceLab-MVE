@@ -168,6 +168,7 @@ class PackedFaceset():
 
     @staticmethod
     def path_contains(samples_path):
+        samples_path = Path(samples_path)
         return (samples_path / packed_faceset_filename).exists() or (samples_path / packed_faceset_filename_zip).exists()
     
     @staticmethod
