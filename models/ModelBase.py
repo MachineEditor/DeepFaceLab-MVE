@@ -331,7 +331,8 @@ class ModelBase(object):
         return def_value
 
     def ask_override(self):
-        return self.is_training and self.iter != 0 and io.input_in_time ("Press enter in 2 seconds to override model settings.", 5 if io.is_colab() else 2 )
+        time_delay = 5 if io.is_colab() else 2
+        return self.is_training and self.iter != 0 and io.input_in_time (f"Press enter in {time_delay} seconds to override model settings.", time_delay )
 
     def ask_session_name(self, default_value=""):
         default_session_name = self.options['session_name'] = self.load_or_def_option('session_name', default_value)
