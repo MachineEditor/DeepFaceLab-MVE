@@ -12,6 +12,7 @@ from facelib import FaceType, LandmarksProcessor
 is_windows = sys.platform[0:3] == 'win'
 xseg_input_size = 256
 
+
 def MergeMaskedFace (predictor_func, predictor_input_shape,
                      face_enhancer_func,
                      xseg_256_extract_func,
@@ -359,11 +360,13 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
         
         
     if 'raw' not in cfg.mode and cfg.debug_mode:
-        ph, pw = predictor_input_bgr.shape[:2]
         oh, ow = out_img.shape[:2]
-        out_img[oh-ph:,ow-pw:] =  predictor_input_bgr
+        debug_imgs_size = int(oh / 4)
+        # ph, pw = predictor_input_bgr.shape[:2]
+        oh, ow = out_img.shape[:2]
+        out_img[oh-debug_imgs_size:,ow-debug_imgs_size:] = cv2.resize(predictor_input_bgr, (debug_imgs_size, debug_imgs_size))
         ph, pw = prd_face_bgr_unchanged.shape[:2]
-        out_img[oh-ph:,0:pw] =  prd_face_bgr_unchanged
+        out_img[oh-debug_imgs_size:,0:debug_imgs_size] = cv2.resize(prd_face_bgr_unchanged, (debug_imgs_size, debug_imgs_size))
     
         
     return out_img, out_merging_mask_a
