@@ -63,7 +63,34 @@ class SAEHDModel(ModelBase):
         default_random_noise       = self.options['random_noise']       = self.load_or_def_option('random_noise', False)
         default_random_blur        = self.options['random_blur']        = self.load_or_def_option('random_blur', False)
         default_random_jpeg        = self.options['random_jpeg']        = self.load_or_def_option('random_jpeg', False)
-        default_random_shadow      = self.options['random_shadow']      = self.load_or_def_option('random_shadow', 'none')
+
+        random_shadow_src_options = self.options['random_shadow_src']   = self.load_or_def_option('random_shadow_src', False)
+        random_shadow_dst_options = self.options['random_shadow_dst']   = self.load_or_def_option('random_shadow_dst', False)
+
+        if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
+
+            if isinstance(random_shadow_src_options, list) and isinstance(random_shadow_dst_options, list):
+                for opt in random_shadow_src_options:
+                    if 'enabled' in opt.keys():
+                        random_shadow_src = opt['enabled']
+                for opt in random_shadow_dst_options:
+                    if 'enabled' in opt.keys():
+                        random_shadow_dst = opt['enabled']
+
+                if random_shadow_src and random_shadow_dst:
+                    self.options['random_shadow'] = 'all'
+                elif random_shadow_src:
+                    self.options['random_shadow'] = 'src'
+                elif random_shadow_dst:
+                    self.options['random_shadow'] = 'dst'
+                else:
+                    self.options['random_shadow'] = 'none'
+                default_random_shadow = self.load_or_def_option('random_shadow', 'none')
+            else:
+                default_random_shadow = self.options['random_shadow'] = self.load_or_def_option('random_shadow', 'none')
+            
+            del self.options['random_shadow_src']
+            del self.options['random_shadow_dst']
 
         default_background_power   = self.options['background_power']   = self.load_or_def_option('background_power', 0.0)
         default_true_face_power    = self.options['true_face_power']    = self.load_or_def_option('true_face_power', 0.0)
@@ -296,8 +323,17 @@ class SAEHDModel(ModelBase):
         if ct_mode == 'none':
             ct_mode = None
 
-        random_shadow_src = True if self.options['random_shadow'] in ['all', 'src'] else False
-        random_shadow_dst = True if self.options['random_shadow'] in ['all', 'dst'] else False
+        # If conf file is not used or doesn't exist
+        if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
+            random_shadow_src = True if self.options['random_shadow'] in ['all', 'src'] else False
+            random_shadow_dst = True if self.options['random_shadow'] in ['all', 'dst'] else False
+
+            # it means is the first time we create the model using conf file
+            if not self.config_file_exists and self.read_from_conf:
+                del self.options['random_shadow']
+        else:
+            random_shadow_src = self.options['random_shadow_src']
+            random_shadow_dst = self.options['random_shadow_dst']
 
         models_opt_on_gpu = False if len(devices) == 0 else self.options['models_opt_on_gpu']
         models_opt_device = nn.tf_default_device_name if models_opt_on_gpu and self.is_training else '/CPU:0'

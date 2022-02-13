@@ -727,6 +727,19 @@ class ModelBase(object):
         visible_options = self.options.copy()
         visible_options.update(self.options_show_override)
 
+        if all(any(i in j for j in visible_options.keys()) for i in ['random_shadow_src', 'random_shadow_dst']):
+            if isinstance(visible_options['random_shadow_src'], list):
+                for opt in visible_options['random_shadow_src']:
+                    if 'enabled' in opt.keys():
+                        visible_options['random_shadow_src'] = opt['enabled']
+                        break
+
+            if isinstance(visible_options['random_shadow_dst'], list):
+                for opt in visible_options['random_shadow_dst']:
+                    if 'enabled' in opt.keys():
+                        visible_options['random_shadow_dst'] = opt['enabled']
+                        break
+
         ###Generate text summary of model hyperparameters
         #Find the longest key name and value string. Used as column widths.
         width_name = max([len(k) for k in visible_options.keys()] + [17]) + 1 # Single space buffer to left edge. Minimum of 17, the length of the longest static string used "Current iteration"

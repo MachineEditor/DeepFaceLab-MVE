@@ -51,7 +51,34 @@ class AMPModel(ModelBase):
         default_random_noise       = self.options['random_noise']       = self.load_or_def_option('random_noise', False)
         default_random_blur        = self.options['random_blur']        = self.load_or_def_option('random_blur', False)
         default_random_jpeg        = self.options['random_jpeg']        = self.load_or_def_option('random_jpeg', False)
-        default_random_shadow      = self.options['random_shadow']      = self.load_or_def_option('random_shadow', False)
+        
+        random_shadow_src_options = self.options['random_shadow_src']   = self.load_or_def_option('random_shadow_src', False)
+        random_shadow_dst_options = self.options['random_shadow_dst']   = self.load_or_def_option('random_shadow_dst', False)
+
+        if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
+
+            if isinstance(random_shadow_src_options, list) and isinstance(random_shadow_dst_options, list):
+                for opt in random_shadow_src_options:
+                    if 'enabled' in opt.keys():
+                        random_shadow_src = opt['enabled']
+                for opt in random_shadow_dst_options:
+                    if 'enabled' in opt.keys():
+                        random_shadow_dst = opt['enabled']
+
+                if random_shadow_src and random_shadow_dst:
+                    self.options['random_shadow'] = 'all'
+                elif random_shadow_src:
+                    self.options['random_shadow'] = 'src'
+                elif random_shadow_dst:
+                    self.options['random_shadow'] = 'dst'
+                else:
+                    self.options['random_shadow'] = 'none'
+                default_random_shadow = self.load_or_def_option('random_shadow', 'none')
+            else:
+                default_random_shadow = self.options['random_shadow'] = self.load_or_def_option('random_shadow', 'none')
+
+            del self.options['random_shadow_src']
+            del self.options['random_shadow_dst']
 
         # Uncomment it just if you want to impelement other loss functions
         default_background_power   = self.options['background_power']   = self.load_or_def_option('background_power', 0.0)
@@ -154,7 +181,7 @@ class AMPModel(ModelBase):
                 self.options['random_noise'] = io.input_bool("Enable random noise added to samples", default_random_noise, help_message="")
                 self.options['random_blur'] = io.input_bool("Enable random blur of samples", default_random_blur, help_message="")
                 self.options['random_jpeg'] = io.input_bool("Enable random jpeg compression of samples", default_random_jpeg, help_message="")
-                self.options['random_shadow'] = io.input_bool("Enable random shadows and highlights of samples", default_random_shadow, help_message="")
+                self.options['random_shadow'] = io.input_str('Enable random shadows and highlights of samples', default_random_shadow, ['none','src','dst','all'], help_message="Helps to create shadows in dataset. Use src if you src dataset has lack of shadows/different lighting situations; dst to help generalization; all for both reason.")
                 self.options['random_hsv_power'] = np.clip ( io.input_number ("Random hue/saturation/light intensity", default_random_hsv_power, add_info="0.0 .. 0.3", help_message="Random hue/saturation/light intensity applied to the src face set only at the input of the neural network. Stabilizes color perturbations during face swapping. Reduces the quality of the color transfer by selecting the closest one in the src faceset. Thus the src faceset must be diverse enough. Typical fine value is 0.05"), 0.0, 0.3 )
 
                 self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 5.0", help_message="Forces the neural network to learn small details of the face. Enable it only when the face is trained enough with random_warp(off), and don't disable. The higher the value, the higher the chances of artifacts. Typical fine value is 0.1"), 0.0, 5.0 )
@@ -751,6 +778,18 @@ class AMPModel(ModelBase):
             if ct_mode is not None:
                 src_generators_count = int(src_generators_count * 1.5)
 
+            # If conf file is not used or doesn't exist
+            if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
+                random_shadow_src = True if self.options['random_shadow'] in ['all', 'src'] else False
+                random_shadow_dst = True if self.options['random_shadow'] in ['all', 'dst'] else False
+
+                # it means is the first time we create the model using conf file
+                if not self.config_file_exists and self.read_from_conf:
+                    del self.options['random_shadow']
+            else:
+                random_shadow_src = self.options['random_shadow_src']
+                random_shadow_dst = self.options['random_shadow_dst']
+
             fs_aug = None
             if ct_mode == 'fs-aug':
                 fs_aug = 'fs-aug'
@@ -765,12 +804,12 @@ class AMPModel(ModelBase):
                                                  'random_noise': self.options['random_noise'],
                                                  'random_blur': self.options['random_blur'],
                                                  'random_jpeg': self.options['random_jpeg'],
-                                                 'random_shadow': self.options['random_shadow'],
+                                                 'random_shadow': random_shadow_src,
                                                  'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,
                                                  'random_hsv_shift_amount' : random_hsv_power,
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False, 'random_hsv_shift_amount' : random_hsv_power,
-                                                'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode, 'random_shadow': self.options['random_shadow'],
+                                                'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode, 'random_shadow': random_shadow_src,
                                                 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
@@ -785,10 +824,10 @@ class AMPModel(ModelBase):
                                                  'random_noise': self.options['random_noise'],
                                                  'random_blur': self.options['random_blur'],
                                                  'random_jpeg': self.options['random_jpeg'],
-                                                 'random_shadow': self.options['random_shadow'],
+                                                 'random_shadow': random_shadow_dst,
                                                  'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug, 'random_shadow': self.options['random_shadow'],   'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug, 'random_shadow': random_shadow_dst,   'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                               ],

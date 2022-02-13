@@ -4,11 +4,9 @@ import cv2
 
 # https://github.com/OsamaMazhar/Random-Shadows-Highlights
 # img is in format np 0-1, float
-def shadow_highlights_augmentation(img, seed=None):
+def shadow_highlights_augmentation(img, high_ratio=(1, 2.5), low_ratio=(0.2, 0.6), seed=None):
     rnd_state = np.random.RandomState (seed)
 
-    high_ratio = (1, 2.5)
-    low_ratio = (0.2, 0.6)
     left_low_ratio = (0.2, 0.6)
     left_high_ratio = (0, 0.2)
     right_low_ratio = (0.3, 0.6)

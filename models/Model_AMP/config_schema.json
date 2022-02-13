@@ -122,8 +122,42 @@
         "random_jpeg": {
           "type": "boolean"
         },
+        "random_shadow_src": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "enabled": {"type": "boolean"},
+              "shadow_low": {"type": "number"},
+              "shadow_high": {"type": "number"},
+              "high_bright_low": {"type": "number"},
+              "high_bright_high": {"type": "number"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "random_shadow_dst": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "enabled": {"type": "boolean"},
+              "shadow_low": {"type": "number"},
+              "shadow_high": {"type": "number"},
+              "high_bright_low": {"type": "number"},
+              "high_bright_high": {"type": "number"}
+            },
+            "additionalProperties": false
+          }
+        },
         "random_shadow": {
-          "type": "boolean"
+          "type": "string",
+          "enum": [
+            "none",
+            "all",
+            "src",
+            "dst"
+          ]
         },
         "random_hsv_power": {
           "type": "number",
