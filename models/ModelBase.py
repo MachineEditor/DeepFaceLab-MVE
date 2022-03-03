@@ -201,8 +201,12 @@ class ModelBase(object):
             io.log_info ("\nModel first run.")
 
         if silent_start:
-            self.device_config = nn.DeviceConfig.BestGPU()
-            io.log_info (f"Silent start: choosed device {'CPU' if self.device_config.cpu_only else self.device_config.devices[0].name}")
+            if force_gpu_idxs is not None:
+                self.device_config = nn.DeviceConfig.GPUIndexes(force_gpu_idxs) if not cpu_only else nn.DeviceConfig.CPU()
+                io.log_info (f"Silent start: choosed device{'s' if len(force_gpu_idxs) > 0 else ''} {'CPU' if self.device_config.cpu_only else [device.name for device in self.device_config.devices]}")
+            else:
+                self.device_config = nn.DeviceConfig.BestGPU()
+                io.log_info (f"Silent start: choosed device {'CPU' if self.device_config.cpu_only else self.device_config.devices[0].name}")
         else:
             self.device_config = nn.DeviceConfig.GPUIndexes( force_gpu_idxs or nn.ask_choose_device_idxs(suggest_best_multi_gpu=True)) \
                                 if not cpu_only else nn.DeviceConfig.CPU()
