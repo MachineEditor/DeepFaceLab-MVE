@@ -196,7 +196,7 @@ def trainerThread (s2c, c2s, e,
 
                     if not is_reached_goal:
 
-                        if model.get_iter() == 0:
+                        if model.is_first_run():
                             io.log_info("")
                             io.log_info(
                                 "Trying to do the first iteration. If an error occurs, reduce the model parameters.")
@@ -244,7 +244,7 @@ def trainerThread (s2c, c2s, e,
                         loss_entry = loss_history[-1]
                         log_step(iter, iter_time, loss_entry[0], loss_entry[1] if len(loss_entry) > 1 else None)
 
-                        if model.get_iter() == 1:
+                        if model.get_iter() == 1 and not model.reset_training:
                             model_save()
 
                         if model.get_target_iter() != 0 and model.is_reached_iter_goal():
