@@ -199,6 +199,16 @@ class ModelBase(object):
 
         if self.is_first_run():
             io.log_info ("\nModel first run.")
+        else:
+            if not silent_start:
+                self.reset_training = io.input_bool(
+                    'Do you want to reset iterations counter and loss graph?',
+                    False,
+                    "It resets model iterations counter and loss graph, but your model won't lose training progress. "
+                    "Useful if you reuse always the same model for multiple fakes"
+                )
+                if self.reset_training:
+                    self.set_iter(0)
 
         if silent_start:
             if force_gpu_idxs is not None:
@@ -678,7 +688,7 @@ class ModelBase(object):
         nn.close_session()
 
     def is_first_run(self):
-        return self.iter == 0
+        return self.iter == 0 and not self.reset_training
 
     def is_debug(self):
         return self.debug

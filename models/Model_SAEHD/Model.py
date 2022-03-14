@@ -1002,7 +1002,7 @@ class SAEHDModel(ModelBase):
 
     #override
     def onTrainOneIter(self):
-        if self.get_iter() == 0 and not self.pretrain and not self.pretrain_just_disabled:
+        if self.is_first_run() and not self.pretrain and not self.pretrain_just_disabled:
             io.log_info('You are training the model from scratch. It is strongly recommended to use a pretrained model to speed up the training and improve the quality.\n')
 
         ( (warped_src, target_src, target_srcm, target_srcm_em), \
