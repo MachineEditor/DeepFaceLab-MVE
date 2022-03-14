@@ -52,6 +52,7 @@ class ModelBase(object):
         self.config_file_path = None
         self.no_preview = no_preview
         self.debug = debug
+        self.reset_training = False
 
         self.model_class_name = model_class_name = Path(inspect.getmodule(self).__file__).parent.name.rsplit("_", 1)[1]
 
