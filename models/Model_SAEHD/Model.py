@@ -850,7 +850,7 @@ class SAEHDModel(ModelBase):
             channel_type = SampleProcessor.ChannelType.LAB_RAND_TRANSFORM if self.options['random_color'] else SampleProcessor.ChannelType.BGR
 
             self.set_training_data_generators ([
-                    SampleGeneratorFace(training_data_src_path, random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
+                    SampleGeneratorFace(training_data_src_path, pak_name=self.src_pak_name, random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(scale_range=[-0.15, 0.15], random_flip=random_src_flip),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp,
                                                  'random_downsample': self.options['random_downsample'],
@@ -889,7 +889,7 @@ class SAEHDModel(ModelBase):
                         generators_count=src_generators_count 
                     ),
 
-                    SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
+                    SampleGeneratorFace(training_data_dst_path, pak_name=self.dst_pak_name, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(scale_range=[-0.15, 0.15], random_flip=random_dst_flip),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp,
                                                  'random_downsample': self.options['random_downsample'],

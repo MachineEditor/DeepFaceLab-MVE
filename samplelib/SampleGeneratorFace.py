@@ -21,7 +21,10 @@ output_sample_types = [
                       ]
 '''
 class SampleGeneratorFace(SampleGeneratorBase):
-    def __init__ (self, samples_path, debug=False, batch_size=1,
+    def __init__ (self, samples_path,
+                        pak_name=None,
+                        debug=False,
+                        batch_size=1,
                         random_ct_samples_path=None,
                         sample_process_options=SampleProcessor.Options(),
                         output_sample_types=[],
@@ -40,7 +43,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
         else:
             self.generators_count = max(1, generators_count)
 
-        samples = SampleLoader.load (SampleType.FACE, samples_path)
+        samples = SampleLoader.load (SampleType.FACE, samples_path, pak_name=pak_name)
         self.samples_len = len(samples)
         
         if self.samples_len == 0:
@@ -78,7 +81,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
             index_host = mplib.IndexHost(self.samples_len)
 
         if random_ct_samples_path is not None:
-            ct_samples = SampleLoader.load (SampleType.FACE, random_ct_samples_path)
+            ct_samples = SampleLoader.load (SampleType.FACE, random_ct_samples_path, pak_name=pak_name)
             ct_index_host = mplib.IndexHost( len(ct_samples) )
         else:
             ct_samples = None

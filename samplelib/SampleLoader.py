@@ -33,7 +33,7 @@ class SampleLoader:
         return len(list(persons_name_idxs.keys()))
 
     @staticmethod
-    def load(sample_type, samples_path, subdirs=False):
+    def load(sample_type, samples_path, subdirs=False, pak_name=None):
         """
         Return MPSharedList of samples
         """
@@ -51,7 +51,7 @@ class SampleLoader:
         elif          sample_type == SampleType.FACE:
             if  samples[sample_type] is None:
                 try:
-                    result = samplelib.PackedFaceset.load(samples_path)
+                    result = samplelib.PackedFaceset.load(samples_path, pak_name)
                 except:
                     io.log_err(f"Error occured while loading samplelib.PackedFaceset.load {str(samples_dat_path)}, {traceback.format_exc()}")
 
