@@ -261,6 +261,12 @@
           "type": "number",
           "minimum": 0.0,
           "maximum": 0.5
+        },
+        "src_pak_name": {
+          "type": "string"
+        },
+        "dst_pak_name": {
+          "type": "string"
         }
       },
       "required": [

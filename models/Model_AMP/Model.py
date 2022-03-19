@@ -796,8 +796,18 @@ class AMPModel(ModelBase):
 
             channel_type = SampleProcessor.ChannelType.LAB_RAND_TRANSFORM if self.options['random_color'] else SampleProcessor.ChannelType.BGR
 
+            # Check for pak names
+            # give priority to pak names in configuration file
+            if self.read_from_conf and self.config_file_exists:
+                conf_src_pak_name = self.options.get('src_pak_name', None)
+                conf_dst_pak_name = self.options.get('dst_pak_name', None)
+                if conf_src_pak_name is not None:
+                    self.src_pak_name = conf_src_pak_name
+                if conf_dst_pak_name is not None:
+                    self.dst_pak_name = conf_dst_pak_name
+
             self.set_training_data_generators ([
-                    SampleGeneratorFace(training_data_src_path, random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
+                    SampleGeneratorFace(training_data_src_path, pak_name=self.src_pak_name, random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(scale_range=[-0.125, 0.125], random_flip=self.random_src_flip),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp,
                                                  'random_downsample': self.options['random_downsample'],
@@ -817,7 +827,7 @@ class AMPModel(ModelBase):
                         uniform_yaw_distribution=self.options['uniform_yaw'], #or self.pretrain
                         generators_count=src_generators_count ),
 
-                    SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
+                    SampleGeneratorFace(training_data_dst_path, pak_name=self.src_pak_name, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(scale_range=[-0.125, 0.125], random_flip=self.random_dst_flip),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp,
                                                  'random_downsample': self.options['random_downsample'],

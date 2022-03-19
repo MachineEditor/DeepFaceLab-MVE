@@ -241,8 +241,18 @@ class QModel(ModelBase):
             src_generators_count = cpu_count // 2
             dst_generators_count = cpu_count // 2
 
+            # Check for pak names
+            # give priority to pak names in configuration file
+            if self.read_from_conf and self.config_file_exists:
+                conf_src_pak_name = self.options.get('src_pak_name', None)
+                conf_dst_pak_name = self.options.get('dst_pak_name', None)
+                if conf_src_pak_name is not None:
+                    self.src_pak_name = conf_src_pak_name
+                if conf_dst_pak_name is not None:
+                    self.dst_pak_name = conf_dst_pak_name
+
             self.set_training_data_generators ([
-                    SampleGeneratorFace(training_data_src_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
+                    SampleGeneratorFace(training_data_src_path, pak_name=self.src_pak_name, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(random_flip=True if self.pretrain else False),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':True,  'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
@@ -250,7 +260,7 @@ class QModel(ModelBase):
                                               ],
                         generators_count=src_generators_count ),
 
-                    SampleGeneratorFace(training_data_dst_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
+                    SampleGeneratorFace(training_data_dst_path, pak_name=self.dst_pak_name, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(random_flip=True if self.pretrain else False),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':True,  'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
@@ -342,6 +352,11 @@ class QModel(ModelBase):
     #override
     def get_config_schema_path(self):
         config_path = Path(__file__).parent.absolute() / Path("config_schema.json")
+        return config_path
+
+    #override
+    def get_formatted_configuration_path(self):
+        config_path = Path(__file__).parent.absolute() / Path("formatted_config.yaml")
         return config_path
 
 Model = QModel

@@ -26,6 +26,12 @@
         "batch_size": {
           "type": "integer",
           "minimum": 1
+        },
+        "src_pak_name": {
+          "type": "string"
+        },
+        "dst_pak_name": {
+          "type": "string"
         }
       },
       "required": [

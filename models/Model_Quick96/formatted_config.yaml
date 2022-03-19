@@ -1,2 +1,5 @@
 basic_param:
   batch_size: 4
+dataset_param:
+  src_pak_name: faceset
+  dst_pak_name: faceset

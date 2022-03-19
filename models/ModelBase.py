@@ -529,7 +529,7 @@ class ModelBase(object):
         return False
 
     def __iterate_read_dict(self, nested_dict, new_dict=None):
-        if new_dict == None:
+        if new_dict is None:
             new_dict = {}
         for k,v in nested_dict.items():
             if isinstance(v, dict):
