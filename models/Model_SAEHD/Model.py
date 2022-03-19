@@ -832,6 +832,7 @@ class SAEHDModel(ModelBase):
         if self.is_training:
             training_data_src_path = self.training_data_src_path if not self.pretrain else self.get_pretraining_data_path()
             training_data_dst_path = self.training_data_dst_path if not self.pretrain else self.get_pretraining_data_path()
+            ignore_same_path = False
 
             random_ct_samples_path=training_data_dst_path if ct_mode is not None and not self.pretrain else None
 
@@ -857,8 +858,12 @@ class SAEHDModel(ModelBase):
                 if conf_dst_pak_name is not None:
                     self.dst_pak_name = conf_dst_pak_name
 
+            if self.src_pak_name != self.dst_pak_name and training_data_src_path == training_data_dst_path:
+                ignore_same_path = True
+
             self.set_training_data_generators ([
-                    SampleGeneratorFace(training_data_src_path, pak_name=self.src_pak_name, random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
+                    SampleGeneratorFace(training_data_src_path, pak_name=self.src_pak_name, ignore_same_path=ignore_same_path,
+                    random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(scale_range=[-0.15, 0.15], random_flip=random_src_flip),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp,
                                                  'random_downsample': self.options['random_downsample'],
@@ -897,7 +902,8 @@ class SAEHDModel(ModelBase):
                         generators_count=src_generators_count 
                     ),
 
-                    SampleGeneratorFace(training_data_dst_path, pak_name=self.dst_pak_name, debug=self.is_debug(), batch_size=self.get_batch_size(),
+                    SampleGeneratorFace(training_data_dst_path, pak_name=self.dst_pak_name, ignore_same_path=ignore_same_path,
+                        debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(scale_range=[-0.15, 0.15], random_flip=random_dst_flip),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp,
                                                  'random_downsample': self.options['random_downsample'],

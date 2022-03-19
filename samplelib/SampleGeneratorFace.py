@@ -30,6 +30,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
                         output_sample_types=[],
                         uniform_yaw_distribution=False,
                         generators_count=4,
+                        ignore_same_path=False,
                         raise_on_no_data=True,                        
                         **kwargs):
 
@@ -43,7 +44,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
         else:
             self.generators_count = max(1, generators_count)
 
-        samples = SampleLoader.load (SampleType.FACE, samples_path, pak_name=pak_name)
+        samples = SampleLoader.load (SampleType.FACE, samples_path, pak_name=pak_name, ignore_same_path=ignore_same_path)
         self.samples_len = len(samples)
         
         if self.samples_len == 0:
