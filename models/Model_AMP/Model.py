@@ -769,6 +769,7 @@ class AMPModel(ModelBase):
         if self.is_training:
             training_data_src_path = self.training_data_src_path #if not self.pretrain else self.get_pretraining_data_path()
             training_data_dst_path = self.training_data_dst_path #if not self.pretrain else self.get_pretraining_data_path()
+            ignore_same_path = False
 
             random_ct_samples_path=training_data_dst_path if ct_mode is not None else None #and not self.pretrain
 

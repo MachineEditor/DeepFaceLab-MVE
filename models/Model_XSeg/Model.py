@@ -158,7 +158,8 @@ class XSegModel(ModelBase):
                     self.src_pak_name = conf_src_pak_name
                 if conf_dst_pak_name is not None:
                     self.dst_pak_name = conf_dst_pak_name
-
+            
+            ignore_same_path = False
             if self.src_pak_name != self.dst_pak_name and self.training_data_src_path == self.training_data_dst_path:
                 ignore_same_path = True
             
