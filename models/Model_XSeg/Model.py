@@ -158,9 +158,12 @@ class XSegModel(ModelBase):
                     self.src_pak_name = conf_src_pak_name
                 if conf_dst_pak_name is not None:
                     self.dst_pak_name = conf_dst_pak_name
+
+            if self.src_pak_name != self.dst_pak_name and self.training_data_src_path == self.training_data_dst_path:
+                ignore_same_path = True
             
             if self.pretrain:
-                pretrain_gen = SampleGeneratorFace(self.get_pretraining_data_path(), debug=self.is_debug(), batch_size=self.get_batch_size(),
+                pretrain_gen = SampleGeneratorFace(self.get_pretraining_data_path(), ignore_same_path=ignore_same_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                                     sample_process_options=SampleProcessor.Options(random_flip=True),
                                     output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                             {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},                                                            
@@ -171,6 +174,7 @@ class XSegModel(ModelBase):
             else:   
                 srcdst_generator = SampleGeneratorFaceXSeg([self.training_data_src_path, self.training_data_dst_path],
                                                             [self.src_pak_name, self.dst_pak_name],
+                                                            ignore_same_path=ignore_same_path,
                                                             debug=self.is_debug(),
                                                             batch_size=self.get_batch_size(),
                                                             resolution=resolution,
@@ -178,13 +182,13 @@ class XSegModel(ModelBase):
                                                             generators_count=src_dst_generators_count,
                                                             data_format=nn.data_format)
 
-                src_generator = SampleGeneratorFace(self.training_data_src_path, pak_name=self.src_pak_name, debug=self.is_debug(), batch_size=self.get_batch_size(),
+                src_generator = SampleGeneratorFace(self.training_data_src_path, pak_name=self.src_pak_name, ignore_same_path=ignore_same_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                                                     sample_process_options=SampleProcessor.Options(random_flip=False),
                                                     output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'warp':False, 'transform':False, 'channel_type' : SampleProcessor.ChannelType.BGR, 'border_replicate':False, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                                         ],
                                                     generators_count=src_generators_count,
                                                     raise_on_no_data=False )
-                dst_generator = SampleGeneratorFace(self.training_data_dst_path, pak_name=self.dst_pak_name, debug=self.is_debug(), batch_size=self.get_batch_size(),
+                dst_generator = SampleGeneratorFace(self.training_data_dst_path, pak_name=self.dst_pak_name, ignore_same_path=ignore_same_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                                                     sample_process_options=SampleProcessor.Options(random_flip=False),
                                                     output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,  'warp':False, 'transform':False, 'channel_type' : SampleProcessor.ChannelType.BGR, 'border_replicate':False, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                                         ],

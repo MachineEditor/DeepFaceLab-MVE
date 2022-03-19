@@ -251,8 +251,11 @@ class QModel(ModelBase):
                 if conf_dst_pak_name is not None:
                     self.dst_pak_name = conf_dst_pak_name
 
+            if self.src_pak_name != self.dst_pak_name and training_data_src_path == training_data_dst_path:
+                ignore_same_path = True
+
             self.set_training_data_generators ([
-                    SampleGeneratorFace(training_data_src_path, pak_name=self.src_pak_name, debug=self.is_debug(), batch_size=self.get_batch_size(),
+                    SampleGeneratorFace(training_data_src_path, pak_name=self.src_pak_name, ignore_same_path=ignore_same_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(random_flip=True if self.pretrain else False),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':True,  'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
@@ -260,7 +263,7 @@ class QModel(ModelBase):
                                               ],
                         generators_count=src_generators_count ),
 
-                    SampleGeneratorFace(training_data_dst_path, pak_name=self.dst_pak_name, debug=self.is_debug(), batch_size=self.get_batch_size(),
+                    SampleGeneratorFace(training_data_dst_path, pak_name=self.dst_pak_name, ignore_same_path=ignore_same_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(random_flip=True if self.pretrain else False),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':True,  'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR,                                                           'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},

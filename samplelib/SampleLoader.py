@@ -38,6 +38,8 @@ class SampleLoader:
         """
         Return MPSharedList of samples
         """
+        samples_cache = SampleLoader.samples_cache
+        
         if ignore_same_path:
             if str(samples_path) not in samples_cache.keys():
                 samples_cache[str(samples_path)] = [None]*SampleType.QTY

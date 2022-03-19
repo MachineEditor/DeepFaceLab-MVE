@@ -17,13 +17,13 @@ from samplelib import (SampleGeneratorBase, SampleLoader, SampleProcessor, Sampl
 
 class SampleGeneratorFaceXSeg(SampleGeneratorBase):
     def __init__ (self, paths, pak_names, debug=False, batch_size=1, resolution=256, face_type=None,
-                        generators_count=4, data_format="NHWC",
+                        generators_count=4, ignore_same_path=False, data_format="NHWC",
                         **kwargs):
 
         super().__init__(debug, batch_size)
         self.initialized = False
 
-        samples = sum([ SampleLoader.load (SampleType.FACE, path, pak_name=pak_names[i]) for i, path in enumerate(paths) ]  )
+        samples = sum([ SampleLoader.load (SampleType.FACE, path, pak_name=pak_names[i], ignore_same_path=ignore_same_path) for i, path in enumerate(paths) ]  )
         seg_sample_idxs = SegmentedSampleFilterSubprocessor(samples).run()
 
         if len(seg_sample_idxs) == 0:
