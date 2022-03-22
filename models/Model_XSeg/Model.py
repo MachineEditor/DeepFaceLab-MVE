@@ -160,11 +160,13 @@ class XSegModel(ModelBase):
                     self.dst_pak_name = conf_dst_pak_name
             
             ignore_same_path = False
-            if self.src_pak_name != self.dst_pak_name and self.training_data_src_path == self.training_data_dst_path:
+            if self.src_pak_name != self.dst_pak_name and self.training_data_src_path == self.training_data_dst_path and not self.pretrain:
                 ignore_same_path = True
+            elif self.pretrain:
+                self.src_pak_name = self.dst_pak_name = 'faceset'
             
             if self.pretrain:
-                pretrain_gen = SampleGeneratorFace(self.get_pretraining_data_path(), ignore_same_path=ignore_same_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
+                pretrain_gen = SampleGeneratorFace(self.get_pretraining_data_path(), pak_name=self.src_pak_name, ignore_same_path=ignore_same_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
                                     sample_process_options=SampleProcessor.Options(random_flip=True),
                                     output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.BGR, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                             {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':True, 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},                                                            

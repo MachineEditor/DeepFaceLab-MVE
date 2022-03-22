@@ -832,7 +832,6 @@ class SAEHDModel(ModelBase):
         if self.is_training:
             training_data_src_path = self.training_data_src_path if not self.pretrain else self.get_pretraining_data_path()
             training_data_dst_path = self.training_data_dst_path if not self.pretrain else self.get_pretraining_data_path()
-            ignore_same_path = False
 
             random_ct_samples_path=training_data_dst_path if ct_mode is not None and not self.pretrain else None
 
@@ -858,8 +857,11 @@ class SAEHDModel(ModelBase):
                 if conf_dst_pak_name is not None:
                     self.dst_pak_name = conf_dst_pak_name
 
-            if self.src_pak_name != self.dst_pak_name and training_data_src_path == training_data_dst_path:
+            ignore_same_path = False
+            if self.src_pak_name != self.dst_pak_name and training_data_src_path == training_data_dst_path and not self.pretrain:
                 ignore_same_path = True
+            elif self.pretrain:
+                self.src_pak_name = self.dst_pak_name = 'faceset'
 
             self.set_training_data_generators ([
                     SampleGeneratorFace(training_data_src_path, pak_name=self.src_pak_name, ignore_same_path=ignore_same_path,
