@@ -200,6 +200,7 @@ if __name__ == "__main__":
                       output_path            = Path(arguments.output_dir),
                       output_mask_path       = Path(arguments.output_mask_dir),
                       aligned_path           = Path(arguments.aligned_dir) if arguments.aligned_dir is not None else None,
+                      pak_name               = arguments.pak_name,
                       force_gpu_idxs         = arguments.force_gpu_idxs,
                       cpu_only               = arguments.cpu_only)
 
@@ -208,6 +209,7 @@ if __name__ == "__main__":
     p.add_argument('--output-dir', required=True, action=fixPathAction, dest="output_dir", help="Output directory. This is where the merged files will be stored.")
     p.add_argument('--output-mask-dir', required=True, action=fixPathAction, dest="output_mask_dir", help="Output mask directory. This is where the mask files will be stored.")
     p.add_argument('--aligned-dir', action=fixPathAction, dest="aligned_dir", default=None, help="Aligned directory. This is where the extracted of dst faces stored.")
+    p.add_argument('--pak-name', required=False, dest='pak_name', type=str, default=None, help='Name of the faceset pack to use')
     p.add_argument('--model-dir', required=True, action=fixPathAction, dest="model_dir", help="Model dir.")
     p.add_argument('--model', required=True, dest="model_name", choices=pathex.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Model class name.")
     p.add_argument('--force-model-name', dest="force_model_name", default=None, help="Forcing to choose model name from model/ folder.")
