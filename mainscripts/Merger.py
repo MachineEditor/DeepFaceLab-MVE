@@ -25,6 +25,7 @@ def main (model_class_name=None,
           output_path=None,
           output_mask_path=None,
           aligned_path=None,
+          pak_name=None,
           force_gpu_idxs=None,
           cpu_only=None):
     io.log_info ("Running merger.\r\n")
@@ -86,7 +87,7 @@ def main (model_class_name=None,
 
             packed_samples = None
             try:
-                packed_samples = samplelib.PackedFaceset.load(aligned_path)
+                packed_samples = samplelib.PackedFaceset.load(aligned_path, pak_name=pak_name)
             except:
                 io.log_err(f"Error occured while loading samplelib.PackedFaceset.load {str(aligned_path)}, {traceback.format_exc()}")
 

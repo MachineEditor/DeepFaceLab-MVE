@@ -121,6 +121,8 @@ if __name__ == "__main__":
                   'training_data_dst_path'   : Path(arguments.training_data_dst_dir),
                   'pretraining_data_path'    : Path(arguments.pretraining_data_dir) if arguments.pretraining_data_dir is not None else None,
                   'pretrained_model_path'    : Path(arguments.pretrained_model_dir) if arguments.pretrained_model_dir is not None else None,
+                  'src_pak_name'             : arguments.src_pak_name,
+                  'dst_pak_name'             : arguments.dst_pak_name,
                   'no_preview'               : arguments.no_preview,
                   'force_model_name'         : arguments.force_model_name,
                   'force_gpu_idxs'           : [ int(x) for x in arguments.force_gpu_idxs.split(',') ] if arguments.force_gpu_idxs is not None else None,
@@ -143,6 +145,8 @@ if __name__ == "__main__":
     p.add_argument('--training-data-src-dir', required=True, action=fixPathAction, dest="training_data_src_dir", help="Dir of extracted SRC faceset.")
     p.add_argument('--training-data-dst-dir', required=True, action=fixPathAction, dest="training_data_dst_dir", help="Dir of extracted DST faceset.")
     p.add_argument('--pretraining-data-dir', action=fixPathAction, dest="pretraining_data_dir", default=None, help="Optional dir of extracted faceset that will be used in pretraining mode.")
+    p.add_argument('--src-pak-name', required=False, dest='src_pak_name', type=str, default=None, help='Name of the src faceset pack to use')
+    p.add_argument('--dst-pak-name', required=False, dest='dst_pak_name', type=str, default=None, help='Name of the dst faceset pack to use')
     p.add_argument('--pretrained-model-dir', action=fixPathAction, dest="pretrained_model_dir", default=None, help="Optional dir of pretrain model files. (Currently only for Quick96).")
     p.add_argument('--model-dir', required=True, action=fixPathAction, dest="model_dir", help="Saved models dir.")
     p.add_argument('--model', required=True, dest="model_name", choices=pathex.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Model class name.")
@@ -196,6 +200,7 @@ if __name__ == "__main__":
                       output_path            = Path(arguments.output_dir),
                       output_mask_path       = Path(arguments.output_mask_dir),
                       aligned_path           = Path(arguments.aligned_dir) if arguments.aligned_dir is not None else None,
+                      pak_name               = arguments.pak_name,
                       force_gpu_idxs         = arguments.force_gpu_idxs,
                       cpu_only               = arguments.cpu_only)
 
@@ -204,6 +209,7 @@ if __name__ == "__main__":
     p.add_argument('--output-dir', required=True, action=fixPathAction, dest="output_dir", help="Output directory. This is where the merged files will be stored.")
     p.add_argument('--output-mask-dir', required=True, action=fixPathAction, dest="output_mask_dir", help="Output mask directory. This is where the mask files will be stored.")
     p.add_argument('--aligned-dir', action=fixPathAction, dest="aligned_dir", default=None, help="Aligned directory. This is where the extracted of dst faces stored.")
+    p.add_argument('--pak-name', required=False, dest='pak_name', type=str, default=None, help='Name of the faceset pack to use')
     p.add_argument('--model-dir', required=True, action=fixPathAction, dest="model_dir", help="Model dir.")
     p.add_argument('--model', required=True, dest="model_name", choices=pathex.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Model class name.")
     p.add_argument('--force-model-name', dest="force_model_name", default=None, help="Forcing to choose model name from model/ folder.")

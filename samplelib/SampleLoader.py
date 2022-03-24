@@ -13,6 +13,7 @@ from DFLIMG import *
 from facelib import FaceType, LandmarksProcessor
 
 from .Sample import Sample, SampleType
+import pprint
 
 
 class SampleLoader:
@@ -33,16 +34,23 @@ class SampleLoader:
         return len(list(persons_name_idxs.keys()))
 
     @staticmethod
-    def load(sample_type, samples_path, subdirs=False):
+    def load(sample_type, samples_path, subdirs=False, ignore_same_path=False, pak_name=None):
         """
         Return MPSharedList of samples
         """
         samples_cache = SampleLoader.samples_cache
-
-        if str(samples_path) not in samples_cache.keys():
-            samples_cache[str(samples_path)] = [None]*SampleType.QTY
-
-        samples = samples_cache[str(samples_path)]
+        
+        if ignore_same_path:
+            if str(samples_path) not in samples_cache.keys():
+                samples_cache[str(samples_path)] = [None]*SampleType.QTY
+                samples = samples_cache[str(samples_path)]
+            else:
+                samples_cache[str(samples_path) + '_fake'] = [None]*SampleType.QTY
+                samples = samples_cache[str(samples_path) + '_fake']
+        else:
+            if str(samples_path) not in samples_cache.keys():
+                samples_cache[str(samples_path)] = [None]*SampleType.QTY
+            samples = samples_cache[str(samples_path)]
 
         if            sample_type == SampleType.IMAGE:
             if  samples[sample_type] is None:
@@ -51,7 +59,7 @@ class SampleLoader:
         elif          sample_type == SampleType.FACE:
             if  samples[sample_type] is None:
                 try:
-                    result = samplelib.PackedFaceset.load(samples_path)
+                    result = samplelib.PackedFaceset.load(samples_path, pak_name)
                 except:
                     io.log_err(f"Error occured while loading samplelib.PackedFaceset.load {str(samples_dat_path)}, {traceback.format_exc()}")
 

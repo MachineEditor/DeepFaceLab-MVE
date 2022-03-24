@@ -66,3 +66,6 @@ color_augs:
   random_hsv_power: 0.0
   ct_mode: none
   random_color: false
+dataset_param:
+  src_pak_name: faceset
+  dst_pak_name: faceset

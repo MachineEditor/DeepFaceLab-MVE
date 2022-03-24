@@ -30,6 +30,8 @@ class ModelBase(object):
                        training_data_dst_path=None,
                        pretraining_data_path=None,
                        pretrained_model_path=None,
+                       src_pak_name=None,
+                       dst_pak_name=None,
                        no_preview=False,
                        force_model_name=None,
                        force_gpu_idxs=None,
@@ -47,6 +49,8 @@ class ModelBase(object):
         self.training_data_dst_path = training_data_dst_path
         self.pretraining_data_path = pretraining_data_path
         self.pretrained_model_path = pretrained_model_path
+        self.src_pak_name = src_pak_name
+        self.dst_pak_name = dst_pak_name
         self.config_training_file = config_training_file
         self.auto_gen_config = auto_gen_config
         self.config_file_path = None
@@ -522,7 +526,7 @@ class ModelBase(object):
         return False
 
     def __iterate_read_dict(self, nested_dict, new_dict=None):
-        if new_dict == None:
+        if new_dict is None:
             new_dict = {}
         for k,v in nested_dict.items():
             if isinstance(v, dict):

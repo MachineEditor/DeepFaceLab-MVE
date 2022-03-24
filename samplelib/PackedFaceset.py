@@ -19,6 +19,7 @@ except:
 packed_faceset_filename = "faceset.pak"
 packed_faceset_filename_zip = "faceset.zip"
 packed_faceset_filename_config = "config.pak"
+PACK_EXTENSION = 'pak'
 
 
 
@@ -172,17 +173,23 @@ class PackedFaceset():
         return (samples_path / packed_faceset_filename).exists() or (samples_path / packed_faceset_filename_zip).exists()
     
     @staticmethod
-    def load(samples_path):
-    
-        if (samples_path / packed_faceset_filename).exists():
-            ext = "pak"
-            samples_dat_path = samples_path / packed_faceset_filename
-        elif (samples_path / packed_faceset_filename_zip).exists():
-            ext = "zip"
+    def load(samples_path, pak_name=None):
+        ext = ''
+        samples_dat_path = None
+
+        if pak_name is not None:
+            if (samples_path / (f"{pak_name}.{PACK_EXTENSION}")).exists():
+                ext = 'pak'
+                samples_dat_path = samples_path / (f"{pak_name}.{PACK_EXTENSION}")
+        else:
+            if (samples_path / packed_faceset_filename).exists():
+                ext = "pak"
+                samples_dat_path = samples_path / packed_faceset_filename
+
+        if (samples_path / packed_faceset_filename_zip).exists() and ext != 'pak':
             samples_dat_path = samples_path / packed_faceset_filename_zip
             samples = []
-            
-      
+
             with zipfile.ZipFile(samples_dat_path, 'r') as zipObj:
                 rebuild_zip = False 
                 if zipObj.comment != hashlib.md5(str(zipObj.namelist()).encode()).digest():
@@ -198,28 +205,30 @@ class PackedFaceset():
                     sample.set_filename_offset_size(str(samples_dat_path), -1, -1)
                     samples.append(sample)
             return samples
+
+        if samples_dat_path is not None:
+        
+            f = open(samples_dat_path, "rb")
+            version, = struct.unpack("Q", f.read(8) )
+            if version != PackedFaceset.VERSION:
+                raise NotImplementedError
+
+            sizeof_samples_bytes, = struct.unpack("Q", f.read(8) )
+
+            samples_configs = pickle.loads ( f.read(sizeof_samples_bytes) )
+            samples = []
+            for sample_config in samples_configs:
+                sample_config = pickle.loads(pickle.dumps (sample_config))
+                samples.append ( Sample (**sample_config) )
+
+            offsets = [ struct.unpack("Q", f.read(8) )[0] for _ in range(len(samples)+1) ]
+            data_start_offset = f.tell()
+            f.close()
+
+            for i, sample in enumerate(samples):
+                start_offset, end_offset = offsets[i], offsets[i+1]
+                sample.set_filename_offset_size( str(samples_dat_path), data_start_offset+start_offset, end_offset-start_offset )
+
+            return samples
         else:
             return None
-        
-        f = open(samples_dat_path, "rb")
-        version, = struct.unpack("Q", f.read(8) )
-        if version != PackedFaceset.VERSION:
-            raise NotImplementedError
-
-        sizeof_samples_bytes, = struct.unpack("Q", f.read(8) )
-
-        samples_configs = pickle.loads ( f.read(sizeof_samples_bytes) )
-        samples = []
-        for sample_config in samples_configs:
-            sample_config = pickle.loads(pickle.dumps (sample_config))
-            samples.append ( Sample (**sample_config) )
-
-        offsets = [ struct.unpack("Q", f.read(8) )[0] for _ in range(len(samples)+1) ]
-        data_start_offset = f.tell()
-        f.close()
-
-        for i, sample in enumerate(samples):
-            start_offset, end_offset = offsets[i], offsets[i+1]
-            sample.set_filename_offset_size( str(samples_dat_path), data_start_offset+start_offset, end_offset-start_offset )
-
-        return samples
