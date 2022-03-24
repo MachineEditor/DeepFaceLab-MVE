@@ -112,6 +112,7 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
         bs = self.batch_size
         while True:
             batches = [ [], [] ]
+            filenames = []
 
             n_batch = 0
             while n_batch < bs:
@@ -121,6 +122,7 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
                         np.random.shuffle(shuffle_idxs)
                     sample = samples[shuffle_idxs.pop()]
                     img, mask = gen_img_mask(sample)
+                    filenames.append(sample.filename)
 
                     if np.random.randint(2) == 0:
                         if len(bg_shuffle_idxs) == 0:
@@ -194,7 +196,7 @@ class SampleGeneratorFaceXSeg(SampleGeneratorBase):
                 except:
                     io.log_err ( traceback.format_exc() )
 
-            yield [ np.array(batch) for batch in batches]
+            yield ([ np.array(batch) for batch in batches], filenames)
 
 class SegmentedSampleFilterSubprocessor(Subprocessor):
     #override

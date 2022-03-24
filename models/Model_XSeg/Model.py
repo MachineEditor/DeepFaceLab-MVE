@@ -13,6 +13,8 @@ from samplelib import *
 
 from pathlib import Path
 
+from utils.label_face import label_face_filename
+
 class XSegModel(ModelBase):
 
     def __init__(self, *args, **kwargs):
@@ -215,24 +217,34 @@ class XSegModel(ModelBase):
 
         result = []
         st = []
+
         for i in range(n_samples):
             if self.pretrain:
-                ar = I[i], IM[i]
+                if filenames is not None and len(filenames) > 0:
+                    ar = label_face_filename(I[i], filenames[0][i]), IM[i]
+                else:
+                    ar = I[i], IM[i]
             else:
-                ar = I[i]*M[i]+0.5*I[i]*(1-M[i])+0.5*green_bg*(1-M[i]), IM[i], I[i]*IM[i]+0.5*I[i]*(1-IM[i]) + 0.5*green_bg*(1-IM[i])
+                if filenames is not None and len(filenames) > 0:
+                    ar = label_face_filename(I[i]*M[i]+0.5*I[i]*(1-M[i])+0.5*green_bg*(1-M[i]), filenames[0][i]), IM[i], I[i]*IM[i]+0.5*I[i]*(1-IM[i]) + 0.5*green_bg*(1-IM[i])
+                else:
+                    ar = I[i]*M[i]+0.5*I[i]*(1-M[i])+0.5*green_bg*(1-M[i]), IM[i], I[i]*IM[i]+0.5*I[i]*(1-IM[i]) + 0.5*green_bg*(1-IM[i])
             st.append ( np.concatenate ( ar, axis=1) )
+
         result += [ ('XSeg training faces', np.concatenate (st, axis=0 )), ]
 
         if not self.pretrain and len(src_samples) != 0:
             src_np, = src_samples
-
 
             D, DM, = [ np.clip(nn.to_data_format(x,"NHWC", self.model_data_format), 0.0, 1.0) for x in ([src_np] + self.view (src_np) ) ]
             DM, = [ np.repeat (x, (3,), -1) for x in [DM] ]
 
             st = []
             for i in range(n_samples):
-                ar = D[i], DM[i], D[i]*DM[i] + 0.5*D[i]*(1-DM[i]) + 0.5*green_bg*(1-DM[i])
+                if filenames is not None and len(filenames) > 0:
+                    ar = label_face_filename(D[i], filenames[1][i]), DM[i], D[i]*DM[i] + 0.5*D[i]*(1-DM[i]) + 0.5*green_bg*(1-DM[i])
+                else:
+                    ar = D[i], DM[i], D[i]*DM[i] + 0.5*D[i]*(1-DM[i]) + 0.5*green_bg*(1-DM[i])
                 st.append ( np.concatenate ( ar, axis=1) )
 
             result += [ ('XSeg src faces', np.concatenate (st, axis=0 )), ]
@@ -240,13 +252,15 @@ class XSegModel(ModelBase):
         if not self.pretrain and len(dst_samples) != 0:
             dst_np, = dst_samples
 
-
             D, DM, = [ np.clip(nn.to_data_format(x,"NHWC", self.model_data_format), 0.0, 1.0) for x in ([dst_np] + self.view (dst_np) ) ]
             DM, = [ np.repeat (x, (3,), -1) for x in [DM] ]
 
             st = []
             for i in range(n_samples):
-                ar = D[i], DM[i], D[i]*DM[i]  + 0.5*D[i]*(1-DM[i]) + 0.5*green_bg*(1-DM[i])
+                if filenames is not None and len(filenames) > 0:
+                    ar = label_face_filename(D[i], filenames[2][i]), DM[i], D[i]*DM[i]  + 0.5*D[i]*(1-DM[i]) + 0.5*green_bg*(1-DM[i])
+                else:
+                    ar = D[i], DM[i], D[i]*DM[i]  + 0.5*D[i]*(1-DM[i]) + 0.5*green_bg*(1-DM[i])
                 st.append ( np.concatenate ( ar, axis=1) )
 
             result += [ ('XSeg dst faces', np.concatenate (st, axis=0 )), ]

@@ -475,9 +475,6 @@ class ModelBase(object):
     def get_history_previews(self):
         return self.onGetPreview (self.sample_for_preview, for_history=True)
 
-    def get_history_previews(self):
-        return self.onGetPreview (self.sample_for_preview, for_history=True)
-
     def get_preview_history_writer(self):
         if self.preview_history_writer is None:
             self.preview_history_writer = PreviewHistoryWriter()
