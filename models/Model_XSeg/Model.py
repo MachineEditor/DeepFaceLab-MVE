@@ -276,7 +276,7 @@ class XSegModel(ModelBase):
             st = []
             for i in range(n_samples):
                 if filenames is not None and len(filenames) > 0:
-                    ar = label_face_filename(D[i], filenames[2][i]), DM[i], D[i]*DM[i]  + 0.5*D[i]*(1-DM[i]) + 0.5*green_bg*(1-DM[i])
+                    ar = label_face_filename(D[i], filenames[2 if len(filenames) == 3 else 1][i]), DM[i], D[i]*DM[i]  + 0.5*D[i]*(1-DM[i]) + 0.5*green_bg*(1-DM[i])
                 else:
                     ar = D[i], DM[i], D[i]*DM[i]  + 0.5*D[i]*(1-DM[i]) + 0.5*green_bg*(1-DM[i])
                 st.append ( np.concatenate ( ar, axis=1) )
