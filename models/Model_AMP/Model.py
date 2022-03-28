@@ -1,6 +1,5 @@
 import multiprocessing
 import operator
-from functools import partial
 
 import numpy as np
 

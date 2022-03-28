@@ -1,9 +1,7 @@
 import multiprocessing
-from functools import partial
 
 import numpy as np
 
-from core import mathlib
 from core.interact import interact as io
 from core.leras import nn
 from facelib import FaceType

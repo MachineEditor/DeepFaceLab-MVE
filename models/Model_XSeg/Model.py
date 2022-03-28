@@ -1,10 +1,7 @@
 import multiprocessing
-import operator
-from functools import partial
 
 import numpy as np
 
-from core import mathlib
 from core.interact import interact as io
 from core.leras import nn
 from facelib import FaceType, XSegNet
@@ -65,9 +62,6 @@ class XSegModel(ModelBase):
             
         place_model_on_cpu = len(devices) == 0
         models_opt_device = '/CPU:0' if place_model_on_cpu else nn.tf_default_device_name
-
-        bgr_shape = nn.get4Dshape(resolution,resolution,3)
-        mask_shape = nn.get4Dshape(resolution,resolution,1)
 
         # Initializing model classes
         self.model = XSegNet(name='XSeg',

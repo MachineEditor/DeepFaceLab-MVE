@@ -82,7 +82,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
             index_host = mplib.IndexHost(self.samples_len)
 
         if random_ct_samples_path is not None:
-            ct_samples = SampleLoader.load (SampleType.FACE, random_ct_samples_path, pak_name=pak_name)
+            ct_samples = SampleLoader.load (SampleType.FACE, random_ct_samples_path, pak_name=pak_name, ignore_same_path=ignore_same_path)
             ct_index_host = mplib.IndexHost( len(ct_samples) )
         else:
             ct_samples = None
