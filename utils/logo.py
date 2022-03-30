@@ -6,7 +6,7 @@ def print_community_info():
 
     print ('')
 
-    print ('You are using Machine Video Editor comunity fork')
+    print ('You are using Machine Video Editor community fork')
 
     print_discord_info()
 
