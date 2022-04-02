@@ -31,6 +31,8 @@ if __name__ == "__main__":
         osex.set_process_lowest_prio()
         from mainscripts import Extractor
         Extractor.main( detector                = arguments.detector,
+                        extract_from_video      = arguments.extract_from_video,
+                        input_video             = Path(arguments.input_video) if arguments.input_video is not None else None,
                         input_path              = Path(arguments.input_dir),
                         output_path             = Path(arguments.output_dir),
                         output_debug            = arguments.output_debug,
@@ -47,6 +49,8 @@ if __name__ == "__main__":
 
     p = subparsers.add_parser( "extract", help="Extract the faces from a pictures.")
     p.add_argument('--detector', dest="detector", choices=['s3fd','manual'], default=None, help="Type of detector.")
+    p.add_argument('--extract-from-video', dest='extract_from_video', action="store_true", default=False, help='Extract aligned images directly from video file')
+    p.add_argument('--input-video', required=False, action=fixPathAction, dest="input_video", help="Input video to be processed. Specify .*-extension to find first file.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
     p.add_argument('--output-dir', required=True, action=fixPathAction, dest="output_dir", help="Output directory. This is where the extracted files will be stored.")
     p.add_argument('--output-debug', action="store_true", dest="output_debug", default=None, help="Writes debug images to <output-dir>_debug\ directory.")
