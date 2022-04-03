@@ -156,7 +156,7 @@ class ExtractSubprocessor(Subprocessor):
 
             if self.video_path is not None:
                 self.frames_queue = multiprocessing.Queue()
-                p = multiprocessing.Process(target=self.frames_generator, args=(self.video_path, fps, self.frames_queue, chunk_size))
+                p = multiprocessing.Process(target=self.frames_generator, args=(self.video_path, fps, self.frames_queue, chunk_size if chunk_size is not None else 0))
                 p.start()
 
         #override
