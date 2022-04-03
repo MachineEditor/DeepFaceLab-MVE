@@ -33,6 +33,7 @@ if __name__ == "__main__":
         Extractor.main( detector                = arguments.detector,
                         extract_from_video      = arguments.extract_from_video,
                         input_video             = Path(arguments.input_video) if arguments.input_video is not None else None,
+                        chunk_size              = arguments.chunk_size,
                         input_path              = Path(arguments.input_dir),
                         output_path             = Path(arguments.output_dir),
                         output_debug            = arguments.output_debug,
@@ -59,6 +60,7 @@ if __name__ == "__main__":
     p.add_argument('--max-faces-from-image', type=int, dest="max_faces_from_image", default=None, help="Max faces from image.")
     p.add_argument('--image-size', type=int, dest="image_size", default=None, help="Output image size.")
     p.add_argument('--jpeg-quality', type=int, dest="jpeg_quality", default=None, help="Jpeg quality.")
+    p.add_argument('--chunk-size', type=int, dest='chunk_size', default=None, help='When extract from video is enabled allows to choose the maximum number of frames that DFL can save in memory')
     p.add_argument('--manual-fix', action="store_true", dest="manual_fix", default=False, help="Enables manual extract only frames where faces were not recognized.")
     p.add_argument('--manual-output-debug-fix', action="store_true", dest="manual_output_debug_fix", default=False, help="Performs manual reextract input-dir frames which were deleted from [output_dir]_debug\ dir.")
     p.add_argument('--manual-window-size', type=int, dest="manual_window_size", default=1368, help="Manual fix window size. Default: 1368.")

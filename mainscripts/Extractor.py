@@ -46,7 +46,7 @@ class ExtractSubprocessor(Subprocessor):
 
     class Cli(Subprocessor.Cli):
 
-        def frames_generator(self, video_path, fps, queue_out: Queue):
+        def frames_generator(self, video_path, fps, queue_out: Queue, chunk_size=0):
             major_ver, _, _ = cv2.__version__.split('.')
             video = cv2.VideoCapture(str(video_path))
             
@@ -57,9 +57,20 @@ class ExtractSubprocessor(Subprocessor):
             
             count = 0
             idx = 0
+            # Number of iteration without size check
             check_rate = 30
+            # Current iteration
             tick = 0
+            # True when queue reached the chunk_size
             wait = False
+
+            # if the chunk_size is not specified set it to 50 and let check_rate to the default value
+            if chunk_size == 0:
+                chunk_size = 50
+            else:
+                # else set the check_rate to the 30% of the chunk_size
+                check_rate = int(chunk_size * 30 / 100)
+
             success, image = video.read()
             success = True
             if fps != 0:
@@ -71,27 +82,34 @@ class ExtractSubprocessor(Subprocessor):
                 video.set(cv2.CAP_PROP_POS_FRAMES, count)
                 success, image = video.read()
                 if success:
+                    # If true, it's time to check the queue size
                     if tick == check_rate:
                         while True:
                             if not wait:
-                                if queue_out.qsize() >= 50:
+                                # if true we reached the max chunk size
+                                if queue_out.qsize() >= chunk_size:
                                     wait = True
                                 else:
+                                    # we didn't reach the max chunk size so we can continue to put
+                                    # frames in the queue
                                     queue_out.put((image, idx))
                                     count += fps_to_extract
                                     idx += 1
                                     tick = 0
                                     break
                             else:
+                                # if true, the queue has the right size to continue to extract frames
                                 if queue_out.qsize() <= 50 - 30:
                                     wait = False
                                     tick = 0
                                     break
                     else:
+                        # it's still not time to check the queue size
                         queue_out.put((image, idx))
                         count += fps_to_extract
                         idx += 1
                         tick += 1
+
             video.release()
 
         #override
@@ -107,6 +125,7 @@ class ExtractSubprocessor(Subprocessor):
             self.output_debug_path    = client_dict['output_debug_path']
             self.video_path           = client_dict['video_path']
             fps                       = client_dict['fps']
+            chunk_size                = client_dict['chunk_size']
 
             #transfer and set stdin in order to work code.interact in debug subprocess
             stdin_fd         = client_dict['stdin_fd']
@@ -135,9 +154,10 @@ class ExtractSubprocessor(Subprocessor):
 
             self.cached_image = (None, None)
 
-            self.frames_queue = multiprocessing.Queue()
-            p = multiprocessing.Process(target=self.frames_generator, args=(self.video_path, fps, self.frames_queue))
-            p.start()
+            if self.video_path is not None:
+                self.frames_queue = multiprocessing.Queue()
+                p = multiprocessing.Process(target=self.frames_generator, args=(self.video_path, fps, self.frames_queue, chunk_size))
+                p.start()
 
         #override
         def process_data(self, data):
@@ -409,6 +429,7 @@ class ExtractSubprocessor(Subprocessor):
                 final_output_path=None,
                 video_path=None,
                 fps=None,
+                chunk_size=None,
                 device_config=None):
 
         if type == 'landmarks-manual':
@@ -430,6 +451,7 @@ class ExtractSubprocessor(Subprocessor):
         self.max_faces_from_image = max_faces_from_image
         self.video_path = video_path
         self.fps = fps
+        self.chunk_size = chunk_size
         self.result = []
 
         self.devices = ExtractSubprocessor.get_devices_for_config(self.type, device_config)
@@ -482,6 +504,7 @@ class ExtractSubprocessor(Subprocessor):
                      'final_output_path': self.final_output_path,
                      'video_path': self.video_path,
                      'fps':self.fps,
+                     'chunk_size':self.chunk_size,
                      'stdin_fd': sys.stdin.fileno() }
 
 
@@ -820,6 +843,7 @@ class DeletedFilesSearcherSubprocessor(Subprocessor):
 def main(detector=None,
          extract_from_video=False,
          input_video=None,
+         chunk_size=None,
          input_path=None,
          output_path=None,
          output_debug=None,
@@ -986,6 +1010,7 @@ def main(detector=None,
                                     final_output_path=output_path,
                                     video_path=input_video,
                                     fps=fps,
+                                    chunk_size=chunk_size,
                                     device_config=device_config).run()
         faces_detected += sum([d.faces_detected for d in data])
 
