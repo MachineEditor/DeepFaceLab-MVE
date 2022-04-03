@@ -99,7 +99,7 @@ class ExtractSubprocessor(Subprocessor):
                                     break
                             else:
                                 # if true, the queue has the right size to continue to extract frames
-                                if queue_out.qsize() <= 50 - 30:
+                                if queue_out.qsize() <= chunk_size - check_rate:
                                     wait = False
                                     tick = 0
                                     break
