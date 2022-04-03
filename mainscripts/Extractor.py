@@ -21,7 +21,7 @@ from core import imagelib
 from core import mathlib
 from facelib import FaceType, LandmarksProcessor
 from core.interact import interact as io
-from core.joblib import Subprocessor
+from core.joblib import Subprocessor, Undaemonize
 from core.leras import nn
 from core import pathex
 from core.cv2ex import *
@@ -156,8 +156,13 @@ class ExtractSubprocessor(Subprocessor):
 
             if self.video_path is not None:
                 self.frames_queue = multiprocessing.Queue()
-                p = multiprocessing.Process(target=self.frames_generator, args=(self.video_path, fps, self.frames_queue, chunk_size if chunk_size is not None else 0))
-                p.start()
+                if sys.version_info[0] == 3 and sys.version_info[1] > 6:
+                    with Undaemonize():
+                        self.frames_processor = multiprocessing.Process(target=self.frames_generator, args=(self.video_path, fps, self.frames_queue, chunk_size if chunk_size is not None else 0))
+                        self.frames_processor.start()
+                else:
+                    self.frames_processor = multiprocessing.Process(target=self.frames_generator, args=(self.video_path, fps, self.frames_queue, chunk_size if chunk_size is not None else 0))
+                    self.frames_processor.start()
 
         #override
         def process_data(self, data):
@@ -200,13 +205,13 @@ class ExtractSubprocessor(Subprocessor):
 
             if self.type == 'final' or self.type == 'all':
                 data = ExtractSubprocessor.Cli.final_stage(data=data,
-                                                           image=image,
-                                                           face_type=self.face_type,
-                                                           image_size=self.image_size,
-                                                           jpeg_quality=self.jpeg_quality,
-                                                           output_debug_path=self.output_debug_path,
-                                                           final_output_path=self.final_output_path
-                                                           )
+                                                        image=image,
+                                                        face_type=self.face_type,
+                                                        image_size=self.image_size,
+                                                        jpeg_quality=self.jpeg_quality,
+                                                        output_debug_path=self.output_debug_path,
+                                                        final_output_path=self.final_output_path
+                                                        )
             return data
 
         @staticmethod
@@ -365,6 +370,10 @@ class ExtractSubprocessor(Subprocessor):
             #return string identificator of your data
             return data.filepath
 
+        #override
+        def on_finalize(self):
+            self.frames_processor.terminate()
+
     def count_video_frames(self, video_path, fps):
             major_ver, _, _ = cv2.__version__.split('.')
             video = cv2.VideoCapture(str(video_path))
@@ -455,8 +464,9 @@ class ExtractSubprocessor(Subprocessor):
         self.result = []
 
         self.devices = ExtractSubprocessor.get_devices_for_config(self.type, device_config)
+        self.cli = ExtractSubprocessor.Cli
 
-        super().__init__('Extractor', ExtractSubprocessor.Cli,
+        super().__init__('Extractor', self.cli,
                              999999 if type == 'landmarks-manual' or DEBUG else 120)
 
     #override
@@ -762,7 +772,6 @@ class ExtractSubprocessor(Subprocessor):
 
         io.show_image (self.wnd_name, image)
 
-
     #override
     def on_result (self, host_dict, data, result):
         if self.type == 'landmarks-manual':
@@ -775,8 +784,6 @@ class ExtractSubprocessor(Subprocessor):
         else:
             self.result.append ( result )
             io.progress_bar_inc(1)
-
-
 
     #override
     def get_result(self):
@@ -1000,19 +1007,27 @@ def main(detector=None,
                     faces_detected += sum([d.faces_detected for d in fix_data])
     else:
         io.log_info ('Extracting faces...')
-        data = ExtractSubprocessor (None,
-                                    'all',
-                                    image_size,
-                                    jpeg_quality,
-                                    face_type,
-                                    output_debug_path if output_debug else None,
-                                    max_faces_from_image=max_faces_from_image,
-                                    final_output_path=output_path,
-                                    video_path=input_video,
-                                    fps=fps,
-                                    chunk_size=chunk_size,
-                                    device_config=device_config).run()
-        faces_detected += sum([d.faces_detected for d in data])
+        data = None
+        try:
+            sub = ExtractSubprocessor (None,
+                                        'all',
+                                        image_size,
+                                        jpeg_quality,
+                                        face_type,
+                                        output_debug_path if output_debug else None,
+                                        max_faces_from_image=max_faces_from_image,
+                                        final_output_path=output_path,
+                                        video_path=input_video,
+                                        fps=fps,
+                                        chunk_size=chunk_size,
+                                        device_config=device_config)
+            data = sub.run()
+        except KeyboardInterrupt:
+            for process in multiprocessing.active_children():
+                process.terminate()
+
+        if data is not None:
+            faces_detected += sum([d.faces_detected for d in data])
 
     io.log_info ('-------------------------')
     io.log_info (f"Images found:        {images_found if not extract_from_video else 'No frames detected. (You are using extract from video mode)'}")
