@@ -1,7 +1,10 @@
+from re import T
 from select import select
 import traceback
 import math
 import multiprocessing
+from threading import Thread
+from queue import Queue
 import operator
 import os
 import shutil
@@ -26,24 +29,6 @@ from DFLIMG import *
 
 DEBUG = False
 
-def count_video_frames(video_path, fps):
-    major_ver, _, _ = cv2.__version__.split('.')
-    video = cv2.VideoCapture(str(video_path))
-
-    if int(major_ver) < 3:
-        total_frames = int(video.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
-        framerate = video.get(cv2.cv.CV_CAP_PROP_FPS)
-    else:
-        total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-        framerate = video.get(cv2.CAP_PROP_FPS)
-
-    video.release()
-
-    if fps == 0:
-        return total_frames
-    else:
-        return int(math.floor(total_frames / framerate) * fps)
-
 class ExtractSubprocessor(Subprocessor):
     class Data(object):
         def __init__(self, image=None, filepath=None, rects=None, landmarks = None, landmarks_accurate=True, manual=False, force_output_path=None, final_output_files = None):
@@ -61,11 +46,10 @@ class ExtractSubprocessor(Subprocessor):
 
     class Cli(Subprocessor.Cli):
 
-        def frames_generator(self, video_path, fps):
-            video = cv2.VideoCapture(str(video_path))
-
+        def frames_generator(self, video_path, fps, queue_out: Queue):
             major_ver, _, _ = cv2.__version__.split('.')
-
+            video = cv2.VideoCapture(str(video_path))
+            
             if int(major_ver) < 3:
                 framerate = video.get(cv2.cv.CV_CAP_PROP_FPS)
             else:
@@ -73,7 +57,9 @@ class ExtractSubprocessor(Subprocessor):
             
             count = 0
             idx = 0
-
+            check_rate = 30
+            tick = 0
+            wait = False
             success, image = video.read()
             success = True
             if fps != 0:
@@ -85,9 +71,27 @@ class ExtractSubprocessor(Subprocessor):
                 video.set(cv2.CAP_PROP_POS_FRAMES, count)
                 success, image = video.read()
                 if success:
-                    count += fps_to_extract
-                    yield (image, idx)
-                    idx += 1
+                    if tick == check_rate:
+                        while True:
+                            if not wait:
+                                if queue_out.qsize() >= 50:
+                                    wait = True
+                                else:
+                                    queue_out.put((image, idx))
+                                    count += fps_to_extract
+                                    idx += 1
+                                    tick = 0
+                                    break
+                            else:
+                                if queue_out.qsize() <= 50 - 30:
+                                    wait = False
+                                    tick = 0
+                                    break
+                    else:
+                        queue_out.put((image, idx))
+                        count += fps_to_extract
+                        idx += 1
+                        tick += 1
             video.release()
 
         #override
@@ -131,11 +135,9 @@ class ExtractSubprocessor(Subprocessor):
 
             self.cached_image = (None, None)
 
-            if self.video_path is not None:
-                try:
-                    self.gen_data = self.frames_generator(self.video_path, fps)
-                except StopIteration:
-                    pass
+            self.frames_queue = multiprocessing.Queue()
+            p = multiprocessing.Process(target=self.frames_generator, args=(self.video_path, fps, self.frames_queue))
+            p.start()
 
         #override
         def process_data(self, data):
@@ -154,10 +156,13 @@ class ExtractSubprocessor(Subprocessor):
                     image = imagelib.cut_odd_image(image)
                     self.cached_image = ( filepath, image )
             else:
-                image, idx = next(self.gen_data)
-                data.idx = idx
-                image = imagelib.normalize_channels(image, 3)
-                image = imagelib.cut_odd_image(image)
+                while True:
+                    if not self.frames_queue.empty():
+                        image, idx = self.frames_queue.get()
+                        data.idx = idx
+                        image = imagelib.normalize_channels(image, 3)
+                        image = imagelib.cut_odd_image(image)
+                        break
 
             if 'rects' in self.type or self.type == 'all':
                 data = ExtractSubprocessor.Cli.rects_stage (data=data,
@@ -340,6 +345,24 @@ class ExtractSubprocessor(Subprocessor):
             #return string identificator of your data
             return data.filepath
 
+    def count_video_frames(self, video_path, fps):
+            major_ver, _, _ = cv2.__version__.split('.')
+            video = cv2.VideoCapture(str(video_path))
+
+            if int(major_ver) < 3:
+                total_frames = int(video.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
+                framerate = video.get(cv2.cv.CV_CAP_PROP_FPS)
+            else:
+                total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+                framerate = video.get(cv2.CAP_PROP_FPS)
+
+            video.release()
+
+            if fps == 0:
+                return total_frames
+            else:
+                return int(math.floor(total_frames / framerate) * fps)
+
     @staticmethod
     def get_devices_for_config (type, device_config):
         devices = device_config.devices
@@ -393,7 +416,7 @@ class ExtractSubprocessor(Subprocessor):
                 x.manual = True
 
         if input_data is None:
-            self.input_data = [ExtractSubprocessor.Data(image=image) for image in range(count_video_frames(video_path, fps))]
+            self.input_data = [ExtractSubprocessor.Data(image=image) for image in range(self.count_video_frames(video_path, fps))]
         else:
             self.input_data = input_data
 
