@@ -155,6 +155,9 @@ class ExtractSubprocessor(Subprocessor):
             self.cached_image = (None, None)
 
             if self.video_path is not None:
+                # true when no frame has been processed yet
+                self.first_frame = True
+
                 self.frames_queue = multiprocessing.Queue()
                 if sys.version_info[0] == 3 and sys.version_info[1] > 6:
                     with Undaemonize():
@@ -181,13 +184,24 @@ class ExtractSubprocessor(Subprocessor):
                     image = imagelib.cut_odd_image(image)
                     self.cached_image = ( filepath, image )
             else:
+                attempts = 0
                 while True:
                     if not self.frames_queue.empty():
+                        # if first_frame is true set it to false cause queue finally has a frame inside
+                        if self.first_frame:
+                            self.first_frame = False
                         image, idx = self.frames_queue.get()
                         data.idx = idx
                         image = imagelib.normalize_channels(image, 3)
                         image = imagelib.cut_odd_image(image)
                         break
+                    else:
+                        # do not increase the attempts counter if we still didn't processed any frames
+                        if not self.first_frame:
+                            attempts += 1
+                            if attempts == 1000:
+                                return data
+
 
             if 'rects' in self.type or self.type == 'all':
                 data = ExtractSubprocessor.Cli.rects_stage (data=data,
