@@ -191,7 +191,7 @@ class ExtractSubprocessor(Subprocessor):
                         if self.first_frame:
                             self.first_frame = False
                         image, idx = self.frames_queue.get()
-                        data.idx = idx
+                        data.idx = f"{idx:{'0'}{5}}"
                         image = imagelib.normalize_channels(image, 3)
                         image = imagelib.cut_odd_image(image)
                         break
@@ -360,7 +360,9 @@ class ExtractSubprocessor(Subprocessor):
                 dflimg = DFLJPG.load(output_filepath)
                 dflimg.set_face_type(FaceType.toString(face_type))
                 dflimg.set_landmarks(face_image_landmarks.tolist())
-                if filepath is not None:
+                if filepath is None:
+                    dflimg.set_source_filename(data.idx)
+                else:
                     dflimg.set_source_filename(filepath.name)
                 dflimg.set_source_rect(rect)
                 dflimg.set_source_landmarks(image_landmarks.tolist())
