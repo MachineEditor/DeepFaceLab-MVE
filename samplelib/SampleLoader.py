@@ -60,7 +60,7 @@ class SampleLoader:
                     io.log_err(f"Error occured while loading samplelib.PackedFaceset.load {str(samples_dat_path)}, {traceback.format_exc()}")
 
                 if result is not None:
-                    io.log_info (f"Loaded {len(result)} packed faces from {samples_path}", end='\r')
+                    io.log_info (f"Loaded {len(result)} packed faces from {samples_path}")
 
                 if result is None:
                     result = SampleLoader.load_face_samples( pathex.get_image_paths(samples_path, subdirs=subdirs) )
