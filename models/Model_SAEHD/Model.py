@@ -1182,4 +1182,185 @@ class SAEHDModel(ModelBase):
         config_path = Path(__file__).parent.absolute() / Path("formatted_config.yaml")
         return config_path
 
+    def generate_training_state(self):
+        from tqdm import tqdm
+        import cv2
+        from core.cv2ex import cv2_imwrite
+        from facelib import FaceType, LandmarksProcessor
+        from core import imagelib
+        import datetime
+        import json
+
+        def get_full_face_mask(sample, sample_bgr, sample_landmarks):
+            xseg_mask = sample.get_xseg_mask()
+            if xseg_mask is not None:
+                if xseg_mask.shape[0] != sample_bgr.shape[0] or xseg_mask.shape[1] != sample_bgr.shape[1]:
+                    xseg_mask = cv2.resize(xseg_mask, (sample_bgr.shape[0], sample_bgr.shape[1]), interpolation=cv2.INTER_CUBIC)
+                    xseg_mask = imagelib.normalize_channels(xseg_mask, 1)
+                return np.clip(xseg_mask, 0, 1)
+            else:
+                full_face_mask = LandmarksProcessor.get_image_hull_mask (sample_bgr.shape, sample_landmarks, eyebrows_expand_mod=sample.eyebrows_expand_mod )
+                return np.clip(full_face_mask, 0, 1)
+
+        def get_eyes_mask(sample_bgr, sample_landmarks):
+            eyes_mask = LandmarksProcessor.get_image_eye_mask (sample_bgr.shape, sample_landmarks)
+            # set eye masks to 1-2
+            clip = np.clip(eyes_mask, 0, 1)
+            clip[clip > 0.1] += 1
+            return clip
+
+        def get_mouth_mask(sample_bgr, sample_landmarks):
+            mouth_mask = LandmarksProcessor.get_image_mouth_mask (sample_bgr.shape, sample_landmarks)
+            # set eye masks to 2-3
+            clip = np.clip(mouth_mask, 0, 1)
+            clip[clip > 0.1] += 2
+            return clip
+
+        def get_full_face_eyes(sample, sample_bgr, sample_landmarks):
+            # sets both eyes and mouth mask parts
+            img = get_full_face_mask(sample, sample_bgr, sample_landmarks)
+            mask = img.copy()
+            mask[mask != 0.0] = 1.0
+            eye_mask = get_eyes_mask(sample_bgr, sample_landmarks) * mask
+            img = np.where(eye_mask > 1, eye_mask, img)
+            mouth_mask = get_mouth_mask(sample_bgr, sample_landmarks) * mask
+            img = np.where(mouth_mask > 2, mouth_mask, img)
+
+        def get_masks(sample, sample_bgr, sample_landmarks):
+            mask = get_full_face_mask(sample, sample_bgr, sample_landmarks)
+
+            mask_em = mask.copy()
+            if self.eyes_prio or self.mouth_prio:
+                mask_em[mask_em != 0.0] = 1.0
+                eye_mask = get_eyes_mask(sample_bgr, sample_landmarks) * mask_em
+                mask = np.where(eye_mask > 1, eye_mask, mask)
+                mouth_mask = get_mouth_mask(sample_bgr, sample_landmarks) * mask_em
+                mask = np.where(mouth_mask > 2, mouth_mask, mask)
+
+            return mask, mask_em
+
+        def get_input_image(image, sample_face_type, sample_landmarks):
+            if self.face_type != sample_face_type and sample_face_type != FaceType.CUSTOM: # custom always valid for stuff like for wf custom equivivelnet 
+                mat = LandmarksProcessor.get_transform_mat (sample_landmarks, self.resolution, self.face_type)
+                image = cv2.warpAffine( image, mat, (self.resolution, self.resolution), borderMode=cv2.BORDER_CONSTANT, flags=cv2.INTER_LINEAR )
+            else:
+                if image.shape[0] != self.resolution:
+                    image = cv2.resize( image, (self.resolution, self.resolution), interpolation=cv2.INTER_LINEAR )
+            return image
+
+        src_gen = self.generator_list[0]
+        dst_gen =  self.generator_list[1]
+        src_sample_state = []
+        dst_sample_state = []
+
+        src_samples = src_gen.samples
+        dst_samples = dst_gen.samples
+        src_len = len(src_samples)
+        dst_len = len(dst_sample)
+        length = src_len
+        if length < dst_len:
+            length = dst_len
+
+        # set paths
+        # create core folder
+        self.state_history_path = self.saved_models_path / ( f'{self.get_model_name()}_state_history' )
+        if not self.autobackups_path.exists():
+            self.autobackups_path.mkdir(exist_ok=True)
+        # create state folder
+        idx_str = datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
+        idx_state_history_path= self.autobackups_path / idx_str
+        idx_state_history_path.mkdir()        
+        # create set folders
+        src_state_path = idx_state_history_path / 'src'
+        src_state_path.mkdir()
+        dst_state_path = idx_state_history_path / 'dst'
+        dst_state_path.mkdir()
+
+        # doing batch 2 always since it is coded to always expect dst and src
+        # if one is smaller reapeating the last sample as a placeholder
+        for idx in tqdm(range(length), desc="Generating samples"):
+            # load image
+            if (src_len < idx):
+                src_sample = src_samples[idx]
+                src_sample_bgr = src_sample.load_bgr()
+                src_sample_mask, src_sample_mask_em = get_masks(src_sample, src_sample_bgr, src_sample.landmarks)
+
+                # resize everything optimally resize before
+                src_sample_bgr = get_input_image(src_sample_bgr, src_sample.sample_type, src_sample.landmarks)
+                src_sample_mask = get_input_image(src_sample_mask, src_sample.sample_type, src_sample.landmarks)
+                src_sample_mask_em = get_input_image(src_sample_mask_em, src_sample.sample_type, src_sample.landmarks)
+
+                last_src = src_sample_bgr,src_sample_mask,src_sample_mask_em
+            else:
+                src_sample_bgr,src_sample_mask,src_sample_mask_em = last_src
+
+            if (dst_len < idx):
+                dst_sample = dst_samples[idx]
+                dst_sample_bgr = dst_sample.load_bgr()
+                dst_sample_mask, dst_sample_mask_em = get_masks(dst_sample, dst_sample_bgr, dst_sample.landmarks)
+
+                # resize everything optimally resize before
+                dst_sample_bgr = get_input_image(dst_sample_bgr, dst_sample.sample_type, dst_sample.landmarks)
+                dst_sample_mask = get_input_image(dst_sample_mask, dst_sample.sample_type, dst_sample.landmarks)
+                dst_sample_mask_em = get_input_image(dst_sample_mask_em, dst_sample.sample_type, dst_sample.landmarks)
+
+                last_dst = dst_sample_bgr,dst_sample_mask,dst_sample_mask_em
+            else:
+                dst_sample_bgr,dst_sample_mask,dst_sample_mask_em = last_dst
+
+            # TODO
+            # prio based mask
+ 
+            # trebam i output, mislim da trebam skinut [:2]
+            src_loss, dst_loss = self.src_dst_train (src_sample_bgr, src_sample_bgr, src_sample_mask, src_sample_mask_em, dst_sample_bgr, dst_sample_bgr, dst_sample_mask, dst_sample_mask_em)
+
+            # todo set a dict with everything
+            last_src = src_sample_bgr
+            last_dst = dst_sample_bgr
+
+            # todo check if the file is new, save only new
+            src_file_name = ''           
+            cv2_imwrite(src_state_path / f"{src_file_name}.jpg", face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 0.9 ] )
+            # cv2_imwrite(src_state_path / f"{src_file_name}_output.jpg", face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 1 ] ) # output
+            # cv2_imwrite(src_state_path / f"{src_file_name}_swap.jpg", face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 1 ] ) # swap
+
+            src_data = { 'loss': src_loss, 'input': f"{src_file_name}.jpg", 'output': f"{src_file_name}_output.jpg", 'swap': f"{src_file_name}_swap.jpg" }
+            src_sample_state.append(src_data)
+
+            dst_file_name = ''
+            cv2_imwrite(dst_state_path / f"{dst_file_name}.jpg", face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 0.9 ] )
+            # cv2_imwrite(dst_state_path / f"{dst_file_name}_output.jpg", face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 1 ] ) # output
+
+            dst_data = { 'loss': dst_loss, 'input': f"{dst_file_name}.jpg", 'output': f"{dst_file_name}_output.jpg"  }
+            dst_sample_state.append(dst_data)
+
+        # save model state params
+        # copy model summary
+        model_summary = self.options.copy()
+        model_summary['iter'] = self.get_iter()
+        model_summary['name'] = self.get_model_name()
+
+        with open(idx_state_history_path / 'model_summary.json', 'w') as outfile:
+            json.dump(model_summary, outfile)
+
+        # training state, full loss stuff from .dat file - prolly should be global
+        # state_history_json = self.loss_history
+
+        # save image loss data
+        src_full_state_dict = {
+            'data': src_sample_state,
+            'set': 'src',
+            'type': 'set-state'
+        }
+        with open(idx_state_history_path / 'src_state.json', 'w') as outfile:
+            json.dump(src_full_state_dict, outfile)
+
+        dst_full_state_dict = {
+            'data': dst_sample_state,
+            'set': 'dst',
+            'type': 'set-state'
+        }
+        with open(idx_state_history_path / 'dst_state.json', 'w') as outfile:
+            json.dump(dst_full_state_dict, outfile)
+
 Model = SAEHDModel

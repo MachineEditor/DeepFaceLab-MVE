@@ -167,7 +167,7 @@ class SampleProcessor(object):
                             mat  = LandmarksProcessor.get_transform_mat (sample_landmarks, warp_resolution, face_type)
                             img = cv2.warpAffine( img, mat, (warp_resolution, warp_resolution), flags=cv2.INTER_LINEAR )
                         else:
-                            if face_type != sample_face_type and sample_face_type != FaceType.CUSTOM: # custom always valid for stuff like for wf custom equivivelnet 
+                            if face_type != sample_face_type and sample_face_type != FaceType.CUSTOM: # custom always valid for stuff like for wf custom equivalent 
                                 mat = LandmarksProcessor.get_transform_mat (sample_landmarks, resolution, face_type)
                                 img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_LINEAR )
                             else:
@@ -187,7 +187,7 @@ class SampleProcessor(object):
                     elif sample_type == SPST.FACE_IMAGE:
                         img = sample_bgr
 
-                        if face_type != sample_face_type:
+                        if face_type != sample_face_type and sample_face_type != FaceType.CUSTOM:
                             mat = LandmarksProcessor.get_transform_mat (sample_landmarks, resolution, face_type)
                             img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_CUBIC )
                         else:
