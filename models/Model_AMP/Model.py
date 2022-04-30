@@ -31,8 +31,16 @@ class AMPModel(ModelBase):
         default_d_mask_dims        = self.options['d_mask_dims']        = self.options.get('d_mask_dims', None)
         default_morph_factor       = self.options['morph_factor']       = self.load_or_def_option('morph_factor', 0.5)
         default_masked_training    = self.options['masked_training']    = self.load_or_def_option('masked_training', True)
+        
         default_eyes_prio          = self.options['eyes_prio']          = self.load_or_def_option('eyes_prio', False)
         default_mouth_prio         = self.options['mouth_prio']         = self.load_or_def_option('mouth_prio', False)
+
+        # Compatibility check
+        eyes_mouth_prio = self.options.get('eyes_mouth_prio')
+        if eyes_mouth_prio is not None:
+            default_eyes_prio = self.options['eyes_prio'] = eyes_mouth_prio
+            default_mouth_prio = self.options['mouth_prio'] = eyes_mouth_prio
+
         default_uniform_yaw        = self.options['uniform_yaw']        = self.load_or_def_option('uniform_yaw', False)
 
         # Uncomment it just if you want to impelement other loss functions
