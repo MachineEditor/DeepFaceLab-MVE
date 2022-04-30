@@ -30,7 +30,6 @@ model_properties:
   background_power: 0.0
   face_style_power: 0.0
   bg_style_power: 0.0
-  eyes_mouth_prio: false
   cpu_cap: 8
   preview_samples: 4
   force_full_preview: false
