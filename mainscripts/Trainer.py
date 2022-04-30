@@ -1,3 +1,4 @@
+from functools import reduce
 import os
 import sys
 import traceback
@@ -105,7 +106,9 @@ def trainerThread (s2c, c2s, e,
                         silent_start=silent_start,
                         config_training_file=config_training_file,
                         auto_gen_config=kwargs.get("auto_gen_config", False),
-                        debug=debug)
+                        debug=debug,
+                        reduce_clutter= kwargs.get('reduce_clutter', False)
+                    )
 
             is_reached_goal = model.is_reached_iter_goal()
 
