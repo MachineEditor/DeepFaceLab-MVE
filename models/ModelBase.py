@@ -304,9 +304,11 @@ class ModelBase(object):
                 io.capture_keys(wnd_name)
                 choosed = False
                 preview_id_counter = 0
+                mask_changed = False
                 while not choosed:
-                    self.sample_for_preview = self.generate_next_samples()
-                    previews = self.get_history_previews()
+                    if not mask_changed:
+                        self.sample_for_preview = self.generate_next_samples()
+                        previews = self.get_history_previews()
 
                     io.show_image( wnd_name, ( previews[preview_id_counter % len(previews) ][1] *255).astype(np.uint8) )
 
@@ -318,8 +320,10 @@ class ModelBase(object):
                             break
                         elif key == ord(' '):
                             preview_id_counter += 1
+                            mask_changed = True
                             break
                         elif key == ord('p'):
+                            if mask_changed: mask_changed = False
                             break
 
                         try:
