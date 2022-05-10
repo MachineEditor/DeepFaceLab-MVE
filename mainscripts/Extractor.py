@@ -1,16 +1,11 @@
-from re import T
-from select import select
-import traceback
 import math
 import multiprocessing
-from threading import Thread
 from queue import Queue
-import operator
 import os
-import shutil
+
 import sys
-import time
 from pathlib import Path
+from tkinter.messagebox import NO
 
 import cv2
 import numpy as np
@@ -879,6 +874,7 @@ def main(detector=None,
          jpeg_quality=None,
          cpu_only = False,
          force_gpu_idxs = None,
+         fps=None
          ):
 
     if not input_path.exists() and not extract_from_video:
@@ -952,7 +948,7 @@ def main(detector=None,
     if jpeg_quality is None:
         jpeg_quality = io.input_int(f"Jpeg quality", 90, valid_range=[1,100], help_message="Jpeg quality. The higher jpeg quality the larger the output file size.")
 
-    if extract_from_video:
+    if extract_from_video and fps is None:
         fps = io.input_int ("Enter FPS", 0, help_message="How many frames of every second of the video will be extracted. 0 - full fps")
 
     if detector is None:

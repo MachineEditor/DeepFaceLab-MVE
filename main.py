@@ -44,6 +44,7 @@ if __name__ == "__main__":
                         max_faces_from_image    = arguments.max_faces_from_image,
                         image_size              = arguments.image_size,
                         jpeg_quality            = arguments.jpeg_quality,
+                        fps                     = arguments.fps,
                         cpu_only                = arguments.cpu_only,
                         force_gpu_idxs          = [ int(x) for x in arguments.force_gpu_idxs.split(',') ] if arguments.force_gpu_idxs is not None else None,
                       )
@@ -60,6 +61,7 @@ if __name__ == "__main__":
     p.add_argument('--max-faces-from-image', type=int, dest="max_faces_from_image", default=None, help="Max faces from image.")
     p.add_argument('--image-size', type=int, dest="image_size", default=None, help="Output image size.")
     p.add_argument('--jpeg-quality', type=int, dest="jpeg_quality", default=None, help="Jpeg quality.")
+    p.add_argument('--fps', type=int, dest="fps", default=None, help="How many frames of every second of the video will be extracted. 0 - full fps.")
     p.add_argument('--chunk-size', type=int, dest='chunk_size', default=None, help='When extract from video is enabled allows to choose the maximum number of frames that DFL can save in memory')
     p.add_argument('--manual-fix', action="store_true", dest="manual_fix", default=False, help="Enables manual extract only frames where faces were not recognized.")
     p.add_argument('--manual-output-debug-fix', action="store_true", dest="manual_output_debug_fix", default=False, help="Performs manual reextract input-dir frames which were deleted from [output_dir]_debug\ dir.")
