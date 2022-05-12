@@ -1,9 +1,8 @@
 import math
 import multiprocessing
-import os
 import operator
 import tempfile
-from tqdm import tqdm
+from functools import cmp_to_key
 from pathlib import Path
 
 import cv2
@@ -123,43 +122,23 @@ def sort_by_motion_blur(input_path):
 
     return img_list, trash_img_list
     
-def make_dataset(dir: str):
-    files = []
-
-    for root, _, fnames in os.walk(dir):
-        for fname in fnames:
-            path = os.path.join(root, fname)
-            files.append(Path(path))
-
-    return files
-
-def process_by_face_yaw(filepath):
-    path = Path(filepath)
-    dflimg = DFLIMG.load(path)
-    if dflimg is None or not dflimg.has_data():
-        print(f"{path.name} is not a DFL image file. Trashing it...")
-        return str(path), False
-        
-    _, yaw, _ = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks(), size=dflimg.get_shape()[1] )
-    return str(path), yaw
-    
 def sort_by_face_yaw(input_path):
     io.log_info ("Sorting by face yaw...")
     img_list = []
     trash_img_list = []
-    dataset = make_dataset(input_path)
+    for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path), "Loading"):
+        filepath = Path(filepath)
 
-    cpus = io.input_int('Insert number of CPUs to use', 
-                    help_message='If the default option is selected it will use all cpu cores and it will slow down pc',
-                    default_value=multiprocessing.cpu_count())
-    
-    with multiprocessing.Pool(processes=cpus) as p:
-        img_list = list(tqdm(p.imap_unordered(process_by_face_yaw, dataset),desc=f"Calculating datasrc with {cpus} {'cpus' if cpus > 1 else 'cpu'}", total=len(dataset), ascii=True))
+        dflimg = DFLIMG.load (filepath)
 
-    for i, img in enumerate(img_list):
-        if not img[1]:
-            trash_img_list.append( [img[0]] )
-            img_list.pop(i)
+        if dflimg is None or not dflimg.has_data():
+            io.log_err (f"{filepath.name} is not a dfl image file")
+            trash_img_list.append ( [str(filepath)] )
+            continue
+
+        pitch, yaw, roll = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks(), size=dflimg.get_shape()[1] )
+
+        img_list.append( [str(filepath), yaw ] )
 
     io.log_info ("Sorting...")
     img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)
@@ -752,17 +731,13 @@ def sort_best(input_path, faster=False):
 """
 def sort_by_vggface(input_path):
     io.log_info ("Sorting by face similarity using VGGFace model...")
-
     model = VGGFace()
-
     final_img_list = []
     trash_img_list = []
-
     image_paths = pathex.get_image_paths(input_path)
     img_list = [ (x,) for x in image_paths ]
     img_list_len = len(img_list)
     img_list_range = [*range(img_list_len)]
-
     feats = [None]*img_list_len
     for i in io.progress_bar_generator(img_list_range, "Loading"):
         img = cv2_imread( img_list[i][0] ).astype(np.float32)
@@ -773,20 +748,15 @@ def sort_by_vggface(input_path):
         img[..., 1] -= 104.7624
         img[..., 2] -= 129.1863
         feats[i] = model.predict( img[None,...] )[0]
-
     tmp = np.zeros( (img_list_len,) )
     float_inf = float("inf")
     for i in io.progress_bar_generator ( range(img_list_len-1), "Sorting" ):
         i_feat = feats[i]
-
         for j in img_list_range:
             tmp[j] = npla.norm(i_feat-feats[j]) if j >= i+1 else float_inf
-
         idx = np.argmin(tmp)
-
         img_list[i+1], img_list[idx] = img_list[idx], img_list[i+1]
         feats[i+1], feats[idx] = feats[idx], feats[i+1]
-
     return img_list, trash_img_list
 """
 
