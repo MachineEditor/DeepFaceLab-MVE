@@ -1,8 +1,9 @@
 import math
 import multiprocessing
+import os
 import operator
 import tempfile
-from functools import cmp_to_key
+from tqdm import tqdm
 from pathlib import Path
 
 import cv2
@@ -122,23 +123,43 @@ def sort_by_motion_blur(input_path):
 
     return img_list, trash_img_list
     
+def make_dataset(dir: str):
+    files = []
+
+    for root, _, fnames in os.walk(dir):
+        for fname in fnames:
+            path = os.path.join(root, fname)
+            files.append(Path(path))
+
+    return files
+
+def process_by_face_yaw(filepath):
+    path = Path(filepath)
+    dflimg = DFLIMG.load(path)
+    if dflimg is None or not dflimg.has_data():
+        print(f"{path.name} is not a DFL image file. Trashing it...")
+        return str(path), False
+        
+    _, yaw, _ = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks(), size=dflimg.get_shape()[1] )
+    return str(path), yaw
+    
 def sort_by_face_yaw(input_path):
     io.log_info ("Sorting by face yaw...")
     img_list = []
     trash_img_list = []
-    for filepath in io.progress_bar_generator( pathex.get_image_paths(input_path), "Loading"):
-        filepath = Path(filepath)
+    dataset = make_dataset(input_path)
 
-        dflimg = DFLIMG.load (filepath)
+    cpus = io.input_int('Insert number of CPUs to use', 
+                    help_message='If the default option is selected it will use all cpu cores and it will slow down pc',
+                    default_value=multiprocessing.cpu_count())
+    
+    with multiprocessing.Pool(processes=cpus) as p:
+        img_list = list(tqdm(p.imap_unordered(process_by_face_yaw, dataset),desc=f"Calculating datasrc with {cpus} {'cpus' if cpus > 1 else 'cpu'}", total=len(dataset), ascii=True))
 
-        if dflimg is None or not dflimg.has_data():
-            io.log_err (f"{filepath.name} is not a dfl image file")
-            trash_img_list.append ( [str(filepath)] )
-            continue
-
-        pitch, yaw, roll = LandmarksProcessor.estimate_pitch_yaw_roll ( dflimg.get_landmarks(), size=dflimg.get_shape()[1] )
-
-        img_list.append( [str(filepath), yaw ] )
+    for i, img in enumerate(img_list):
+        if not img[1]:
+            trash_img_list.append( [img[0]] )
+            img_list.pop(i)
 
     io.log_info ("Sorting...")
     img_list = sorted(img_list, key=operator.itemgetter(1), reverse=True)
