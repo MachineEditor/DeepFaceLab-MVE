@@ -1,6 +1,6 @@
 import multiprocessing
 import operator
-
+from pathlib import Path
 import numpy as np
 
 from core.interact import interact as io
@@ -842,8 +842,11 @@ class AMPLegacyModel(ModelBase):
                 if conf_dst_pak_name is not None:
                     self.dst_pak_name = conf_dst_pak_name
 
-            if self.src_pak_name != self.dst_pak_name and training_data_src_path == training_data_dst_path:
+            ignore_same_path = False
+            if self.src_pak_name != self.dst_pak_name and training_data_src_path == training_data_dst_path and not self.pretrain:
                 ignore_same_path = True
+            elif self.pretrain:
+                self.src_pak_name = self.dst_pak_name = 'faceset'
 
             self.set_training_data_generators ([
                     SampleGeneratorFace(training_data_src_path, pak_name=self.src_pak_name, ignore_same_path=ignore_same_path,
@@ -867,7 +870,7 @@ class AMPLegacyModel(ModelBase):
                         uniform_yaw_distribution=self.options['uniform_yaw'], #or self.pretrain
                         generators_count=src_generators_count ),
 
-                    SampleGeneratorFace(training_data_dst_path, pak_name=self.src_pak_name, ignore_same_path=ignore_same_path,
+                    SampleGeneratorFace(training_data_dst_path, pak_name=self.dst_pak_name, ignore_same_path=ignore_same_path,
                         debug=self.is_debug(), batch_size=self.get_batch_size(),
                         sample_process_options=SampleProcessor.Options(scale_range=[-0.125, 0.125], random_flip=random_dst_flip),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp,
@@ -1084,5 +1087,15 @@ class AMPLegacyModel(ModelBase):
 
         import merger
         return predictor_morph, (self.options['resolution'], self.options['resolution'], 3), merger.MergerConfigMasked(face_type=self.face_type, default_mode = 'overlay', is_morphable=True)
+
+    #override
+    def get_config_schema_path(self):
+        config_path = Path(__file__).parent.absolute() / Path("config_schema.json")
+        return config_path
+
+    #override
+    def get_formatted_configuration_path(self):
+        config_path = Path(__file__).parent.absolute() / Path("formatted_config.yaml")
+        return config_path
 
 Model = AMPLegacyModel
