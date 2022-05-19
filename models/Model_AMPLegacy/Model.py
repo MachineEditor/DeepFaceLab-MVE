@@ -905,8 +905,8 @@ class AMPLegacyModel(ModelBase):
             gpu_dst_inter_dst_code = self.inter_dst ( gpu_dst_code)
 
             inter_dims_slice = tf.cast(self.inter_dims*morph_value[0], tf.int32)
-            gpu_src_dst_code =  tf.concat( (tf.slice(gpu_dst_inter_src_code, [0,0,0,0],   [-1, inter_dims_slice , self.inter_res, self.inter_res]),
-                                            tf.slice(gpu_dst_inter_dst_code, [0,inter_dims_slice,0,0], [-1,self.inter_dims-inter_dims_slice, self.inter_res,self.inter_res]) ), 1 )
+            gpu_src_dst_code =  tf.concat( (tf.slice(gpu_dst_inter_src_code, [0,0,0,0],   [-1, inter_dims_slice , self.lowest_dense_res, self.lowest_dense_res]),
+                                            tf.slice(gpu_dst_inter_dst_code, [0,inter_dims_slice,0,0], [-1,self.inter_dims-inter_dims_slice, self.lowest_dense_res,self.lowest_dense_res]) ), 1 )
 
             gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder(gpu_src_dst_code)
             _, gpu_pred_dst_dstm = self.decoder(gpu_dst_inter_dst_code)
