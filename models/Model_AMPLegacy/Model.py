@@ -473,7 +473,7 @@ class AMPLegacyModel(ModelBase):
                     # gpu_target_srcm_anti = 1-gpu_target_srcm_all
                     # gpu_target_dstm_anti = 1-gpu_target_dstm_all
                     gpu_target_srcm_anti = 1-gpu_target_srcm
-                    gpu_target_dstm_anti = 1-gpu_target_dstm_em
+                    gpu_target_dstm_anti = 1-gpu_target_dstm
 
                     # process model tensors
                     gpu_src_code = self.encoder (gpu_warped_src)
@@ -652,12 +652,6 @@ class AMPLegacyModel(ModelBase):
 
                     def DLoss(labels,logits):
                         return tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits), axis=[1,2,3])
-
-                    def DLossOnes(logits):
-                        return tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(logits), logits=logits), axis=[1,2,3])
-
-                    def DLossZeros(logits):
-                        return tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(logits), logits=logits), axis=[1,2,3])
 
                     if gan_power != 0:
                         
