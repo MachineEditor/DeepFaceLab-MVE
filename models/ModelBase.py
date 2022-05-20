@@ -10,9 +10,7 @@ import datetime
 from pathlib import Path
 import yaml
 from jsonschema import validate, ValidationError
-import models
 
-import cv2
 import numpy as np
 
 from core import imagelib, pathex
@@ -523,10 +521,10 @@ class ModelBase(object):
         if key in nested_dict:
             nested_dict[key] = self.__convert_type_write(val)
             return True
-        for k, v in nested_dict.items():
-              if isinstance(v, dict):
-                  if self.__update_nested_dict(v, key, val):
-                      return True
+        for v in nested_dict.values():
+            if isinstance(v, dict):
+                if self.__update_nested_dict(v, key, val):
+                    return True
         return False
 
     def __iterate_read_dict(self, nested_dict, new_dict=None):
@@ -575,12 +573,11 @@ class ModelBase(object):
         Args:
             filepath (str|Path): Path where to save configuration file.
         """
-
         formatted_dict = self.read_from_config_file(self.get_formatted_configuration_path(), keep_nested=True, validation=False)
 
         for key, value in self.options.items():
             if not self.__update_nested_dict(formatted_dict, key, value):
-                formatted_dict[key] = self.__convert_type_write(value)
+                print(f"'{key}' not saved in the configuration file")
 
         try:
             with open(filepath, 'w') as file:
