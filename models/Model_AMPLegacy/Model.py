@@ -22,7 +22,12 @@ class AMPLegacyModel(ModelBase):
         default_models_opt_on_gpu  = self.options['models_opt_on_gpu']  = self.load_or_def_option('models_opt_on_gpu', True)
 
         default_ae_dims            = self.options['ae_dims']            = self.load_or_def_option('ae_dims', 256)
-        default_inter_dims         = self.options['inter_dims']         = self.load_or_def_option('inter_dims', 1024)
+
+        # Check compatibility for models without inter dims
+        if self.load_or_def_option('inter_dims', None) is None:
+            self.options['inter_dims'] == self.options['ae_dims']
+        else:
+            default_inter_dims      = self.options['inter_dims']        = self.load_or_def_option('inter_dims', 1024)
 
         default_e_dims             = self.options['e_dims']             = self.load_or_def_option('e_dims', 64)
         default_d_dims             = self.options['d_dims']             = self.options.get('d_dims', None)
