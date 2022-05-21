@@ -25,7 +25,7 @@ class AMPLegacyModel(ModelBase):
 
         # Check compatibility for models without inter dims
         if self.load_or_def_option('inter_dims', None) is None:
-            self.options['inter_dims'] == self.options['ae_dims']
+            self.options['inter_dims'] = self.options['ae_dims']
         else:
             default_inter_dims      = self.options['inter_dims']        = self.load_or_def_option('inter_dims', 1024)
 
