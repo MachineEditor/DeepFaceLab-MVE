@@ -351,6 +351,13 @@ class ModelBase(object):
 
         return def_value
 
+    def load_inter_dims(self):
+        try:
+            v = self.options['inter_dims']
+        except KeyError:
+            return False
+        return v
+
     def ask_override(self):
         time_delay = 5 if io.is_colab() else 2
         return self.is_training and not self.is_first_run() and io.input_in_time (f"Press enter in {time_delay} seconds to override model settings.", time_delay )
