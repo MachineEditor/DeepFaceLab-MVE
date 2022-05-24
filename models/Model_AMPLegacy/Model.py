@@ -34,7 +34,10 @@ class AMPLegacyModel(ModelBase):
         default_e_dims             = self.options['e_dims']             = self.load_or_def_option('e_dims', 64)
         default_d_dims             = self.options['d_dims']             = self.options.get('d_dims', None)
         default_d_mask_dims        = self.options['d_mask_dims']        = self.options.get('d_mask_dims', None)
+
         default_morph_factor       = self.options['morph_factor']       = self.load_or_def_option('morph_factor', 0.5)
+        default_preview_mf         = self.options['preview_mf']         = self.load_or_def_option('preview_mf', 1)
+
         default_masked_training    = self.options['masked_training']    = self.load_or_def_option('masked_training', True)
         default_eyes_prio          = self.options['eyes_prio']          = self.load_or_def_option('eyes_prio', False)
         default_mouth_prio         = self.options['mouth_prio']         = self.load_or_def_option('mouth_prio', False)
@@ -147,6 +150,9 @@ class AMPLegacyModel(ModelBase):
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
                 morph_factor = np.clip ( io.input_number ("Morph factor.", default_morph_factor, add_info="0.1 .. 0.5", help_message="Typical fine value is 0.5"), 0.1, 0.5 )
                 self.options['morph_factor'] = morph_factor
+
+                preview_mf = io.input_number ("Preview morph factor.", default_preview_mf, add_info="0.25 | 0.50 | 0.65 | 0.75 | 1", valid_list=[0.25, 0.50, 0.65, 0.75, 1], help_message="Morph factor of last column in preview 1/3")
+                self.options['preview_mf'] = preview_mf
             
                 if self.options['face_type'] == 'wf' or self.options['face_type'] == 'head':
                         self.options['masked_training']  = io.input_bool ("Masked training", default_masked_training, help_message="This option is available only for 'whole_face' or 'head' type. Masked training clips training area to full_face mask or XSeg mask, thus network will train the faces properly.")
@@ -1018,20 +1024,30 @@ class AMPLegacyModel(ModelBase):
                                                                  DDM_075, SDM_075,
                                                                  DDM_100, SDM_100) ]
 
+        morphed_preview_dict = {
+            0.25: SD_025,
+            0.50: SD_050,
+            0.65: SD_065,
+            0.75: SD_075,
+            1   : SD_100,
+        }
+
         target_srcm, target_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format) for x in ([target_srcm, target_dstm] )]
 
         n_samples = min(self.get_batch_size(), self.options['preview_samples'])
 
         result = []
-
-
         if self.options['force_full_preview']:
             i = np.random.randint(n_samples) if not for_history else 0
 
-            st =  [ np.concatenate ((S[i],  D[i],  DD[i]*DDM_000[i]), axis=1) ]
-            st += [ np.concatenate ((SS[i], DD[i], SD_075[i] ), axis=1) ]
+            if filenames is not None and len(filenames) > 0:
+                S[i] = label_face_filename(S[i], filenames[0][i])
+                D[i] = label_face_filename(D[i], filenames[1][i])
 
-            result += [ ('AMP morph 0.75', np.concatenate (st, axis=0 )), ]
+            st =  [ np.concatenate ((S[i],  D[i],  DD[i]*DDM_000[i]), axis=1) ]
+            st += [ np.concatenate ((SS[i], DD[i], morphed_preview_dict[self.options['preview_mf']][i] ), axis=1) ]
+
+            result += [ (f"AMP morph {self.options['preview_mf']}", np.concatenate (st, axis=0 )), ]
 
             st =  [ np.concatenate ((DD[i], SD_025[i],  SD_050[i]), axis=1) ]
             st += [ np.concatenate ((SD_065[i], SD_075[i], SD_100[i]), axis=1) ]
@@ -1051,9 +1067,9 @@ class AMPLegacyModel(ModelBase):
             temp_r = []        
             for i in range(n_samples if not for_history else 1):
                 st =  [ np.concatenate ((S[i], SS[i],  D[i]), axis=1) ]
-                st += [ np.concatenate ((DD[i], DD[i]*DDM_000[i], SD_100[i] ), axis=1) ]
+                st += [ np.concatenate ((DD[i], DD[i]*DDM_000[i], morphed_preview_dict[self.options['preview_mf']][i] ), axis=1) ]
                 temp_r += [ np.concatenate (st, axis=1) ]
-            result += [ ('AMP morph 1.0', np.concatenate (temp_r, axis=0 )), ]
+            result += [ (f"AMP morph {self.options['preview_mf']}", np.concatenate (temp_r, axis=0 )), ]
             # result += [ ('AMP morph 1.0', np.concatenate (st, axis=0 )), ]
             st = []  
             temp_r = []      
