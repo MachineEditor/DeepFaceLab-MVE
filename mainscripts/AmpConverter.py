@@ -56,8 +56,5 @@ def main(saved_models_path):
             new_name = f"{new_model_name}_AMPLegacy_{rest_of_name}"
             new_path = Path(f"{parent_str}/{new_name}")
 
-        print(new_path)
-        input()
-
         if original_model_name == saved_models_names[inp]:
             os.rename(filepath, new_path)
