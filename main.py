@@ -179,6 +179,14 @@ if __name__ == "__main__":
     p.add_argument('--model-dir', required=True, action=fixPathAction, dest="model_dir", help="Saved models dir.")
     p.add_argument('--model', required=True, dest="model_name", choices=pathex.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Model class name.")
     p.set_defaults (func=process_exportdfm)
+
+    def process_ampconverter(arguments):
+        from mainscripts import AmpConverter
+        AmpConverter.main(saved_models_path = Path(arguments.model_dir))
+
+    p = subparsers.add_parser( "ampconverter", help="Rename model files in order to be used with AMPModel. Only for AMP model.")
+    p.add_argument('--model-dir', required=True, action=fixPathAction, dest="model_dir", help="Saved models dir.")
+    p.set_defaults (func=process_ampconverter)
     
     def process_merge(arguments):
         osex.set_process_lowest_prio()
