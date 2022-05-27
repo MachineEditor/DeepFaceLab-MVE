@@ -24,12 +24,12 @@ class AMPLegacyModel(ModelBase):
         default_ae_dims            = self.options['ae_dims']            = self.load_or_def_option('ae_dims', 256)
 
         # Check compatibility for models without inter dims
-        if not self.load_inter_dims() and self.is_first_run():
+        if not self.load_inter_dims() and not self.is_first_run():
             self.options['inter_dims'] = self.options['ae_dims']
-            is_old_amp = True
+            
         else:
             default_inter_dims      = self.options['inter_dims']        = self.load_or_def_option('inter_dims', 1024)
-            is_old_amp = False
+            
 
         default_e_dims             = self.options['e_dims']             = self.load_or_def_option('e_dims', 64)
         default_d_dims             = self.options['d_dims']             = self.options.get('d_dims', None)
@@ -131,8 +131,8 @@ class AMPLegacyModel(ModelBase):
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
                 self.options['ae_dims']    = np.clip ( io.input_int("AutoEncoder dimensions", default_ae_dims, add_info="32-1024", help_message="All face information will packed to AE dims. If amount of AE dims are not enough, then for example closed eyes will not be recognized. More dims are better, but require more VRAM. You can fine-tune model size to fit your GPU." ), 32, 1024 )
                 
-                if not is_old_amp:
-                    self.options['inter_dims'] = np.clip ( io.input_int("Inter dimensions", default_inter_dims, add_info="32-2048", help_message="Should be equal or more than AutoEncoder dimensions. More dims are better, but require more VRAM. You can fine-tune model size to fit your GPU." ), 32, 2048 )
+                
+                self.options['inter_dims'] = np.clip ( io.input_int("Inter dimensions", default_inter_dims, add_info="32-2048", help_message="Should be equal or more than AutoEncoder dimensions. More dims are better, but require more VRAM. You can fine-tune model size to fit your GPU." ), 32, 2048 )
 
                 e_dims = np.clip ( io.input_int("Encoder dimensions", default_e_dims, add_info="16-256", help_message="More dims help to recognize more facial features and achieve sharper result, but require more VRAM. You can fine-tune model size to fit your GPU." ), 16, 256 )
                 self.options['e_dims'] = e_dims + e_dims % 2
