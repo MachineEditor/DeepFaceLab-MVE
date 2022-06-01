@@ -10,9 +10,7 @@ import datetime
 from pathlib import Path
 import yaml
 from jsonschema import validate, ValidationError
-import models
 
-import cv2
 import numpy as np
 
 from core import imagelib, pathex
@@ -304,9 +302,11 @@ class ModelBase(object):
                 io.capture_keys(wnd_name)
                 choosed = False
                 preview_id_counter = 0
+                mask_changed = False
                 while not choosed:
-                    self.sample_for_preview = self.generate_next_samples()
-                    previews = self.get_history_previews()
+                    if not mask_changed:
+                        self.sample_for_preview = self.generate_next_samples()
+                        previews = self.get_history_previews()
 
                     io.show_image( wnd_name, ( previews[preview_id_counter % len(previews) ][1] *255).astype(np.uint8) )
 
@@ -318,8 +318,10 @@ class ModelBase(object):
                             break
                         elif key == ord(' '):
                             preview_id_counter += 1
+                            mask_changed = True
                             break
                         elif key == ord('p'):
+                            if mask_changed: mask_changed = False
                             break
 
                         try:
@@ -348,6 +350,13 @@ class ModelBase(object):
             return def_opt_val
 
         return def_value
+
+    def load_inter_dims(self):
+        try:
+            v = self.options['inter_dims']
+        except KeyError:
+            return False
+        return v
 
     def ask_override(self):
         time_delay = 5 if io.is_colab() else 2
@@ -519,10 +528,10 @@ class ModelBase(object):
         if key in nested_dict:
             nested_dict[key] = self.__convert_type_write(val)
             return True
-        for k, v in nested_dict.items():
-              if isinstance(v, dict):
-                  if self.__update_nested_dict(v, key, val):
-                      return True
+        for v in nested_dict.values():
+            if isinstance(v, dict):
+                if self.__update_nested_dict(v, key, val):
+                    return True
         return False
 
     def __iterate_read_dict(self, nested_dict, new_dict=None):
@@ -571,12 +580,11 @@ class ModelBase(object):
         Args:
             filepath (str|Path): Path where to save configuration file.
         """
-
         formatted_dict = self.read_from_config_file(self.get_formatted_configuration_path(), keep_nested=True, validation=False)
 
         for key, value in self.options.items():
             if not self.__update_nested_dict(formatted_dict, key, value):
-                formatted_dict[key] = self.__convert_type_write(value)
+                print(f"'{key}' not saved in the configuration file")
 
         try:
             with open(filepath, 'w') as file:

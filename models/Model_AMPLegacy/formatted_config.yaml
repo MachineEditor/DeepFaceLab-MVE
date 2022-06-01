@@ -1,17 +1,18 @@
 basic_param:
-  archi: liae-ud
   resolution: 128
   ae_dims: 256
+  inter_dims: 1024
   e_dims: 64
   d_dims: 64
   d_mask_dims: 22
   face_type: wf
 model_properties:
+  morph_factor: 0.5
+  preview_mf: 1
   session_name: ''
   autobackup_hour: 0
   maximum_n_backups: 24
   write_preview_history: false
-  pretrain: false
   use_fp16: false
   target_iter: 0
   batch_size: 8
@@ -28,9 +29,9 @@ model_properties:
   clipgrad: false
   retraining_samples: false
   background_power: 0.0
-  true_face_power: 0.0
   face_style_power: 0.0
   bg_style_power: 0.0
+  eyes_mouth_prio: false
   cpu_cap: 8
   preview_samples: 4
   force_full_preview: false
@@ -48,6 +49,7 @@ augmentations:
   random_downsample: false
   random_noise: false
   random_blur: false
+  random_jpeg: false
   random_jpeg: false
   random_shadow_src:
   - enabled: false

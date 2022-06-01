@@ -1,6 +1,6 @@
 import multiprocessing
 import operator
-
+from pathlib import Path
 import numpy as np
 
 from core.interact import interact as io
@@ -10,21 +10,26 @@ from models import ModelBase
 from samplelib import *
 from core.cv2ex import *
 
-from pathlib import Path
-
 from utils.label_face import label_face_filename
 
-class AMPModel(ModelBase):
+class AMPLegacyModel(ModelBase):
 
     #override
     def on_initialize_options(self):
         default_retraining_samples = self.options['retraining_samples'] = self.load_or_def_option('retraining_samples', False)
         default_resolution         = self.options['resolution']         = self.load_or_def_option('resolution', 224)
-        default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'f')
+        default_face_type          = self.options['face_type']          = self.load_or_def_option('face_type', 'wf')
         default_models_opt_on_gpu  = self.options['models_opt_on_gpu']  = self.load_or_def_option('models_opt_on_gpu', True)
 
         default_ae_dims            = self.options['ae_dims']            = self.load_or_def_option('ae_dims', 256)
-        default_inter_dims         = self.options['inter_dims']         = self.load_or_def_option('inter_dims', 1024)
+
+        # Check compatibility for models without inter dims
+        if not self.load_inter_dims() and not self.is_first_run():
+            self.options['inter_dims'] = self.options['ae_dims']
+            
+        else:
+            default_inter_dims      = self.options['inter_dims']        = self.load_or_def_option('inter_dims', 1024)
+            
 
         default_e_dims             = self.options['e_dims']             = self.load_or_def_option('e_dims', 64)
         default_d_dims             = self.options['d_dims']             = self.options.get('d_dims', None)
@@ -34,19 +39,10 @@ class AMPModel(ModelBase):
         default_preview_mf         = self.options['preview_mf']         = self.load_or_def_option('preview_mf', 1)
 
         default_masked_training    = self.options['masked_training']    = self.load_or_def_option('masked_training', True)
-        
         default_eyes_prio          = self.options['eyes_prio']          = self.load_or_def_option('eyes_prio', False)
         default_mouth_prio         = self.options['mouth_prio']         = self.load_or_def_option('mouth_prio', False)
-
-        # Compatibility check
-        eyes_mouth_prio = self.options.get('eyes_mouth_prio')
-        if eyes_mouth_prio is not None:
-            default_eyes_prio = self.options['eyes_prio'] = eyes_mouth_prio
-            default_mouth_prio = self.options['mouth_prio'] = eyes_mouth_prio
-
         default_uniform_yaw        = self.options['uniform_yaw']        = self.load_or_def_option('uniform_yaw', False)
 
-        # Uncomment it just if you want to impelement other loss functions
         default_loss_function      = self.options['loss_function']      = self.load_or_def_option('loss_function', 'SSIM')
 
         default_blur_out_mask      = self.options['blur_out_mask']      = self.load_or_def_option('blur_out_mask', False)
@@ -64,6 +60,7 @@ class AMPModel(ModelBase):
         
         random_shadow_src_options = self.options['random_shadow_src']   = self.load_or_def_option('random_shadow_src', False)
         random_shadow_dst_options = self.options['random_shadow_dst']   = self.load_or_def_option('random_shadow_dst', False)
+        default_pretrain           = self.options['pretrain']      = self.load_or_def_option('pretrain', False)
 
         if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
 
@@ -90,7 +87,6 @@ class AMPModel(ModelBase):
             del self.options['random_shadow_src']
             del self.options['random_shadow_dst']
 
-        # Uncomment it just if you want to impelement other loss functions
         default_background_power   = self.options['background_power']   = self.load_or_def_option('background_power', 0.0)
         default_ct_mode            = self.options['ct_mode']            = self.load_or_def_option('ct_mode', 'none')
         default_random_color       = self.options['random_color']       = self.load_or_def_option('random_color', False)
@@ -110,8 +106,6 @@ class AMPModel(ModelBase):
                 self.ask_write_preview_history()
                 self.options['preview_samples'] = np.clip ( io.input_int ("Number of samples to preview", default_preview_samples, add_info="1 - 16", help_message="Typical fine value is 4"), 1, 16 )
                 self.options['force_full_preview'] = io.input_bool ("Use old preview panel", default_full_preview)
-
-
                 self.ask_target_iter()
                 self.ask_retraining_samples()
                 self.ask_random_src_flip()
@@ -132,7 +126,6 @@ class AMPModel(ModelBase):
 
 
         default_d_dims             = self.options['d_dims']             = self.load_or_def_option('d_dims', 64)
-
         default_d_mask_dims        = default_d_dims // 3
         default_d_mask_dims        += default_d_mask_dims % 2
         default_d_mask_dims        = self.options['d_mask_dims']        = self.load_or_def_option('d_mask_dims', default_d_mask_dims)
@@ -140,6 +133,8 @@ class AMPModel(ModelBase):
         if self.is_first_run():
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
                 self.options['ae_dims']    = np.clip ( io.input_int("AutoEncoder dimensions", default_ae_dims, add_info="32-1024", help_message="All face information will packed to AE dims. If amount of AE dims are not enough, then for example closed eyes will not be recognized. More dims are better, but require more VRAM. You can fine-tune model size to fit your GPU." ), 32, 1024 )
+                
+                
                 self.options['inter_dims'] = np.clip ( io.input_int("Inter dimensions", default_inter_dims, add_info="32-2048", help_message="Should be equal or more than AutoEncoder dimensions. More dims are better, but require more VRAM. You can fine-tune model size to fit your GPU." ), 32, 2048 )
 
                 e_dims = np.clip ( io.input_int("Encoder dimensions", default_e_dims, add_info="16-256", help_message="More dims help to recognize more facial features and achieve sharper result, but require more VRAM. You can fine-tune model size to fit your GPU." ), 16, 256 )
@@ -217,8 +212,10 @@ class AMPModel(ModelBase):
                 self.options['random_color'] = io.input_bool ("Random color", default_random_color, help_message="Samples are randomly rotated around the L axis in LAB colorspace, helps generalize training")
 
                 self.options['clipgrad'] = io.input_bool ("Enable gradient clipping", default_clipgrad, help_message="Gradient clipping reduces chance of model collapse, sacrificing speed of training.")
+                self.options['pretrain'] = io.input_bool ("Enable pretraining mode", default_pretrain, help_message="Pretrain the model with large amount of various faces. After that, model can be used to train the fakes more quickly. Forces random_warp=N, random_flips=Y, gan_power=0.0, lr_dropout=N, uniform_yaw=Y")
 
         self.gan_model_changed = (default_gan_patch_size != self.options['gan_patch_size']) or (default_gan_dims != self.options['gan_dims'])
+        self.pretrain_just_disabled = (default_pretrain == True and self.options['pretrain'] == False)
 
     #override
     def on_initialize(self):
@@ -228,57 +225,63 @@ class AMPModel(ModelBase):
         nn.initialize(data_format=self.model_data_format)
         tf = nn.tf
 
-        input_ch=3
-        resolution  = self.resolution = self.options['resolution']
-        e_dims      = self.options['e_dims']
-        ae_dims     = self.options['ae_dims']
-        inter_dims  = self.inter_dims = self.options['inter_dims']
-        inter_res   = self.inter_res = resolution // 32
-        d_dims      = self.options['d_dims']
-        d_mask_dims = self.options['d_mask_dims']
+        self.resolution = resolution = self.options['resolution']
+
+        lowest_dense_res = self.lowest_dense_res = resolution // 32
         self.face_type = {'h'  : FaceType.HALF,
                           'mf' : FaceType.MID_FULL,
                           'f'  : FaceType.FULL,
                           'wf' : FaceType.WHOLE_FACE,
                           'custom' : FaceType.CUSTOM,
                           'head' : FaceType.HEAD}[ self.options['face_type'] ]
-        morph_factor = self.options['morph_factor']
-        gan_power    = self.gan_power = self.options['gan_power']
-        random_warp  = self.options['random_warp']
-        random_hsv_power = self.options['random_hsv_power']
-        
+
         if 'eyes_mouth_prio' in self.options:
             self.options.pop('eyes_mouth_prio')
-            
-        bg_factor = self.options['background_power']
+
+        ae_dims = self.ae_dims = self.options['ae_dims']
+        inter_dims  = self.inter_dims = self.options['inter_dims']
+        e_dims = self.options['e_dims']
+        d_dims = self.options['d_dims']
+        d_mask_dims = self.options['d_mask_dims']
+        morph_factor = self.options['morph_factor']
+
+        adabelief = self.options['adabelief']
         
+        pretrain = self.pretrain = self.options['pretrain']
+        if self.pretrain_just_disabled:
+            self.set_iter(0)
+            
+        self.gan_power = gan_power = 0.0 if self.pretrain else self.options['gan_power']
+        random_warp = False if self.pretrain else self.options['random_warp']
+        random_hsv_power = self.options['random_hsv_power']
+        random_src_flip = self.random_src_flip if not self.pretrain else True
+        random_dst_flip = self.random_dst_flip if not self.pretrain else True
+        
+        if self.pretrain:
+            self.options_show_override['gan_power'] = 0.0
+            self.options_show_override['random_warp'] = False
+            self.options_show_override['lr_dropout'] = 'n'
+            self.options_show_override['uniform_yaw'] = True
+            
+        masked_training = self.options['masked_training']
+        blur_out_mask = self.options['blur_out_mask'] if masked_training else False
         eyes_prio = self.options['eyes_prio']
         mouth_prio = self.options['mouth_prio']
-        masked_training = self.options['masked_training'] 
-        blur_out_mask = self.options['blur_out_mask'] if masked_training else False
 
         ct_mode = self.options['ct_mode']
         if ct_mode == 'none':
             ct_mode = None
 
-        adabelief = self.options['adabelief']
-
-        use_fp16 = self.options['use_fp16']
-        if self.is_exporting:
-            use_fp16 = io.input_bool ("Export quantized?", False, help_message='Makes the exported model faster. If you have problems, disable this option.')
-
-        conv_dtype = tf.float16 if use_fp16 else tf.float32
-
         class Downscale(nn.ModelBase):
             def on_build(self, in_ch, out_ch, kernel_size=5 ):
-                self.conv1 = nn.Conv2D( in_ch, out_ch, kernel_size=kernel_size, strides=2, padding='SAME', dtype=conv_dtype)
+                self.conv1 = nn.Conv2D( in_ch, out_ch, kernel_size=kernel_size, strides=2, padding='SAME')
 
             def forward(self, x):
                 return tf.nn.leaky_relu(self.conv1(x), 0.1)
 
         class Upscale(nn.ModelBase):
             def on_build(self, in_ch, out_ch, kernel_size=3 ):
-                self.conv1 = nn.Conv2D(in_ch, out_ch*4, kernel_size=kernel_size, padding='SAME', dtype=conv_dtype)
+                self.conv1 = nn.Conv2D(in_ch, out_ch*4, kernel_size=kernel_size, padding='SAME')
 
             def forward(self, x):
                 x = nn.depth_to_space(tf.nn.leaky_relu(self.conv1(x), 0.1), 2)
@@ -286,8 +289,8 @@ class AMPModel(ModelBase):
 
         class ResidualBlock(nn.ModelBase):
             def on_build(self, ch, kernel_size=3 ):
-                self.conv1 = nn.Conv2D( ch, ch, kernel_size=kernel_size, padding='SAME', dtype=conv_dtype)
-                self.conv2 = nn.Conv2D( ch, ch, kernel_size=kernel_size, padding='SAME', dtype=conv_dtype)
+                self.conv1 = nn.Conv2D( ch, ch, kernel_size=kernel_size, padding='SAME')
+                self.conv2 = nn.Conv2D( ch, ch, kernel_size=kernel_size, padding='SAME')
 
             def forward(self, inp):
                 x = self.conv1(inp)
@@ -305,11 +308,10 @@ class AMPModel(ModelBase):
                 self.down4 = Downscale(e_dims*4, e_dims*8, kernel_size=5)
                 self.down5 = Downscale(e_dims*8, e_dims*8, kernel_size=5)
                 self.res5 = ResidualBlock(e_dims*8)
-                self.dense1 = nn.Dense( (( resolution//(2**5) )**2) * e_dims*8, ae_dims )
+                #self.dense1 = nn.Dense( (( resolution//(2**5) )**2) * e_dims*8, ae_dims )
+                self.dense1 = nn.Dense(lowest_dense_res*lowest_dense_res*e_dims*8 , ae_dims ) # should be same as line above but consistent to legacy implementation
 
             def forward(self, x):
-                if use_fp16:
-                    x = tf.cast(x, tf.float16)
                 x = self.down1(x)
                 x = self.res1(x)
                 x = self.down2(x)
@@ -317,20 +319,18 @@ class AMPModel(ModelBase):
                 x = self.down4(x)
                 x = self.down5(x)
                 x = self.res5(x)
-                if use_fp16:
-                    x = tf.cast(x, tf.float32)
                 x = nn.pixel_norm(nn.flatten(x), axes=-1)
                 x = self.dense1(x)
                 return x
 
         class Inter(nn.ModelBase):
             def on_build(self):
-                self.dense2 = nn.Dense(ae_dims, inter_res * inter_res * inter_dims)
+                self.dense2 = nn.Dense(ae_dims, lowest_dense_res * lowest_dense_res * inter_dims)
 
             def forward(self, inp):
                 x = inp
                 x = self.dense2(x)
-                x = nn.reshape_4D (x, inter_res, inter_res, inter_dims)
+                x = nn.reshape_4D (x, lowest_dense_res, lowest_dense_res, inter_dims)
                 return x
 
         class Decoder(nn.ModelBase):
@@ -350,17 +350,14 @@ class AMPModel(ModelBase):
                 self.upscalem2 = Upscale(d_mask_dims*8, d_mask_dims*4, kernel_size=3)
                 self.upscalem3 = Upscale(d_mask_dims*4, d_mask_dims*2, kernel_size=3)
                 self.upscalem4 = Upscale(d_mask_dims*2, d_mask_dims*1, kernel_size=3)
-                self.out_convm = nn.Conv2D( d_mask_dims*1, 1, kernel_size=1, padding='SAME', dtype=conv_dtype)
+                self.out_convm = nn.Conv2D( d_mask_dims*1, 1, kernel_size=1, padding='SAME')
 
-                self.out_conv  = nn.Conv2D( d_dims*2, 3, kernel_size=1, padding='SAME', dtype=conv_dtype)
-                self.out_conv1 = nn.Conv2D( d_dims*2, 3, kernel_size=3, padding='SAME', dtype=conv_dtype)
-                self.out_conv2 = nn.Conv2D( d_dims*2, 3, kernel_size=3, padding='SAME', dtype=conv_dtype)
-                self.out_conv3 = nn.Conv2D( d_dims*2, 3, kernel_size=3, padding='SAME', dtype=conv_dtype)
+                self.out_conv  = nn.Conv2D( d_dims*2, 3, kernel_size=1, padding='SAME')
+                self.out_conv1 = nn.Conv2D( d_dims*2, 3, kernel_size=3, padding='SAME')
+                self.out_conv2 = nn.Conv2D( d_dims*2, 3, kernel_size=3, padding='SAME')
+                self.out_conv3 = nn.Conv2D( d_dims*2, 3, kernel_size=3, padding='SAME')
 
             def forward(self, z):
-                if use_fp16:
-                    z = tf.cast(z, tf.float16)
-
                 x = self.upscale0(z)
                 x = self.res0(x)
                 x = self.upscale1(x)
@@ -381,15 +378,13 @@ class AMPModel(ModelBase):
                 m = self.upscalem4(m)
                 m = tf.nn.sigmoid(self.out_convm(m))
 
-                if use_fp16:
-                    x = tf.cast(x, tf.float32)
-                    m = tf.cast(m, tf.float32)
                 return x, m
 
         models_opt_on_gpu = False if len(devices) == 0 else self.options['models_opt_on_gpu']
         models_opt_device = nn.tf_default_device_name if models_opt_on_gpu and self.is_training else '/CPU:0'
         optimizer_vars_on_cpu = models_opt_device=='/CPU:0'
 
+        input_ch=3
         bgr_shape = self.bgr_shape = nn.get4Dshape(resolution,resolution,input_ch)
         mask_shape = nn.get4Dshape(resolution,resolution,1)
         self.model_filename_list = []
@@ -423,24 +418,31 @@ class AMPModel(ModelBase):
 
             if self.is_training:
                 if gan_power != 0:
-                    self.GAN = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], use_fp16=self.options['use_fp16'], name="D_src")
+                    self.GAN = nn.UNetPatchDiscriminator(patch_size=self.options['gan_patch_size'], in_ch=input_ch, base_ch=self.options['gan_dims'], name="GAN")
                     self.model_filename_list += [ [self.GAN, 'GAN.npy'] ]
-            
+
                 # Initialize optimizers
-                lr = self.options['lr']
-               
+                lr=5e-5
+                lr_dropout = 0.3 if self.options['lr_dropout'] in ['y','cpu'] and not self.pretrain else 1.0
+                
                 clipnorm = 1.0 if self.options['clipgrad'] else 0.0
-                if self.options['lr_dropout'] in ['y','cpu']:
+                if self.options['lr_dropout'] in ['y','cpu'] and not self.pretrain:
                     lr_cos = 500
                     lr_dropout = 0.3
                 else:
                     lr_cos = 0
                     lr_dropout = 1.0
-                self.G_weights = self.encoder.get_weights() + self.decoder.get_weights()
-
+                
                 OptimizerClass = nn.AdaBelief if adabelief else nn.RMSprop
-                self.src_dst_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, clipnorm=clipnorm, name='src_dst_opt')
-                self.src_dst_opt.initialize_variables (self.G_weights, vars_on_cpu=optimizer_vars_on_cpu)
+
+                self.all_weights = self.encoder.get_weights() + self.inter_src.get_weights() + self.inter_dst.get_weights() + self.decoder.get_weights()
+                if pretrain:
+                    self.trainable_weights = self.encoder.get_weights() + self.inter_dst.get_weights() + self.decoder.get_weights()
+                else:
+                    self.trainable_weights = self.encoder.get_weights() + self.inter_src.get_weights() + self.inter_dst.get_weights() + self.decoder.get_weights()
+
+                self.src_dst_opt = OptimizerClass(lr=lr, lr_dropout=lr_dropout, lr_cos=lr_cos, clipnorm=clipnorm, name='src_dst_opt')
+                self.src_dst_opt.initialize_variables (self.all_weights, vars_on_cpu=optimizer_vars_on_cpu, lr_dropout_on_cpu=self.options['lr_dropout']=='cpu')
                 self.model_filename_list += [ (self.src_dst_opt, 'src_dst_opt.npy') ]
 
                 if gan_power != 0:
@@ -464,17 +466,8 @@ class AMPModel(ModelBase):
 
             gpu_src_losses = []
             gpu_dst_losses = []
-            gpu_G_loss_gradients = []
+            gpu_G_loss_gvs = []
             gpu_GAN_loss_gradients = []
-
-            def DLoss(labels,logits):
-                return tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits), axis=[1,2,3])
-            
-            def DLossOnes(logits):
-                return tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(logits), logits=logits), axis=[1,2,3])
-
-            def DLossZeros(logits):
-                return tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(logits), logits=logits), axis=[1,2,3])
 
             for gpu_id in range(gpu_count):
                 with tf.device( f'/{devices[gpu_id].tf_dev_type}:{gpu_id}' if len(devices) != 0 else f'/CPU:0' ):
@@ -485,167 +478,199 @@ class AMPModel(ModelBase):
                         gpu_warped_dst      = self.warped_dst [batch_slice,:,:,:]
                         gpu_target_src      = self.target_src [batch_slice,:,:,:]
                         gpu_target_dst      = self.target_dst [batch_slice,:,:,:]
-                        gpu_target_srcm_all     = self.target_srcm[batch_slice,:,:,:]
+                        gpu_target_srcm     = self.target_srcm[batch_slice,:,:,:]
                         gpu_target_srcm_em  = self.target_srcm_em[batch_slice,:,:,:]
-                        gpu_target_dstm_all     = self.target_dstm[batch_slice,:,:,:]
+                        gpu_target_dstm     = self.target_dstm[batch_slice,:,:,:]
                         gpu_target_dstm_em  = self.target_dstm_em[batch_slice,:,:,:]
-                        
-                    gpu_target_srcm_anti = 1-gpu_target_srcm_all
-                    gpu_target_dstm_anti = 1-gpu_target_dstm_all
+
+                    # Adapted from new code
+                    # Original new code
+                    # gpu_target_srcm_anti = 1-gpu_target_srcm_all
+                    # gpu_target_dstm_anti = 1-gpu_target_dstm_all
+                    gpu_target_srcm_anti = 1-gpu_target_srcm
+                    gpu_target_dstm_anti = 1-gpu_target_dstm
 
                     # process model tensors
                     gpu_src_code = self.encoder (gpu_warped_src)
                     gpu_dst_code = self.encoder (gpu_warped_dst)
+                    
+                    if pretrain:
+                        gpu_src_inter_src_code = self.inter_src (gpu_src_code)
+                        gpu_dst_inter_dst_code = self.inter_dst (gpu_dst_code)
+                        gpu_src_code = gpu_src_inter_src_code * nn.random_binomial( [bs_per_gpu, gpu_src_inter_src_code.shape.as_list()[1], 1,1] , p=morph_factor)
+                        gpu_dst_code = gpu_src_dst_code = gpu_dst_inter_dst_code * nn.random_binomial( [bs_per_gpu, gpu_dst_inter_dst_code.shape.as_list()[1], 1,1] , p=0.25)
+                    else:
+                        gpu_src_inter_src_code = self.inter_src (gpu_src_code)
+                        gpu_src_inter_dst_code = self.inter_dst (gpu_src_code)
+                        gpu_dst_inter_src_code = self.inter_src (gpu_dst_code)
+                        gpu_dst_inter_dst_code = self.inter_dst (gpu_dst_code)
 
-                    gpu_src_inter_src_code, gpu_src_inter_dst_code = self.inter_src (gpu_src_code), self.inter_dst (gpu_src_code)
-                    gpu_dst_inter_src_code, gpu_dst_inter_dst_code = self.inter_src (gpu_dst_code), self.inter_dst (gpu_dst_code)
+                        inter_rnd_binomial = nn.random_binomial( [bs_per_gpu, gpu_src_inter_src_code.shape.as_list()[1], 1,1] , p=morph_factor)
+                        gpu_src_code = gpu_src_inter_src_code * inter_rnd_binomial + gpu_src_inter_dst_code * (1-inter_rnd_binomial)
+                        gpu_dst_code = gpu_dst_inter_dst_code
 
-                    inter_dims_bin = int(inter_dims*morph_factor)
-                    with tf.device(f'/CPU:0'):
-                        inter_rnd_binomial = tf.stack([tf.random.shuffle(tf.concat([tf.tile(tf.constant([1], tf.float32), ( inter_dims_bin, )),
-                                                                                    tf.tile(tf.constant([0], tf.float32), ( inter_dims-inter_dims_bin, ))], 0 )) for _ in range(bs_per_gpu)], 0)
-
-                        inter_rnd_binomial = tf.stop_gradient(inter_rnd_binomial[...,None,None])
-
-                    gpu_src_code = gpu_src_inter_src_code * inter_rnd_binomial + gpu_src_inter_dst_code * (1-inter_rnd_binomial)
-                    gpu_dst_code = gpu_dst_inter_dst_code
-
-                    inter_dims_slice = tf.cast(inter_dims*self.morph_value_t[0], tf.int32)
-                    gpu_src_dst_code = tf.concat( (tf.slice(gpu_dst_inter_src_code, [0,0,0,0],   [-1, inter_dims_slice , inter_res, inter_res]),
-                                                   tf.slice(gpu_dst_inter_dst_code, [0,inter_dims_slice,0,0], [-1,inter_dims-inter_dims_slice, inter_res,inter_res]) ), 1 )
+                        inter_dims_slice = tf.cast(inter_dims*self.morph_value_t[0], tf.int32)
+                        gpu_src_dst_code =  tf.concat( (tf.slice(gpu_dst_inter_src_code, [0,0,0,0],   [-1, inter_dims_slice , lowest_dense_res, lowest_dense_res]),
+                                                        tf.slice(gpu_dst_inter_dst_code, [0,inter_dims_slice,0,0], [-1,inter_dims-inter_dims_slice, lowest_dense_res,lowest_dense_res]) ), 1 )
 
                     gpu_pred_src_src, gpu_pred_src_srcm = self.decoder(gpu_src_code)
                     gpu_pred_dst_dst, gpu_pred_dst_dstm = self.decoder(gpu_dst_code)
                     gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder(gpu_src_dst_code)
 
-                    gpu_pred_src_src_list.append(gpu_pred_src_src), gpu_pred_src_srcm_list.append(gpu_pred_src_srcm)
-                    gpu_pred_dst_dst_list.append(gpu_pred_dst_dst), gpu_pred_dst_dstm_list.append(gpu_pred_dst_dstm)
-                    gpu_pred_src_dst_list.append(gpu_pred_src_dst), gpu_pred_src_dstm_list.append(gpu_pred_src_dstm)
+                    gpu_pred_src_src_list.append(gpu_pred_src_src)
+                    gpu_pred_dst_dst_list.append(gpu_pred_dst_dst)
+                    gpu_pred_src_dst_list.append(gpu_pred_src_dst)
 
+                    gpu_pred_src_srcm_list.append(gpu_pred_src_srcm)
+                    gpu_pred_dst_dstm_list.append(gpu_pred_dst_dstm)
+                    gpu_pred_src_dstm_list.append(gpu_pred_src_dstm)
 
                     if blur_out_mask:
                         sigma = resolution / 128
 
                         x = nn.gaussian_blur(gpu_target_src*gpu_target_srcm_anti, sigma)
-                        y = 1-nn.gaussian_blur(gpu_target_srcm_all, sigma)
+                        y = 1-nn.gaussian_blur(gpu_target_srcm, sigma)
                         y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
-                        gpu_target_src = gpu_target_src*gpu_target_srcm_all + (x/y)*gpu_target_srcm_anti
+                        gpu_target_src = gpu_target_src*gpu_target_srcm + (x/y)*gpu_target_srcm_anti
                         
                         x = nn.gaussian_blur(gpu_target_dst*gpu_target_dstm_anti, sigma)
-                        y = 1-nn.gaussian_blur(gpu_target_dstm_all, sigma)
+                        y = 1-nn.gaussian_blur(gpu_target_dstm, sigma)
                         y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
-                        gpu_target_dst = gpu_target_dst*gpu_target_dstm_all + (x/y)*gpu_target_dstm_anti
+                        gpu_target_dst = gpu_target_dst*gpu_target_dstm + (x/y)*gpu_target_dstm_anti
 
                     # unpack masks from one combined mask
-                    gpu_target_srcm      = tf.clip_by_value (gpu_target_srcm_all, 0, 1)
-                    gpu_target_dstm      = tf.clip_by_value (gpu_target_dstm_all, 0, 1)
+                    gpu_target_srcm      = tf.clip_by_value (gpu_target_srcm, 0, 1)
+                    gpu_target_dstm      = tf.clip_by_value (gpu_target_dstm, 0, 1)
                     gpu_target_srcm_eye_mouth = tf.clip_by_value (gpu_target_srcm_em-1, 0, 1)
                     gpu_target_dstm_eye_mouth = tf.clip_by_value (gpu_target_dstm_em-1, 0, 1)
                     gpu_target_srcm_mouth = tf.clip_by_value (gpu_target_srcm_em-2, 0, 1)
                     gpu_target_dstm_mouth = tf.clip_by_value (gpu_target_dstm_em-2, 0, 1)
                     gpu_target_srcm_eyes = tf.clip_by_value (gpu_target_srcm_eye_mouth-gpu_target_srcm_mouth, 0, 1)
                     gpu_target_dstm_eyes = tf.clip_by_value (gpu_target_dstm_eye_mouth-gpu_target_dstm_mouth, 0, 1)
-                    
-                                        
 
-                    gpu_target_srcm_gblur = nn.gaussian_blur(gpu_target_srcm, resolution // 32)
-                    gpu_target_dstm_gblur = nn.gaussian_blur(gpu_target_dstm, resolution // 32)
-                    
-                    
-                    gpu_target_srcm_blur = tf.clip_by_value(gpu_target_srcm_gblur, 0, 0.5) * 2
-                    gpu_target_dstm_blur = tf.clip_by_value(gpu_target_dstm_gblur, 0, 0.5) * 2
-                    
-                    gpu_target_srcm_anti_blur = 1.0-gpu_target_srcm_blur
-                    gpu_target_dstm_anti_blur = 1.0-gpu_target_dstm_blur
-                    
-                    gpu_target_src_masked = gpu_target_src*gpu_target_srcm_blur if masked_training else gpu_target_src
-                    gpu_target_dst_masked = gpu_target_dst*gpu_target_dstm_blur if masked_training else gpu_target_dst
-                    gpu_target_src_anti_masked = gpu_target_src*gpu_target_srcm_anti_blur if masked_training else gpu_pred_src_src
-                    gpu_target_dst_anti_masked = gpu_target_dst*gpu_target_dstm_anti_blur if masked_training else gpu_pred_dst_dst
+                    gpu_target_srcm_blur = nn.gaussian_blur(gpu_target_srcm,  max(1, resolution // 32) )
+                    gpu_target_srcm_blur = tf.clip_by_value(gpu_target_srcm_blur, 0, 0.5) * 2
 
-                    gpu_pred_src_src_masked = gpu_pred_src_src*gpu_target_srcm_blur
-                    gpu_pred_dst_dst_masked = gpu_pred_dst_dst*gpu_target_dstm_blur
-                    gpu_pred_src_src_anti_masked = gpu_pred_src_src*gpu_target_srcm_anti_blur
-                    gpu_pred_dst_dst_anti_masked = gpu_pred_dst_dst*gpu_target_dstm_anti_blur
+                    gpu_target_dstm_blur = nn.gaussian_blur(gpu_target_dstm,  max(1, resolution // 32) )
+                    gpu_target_dstm_blur = tf.clip_by_value(gpu_target_dstm_blur, 0, 0.5) * 2
 
-                    if self.options['loss_function'] == 'MS-SSIM':   
-                        gpu_src_loss =  10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_src_masked, gpu_pred_src_src_masked, max_val=1.0)
-                        gpu_src_loss += tf.reduce_mean ( 10*tf.square ( gpu_target_src_masked - gpu_pred_src_src_masked ), axis=[1,2,3])
-                        gpu_dst_loss  =  10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_dst_masked, gpu_pred_dst_dst_masked, max_val=1.0)
-                        gpu_dst_loss += tf.reduce_mean ( 10*tf.square ( gpu_target_dst_masked - gpu_pred_dst_dst_masked ), axis=[1,2,3])
-                        
-                        if bg_factor  > 0:
-                            gpu_dst_loss += bg_factor * 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0)
-                            gpu_dst_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_dst - gpu_pred_dst_dst ), axis=[1,2,3])
-                            gpu_src_loss += bg_factor * 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_src, gpu_pred_src_src, max_val=1.0)
-                            gpu_src_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_src - gpu_pred_src_src ), axis=[1,2,3])
-                            
+                    gpu_target_dst_anti_masked = gpu_target_dst*(1.0-gpu_target_dstm_blur)
+                    gpu_target_src_anti_masked = gpu_target_src*(1.0-gpu_target_srcm_blur)
+                    gpu_target_src_masked_opt  = gpu_target_src*gpu_target_srcm_blur if masked_training else gpu_target_src
+                    gpu_target_dst_masked_opt  = gpu_target_dst*gpu_target_dstm_blur if masked_training else gpu_target_dst
+
+                    gpu_pred_src_src_masked_opt = gpu_pred_src_src*gpu_target_srcm_blur if masked_training else gpu_pred_src_src
+                    gpu_pred_src_src_anti_masked = gpu_pred_src_src*(1.0-gpu_target_srcm_blur)
+                    gpu_pred_dst_dst_masked_opt = gpu_pred_dst_dst*gpu_target_dstm_blur if masked_training else gpu_pred_dst_dst
+                    gpu_pred_dst_dst_anti_masked = gpu_pred_dst_dst*(1.0-gpu_target_dstm_blur)
+
+                    if self.options['loss_function'] == 'MS-SSIM':
+                        gpu_dst_loss = 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0)
+                        gpu_dst_loss += tf.reduce_mean ( 10*tf.square ( gpu_target_dst_masked_opt - gpu_pred_dst_dst_masked_opt ), axis=[1,2,3])
                     elif self.options['loss_function'] == 'MS-SSIM+L1':
-                    
-                        gpu_src_loss = 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution, use_l1=True)(gpu_target_src_masked, gpu_pred_src_src_masked, max_val=1.0)
-                        gpu_dst_loss = 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution, use_l1=True)(gpu_target_dst_masked, gpu_pred_dst_dst_masked, max_val=1.0)
-
-                        if bg_factor > 0:
-                            gpu_dst_loss += bg_factor * 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution, use_l1=True)(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0)
-                            gpu_src_loss += bg_factor * 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution, use_l1=True)(gpu_target_src, gpu_pred_src_src, max_val=1.0)
-    
+                        gpu_dst_loss = 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution, use_l1=True)(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0)
                     else:
-                        gpu_src_loss =  tf.reduce_mean (5*nn.dssim(gpu_target_src_masked, gpu_pred_src_src_masked, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
-                        gpu_src_loss += tf.reduce_mean (5*nn.dssim(gpu_target_src_masked, gpu_pred_src_src_masked, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
-                        
-                        gpu_dst_loss =  tf.reduce_mean (5*nn.dssim(gpu_target_dst_masked, gpu_pred_dst_dst_masked, max_val=1.0, filter_size=int(resolution/11.6) ), axis=[1])
-                        gpu_dst_loss += tf.reduce_mean (5*nn.dssim(gpu_target_dst_masked, gpu_pred_dst_dst_masked, max_val=1.0, filter_size=int(resolution/23.2) ), axis=[1])
-                        
-                        # Pixel loss
-                        gpu_dst_loss += tf.reduce_mean (10*tf.square(gpu_target_dst_masked-gpu_pred_dst_dst_masked), axis=[1,2,3])
-                        gpu_src_loss += tf.reduce_mean (10*tf.square(gpu_target_src_masked-gpu_pred_src_src_masked), axis=[1,2,3])
-                        
-                        if bg_factor > 0:
-                            gpu_dst_loss +=  bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
-                            gpu_dst_loss += bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
-                            gpu_src_loss +=  bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_src, gpu_pred_src_src, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
-                            gpu_src_loss += bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_src, gpu_pred_src_src, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
-                                               
-                    if bg_factor > 0:
-                        gpu_dst_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_dst - gpu_pred_dst_dst ), axis=[1,2,3])
-                        gpu_src_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_src - gpu_pred_src_src ), axis=[1,2,3])
-                            
+                        if resolution < 256:
+                            gpu_dst_loss = tf.reduce_mean ( 10*nn.dssim(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0, filter_size=int(resolution/11.6) ), axis=[1])
+                        else:
+                            gpu_dst_loss = tf.reduce_mean ( 5*nn.dssim(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0, filter_size=int(resolution/11.6) ), axis=[1])
+                            gpu_dst_loss += tf.reduce_mean ( 5*nn.dssim(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0, filter_size=int(resolution/23.2) ), axis=[1])
+                        gpu_dst_loss += tf.reduce_mean ( 10*tf.square(  gpu_target_dst_masked_opt- gpu_pred_dst_dst_masked_opt ), axis=[1,2,3])
                     
-                    
-                    # Eyes+mouth prio loss
-                    # if eyes_mouth_prio:
-                        # gpu_src_loss += tf.reduce_mean (300*tf.abs (gpu_target_src*gpu_target_srcm_em-gpu_pred_src_src*gpu_target_srcm_em), axis=[1,2,3])
-                        # gpu_dst_loss += tf.reduce_mean (300*tf.abs (gpu_target_dst*gpu_target_dstm_em-gpu_pred_dst_dst*gpu_target_dstm_em), axis=[1,2,3])
-                    
+                    #if eyes_mouth_prio:
+                        # gpu_dst_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_dst*gpu_target_dstm_em - gpu_pred_dst_dst*gpu_target_dstm_em ), axis=[1,2,3])
+
                     if eyes_prio or mouth_prio:
                         if eyes_prio and mouth_prio:
-                            gpu_target_part_mask_src = gpu_target_srcm_eye_mouth
                             gpu_target_part_mask_dst = gpu_target_dstm_eye_mouth
                         elif eyes_prio:
-                            gpu_target_part_mask_src = gpu_target_srcm_eyes
                             gpu_target_part_mask_dst = gpu_target_dstm_eyes
                         elif mouth_prio:
-                            gpu_target_part_mask_src = gpu_target_srcm_mouth
                             gpu_target_part_mask_dst = gpu_target_dstm_mouth
-                            
-                        gpu_src_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_src*gpu_target_part_mask_src - gpu_pred_src_src*gpu_target_part_mask_src ), axis=[1,2,3])
+
                         gpu_dst_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_dst*gpu_target_part_mask_dst - gpu_pred_dst_dst*gpu_target_part_mask_dst ), axis=[1,2,3])
+                    
+                    gpu_dst_loss += tf.reduce_mean ( 10*tf.square( gpu_target_dstm - gpu_pred_dst_dstm ),axis=[1,2,3] )
+                    gpu_dst_loss += 0.1*tf.reduce_mean(tf.square(gpu_pred_dst_dst_anti_masked-gpu_target_dst_anti_masked),axis=[1,2,3] )
 
-                    # Mask loss
-                    gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm_all - gpu_pred_src_srcm ),axis=[1,2,3] )
-                    gpu_dst_loss += tf.reduce_mean ( 10*tf.square( gpu_target_dstm_all - gpu_pred_dst_dstm ),axis=[1,2,3] )
+                    if self.options['background_power'] > 0:
+                        bg_factor = self.options['background_power']
 
-                    gpu_src_losses += [gpu_src_loss]
+                        if self.options['loss_function'] == 'MS-SSIM':
+                            gpu_dst_loss += bg_factor * 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0)
+                            gpu_dst_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_dst - gpu_pred_dst_dst ), axis=[1,2,3])
+                        elif self.options['loss_function'] == 'MS-SSIM+L1':
+                            gpu_dst_loss += bg_factor * 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution, use_l1=True)(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0)
+                        else:
+                            if resolution < 256:
+                                gpu_dst_loss +=  bg_factor * tf.reduce_mean ( 10*nn.dssim(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                            else:
+                                gpu_dst_loss +=  bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                                gpu_dst_loss += bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_dst, gpu_pred_dst_dst, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
+                            gpu_dst_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_dst - gpu_pred_dst_dst ), axis=[1,2,3])
+
                     gpu_dst_losses += [gpu_dst_loss]
-                    gpu_G_loss = gpu_src_loss + gpu_dst_loss
-                    # dst-dst background weak loss
-                    gpu_G_loss += tf.reduce_mean(0.1*tf.square(gpu_pred_dst_dst_anti_masked-gpu_target_dst_anti_masked),axis=[1,2,3] )
-                    gpu_G_loss += 0.000001*nn.total_variation_mse(gpu_pred_dst_dst_anti_masked)
 
+                    if not pretrain:
+                        if self.options['loss_function'] == 'MS-SSIM':
+                            gpu_src_loss = 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_src_masked_opt, gpu_pred_src_src_masked_opt, max_val=1.0)
+                            gpu_src_loss += tf.reduce_mean ( 10*tf.square ( gpu_target_src_masked_opt - gpu_pred_src_src_masked_opt ), axis=[1,2,3])
+                        elif self.options['loss_function'] == 'MS-SSIM+L1':
+                            gpu_src_loss = 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution, use_l1=True)(gpu_target_src_masked_opt, gpu_pred_src_src_masked_opt, max_val=1.0)
+                        else:
+                            if resolution < 256:
+                                gpu_src_loss =  tf.reduce_mean ( 10*nn.dssim(gpu_target_src_masked_opt, gpu_pred_src_src_masked_opt, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                            else:
+                                gpu_src_loss =  tf.reduce_mean ( 5*nn.dssim(gpu_target_src_masked_opt, gpu_pred_src_src_masked_opt, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                                gpu_src_loss += tf.reduce_mean ( 5*nn.dssim(gpu_target_src_masked_opt, gpu_pred_src_src_masked_opt, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
+                            gpu_src_loss += tf.reduce_mean ( 10*tf.square ( gpu_target_src_masked_opt - gpu_pred_src_src_masked_opt ), axis=[1,2,3])
+
+                        #if eyes_mouth_prio:
+                            #gpu_src_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_src*gpu_target_srcm_em - gpu_pred_src_src*gpu_target_srcm_em ), axis=[1,2,3])
+
+                        if eyes_prio or mouth_prio:
+                            if eyes_prio and mouth_prio:
+                                gpu_target_part_mask_src = gpu_target_srcm_eye_mouth
+                            elif eyes_prio:
+                                gpu_target_part_mask_src = gpu_target_srcm_eyes
+                            elif mouth_prio:
+                                gpu_target_part_mask_src = gpu_target_srcm_mouth
+                                
+                            gpu_src_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_src*gpu_target_part_mask_src - gpu_pred_src_src*gpu_target_part_mask_src ), axis=[1,2,3])
+                        
+                        gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
+
+                        if self.options['background_power'] > 0:
+                            bg_factor = self.options['background_power']
+
+                            if self.options['loss_function'] == 'MS-SSIM':
+                                gpu_src_loss += bg_factor * 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution)(gpu_target_src, gpu_pred_src_src, max_val=1.0)
+                                gpu_src_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_src - gpu_pred_src_src ), axis=[1,2,3])
+                            elif self.options['loss_function'] == 'MS-SSIM+L1':
+                                gpu_src_loss += bg_factor * 10 * nn.MsSsim(bs_per_gpu, input_ch, resolution, use_l1=True)(gpu_target_src, gpu_pred_src_src, max_val=1.0)
+                            else:
+                                if resolution < 256:
+                                    gpu_src_loss +=  bg_factor * tf.reduce_mean ( 10*nn.dssim(gpu_target_src, gpu_pred_src_src, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                                else:
+                                    gpu_src_loss +=  bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_src, gpu_pred_src_src, max_val=1.0, filter_size=int(resolution/11.6)), axis=[1])
+                                    gpu_src_loss += bg_factor * tf.reduce_mean ( 5*nn.dssim(gpu_target_src, gpu_pred_src_src, max_val=1.0, filter_size=int(resolution/23.2)), axis=[1])
+                                gpu_src_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_src - gpu_pred_src_src ), axis=[1,2,3])
+                    else:
+                        gpu_src_loss = gpu_dst_loss
+                    
+                    gpu_src_losses += [gpu_src_loss]
+                    
+                    if pretrain:
+                        gpu_G_loss = gpu_dst_loss
+                    else:     
+                        gpu_G_loss = gpu_src_loss + gpu_dst_loss
+
+                    def DLoss(labels,logits):
+                        return tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits), axis=[1,2,3])
 
                     if gan_power != 0:
                         
-                        gpu_pred_src_src_d, gpu_pred_src_src_d2 = self.GAN(gpu_pred_src_src_masked)
+                        gpu_pred_src_src_d, gpu_pred_src_src_d2 = self.GAN(gpu_pred_src_src_masked_opt)
 
                         def get_smooth_noisy_labels(label, tensor, smoothing=0.1, noise=0.05):
                             num_labels = self.batch_size
@@ -669,7 +694,7 @@ class AMPModel(ModelBase):
                         gpu_pred_src_src_d_smooth_zeros = get_smooth_noisy_labels(0, gpu_pred_src_src_d, smoothing=smoothing, noise=noise)
                         gpu_pred_src_src_d2_smooth_zeros = get_smooth_noisy_labels(0, gpu_pred_src_src_d2, smoothing=smoothing, noise=noise)
 
-                        gpu_target_src_d, gpu_target_src_d2 = self.GAN(gpu_target_src_masked)
+                        gpu_target_src_d, gpu_target_src_d2 = self.GAN(gpu_target_src_masked_opt)
 
                         gpu_target_src_d_smooth_ones = get_smooth_noisy_labels(1, gpu_target_src_d, smoothing=smoothing, noise=noise)
                         gpu_target_src_d2_smooth_ones = get_smooth_noisy_labels(1, gpu_target_src_d2, smoothing=smoothing, noise=noise)
@@ -688,30 +713,30 @@ class AMPModel(ModelBase):
                             # Minimal src-src-bg rec with total_variation_mse to suppress random bright dots from gan
                             gpu_G_loss += 0.000001*nn.total_variation_mse(gpu_pred_src_src)
                             gpu_G_loss += 0.02*tf.reduce_mean(tf.square(gpu_pred_src_src_anti_masked-gpu_target_src_anti_masked),axis=[1,2,3] )
-
-                    gpu_G_loss_gradients += [ nn.gradients ( gpu_G_loss, self.G_weights ) ]
+                    
+                    gpu_G_loss_gvs += [ nn.gradients ( gpu_G_loss, self.trainable_weights ) ]
 
             # Average losses and gradients, and create optimizer update ops
             with tf.device(f'/CPU:0'):
                 pred_src_src  = nn.concat(gpu_pred_src_src_list, 0)
                 pred_dst_dst  = nn.concat(gpu_pred_dst_dst_list, 0)
                 pred_src_dst  = nn.concat(gpu_pred_src_dst_list, 0)
-                pred_src_srcm = nn.concat(gpu_pred_src_srcm_list, 0)
+                # pred_src_srcm = nn.concat(gpu_pred_src_srcm_list, 0)
                 pred_dst_dstm = nn.concat(gpu_pred_dst_dstm_list, 0)
                 pred_src_dstm = nn.concat(gpu_pred_src_dstm_list, 0)
 
             with tf.device (models_opt_device):
                 src_loss = tf.concat(gpu_src_losses, 0)
                 dst_loss = tf.concat(gpu_dst_losses, 0)
-                train_op = self.src_dst_opt.get_update_op (nn.average_gv_list (gpu_G_loss_gradients))
+                src_dst_loss_gv_op = self.src_dst_opt.get_update_op (nn.average_gv_list (gpu_G_loss_gvs))
 
                 if gan_power != 0:
                     GAN_train_op = self.GAN_opt.get_update_op (nn.average_gv_list(gpu_GAN_loss_gradients) )
 
             # Initializing training and view functions
-            def train(warped_src, target_src, target_srcm, target_srcm_em,  \
+            def src_dst_train(warped_src, target_src, target_srcm, target_srcm_em,  \
                               warped_dst, target_dst, target_dstm, target_dstm_em, ):
-                s, d, _ = nn.tf_sess.run ([src_loss, dst_loss, train_op],
+                s, d, _ = nn.tf_sess.run ( [ src_loss, dst_loss, src_dst_loss_gv_op],
                                             feed_dict={self.warped_src :warped_src,
                                                        self.target_src :target_src,
                                                        self.target_srcm:target_srcm,
@@ -722,20 +747,22 @@ class AMPModel(ModelBase):
                                                        self.target_dstm_em:target_dstm_em,
                                                        })
                 return s, d
-            self.train = train
+            self.src_dst_train = src_dst_train
 
             if gan_power != 0:
-                def GAN_train(warped_src, target_src, target_srcm, target_srcm_em,  \
-                              warped_dst, target_dst, target_dstm, target_dstm_em, ):
+                def D_src_dst_train(warped_src, target_src, target_srcm, target_srcm_em,  \
+                                    warped_dst, target_dst, target_dstm, target_dstm_em, ):
                     nn.tf_sess.run ([GAN_train_op], feed_dict={self.warped_src :warped_src,
-                                                               self.target_src :target_src,
-                                                               self.target_srcm:target_srcm,
-                                                               self.target_srcm_em:target_srcm_em,
-                                                               self.warped_dst :warped_dst,
-                                                               self.target_dst :target_dst,
-                                                               self.target_dstm:target_dstm,
-                                                               self.target_dstm_em:target_dstm_em})
-                self.GAN_train = GAN_train
+                                                    self.target_src :target_src,
+                                                    self.target_srcm:target_srcm,
+                                                    self.target_srcm_em:target_srcm_em,
+                                                    self.warped_dst :warped_dst,
+                                                    self.target_dst :target_dst,
+                                                    self.target_dstm:target_dstm,
+                                                    self.target_dstm_em:target_dstm_em
+                                                    })
+                self.D_src_dst_train = D_src_dst_train
+
 
             def AE_view(warped_src, warped_dst, morph_value):
                 return nn.tf_sess.run ( [pred_src_src, pred_dst_dst, pred_dst_dstm, pred_src_dst, pred_src_dstm],
@@ -746,12 +773,12 @@ class AMPModel(ModelBase):
             #Initializing merge function
             with tf.device( nn.tf_default_device_name if len(devices) != 0 else f'/CPU:0'):
                 gpu_dst_code = self.encoder (self.warped_dst)
-                gpu_dst_inter_src_code = self.inter_src (gpu_dst_code)
-                gpu_dst_inter_dst_code = self.inter_dst (gpu_dst_code)
+                gpu_dst_inter_src_code = self.inter_src ( gpu_dst_code)
+                gpu_dst_inter_dst_code = self.inter_dst ( gpu_dst_code)
 
                 inter_dims_slice = tf.cast(inter_dims*self.morph_value_t[0], tf.int32)
-                gpu_src_dst_code =  tf.concat( ( tf.slice(gpu_dst_inter_src_code, [0,0,0,0],   [-1, inter_dims_slice , inter_res, inter_res]),
-                                                 tf.slice(gpu_dst_inter_dst_code, [0,inter_dims_slice,0,0], [-1,inter_dims-inter_dims_slice, inter_res,inter_res]) ), 1 )
+                gpu_src_dst_code =  tf.concat( ( tf.slice(gpu_dst_inter_src_code, [0,0,0,0],   [-1, inter_dims_slice , lowest_dense_res, lowest_dense_res]),
+                                                 tf.slice(gpu_dst_inter_dst_code, [0,inter_dims_slice,0,0], [-1,inter_dims-inter_dims_slice, lowest_dense_res,lowest_dense_res]) ), 1 )
 
                 gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder(gpu_src_dst_code)
                 _, gpu_pred_dst_dstm = self.decoder(gpu_dst_inter_dst_code)
@@ -763,23 +790,31 @@ class AMPModel(ModelBase):
 
         # Loading/initializing all models/optimizers weights
         for model, filename in io.progress_bar_generator(self.model_filename_list, "Initializing models"):
-            do_init = self.is_first_run()
-            if self.is_training and gan_power != 0 and model == self.GAN:
-                if self.gan_model_changed:
+            if self.pretrain_just_disabled:
+                do_init = False
+                if model == self.inter_src or model == self.inter_dst:
                     do_init = True
+            else:
+                do_init = self.is_first_run()
+                if self.is_training and gan_power != 0 and model == self.GAN:
+                    if self.gan_model_changed:
+                        do_init = True
+                        
             if not do_init:
                 do_init = not model.load_weights( self.get_strpath_storage_for_file(filename) )
             if do_init:
                 model.init_weights()
+
+
         ###############
 
         # initializing sample generators
         if self.is_training:
-            training_data_src_path = self.training_data_src_path #if not self.pretrain else self.get_pretraining_data_path()
-            training_data_dst_path = self.training_data_dst_path #if not self.pretrain else self.get_pretraining_data_path()
+            training_data_src_path = self.training_data_src_path if not self.pretrain else self.get_pretraining_data_path()
+            training_data_dst_path = self.training_data_dst_path if not self.pretrain else self.get_pretraining_data_path()
             ignore_same_path = False
 
-            random_ct_samples_path=training_data_dst_path if ct_mode is not None else None #and not self.pretrain
+            random_ct_samples_path=training_data_dst_path if ct_mode is not None else None and not self.pretrain
 
             cpu_count = min(multiprocessing.cpu_count(), self.options['cpu_cap'])
             src_generators_count = cpu_count // 2
@@ -815,13 +850,16 @@ class AMPModel(ModelBase):
                 if conf_dst_pak_name is not None:
                     self.dst_pak_name = conf_dst_pak_name
 
-            if self.src_pak_name != self.dst_pak_name and training_data_src_path == training_data_dst_path:
+            ignore_same_path = False
+            if self.src_pak_name != self.dst_pak_name and training_data_src_path == training_data_dst_path and not self.pretrain:
                 ignore_same_path = True
+            elif self.pretrain:
+                self.src_pak_name = self.dst_pak_name = 'faceset'
 
             self.set_training_data_generators ([
                     SampleGeneratorFace(training_data_src_path, pak_name=self.src_pak_name, ignore_same_path=ignore_same_path,
                         random_ct_samples_path=random_ct_samples_path, debug=self.is_debug(), batch_size=self.get_batch_size(),
-                        sample_process_options=SampleProcessor.Options(scale_range=[-0.125, 0.125], random_flip=self.random_src_flip),
+                        sample_process_options=SampleProcessor.Options(scale_range=[-0.125, 0.125], random_flip=random_src_flip),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp,
                                                  'random_downsample': self.options['random_downsample'],
                                                  'random_noise': self.options['random_noise'],
@@ -840,9 +878,9 @@ class AMPModel(ModelBase):
                         uniform_yaw_distribution=self.options['uniform_yaw'], #or self.pretrain
                         generators_count=src_generators_count ),
 
-                    SampleGeneratorFace(training_data_dst_path, pak_name=self.src_pak_name, ignore_same_path=ignore_same_path,
+                    SampleGeneratorFace(training_data_dst_path, pak_name=self.dst_pak_name, ignore_same_path=ignore_same_path,
                         debug=self.is_debug(), batch_size=self.get_batch_size(),
-                        sample_process_options=SampleProcessor.Options(scale_range=[-0.125, 0.125], random_flip=self.random_dst_flip),
+                        sample_process_options=SampleProcessor.Options(scale_range=[-0.125, 0.125], random_flip=random_dst_flip),
                         output_sample_types = [ {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':random_warp,
                                                  'random_downsample': self.options['random_downsample'],
                                                  'random_noise': self.options['random_noise'],
@@ -863,6 +901,9 @@ class AMPModel(ModelBase):
                 self.last_src_samples_loss = []
                 self.last_dst_samples_loss = []
 
+            if self.pretrain_just_disabled:
+                self.update_sample_for_preview(force_new=True)
+
     def export_dfm (self):
         output_path=self.get_strpath_storage_for_file('model.dfm')
 
@@ -879,8 +920,8 @@ class AMPModel(ModelBase):
             gpu_dst_inter_dst_code = self.inter_dst ( gpu_dst_code)
 
             inter_dims_slice = tf.cast(self.inter_dims*morph_value[0], tf.int32)
-            gpu_src_dst_code =  tf.concat( (tf.slice(gpu_dst_inter_src_code, [0,0,0,0],   [-1, inter_dims_slice , self.inter_res, self.inter_res]),
-                                            tf.slice(gpu_dst_inter_dst_code, [0,inter_dims_slice,0,0], [-1,self.inter_dims-inter_dims_slice, self.inter_res,self.inter_res]) ), 1 )
+            gpu_src_dst_code =  tf.concat( (tf.slice(gpu_dst_inter_src_code, [0,0,0,0],   [-1, inter_dims_slice , self.lowest_dense_res, self.lowest_dense_res]),
+                                            tf.slice(gpu_dst_inter_dst_code, [0,inter_dims_slice,0,0], [-1,self.inter_dims-inter_dims_slice, self.lowest_dense_res,self.lowest_dense_res]) ), 1 )
 
             gpu_pred_src_dst, gpu_pred_src_dstm = self.decoder(gpu_src_dst_code)
             _, gpu_pred_dst_dstm = self.decoder(gpu_dst_inter_dst_code)
@@ -930,31 +971,31 @@ class AMPModel(ModelBase):
         ( (warped_src, target_src, target_srcm, target_srcm_em), \
           (warped_dst, target_dst, target_dstm, target_dstm_em) ) = self.generate_next_samples()
 
-        src_loss, dst_loss = self.train (warped_src, target_src, target_srcm, target_srcm_em, warped_dst, target_dst, target_dstm, target_dstm_em)
+        src_loss, dst_loss = self.src_dst_train (warped_src, target_src, target_srcm, target_srcm_em, warped_dst, target_dst, target_dstm, target_dstm_em)
 
         if self.options['retraining_samples']:
             for i in range(bs):
-                self.last_src_samples_loss.append ( (src_loss[i], target_src[i], target_srcm[i], target_srcm_em[i]) )
-                self.last_dst_samples_loss.append ( (dst_loss[i], target_dst[i], target_dstm[i], target_dstm_em[i]) )
+                self.last_src_samples_loss.append ( (target_src[i], target_srcm[i], target_srcm_em[i], src_loss[i] ) )
+                self.last_dst_samples_loss.append ( (target_dst[i], target_dstm[i], target_dstm_em[i], dst_loss[i] ) )
 
             if len(self.last_src_samples_loss) >= bs*16:
-                src_samples_loss = sorted(self.last_src_samples_loss, key=operator.itemgetter(0), reverse=True)
-                dst_samples_loss = sorted(self.last_dst_samples_loss, key=operator.itemgetter(0), reverse=True)
+                src_samples_loss = sorted(self.last_src_samples_loss, key=operator.itemgetter(3), reverse=True)
+                dst_samples_loss = sorted(self.last_dst_samples_loss, key=operator.itemgetter(3), reverse=True)
 
-                target_src        = np.stack( [ x[1] for x in src_samples_loss[:bs] ] )
-                target_srcm       = np.stack( [ x[2] for x in src_samples_loss[:bs] ] )
-                target_srcm_em    = np.stack( [ x[3] for x in src_samples_loss[:bs] ] )
+                target_src        = np.stack( [ x[0] for x in src_samples_loss[:bs] ] )
+                target_srcm       = np.stack( [ x[1] for x in src_samples_loss[:bs] ] )
+                target_srcm_em    = np.stack( [ x[2] for x in src_samples_loss[:bs] ] )
 
-                target_dst        = np.stack( [ x[1] for x in dst_samples_loss[:bs] ] )
-                target_dstm       = np.stack( [ x[2] for x in dst_samples_loss[:bs] ] )
-                target_dstm_em    = np.stack( [ x[3] for x in dst_samples_loss[:bs] ] )
+                target_dst        = np.stack( [ x[0] for x in dst_samples_loss[:bs] ] )
+                target_dstm       = np.stack( [ x[1] for x in dst_samples_loss[:bs] ] )
+                target_dstm_em    = np.stack( [ x[2] for x in dst_samples_loss[:bs] ] )
 
-                src_loss, dst_loss = self.train (target_src, target_src, target_srcm, target_srcm_em, target_dst, target_dst, target_dstm, target_dstm_em)
+                src_loss, dst_loss = self.src_dst_train (target_src, target_src, target_srcm, target_srcm_em, target_dst, target_dst, target_dstm, target_dstm_em)
                 self.last_src_samples_loss = []
                 self.last_dst_samples_loss = []
 
         if self.gan_power != 0:
-            self.GAN_train (warped_src, target_src, target_srcm, target_srcm_em, warped_dst, target_dst, target_dstm, target_dstm_em)
+            self.D_src_dst_train (warped_src, target_src, target_srcm, target_srcm_em, warped_dst, target_dst, target_dstm, target_dstm_em)
 
         return ( ('src_loss', np.mean(src_loss) ), ('dst_loss', np.mean(dst_loss) ), )
 
@@ -1006,7 +1047,7 @@ class AMPModel(ModelBase):
             st =  [ np.concatenate ((S[i],  D[i],  DD[i]*DDM_000[i]), axis=1) ]
             st += [ np.concatenate ((SS[i], DD[i], morphed_preview_dict[self.options['preview_mf']][i] ), axis=1) ]
 
-            result += [ ('AMP morph 0.75', np.concatenate (st, axis=0 )), ]
+            result += [ (f"AMP morph {self.options['preview_mf']}", np.concatenate (st, axis=0 )), ]
 
             st =  [ np.concatenate ((DD[i], SD_025[i],  SD_050[i]), axis=1) ]
             st += [ np.concatenate ((SD_065[i], SD_075[i], SD_100[i]), axis=1) ]
@@ -1028,7 +1069,7 @@ class AMPModel(ModelBase):
                 st =  [ np.concatenate ((S[i], SS[i],  D[i]), axis=1) ]
                 st += [ np.concatenate ((DD[i], DD[i]*DDM_000[i], morphed_preview_dict[self.options['preview_mf']][i] ), axis=1) ]
                 temp_r += [ np.concatenate (st, axis=1) ]
-            result += [ ('AMP morph 1.0', np.concatenate (temp_r, axis=0 )), ]
+            result += [ (f"AMP morph {self.options['preview_mf']}", np.concatenate (temp_r, axis=0 )), ]
             # result += [ ('AMP morph 1.0', np.concatenate (st, axis=0 )), ]
             st = []  
             temp_r = []      
@@ -1064,7 +1105,7 @@ class AMPModel(ModelBase):
 
         import merger
         return predictor_morph, (self.options['resolution'], self.options['resolution'], 3), merger.MergerConfigMasked(face_type=self.face_type, default_mode = 'overlay', is_morphable=True)
-    
+
     #override
     def get_config_schema_path(self):
         config_path = Path(__file__).parent.absolute() / Path("config_schema.json")
@@ -1075,4 +1116,4 @@ class AMPModel(ModelBase):
         config_path = Path(__file__).parent.absolute() / Path("formatted_config.yaml")
         return config_path
 
-Model = AMPModel
+Model = AMPLegacyModel

@@ -70,7 +70,7 @@ if __name__ == "__main__":
 
     p = subparsers.add_parser( "sort", help="Sort faces in a directory.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
-    p.add_argument('--by', dest="sort_by_method", default=None, choices=("blur", "motion-blur", "face-yaw", "face-pitch", "face-source-rect-size", "hist", "hist-dissim", "brightness", "hue", "black", "origname", "oneface", "final-by-blur", "final-by-size", "absdiff"), help="Method of sorting. 'origname' sort by original filename to recover original sequence." )
+    p.add_argument('--by', dest="sort_by_method", default=None, choices=("blur", "motion-blur", "face-yaw", "face-pitch", "face-source-rect-size", "hist", "hist-dissim", "brightness", "hue", "black", "origname", "oneface", "final", "final-fast", "absdiff"), help="Method of sorting. 'origname' sort by original filename to recover original sequence." )
     p.set_defaults (func=process_sort)
 
     def process_util(arguments):
@@ -180,15 +180,13 @@ if __name__ == "__main__":
     p.add_argument('--model', required=True, dest="model_name", choices=pathex.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Model class name.")
     p.set_defaults (func=process_exportdfm)
 
-    def process_exportdfm(arguments):
-        osex.set_process_lowest_prio()
-        from mainscripts import ExportDFM
-        ExportDFM.main(model_class_name = arguments.model_name, saved_models_path = Path(arguments.model_dir))
+    def process_ampconverter(arguments):
+        from mainscripts import AmpConverter
+        AmpConverter.main(saved_models_path = Path(arguments.model_dir))
 
-    p = subparsers.add_parser( "exportdfm", help="Export model to use in DeepFaceLive.")
+    p = subparsers.add_parser( "ampconverter", help="Rename model files in order to be used with AMPModel. Only for AMP model.")
     p.add_argument('--model-dir', required=True, action=fixPathAction, dest="model_dir", help="Saved models dir.")
-    p.add_argument('--model', required=True, dest="model_name", choices=pathex.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Model class name.")
-    p.set_defaults (func=process_exportdfm)
+    p.set_defaults (func=process_ampconverter)
     
     def process_merge(arguments):
         osex.set_process_lowest_prio()
