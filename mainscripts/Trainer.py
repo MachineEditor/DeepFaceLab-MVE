@@ -246,8 +246,13 @@ def trainerThread (s2c, c2s, e,
                         loss_entry = loss_history[-1]
                         log_step(iter, iter_time, loss_entry[0], loss_entry[1] if len(loss_entry) > 1 else None)
 
+                        model.generate_training_state()
                         if model.get_iter() == 1 and not model.reset_training:
                             model_save()
+
+                        # if model.get_iter() % 5000 == 0:
+                        #     print ('Doing a training analysis.')
+                        #     model.generate_training_state()
 
                         if model.get_target_iter() != 0 and model.is_reached_iter_goal():
                             io.log_info('Reached target iteration.')

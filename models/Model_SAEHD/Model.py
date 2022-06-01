@@ -741,6 +741,7 @@ class SAEHDModel(ModelBase):
             # Initializing training and view functions
             def src_dst_train(warped_src, target_src, target_srcm, target_srcm_em,  \
                               warped_dst, target_dst, target_dstm, target_dstm_em, ):
+
                 s, d = nn.tf_sess.run ( [ src_loss, dst_loss, src_dst_loss_gv_op],
                                             feed_dict={self.warped_src :warped_src,
                                                        self.target_src :target_src,
@@ -753,6 +754,24 @@ class SAEHDModel(ModelBase):
                                                        })[:2]
                 return s, d
             self.src_dst_train = src_dst_train
+
+            def get_src_dst_information(warped_src, target_src, target_srcm, target_srcm_em,  \
+                                        warped_dst, target_dst, target_dstm, target_dstm_em, ):
+                out_data =nn.tf_sess.run ( [ src_loss, dst_loss, pred_src_src, pred_src_srcm, pred_dst_dst,
+                                            pred_dst_dstm, pred_src_dst, pred_src_dstm],
+                                            feed_dict={self.warped_src :warped_src,
+                                                       self.target_src :target_src,
+                                                       self.target_srcm:target_srcm,
+                                                       self.target_srcm_em:target_srcm_em,
+                                                       self.warped_dst :warped_dst,
+                                                       self.target_dst :target_dst,
+                                                       self.target_dstm:target_dstm,
+                                                       self.target_dstm_em:target_dstm_em,
+                                                       })
+
+                return out_data
+
+            self.get_src_dst_information = get_src_dst_information
 
             if self.options['true_face_power'] != 0:
                 def D_train(warped_src, warped_dst):
@@ -1190,6 +1209,9 @@ class SAEHDModel(ModelBase):
         from core import imagelib
         import datetime
         import json
+        import os
+        from pathlib import Path
+        import shutil
 
         def get_full_face_mask(sample, sample_bgr, sample_landmarks):
             xseg_mask = sample.get_xseg_mask()
@@ -1230,7 +1252,7 @@ class SAEHDModel(ModelBase):
             mask = get_full_face_mask(sample, sample_bgr, sample_landmarks)
 
             mask_em = mask.copy()
-            if self.eyes_prio or self.mouth_prio:
+            if self.options['eyes_prio'] or self.options['mouth_prio']:
                 mask_em[mask_em != 0.0] = 1.0
                 eye_mask = get_eyes_mask(sample_bgr, sample_landmarks) * mask_em
                 mask = np.where(eye_mask > 1, eye_mask, mask)
@@ -1248,6 +1270,12 @@ class SAEHDModel(ModelBase):
                     image = cv2.resize( image, (self.resolution, self.resolution), interpolation=cv2.INTER_LINEAR )
             return image
 
+        def get_formated_image(raw_output):
+            formated = np.clip( nn.to_data_format(raw_output,"NHWC", self.model_data_format), 0.0, 1.0)
+            formated = np.squeeze(formated, 0)
+
+            return formated
+
         src_gen = self.generator_list[0]
         dst_gen =  self.generator_list[1]
         src_sample_state = []
@@ -1256,7 +1284,7 @@ class SAEHDModel(ModelBase):
         src_samples = src_gen.samples
         dst_samples = dst_gen.samples
         src_len = len(src_samples)
-        dst_len = len(dst_sample)
+        dst_len = len(dst_samples)
         length = src_len
         if length < dst_len:
             length = dst_len
@@ -1264,11 +1292,11 @@ class SAEHDModel(ModelBase):
         # set paths
         # create core folder
         self.state_history_path = self.saved_models_path / ( f'{self.get_model_name()}_state_history' )
-        if not self.autobackups_path.exists():
-            self.autobackups_path.mkdir(exist_ok=True)
+        if not self.state_history_path.exists():
+            self.state_history_path.mkdir(exist_ok=True)
         # create state folder
         idx_str = datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
-        idx_state_history_path= self.autobackups_path / idx_str
+        idx_state_history_path= self.state_history_path / idx_str
         idx_state_history_path.mkdir()        
         # create set folders
         src_state_path = idx_state_history_path / 'src'
@@ -1280,7 +1308,7 @@ class SAEHDModel(ModelBase):
         # if one is smaller reapeating the last sample as a placeholder
         for idx in tqdm(range(length), desc="Generating samples"):
             # load image
-            if (src_len < idx):
+            if idx < src_len:
                 src_sample = src_samples[idx]
                 src_sample_bgr = src_sample.load_bgr()
                 src_sample_mask, src_sample_mask_em = get_masks(src_sample, src_sample_bgr, src_sample.landmarks)
@@ -1294,7 +1322,7 @@ class SAEHDModel(ModelBase):
             else:
                 src_sample_bgr,src_sample_mask,src_sample_mask_em = last_src
 
-            if (dst_len < idx):
+            if idx < dst_len:
                 dst_sample = dst_samples[idx]
                 dst_sample_bgr = dst_sample.load_bgr()
                 dst_sample_mask, dst_sample_mask_em = get_masks(dst_sample, dst_sample_bgr, dst_sample.landmarks)
@@ -1308,31 +1336,69 @@ class SAEHDModel(ModelBase):
             else:
                 dst_sample_bgr,dst_sample_mask,dst_sample_mask_em = last_dst
 
-            # TODO
-            # prio based mask
- 
-            # trebam i output, mislim da trebam skinut [:2]
-            src_loss, dst_loss = self.src_dst_train (src_sample_bgr, src_sample_bgr, src_sample_mask, src_sample_mask_em, dst_sample_bgr, dst_sample_bgr, dst_sample_mask, dst_sample_mask_em)
+            def data_format_change(image):
+                if len(image.shape) == 2:
+                    image = image[..., None]
+                image = np.transpose(image, (2,0,1) )
+                image = np.expand_dims(image, axis=0)
 
-            # todo set a dict with everything
-            last_src = src_sample_bgr
-            last_dst = dst_sample_bgr
+                return image
+
+            def print_sample_status(sample):
+                print (sample.shape)
+                print (np.amax(sample))
+
+            src_loss, dst_loss, pred_src_src, pred_src_srcm, pred_dst_dst, pred_dst_dstm, pred_src_dst, pred_src_dstm = self.get_src_dst_information(
+                data_format_change(src_sample_bgr), data_format_change(src_sample_bgr), data_format_change(src_sample_mask),
+                data_format_change(src_sample_mask_em), data_format_change(dst_sample_bgr), data_format_change(dst_sample_bgr),
+                data_format_change(dst_sample_mask), data_format_change(dst_sample_mask_em))
+
 
             # todo check if the file is new, save only new
-            src_file_name = ''           
-            cv2_imwrite(src_state_path / f"{src_file_name}.jpg", face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 0.9 ] )
-            # cv2_imwrite(src_state_path / f"{src_file_name}_output.jpg", face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 1 ] ) # output
-            # cv2_imwrite(src_state_path / f"{src_file_name}_swap.jpg", face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 1 ] ) # swap
+            if idx < src_len:
+                src_file_name = Path(src_sample.filename).stem
 
-            src_data = { 'loss': src_loss, 'input': f"{src_file_name}.jpg", 'output': f"{src_file_name}_output.jpg", 'swap': f"{src_file_name}_swap.jpg" }
-            src_sample_state.append(src_data)
+                # cv2_imwrite(src_state_path / f"{src_file_name}.jpg", src_sample_bgr * 255, [int(cv2.IMWRITE_JPEG_QUALITY), 90 ] )
+                # shutil.copyfile(src_sample.filename, src_state_path / f"{src_file_name}.jpg")
 
-            dst_file_name = ''
-            cv2_imwrite(dst_state_path / f"{dst_file_name}.jpg", face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 0.9 ] )
-            # cv2_imwrite(dst_state_path / f"{dst_file_name}_output.jpg", face_image, [int(cv2.IMWRITE_JPEG_QUALITY), 1 ] ) # output
+                # # copied from extractor
+                # dflimg = DFLJPG.load(output_filepath)
+                # dflimg.set_face_type(FaceType.toString(face_type))
+                # dflimg.set_landmarks(face_image_landmarks.tolist())
+                # dflimg.set_source_filename(filepath.name)
+                # dflimg.set_source_rect(rect)
+                # dflimg.set_source_landmarks(image_landmarks.tolist())
+                # dflimg.set_image_to_face_mat(image_to_face_mat)
+                # dflimg.save()
 
-            dst_data = { 'loss': dst_loss, 'input': f"{dst_file_name}.jpg", 'output': f"{dst_file_name}_output.jpg"  }
-            dst_sample_state.append(dst_data)
+                cv2_imwrite(src_state_path / f"{src_file_name}_output.jpg", get_formated_image(pred_src_src) * 255, [int(cv2.IMWRITE_JPEG_QUALITY), 100 ] ) # output
+
+                src_data = { 'loss': float(src_loss[0]), 'input': f"{src_file_name}.jpg", 'output': f"{src_file_name}_output.jpg" }
+                src_sample_state.append(src_data)
+
+            if idx < dst_len:
+                dst_file_name = Path(dst_sample.filename).stem
+
+                # copy file
+
+                # cv2_imwrite(dst_state_path / f"{dst_file_name}.jpg", dst_sample_bgr * 255, [int(cv2.IMWRITE_JPEG_QUALITY), 90 ] )
+                # shutil.copyfile(dst_sample.filename, dst_state_path / f"{dst_file_name}.jpg")
+
+                # # copied from extractor
+                # dflimg = DFLJPG.load(output_filepath)
+                # dflimg.set_face_type(FaceType.toString(face_type))
+                # dflimg.set_landmarks(face_image_landmarks.tolist())
+                # dflimg.set_source_filename(filepath.name)
+                # dflimg.set_source_rect(rect)
+                # dflimg.set_source_landmarks(image_landmarks.tolist())
+                # dflimg.set_image_to_face_mat(image_to_face_mat)
+                # dflimg.save()
+
+                cv2_imwrite(dst_state_path / f"{dst_file_name}_output.jpg", get_formated_image(pred_dst_dst) * 255, [int(cv2.IMWRITE_JPEG_QUALITY), 100 ] ) # output
+                cv2_imwrite(dst_state_path / f"{dst_file_name}_swap.jpg", get_formated_image(pred_src_dst) * 255, [int(cv2.IMWRITE_JPEG_QUALITY), 100 ] ) # swap
+
+                dst_data = { 'loss': float(dst_loss[0]), 'input': f"{dst_file_name}.jpg", 'output': f"{dst_file_name}_output.jpg", 'swap': f"{dst_file_name}_swap.jpg"  }
+                dst_sample_state.append(dst_data)
 
         # save model state params
         # copy model summary
@@ -1340,8 +1406,9 @@ class SAEHDModel(ModelBase):
         model_summary['iter'] = self.get_iter()
         model_summary['name'] = self.get_model_name()
 
-        with open(idx_state_history_path / 'model_summary.json', 'w') as outfile:
-            json.dump(model_summary, outfile)
+        # error with some types, need to double check
+        # with open(idx_state_history_path / 'model_summary.json', 'w') as outfile:
+        #     json.dump(model_summary, outfile)
 
         # training state, full loss stuff from .dat file - prolly should be global
         # state_history_json = self.loss_history
