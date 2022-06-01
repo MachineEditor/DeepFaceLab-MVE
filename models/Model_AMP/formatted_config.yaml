@@ -8,6 +8,7 @@ basic_param:
   face_type: wf
 model_properties:
   morph_factor: 0.5
+  preview_mf: 1
   session_name: ''
   autobackup_hour: 0
   maximum_n_backups: 24

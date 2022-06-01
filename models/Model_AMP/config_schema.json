@@ -19,6 +19,16 @@
           "minimum":0.0,
           "maximum":0.5
         },
+        "preview_mf": {
+          "type": "number",
+          "enum": [
+            0.25,
+            0.50,
+            0.65,
+            0.75,
+            1
+          ]
+        },
         "resolution": {
           "type": "integer",
           "minimum": 64,
