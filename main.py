@@ -31,6 +31,9 @@ if __name__ == "__main__":
         osex.set_process_lowest_prio()
         from mainscripts import Extractor
         Extractor.main( detector                = arguments.detector,
+                        extract_from_video      = arguments.extract_from_video,
+                        input_video             = Path(arguments.input_video) if arguments.input_video is not None else None,
+                        chunk_size              = arguments.chunk_size,
                         input_path              = Path(arguments.input_dir),
                         output_path             = Path(arguments.output_dir),
                         output_debug            = arguments.output_debug,
@@ -41,12 +44,15 @@ if __name__ == "__main__":
                         max_faces_from_image    = arguments.max_faces_from_image,
                         image_size              = arguments.image_size,
                         jpeg_quality            = arguments.jpeg_quality,
+                        fps                     = arguments.fps,
                         cpu_only                = arguments.cpu_only,
                         force_gpu_idxs          = [ int(x) for x in arguments.force_gpu_idxs.split(',') ] if arguments.force_gpu_idxs is not None else None,
                       )
 
     p = subparsers.add_parser( "extract", help="Extract the faces from a pictures.")
     p.add_argument('--detector', dest="detector", choices=['s3fd','manual'], default=None, help="Type of detector.")
+    p.add_argument('--extract-from-video', dest='extract_from_video', action="store_true", default=False, help='Extract aligned images directly from video file')
+    p.add_argument('--input-video', required=False, action=fixPathAction, dest="input_video", help="Input video to be processed. Specify .*-extension to find first file.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
     p.add_argument('--output-dir', required=True, action=fixPathAction, dest="output_dir", help="Output directory. This is where the extracted files will be stored.")
     p.add_argument('--output-debug', action="store_true", dest="output_debug", default=None, help="Writes debug images to <output-dir>_debug\ directory.")
@@ -55,6 +61,8 @@ if __name__ == "__main__":
     p.add_argument('--max-faces-from-image', type=int, dest="max_faces_from_image", default=None, help="Max faces from image.")
     p.add_argument('--image-size', type=int, dest="image_size", default=None, help="Output image size.")
     p.add_argument('--jpeg-quality', type=int, dest="jpeg_quality", default=None, help="Jpeg quality.")
+    p.add_argument('--fps', type=int, dest="fps", default=None, help="How many frames of every second of the video will be extracted. 0 - full fps.")
+    p.add_argument('--chunk-size', type=int, dest='chunk_size', default=None, help='When extract from video is enabled allows to choose the maximum number of frames that DFL can save in memory')
     p.add_argument('--manual-fix', action="store_true", dest="manual_fix", default=False, help="Enables manual extract only frames where faces were not recognized.")
     p.add_argument('--manual-output-debug-fix', action="store_true", dest="manual_output_debug_fix", default=False, help="Performs manual reextract input-dir frames which were deleted from [output_dir]_debug\ dir.")
     p.add_argument('--manual-window-size', type=int, dest="manual_window_size", default=1368, help="Manual fix window size. Default: 1368.")
