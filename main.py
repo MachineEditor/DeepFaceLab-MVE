@@ -133,10 +133,10 @@ if __name__ == "__main__":
                   'saving_time'              : arguments.saving_time,
                   'tensorboard_dir'          : arguments.tensorboard_dir,
                   'start_tensorboard'        : arguments.start_tensorboard,
-                  'dump_ckpt'                : arguments.dump_ckpt,
                   'flask_preview'            : arguments.flask_preview,
                   'config_training_file'     : arguments.config_training_file,
-                  'auto_gen_config'          : arguments.auto_gen_config
+                  'auto_gen_config'          : arguments.auto_gen_config,
+                  'reduce_clutter'           : arguments.reduce_clutter
                   }
         from mainscripts import Trainer
         Trainer.main(**kwargs)
@@ -161,9 +161,8 @@ if __name__ == "__main__":
     p.add_argument('--start-tensorboard', action="store_true", dest="start_tensorboard", default=False, help="Automatically start the tensorboard server preconfigured to the tensorboard-logdir")
     p.add_argument('--config-training-file', action=fixPathAction, dest="config_training_file", help="Path to custom yaml configuration file")
     p.add_argument('--auto-gen-config', action="store_true", dest="auto_gen_config", default=False, help="Saves a configuration file for each model used in the trainer. It'll have the same model name")
+    p.add_argument('--reduce-clutter', action="store_true", dest="reduce_clutter", default=False, help='Remove options that are not used from printed summary')
     
-
-    p.add_argument('--dump-ckpt', action="store_true", dest="dump_ckpt", default=False, help="Dump the model to ckpt format.")
     p.add_argument('--flask-preview', action="store_true", dest="flask_preview", default=False,
                    help="Launches a flask server to view the previews in a web browser")
 
@@ -213,6 +212,7 @@ if __name__ == "__main__":
     p.add_argument('--force-model-name', dest="force_model_name", default=None, help="Forcing to choose model name from model/ folder.")
     p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Merge on CPU.")
     p.add_argument('--force-gpu-idxs', dest="force_gpu_idxs", default=None, help="Force to choose GPU indexes separated by comma.")
+    p.add_argument('--reduce-clutter', action="store_true", dest="reduce_clutter", default=False, help='Remove options that are not used from printed summary')
     p.set_defaults(func=process_merge)
 
     videoed_parser = subparsers.add_parser( "videoed", help="Video processing.").add_subparsers()
