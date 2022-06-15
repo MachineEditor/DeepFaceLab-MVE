@@ -5,7 +5,6 @@ import os
 
 import sys
 from pathlib import Path
-from tkinter.messagebox import NO
 
 import cv2
 import numpy as np
