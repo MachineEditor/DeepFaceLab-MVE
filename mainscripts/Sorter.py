@@ -3,8 +3,8 @@ import multiprocessing
 import operator
 from enum import Enum
 import tempfile
-from functools import cmp_to_key
 from pathlib import Path
+from tqdm import tqdm
 
 import cv2
 import numpy as np
