@@ -220,6 +220,7 @@ class ExtractSubprocessor(Subprocessor):
                                                         output_debug_path=self.output_debug_path,
                                                         final_output_path=self.final_output_path
                                                         )
+
             return data
 
         @staticmethod
@@ -727,7 +728,7 @@ class ExtractSubprocessor(Subprocessor):
                                           int(self.x+self.rect_size),
                                           int(self.y+self.rect_size) )
 
-                            return ExtractSubprocessor.Data (filepath, rects=[self.rect], landmarks_accurate=self.landmarks_accurate)
+                            return ExtractSubprocessor.Data (filepath=filepath, rects=[self.rect], landmarks_accurate=self.landmarks_accurate)
 
                 else:
                     is_frame_done = True
@@ -746,7 +747,7 @@ class ExtractSubprocessor(Subprocessor):
 
     #override
     def on_data_return (self, host_dict, data):
-        if not self.type != 'landmarks-manual':
+        if self.type == 'landmarks-manual':
             self.input_data.insert(0, data)
 
     def redraw(self):
@@ -1011,7 +1012,7 @@ def main(detector=None,
                 if all ( np.array ( [ d.faces_detected > 0 for d in data] ) == True ):
                     io.log_info ('All faces are detected, manual fix not needed.')
                 else:
-                    fix_data = [ ExtractSubprocessor.Data(d.filepath) for d in data if d.faces_detected == 0 ]
+                    fix_data = [ ExtractSubprocessor.Data(filepath=d.filepath) for d in data if d.faces_detected == 0 ]
                     io.log_info ('Performing manual fix for %d images...' % (len(fix_data)) )
                     fix_data = ExtractSubprocessor (fix_data, 'landmarks-manual', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, manual_window_size=manual_window_size, device_config=device_config).run()
                     fix_data = ExtractSubprocessor (fix_data, 'final', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, final_output_path=output_path, device_config=device_config).run()

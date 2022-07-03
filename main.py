@@ -1,4 +1,7 @@
 if __name__ == "__main__":
+    # Uncomment to start DFL with PDB
+    #__spec__ = "ModuleSpec(name='builtins', loader=<class '_frozen_importlib.BuiltinImporter'>)"
+    
     # Fix for linux
     import multiprocessing
     multiprocessing.set_start_method("spawn")
