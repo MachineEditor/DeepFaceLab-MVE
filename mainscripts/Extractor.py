@@ -989,7 +989,7 @@ def main(detector=None,
             if detector == 'manual':
                 if not extract_from_video:
                     io.log_info ('Performing manual extract...')
-                    data = ExtractSubprocessor ([ ExtractSubprocessor.Data(Path(filename)) for filename in input_image_paths ], 'landmarks-manual', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, manual_window_size=manual_window_size, device_config=device_config).run()
+                    data = ExtractSubprocessor ([ ExtractSubprocessor.Data(filepath=Path(filename)) for filename in input_image_paths ], 'landmarks-manual', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, manual_window_size=manual_window_size, device_config=device_config).run()
 
                     io.log_info ('Performing 3rd pass...')
                     data = ExtractSubprocessor (data, 'final', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, final_output_path=output_path, device_config=device_config).run()
