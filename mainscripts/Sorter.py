@@ -731,17 +731,13 @@ def sort_best(input_path, faster=False):
 """
 def sort_by_vggface(input_path):
     io.log_info ("Sorting by face similarity using VGGFace model...")
-
     model = VGGFace()
-
     final_img_list = []
     trash_img_list = []
-
     image_paths = pathex.get_image_paths(input_path)
     img_list = [ (x,) for x in image_paths ]
     img_list_len = len(img_list)
     img_list_range = [*range(img_list_len)]
-
     feats = [None]*img_list_len
     for i in io.progress_bar_generator(img_list_range, "Loading"):
         img = cv2_imread( img_list[i][0] ).astype(np.float32)
@@ -752,20 +748,15 @@ def sort_by_vggface(input_path):
         img[..., 1] -= 104.7624
         img[..., 2] -= 129.1863
         feats[i] = model.predict( img[None,...] )[0]
-
     tmp = np.zeros( (img_list_len,) )
     float_inf = float("inf")
     for i in io.progress_bar_generator ( range(img_list_len-1), "Sorting" ):
         i_feat = feats[i]
-
         for j in img_list_range:
             tmp[j] = npla.norm(i_feat-feats[j]) if j >= i+1 else float_inf
-
         idx = np.argmin(tmp)
-
         img_list[i+1], img_list[idx] = img_list[idx], img_list[i+1]
         feats[i+1], feats[idx] = feats[idx], feats[i+1]
-
     return img_list, trash_img_list
 """
 

@@ -10,9 +10,7 @@ import datetime
 from pathlib import Path
 import yaml
 from jsonschema import validate, ValidationError
-import models
 
-import cv2
 import numpy as np
 
 from core import imagelib, pathex
@@ -41,6 +39,7 @@ class ModelBase(object):
                        config_training_file=None,
                        auto_gen_config=False,
                        silent_start=False,
+                       reduce_clutter=False,
                        **kwargs):
         self.is_training = is_training
         self.is_exporting = is_exporting
@@ -57,6 +56,7 @@ class ModelBase(object):
         self.no_preview = no_preview
         self.debug = debug
         self.reset_training = False
+        self.reduce_clutter = reduce_clutter
 
         self.model_class_name = model_class_name = Path(inspect.getmodule(self).__file__).parent.name.rsplit("_", 1)[1]
 
@@ -293,7 +293,7 @@ class ModelBase(object):
                 if not self.autobackups_path.exists():
                     self.autobackups_path.mkdir(exist_ok=True)
 
-        io.log_info( self.get_summary_text() )
+        io.log_info( self.get_summary_text(reduce_clutter=True) )
 
     def update_sample_for_preview(self, choose_preview_history=False, force_new=False):
         if self.sample_for_preview is None or choose_preview_history or force_new:
@@ -304,9 +304,11 @@ class ModelBase(object):
                 io.capture_keys(wnd_name)
                 choosed = False
                 preview_id_counter = 0
+                mask_changed = False
                 while not choosed:
-                    self.sample_for_preview = self.generate_next_samples()
-                    previews = self.get_history_previews()
+                    if not mask_changed:
+                        self.sample_for_preview = self.generate_next_samples()
+                        previews = self.get_history_previews()
 
                     io.show_image( wnd_name, ( previews[preview_id_counter % len(previews) ][1] *255).astype(np.uint8) )
 
@@ -318,8 +320,10 @@ class ModelBase(object):
                             break
                         elif key == ord(' '):
                             preview_id_counter += 1
+                            mask_changed = True
                             break
                         elif key == ord('p'):
+                            if mask_changed: mask_changed = False
                             break
 
                         try:
@@ -348,6 +352,13 @@ class ModelBase(object):
             return def_opt_val
 
         return def_value
+
+    def load_inter_dims(self):
+        try:
+            v = self.options['inter_dims']
+        except KeyError:
+            return False
+        return v
 
     def ask_override(self):
         time_delay = 5 if io.is_colab() else 2
@@ -519,10 +530,10 @@ class ModelBase(object):
         if key in nested_dict:
             nested_dict[key] = self.__convert_type_write(val)
             return True
-        for k, v in nested_dict.items():
-              if isinstance(v, dict):
-                  if self.__update_nested_dict(v, key, val):
-                      return True
+        for v in nested_dict.values():
+            if isinstance(v, dict):
+                if self.__update_nested_dict(v, key, val):
+                    return True
         return False
 
     def __iterate_read_dict(self, nested_dict, new_dict=None):
@@ -571,12 +582,11 @@ class ModelBase(object):
         Args:
             filepath (str|Path): Path where to save configuration file.
         """
-
         formatted_dict = self.read_from_config_file(self.get_formatted_configuration_path(), keep_nested=True, validation=False)
 
         for key, value in self.options.items():
             if not self.__update_nested_dict(formatted_dict, key, value):
-                formatted_dict[key] = self.__convert_type_write(value)
+                print(f"'{key}' not saved in the configuration file")
 
         try:
             with open(filepath, 'w') as file:
@@ -739,7 +749,7 @@ class ModelBase(object):
     def get_model_conf_path(self):
         return self.get_strpath_storage_for_file('configuration_file.yaml')
 
-    def get_summary_text(self):
+    def get_summary_text(self, reduce_clutter=False):
         visible_options = self.options.copy()
         visible_options.update(self.options_show_override)
 
@@ -775,7 +785,11 @@ class ModelBase(object):
         summary_text += [f'=={" Model Options ":-^{width_total}}=='] # Model options
         summary_text += [f'=={" "*width_total}==']
         for key in visible_options.keys():
-            summary_text += [f'=={key: >{width_name}}: {str(visible_options[key]): <{width_value}}=='] # visible_options key/value pairs
+            if reduce_clutter:
+                if str(visible_options[key]) not in ['none', 'n', 'False']:
+                    summary_text += [f'=={key: >{width_name}}: {str(visible_options[key]): <{width_value}}=='] # visible_options key/value pairs
+            else:
+                summary_text += [f'=={key: >{width_name}}: {str(visible_options[key]): <{width_value}}=='] # visible_options key/value pairs
         summary_text += [f'=={" "*width_total}==']
 
         summary_text += [f'=={" Running On ":-^{width_total}}=='] # Training hardware info

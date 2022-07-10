@@ -31,6 +31,9 @@ if __name__ == "__main__":
         osex.set_process_lowest_prio()
         from mainscripts import Extractor
         Extractor.main( detector                = arguments.detector,
+                        extract_from_video      = arguments.extract_from_video,
+                        input_video             = Path(arguments.input_video) if arguments.input_video is not None else None,
+                        chunk_size              = arguments.chunk_size,
                         input_path              = Path(arguments.input_dir),
                         output_path             = Path(arguments.output_dir),
                         output_debug            = arguments.output_debug,
@@ -41,12 +44,15 @@ if __name__ == "__main__":
                         max_faces_from_image    = arguments.max_faces_from_image,
                         image_size              = arguments.image_size,
                         jpeg_quality            = arguments.jpeg_quality,
+                        fps                     = arguments.fps,
                         cpu_only                = arguments.cpu_only,
                         force_gpu_idxs          = [ int(x) for x in arguments.force_gpu_idxs.split(',') ] if arguments.force_gpu_idxs is not None else None,
                       )
 
     p = subparsers.add_parser( "extract", help="Extract the faces from a pictures.")
     p.add_argument('--detector', dest="detector", choices=['s3fd','manual'], default=None, help="Type of detector.")
+    p.add_argument('--extract-from-video', dest='extract_from_video', action="store_true", default=False, help='Extract aligned images directly from video file')
+    p.add_argument('--input-video', required=False, action=fixPathAction, dest="input_video", help="Input video to be processed. Specify .*-extension to find first file.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
     p.add_argument('--output-dir', required=True, action=fixPathAction, dest="output_dir", help="Output directory. This is where the extracted files will be stored.")
     p.add_argument('--output-debug', action="store_true", dest="output_debug", default=None, help="Writes debug images to <output-dir>_debug\ directory.")
@@ -55,6 +61,8 @@ if __name__ == "__main__":
     p.add_argument('--max-faces-from-image', type=int, dest="max_faces_from_image", default=None, help="Max faces from image.")
     p.add_argument('--image-size', type=int, dest="image_size", default=None, help="Output image size.")
     p.add_argument('--jpeg-quality', type=int, dest="jpeg_quality", default=None, help="Jpeg quality.")
+    p.add_argument('--fps', type=int, dest="fps", default=None, help="How many frames of every second of the video will be extracted. 0 - full fps.")
+    p.add_argument('--chunk-size', type=int, dest='chunk_size', default=None, help='When extract from video is enabled allows to choose the maximum number of frames that DFL can save in memory')
     p.add_argument('--manual-fix', action="store_true", dest="manual_fix", default=False, help="Enables manual extract only frames where faces were not recognized.")
     p.add_argument('--manual-output-debug-fix', action="store_true", dest="manual_output_debug_fix", default=False, help="Performs manual reextract input-dir frames which were deleted from [output_dir]_debug\ dir.")
     p.add_argument('--manual-window-size', type=int, dest="manual_window_size", default=1368, help="Manual fix window size. Default: 1368.")
@@ -70,7 +78,7 @@ if __name__ == "__main__":
 
     p = subparsers.add_parser( "sort", help="Sort faces in a directory.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
-    p.add_argument('--by', dest="sort_by_method", default=None, choices=("blur", "motion-blur", "face-yaw", "face-pitch", "face-source-rect-size", "hist", "hist-dissim", "brightness", "hue", "black", "origname", "oneface", "final-by-blur", "final-by-size", "absdiff"), help="Method of sorting. 'origname' sort by original filename to recover original sequence." )
+    p.add_argument('--by', dest="sort_by_method", default=None, choices=("blur", "motion-blur", "face-yaw", "face-pitch", "face-source-rect-size", "hist", "hist-dissim", "brightness", "hue", "black", "origname", "oneface", "final", "final-fast", "absdiff"), help="Method of sorting. 'origname' sort by original filename to recover original sequence." )
     p.set_defaults (func=process_sort)
 
     def process_util(arguments):
@@ -133,11 +141,11 @@ if __name__ == "__main__":
                   'saving_time'              : arguments.saving_time,
                   'tensorboard_dir'          : arguments.tensorboard_dir,
                   'start_tensorboard'        : arguments.start_tensorboard,
-                  'dump_ckpt'                : arguments.dump_ckpt,
                   'flask_preview'            : arguments.flask_preview,
                   'config_training_file'     : arguments.config_training_file,
                   'auto_gen_config'          : arguments.auto_gen_config,
-                  'gen_snapshot'             : arguments.gen_snapshot
+                  'gen_snapshot'             : arguments.gen_snapshot,
+                  'reduce_clutter'           : arguments.reduce_clutter
                   }
         from mainscripts import Trainer
         Trainer.main(**kwargs)
@@ -162,10 +170,9 @@ if __name__ == "__main__":
     p.add_argument('--start-tensorboard', action="store_true", dest="start_tensorboard", default=False, help="Automatically start the tensorboard server preconfigured to the tensorboard-logdir")
     p.add_argument('--config-training-file', action=fixPathAction, dest="config_training_file", help="Path to custom yaml configuration file")
     p.add_argument('--auto-gen-config', action="store_true", dest="auto_gen_config", default=False, help="Saves a configuration file for each model used in the trainer. It'll have the same model name")
+    p.add_argument('--reduce-clutter', action="store_true", dest="reduce_clutter", default=False, help='Remove options that are not used from printed summary')
     
     p.add_argument('--gen-snapshot', action="store_true", dest="gen_snapshot", default=False, help="Generate a set snapshot only.")
-
-    p.add_argument('--dump-ckpt', action="store_true", dest="dump_ckpt", default=False, help="Dump the model to ckpt format.")
     p.add_argument('--flask-preview', action="store_true", dest="flask_preview", default=False,
                    help="Launches a flask server to view the previews in a web browser")
 
@@ -182,15 +189,13 @@ if __name__ == "__main__":
     p.add_argument('--model', required=True, dest="model_name", choices=pathex.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Model class name.")
     p.set_defaults (func=process_exportdfm)
 
-    def process_exportdfm(arguments):
-        osex.set_process_lowest_prio()
-        from mainscripts import ExportDFM
-        ExportDFM.main(model_class_name = arguments.model_name, saved_models_path = Path(arguments.model_dir))
+    def process_ampconverter(arguments):
+        from mainscripts import AmpConverter
+        AmpConverter.main(saved_models_path = Path(arguments.model_dir))
 
-    p = subparsers.add_parser( "exportdfm", help="Export model to use in DeepFaceLive.")
+    p = subparsers.add_parser( "ampconverter", help="Rename model files in order to be used with AMPModel. Only for AMP model.")
     p.add_argument('--model-dir', required=True, action=fixPathAction, dest="model_dir", help="Saved models dir.")
-    p.add_argument('--model', required=True, dest="model_name", choices=pathex.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Model class name.")
-    p.set_defaults (func=process_exportdfm)
+    p.set_defaults (func=process_ampconverter)
     
     def process_merge(arguments):
         osex.set_process_lowest_prio()
@@ -217,6 +222,7 @@ if __name__ == "__main__":
     p.add_argument('--force-model-name', dest="force_model_name", default=None, help="Forcing to choose model name from model/ folder.")
     p.add_argument('--cpu-only', action="store_true", dest="cpu_only", default=False, help="Merge on CPU.")
     p.add_argument('--force-gpu-idxs', dest="force_gpu_idxs", default=None, help="Force to choose GPU indexes separated by comma.")
+    p.add_argument('--reduce-clutter', action="store_true", dest="reduce_clutter", default=False, help='Remove options that are not used from printed summary')
     p.set_defaults(func=process_merge)
 
     videoed_parser = subparsers.add_parser( "videoed", help="Video processing.").add_subparsers()
