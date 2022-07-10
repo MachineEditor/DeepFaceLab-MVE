@@ -729,6 +729,24 @@ class AMPModel(ModelBase):
                 return s, d
             self.train = train
 
+            def get_src_dst_information(warped_src, target_src, target_srcm, target_srcm_em,  \
+                                        warped_dst, target_dst, target_dstm, target_dstm_em, ):
+                out_data =nn.tf_sess.run ( [ src_loss, dst_loss, pred_src_src, pred_src_srcm, pred_dst_dst,
+                                            pred_dst_dstm, pred_src_dst, pred_src_dstm],
+                                            feed_dict={self.warped_src :warped_src,
+                                                       self.target_src :target_src,
+                                                       self.target_srcm:target_srcm,
+                                                       self.target_srcm_em:target_srcm_em,
+                                                       self.warped_dst :warped_dst,
+                                                       self.target_dst :target_dst,
+                                                       self.target_dstm:target_dstm,
+                                                       self.target_dstm_em:target_dstm_em,
+                                                       })
+
+                return out_data
+
+            self.get_src_dst_information = get_src_dst_information
+
             if gan_power != 0:
                 def GAN_train(warped_src, target_src, target_srcm, target_srcm_em,  \
                               warped_dst, target_dst, target_dstm, target_dstm_em, ):
@@ -1152,6 +1170,7 @@ class AMPModel(ModelBase):
         with open(self.state_history_path / 'config.json', 'w') as outfile:
             json.dump(config_dict, outfile)
 
+        print ('Done.')
 
         # save image loss data
         src_full_state_dict = {
@@ -1169,6 +1188,8 @@ class AMPModel(ModelBase):
         }
         with open(idx_state_history_path / 'dst_state.json', 'w') as outfile:
             json.dump(dst_full_state_dict, outfile)
+
+        print ('Done.')
 
     def _get_formatted_image(self, raw_output):
         formatted = np.clip( nn.to_data_format(raw_output,"NHWC", self.model_data_format), 0.0, 1.0)

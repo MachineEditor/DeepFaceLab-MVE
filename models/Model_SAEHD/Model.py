@@ -1305,6 +1305,8 @@ class SAEHDModel(ModelBase):
         with open(idx_state_history_path / 'dst_state.json', 'w') as outfile:
             json.dump(dst_full_state_dict, outfile)
 
+        print ('Done.')
+
     def _get_formatted_image(self, raw_output):
         formatted = np.clip( nn.to_data_format(raw_output,"NHWC", self.model_data_format), 0.0, 1.0)
         formatted = np.squeeze(formatted, 0)
