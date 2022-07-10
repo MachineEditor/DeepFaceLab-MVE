@@ -52,6 +52,7 @@ class SAEHDModel(ModelBase):
         if eyes_mouth_prio is not None:
             default_eyes_prio = self.options['eyes_prio'] = eyes_mouth_prio
             default_mouth_prio = self.options['mouth_prio'] = eyes_mouth_prio
+            self.options.pop('eyes_mouth_prio')
 
         default_uniform_yaw        = self.options['uniform_yaw']        = self.load_or_def_option('uniform_yaw', False)
         default_blur_out_mask      = self.options['blur_out_mask']      = self.load_or_def_option('blur_out_mask', False)
