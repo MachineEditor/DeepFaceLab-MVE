@@ -51,13 +51,9 @@ class AMPLegacyModel(ModelBase):
             self.options.pop('eyes_mouth_prio')
 
         default_uniform_yaw        = self.options['uniform_yaw']        = self.load_or_def_option('uniform_yaw', False)
-
         default_loss_function      = self.options['loss_function']      = self.load_or_def_option('loss_function', 'SSIM')
-
         default_blur_out_mask      = self.options['blur_out_mask']      = self.load_or_def_option('blur_out_mask', False)
-
         default_adabelief          = self.options['adabelief']          = self.load_or_def_option('adabelief', True)
-
         default_lr_dropout         = self.options['lr_dropout']         = self.load_or_def_option('lr_dropout', 'n')
 
         default_random_warp        = self.options['random_warp']        = self.load_or_def_option('random_warp', True)
@@ -116,7 +112,7 @@ class AMPLegacyModel(ModelBase):
                 self.options['preview_samples'] = np.clip ( io.input_int ("Number of samples to preview", default_preview_samples, add_info="1 - 16", help_message="Typical fine value is 4"), 1, 16 )
                 self.options['force_full_preview'] = io.input_bool ("Use old preview panel", default_full_preview)
                 self.ask_target_iter()
-                self.ask_retraining_samples()
+                self.ask_retraining_samples(default_retraining_samples)
                 self.ask_random_src_flip()
                 self.ask_random_dst_flip()
                 self.ask_batch_size(8)

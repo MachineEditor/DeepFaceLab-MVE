@@ -44,6 +44,8 @@ class SAEHDModel(ModelBase):
         default_d_mask_dims        = self.options['d_mask_dims']        = self.options.get('d_mask_dims', None)
         default_masked_training    = self.options['masked_training']    = self.load_or_def_option('masked_training', True)
 
+        default_retraining_samples = self.options['retraining_samples'] = self.load_or_def_option('retraining_samples', False)
+
         default_eyes_prio          = self.options['eyes_prio']          = self.load_or_def_option('eyes_prio', False)
         default_mouth_prio         = self.options['mouth_prio']         = self.load_or_def_option('mouth_prio', False)
 
@@ -124,7 +126,7 @@ class SAEHDModel(ModelBase):
                 self.options['force_full_preview'] = io.input_bool ("Use old preview panel", default_full_preview)
                 
                 self.ask_target_iter()
-                self.ask_retraining_samples()
+                self.ask_retraining_samples(default_retraining_samples)
                 self.ask_random_src_flip()
                 self.ask_random_dst_flip()
                 self.ask_batch_size(suggest_batch_size)

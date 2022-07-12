@@ -114,7 +114,7 @@ class AMPModel(ModelBase):
 
 
                 self.ask_target_iter()
-                self.ask_retraining_samples()
+                self.ask_retraining_samples(default_retraining_samples)
                 self.ask_random_src_flip()
                 self.ask_random_dst_flip()
                 self.ask_batch_size(8)
