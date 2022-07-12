@@ -137,14 +137,17 @@ def trainerThread (s2c, c2s, e,
 
             def read_stopping_file():
                 path = Path(saved_models_path / COLAB_TRAIN_STOPPER_FILENAME)
-                if io.is_colab():
-                    if not os.path.exists(path):
-                        with open(path, 'w') as f:
-                            f.write('false')
-                            return False
-                    else:
-                        with open(path, 'r') as f:
-                            return True if f.read() == 'true' else False
+                if not os.path.exists(path):
+                    write_stopping_file('false')
+                    return False
+                else:
+                    with open(path, 'r') as f:
+                        return True if f.read() == 'true' else False
+
+            def write_stopping_file(value):
+                path = Path(saved_models_path / COLAB_TRAIN_STOPPER_FILENAME)
+                with open(path, 'w') as f:
+                    f.write(value)
                     
             def log_step(step, step_time, src_loss, dst_loss):
                 c2s.put({ 
@@ -279,9 +282,11 @@ def trainerThread (s2c, c2s, e,
                     model_save()
                     send_preview()
 
-                if read_stopping_file():
-                    io.log_info('Stopping training due to stopping file!')
-                    s2c.put({'op': 'close'})
+                if io.is_colab():
+                    if read_stopping_file():
+                        io.log_info('Stopping training due to stopping file!')
+                        write_stopping_file('false')
+                        s2c.put({'op': 'close'})
 
                 if i == 0:
                     if is_reached_goal:
