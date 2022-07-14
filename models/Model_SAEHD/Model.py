@@ -1269,12 +1269,13 @@ class SAEHDModel(ModelBase):
         # save model state params
         # copy model summary
         # model_summary = self.options.copy()
-        # model_summary['iter'] = self.get_iter()
-        # model_summary['name'] = self.get_model_name()
+        model_summary = {}
+        model_summary['iter'] = self.get_iter()
+        model_summary['name'] = self.get_model_name()
 
         # error with some types, need to double check
-        # with open(idx_state_history_path / 'model_summary.json', 'w') as outfile:
-        #     json.dump(model_summary, outfile)
+        with open(idx_state_history_path / 'model_summary.json', 'w') as outfile:
+            json.dump(model_summary, outfile)
 
         # training state, full loss stuff from .dat file - prolly should be global
         # state_history_json = self.loss_history
