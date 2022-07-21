@@ -73,6 +73,7 @@ def trainerThread (s2c, c2s, e,
                     tensorboard_dir=None,
                     start_tensorboard=False,
                     config_training_file=None,
+                    gen_snapshot=False,
                     **kwargs):
     while True:
         try:
@@ -214,6 +215,10 @@ def trainerThread (s2c, c2s, e,
                                 io.log_info("https://i.imgur.com/B7cmDCB.jpg")
                                 io.log_info("!!!")
 
+                        if gen_snapshot:
+                            model.generate_training_state()
+                            break
+
                         iter, iter_time = model.train_one_iter()
 
                         loss_history = model.get_loss_history()
@@ -251,6 +256,10 @@ def trainerThread (s2c, c2s, e,
 
                         if model.get_iter() == 1 and not model.reset_training:
                             model_save()
+
+                        # if model.get_iter() % 5000 == 0:
+                        #     print ('Doing a training analysis.')
+                        #     model.generate_training_state()
 
                         if model.get_target_iter() != 0 and model.is_reached_iter_goal():
                             io.log_info('Reached target iteration.')

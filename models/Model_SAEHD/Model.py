@@ -2,6 +2,7 @@ import multiprocessing
 import operator
 
 import numpy as np
+# from psutil import cpu_count
 
 from core.interact import interact as io
 from core.leras import nn
@@ -12,6 +13,11 @@ from samplelib import *
 from pathlib import Path
 
 from utils.label_face import label_face_filename
+
+from utils.train_status_export import data_format_change, prepare_sample
+import cv2
+from core.cv2ex import cv2_imwrite
+from tqdm import tqdm
 
 class SAEHDModel(ModelBase):
 
@@ -752,6 +758,7 @@ class SAEHDModel(ModelBase):
             # Initializing training and view functions
             def src_dst_train(warped_src, target_src, target_srcm, target_srcm_em,  \
                               warped_dst, target_dst, target_dstm, target_dstm_em, ):
+
                 s, d = nn.tf_sess.run ( [ src_loss, dst_loss, src_dst_loss_gv_op],
                                             feed_dict={self.warped_src :warped_src,
                                                        self.target_src :target_src,
@@ -764,6 +771,24 @@ class SAEHDModel(ModelBase):
                                                        })[:2]
                 return s, d
             self.src_dst_train = src_dst_train
+
+            def get_src_dst_information(warped_src, target_src, target_srcm, target_srcm_em,  \
+                                        warped_dst, target_dst, target_dstm, target_dstm_em, ):
+                out_data =nn.tf_sess.run ( [ src_loss, dst_loss, pred_src_src, pred_src_srcm, pred_dst_dst,
+                                            pred_dst_dstm, pred_src_dst, pred_src_dstm],
+                                            feed_dict={self.warped_src :warped_src,
+                                                       self.target_src :target_src,
+                                                       self.target_srcm:target_srcm,
+                                                       self.target_srcm_em:target_srcm_em,
+                                                       self.warped_dst :warped_dst,
+                                                       self.target_dst :target_dst,
+                                                       self.target_dstm:target_dstm,
+                                                       self.target_dstm_em:target_dstm_em,
+                                                       })
+
+                return out_data
+
+            self.get_src_dst_information = get_src_dst_information
 
             if self.options['true_face_power'] != 0:
                 def D_train(warped_src, warped_dst):
@@ -1192,5 +1217,136 @@ class SAEHDModel(ModelBase):
     def get_formatted_configuration_path(self):
         config_path = Path(__file__).parent.absolute() / Path("formatted_config.yaml")
         return config_path
+
+    # function is WIP
+    def generate_training_state(self):
+        from tqdm import tqdm
+
+        import datetime
+        import json
+        from itertools import zip_longest
+        import multiprocessing as mp
+        
+
+        src_gen = self.generator_list[0]
+        dst_gen =  self.generator_list[1]
+        self.src_sample_state = []
+        self.dst_sample_state = []
+
+        src_samples = src_gen.samples
+        dst_samples = dst_gen.samples
+        src_len = len(src_samples)
+        dst_len = len(dst_samples)
+        length = src_len
+        if length < dst_len:
+            length = dst_len
+
+        # set paths
+        # create core folder
+        self.state_history_path = self.saved_models_path / ( f'{self.get_model_name()}_state_history' )
+        if not self.state_history_path.exists():
+            self.state_history_path.mkdir(exist_ok=True)
+        # create state folder
+        idx_str = datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
+        idx_state_history_path= self.state_history_path / idx_str
+        idx_state_history_path.mkdir()        
+        # create set folders
+        self.src_state_path = idx_state_history_path / 'src'
+        self.src_state_path.mkdir()
+        self.dst_state_path = idx_state_history_path / 'dst'
+        self.dst_state_path.mkdir()
+
+        print ('Generating dataset state snapshot\r')
+
+        # doing batch 2 always since it is coded to always expect dst and src
+        # if one is smaller reapeating the last sample as a placeholder
+
+        # 0 means ignore and use dummy data
+        data_list = list(zip_longest(src_samples, dst_samples, fillvalue=0))
+        self._dummy_input = np.zeros((self.resolution, self.resolution, 3), dtype=np.float32)
+        self._dummy_mask = np.zeros((self.resolution, self.resolution, 1), dtype=np.float32)
+
+        for sample_tuple in tqdm(data_list, desc='Processing samples', total=len(data_list)):
+            self._processor(sample_tuple)
+
+        # save model state params
+        # copy model summary
+        # model_summary = self.options.copy()
+        model_summary = {}
+        model_summary['iter'] = self.get_iter()
+        model_summary['name'] = self.get_model_name()
+
+        # error with some types, need to double check
+        with open(idx_state_history_path / 'model_summary.json', 'w') as outfile:
+            json.dump(model_summary, outfile)
+
+        # training state, full loss stuff from .dat file - prolly should be global
+        # state_history_json = self.loss_history
+
+        # main config data
+        # set name and full path
+        config_dict = {
+            'datasets': [{'name': 'src', 'path': str(self.training_data_src_path) }, {'name': 'dst', 'path': str(self.training_data_dst_path) }]
+        }
+        with open(self.state_history_path / 'config.json', 'w') as outfile:
+            json.dump(config_dict, outfile)
+
+
+        # save image loss data
+        src_full_state_dict = {
+            'data': self.src_sample_state,
+            'set': 'src',
+            'type': 'set-state'
+        }
+        with open(idx_state_history_path / 'src_state.json', 'w') as outfile:
+            json.dump(src_full_state_dict, outfile)
+
+        dst_full_state_dict = {
+            'data': self.dst_sample_state,
+            'set': 'dst',
+            'type': 'set-state'
+        }
+        with open(idx_state_history_path / 'dst_state.json', 'w') as outfile:
+            json.dump(dst_full_state_dict, outfile)
+
+        print ('Done.')
+
+    def _get_formatted_image(self, raw_output):
+        formatted = np.clip( nn.to_data_format(raw_output,"NHWC", self.model_data_format), 0.0, 1.0)
+        formatted = np.squeeze(formatted, 0)
+
+        return formatted
+
+    def _processor(self, samples_tuple):
+        if samples_tuple[0] != 0:
+            src_sample_bgr, src_sample_mask, src_sample_mask_em = prepare_sample(samples_tuple[0], self.options, self.resolution, self.face_type)
+        else:
+            src_sample_bgr, src_sample_mask, src_sample_mask_em = self._dummy_input, self._dummy_mask, self._dummy_mask
+        if samples_tuple[1] != 0: 
+            dst_sample_bgr, dst_sample_mask, dst_sample_mask_em = prepare_sample(samples_tuple[1], self.options, self.resolution, self.face_type)
+        else:
+            dst_sample_bgr, dst_sample_mask, dst_sample_mask_em = self._dummy_input, self._dummy_mask, self._dummy_mask
+
+        src_loss, dst_loss, pred_src_src, pred_src_srcm, pred_dst_dst, pred_dst_dstm, pred_src_dst, pred_src_dstm = self.get_src_dst_information(
+            data_format_change(src_sample_bgr), data_format_change(src_sample_bgr), data_format_change(src_sample_mask),
+            data_format_change(src_sample_mask_em), data_format_change(dst_sample_bgr), data_format_change(dst_sample_bgr),
+            data_format_change(dst_sample_mask), data_format_change(dst_sample_mask_em))
+
+        if samples_tuple[0] != 0:
+            src_file_name = Path(samples_tuple[0].filename).stem
+
+            cv2_imwrite(self.src_state_path / f"{src_file_name}_output.jpg", self._get_formatted_image(pred_src_src) * 255, [int(cv2.IMWRITE_JPEG_QUALITY), 100 ] ) # output
+
+            src_data = { 'loss': float(src_loss[0]), 'input': f"{src_file_name}.jpg", 'output': f"{src_file_name}_output.jpg" }
+            self.src_sample_state.append(src_data)
+
+        if samples_tuple[1] != 0:
+            dst_file_name = Path(samples_tuple[1].filename).stem
+
+            cv2_imwrite(self.dst_state_path / f"{dst_file_name}_output.jpg", self._get_formatted_image(pred_dst_dst) * 255, [int(cv2.IMWRITE_JPEG_QUALITY), 100 ] ) # output
+            cv2_imwrite(self.dst_state_path / f"{dst_file_name}_swap.jpg", self._get_formatted_image(pred_src_dst) * 255, [int(cv2.IMWRITE_JPEG_QUALITY), 100 ] ) # swap
+
+            dst_data = { 'loss': float(dst_loss[0]), 'input': f"{dst_file_name}.jpg", 'output': f"{dst_file_name}_output.jpg", 'swap': f"{dst_file_name}_swap.jpg"  }
+            self.dst_sample_state.append(dst_data)
 
 Model = SAEHDModel

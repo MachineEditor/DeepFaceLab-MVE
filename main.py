@@ -147,6 +147,7 @@ if __name__ == "__main__":
                   'flask_preview'            : arguments.flask_preview,
                   'config_training_file'     : arguments.config_training_file,
                   'auto_gen_config'          : arguments.auto_gen_config,
+                  'gen_snapshot'             : arguments.gen_snapshot,
                   'reduce_clutter'           : arguments.reduce_clutter
                   }
         from mainscripts import Trainer
@@ -174,6 +175,7 @@ if __name__ == "__main__":
     p.add_argument('--auto-gen-config', action="store_true", dest="auto_gen_config", default=False, help="Saves a configuration file for each model used in the trainer. It'll have the same model name")
     p.add_argument('--reduce-clutter', action="store_true", dest="reduce_clutter", default=False, help='Remove options that are not used from printed summary')
     
+    p.add_argument('--gen-snapshot', action="store_true", dest="gen_snapshot", default=False, help="Generate a set snapshot only.")
     p.add_argument('--flask-preview', action="store_true", dest="flask_preview", default=False,
                    help="Launches a flask server to view the previews in a web browser")
 
