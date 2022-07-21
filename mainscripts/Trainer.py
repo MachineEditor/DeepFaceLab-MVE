@@ -1,4 +1,3 @@
-from functools import reduce
 import os
 import sys
 import traceback
@@ -10,14 +9,14 @@ from enum import Enum
 import numpy as np
 import itertools
 from pathlib import Path
-from core import pathex
 from core import imagelib
 import cv2
 import models
 from core.interact import interact as io
 import logging
-import datetime
 import os
+
+COLAB_TRAIN_STOPPER_FILENAME = 'stopper.txt'
 
 # adapted from https://stackoverflow.com/a/52295534
 class TensorBoardTool:
@@ -136,6 +135,20 @@ def trainerThread (s2c, c2s, e,
             def model_backup():
                 if not debug and not is_reached_goal:
                     model.create_backup()
+
+            def read_stopping_file():
+                path = Path(saved_models_path / COLAB_TRAIN_STOPPER_FILENAME)
+                if not os.path.exists(path):
+                    write_stopping_file('false')
+                    return False
+                else:
+                    with open(path, 'r') as f:
+                        return True if f.read() == 'true' else False
+
+            def write_stopping_file(value):
+                path = Path(saved_models_path / COLAB_TRAIN_STOPPER_FILENAME)
+                with open(path, 'w') as f:
+                    f.write(value)
                     
             def log_step(step, step_time, src_loss, dst_loss):
                 c2s.put({ 
@@ -277,6 +290,12 @@ def trainerThread (s2c, c2s, e,
                     last_save_time += save_interval_min*60
                     model_save()
                     send_preview()
+
+                if io.is_colab():
+                    if read_stopping_file():
+                        io.log_info('Stopping training due to stopping file!')
+                        write_stopping_file('false')
+                        s2c.put({'op': 'close'})
 
                 if i == 0:
                     if is_reached_goal:
