@@ -109,6 +109,10 @@ if __name__ == "__main__":
             io.log_info ("Performing faceset unpacking...\r\n")
             from samplelib import PackedFaceset
             PackedFaceset.unpack( Path(arguments.input_dir) )
+
+        if arguments.export_faceset_mask:
+            io.log_info ("Exporting faceset mask..\r\n")
+            Util.export_faceset_mask( Path(arguments.input_dir) )
             
     p = subparsers.add_parser( "util", help="Utilities.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
@@ -118,6 +122,7 @@ if __name__ == "__main__":
     p.add_argument('--restore-faceset-metadata', action="store_true", dest="restore_faceset_metadata", default=False, help="Restore faceset metadata to file. Image filenames must be the same as used with save.")
     p.add_argument('--pack-faceset', action="store_true", dest="pack_faceset", default=False, help="")
     p.add_argument('--unpack-faceset', action="store_true", dest="unpack_faceset", default=False, help="")
+    p.add_argument('--export-faceset-mask', action="store_true", dest="export_faceset_mask", default=False, help="")
     p.add_argument('--archive-type', dest="archive_type", choices=['zip', 'pak'], default=None)
 
     p.set_defaults (func=process_util)
