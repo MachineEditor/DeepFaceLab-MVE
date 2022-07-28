@@ -293,7 +293,7 @@ class ModelBase(object):
                 if not self.autobackups_path.exists():
                     self.autobackups_path.mkdir(exist_ok=True)
 
-        io.log_info( self.get_summary_text(reduce_clutter=True) )
+        io.log_info( self.get_summary_text(reduce_clutter=reduce_clutter) )
 
     def update_sample_for_preview(self, choose_preview_history=False, force_new=False):
         if self.sample_for_preview is None or choose_preview_history or force_new:

@@ -45,6 +45,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
             self.generators_count = max(1, generators_count)
 
         samples = SampleLoader.load (SampleType.FACE, samples_path, pak_name=pak_name, ignore_same_path=ignore_same_path)
+        self.samples = samples # used to have minimal changes with the repo - used for train analysis 
         self.samples_len = len(samples)
         
         if self.samples_len == 0:

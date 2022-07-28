@@ -175,3 +175,31 @@ def recover_original_aligned_filename(input_path):
             fs.rename (fd)
         except:
             io.log_err ('fail to rename %s' % (fs.name) )
+
+def export_faceset_mask(input_dir):
+    for filename in io.progress_bar_generator(pathex.get_image_paths (input_dir), "Processing"):
+        filepath = Path(filename)
+
+        if '_mask' in filepath.stem:
+            continue
+
+        mask_filepath = filepath.parent / (filepath.stem+'_mask'+filepath.suffix)
+
+        dflimg = DFLJPG.load(filepath)
+
+        H,W,C = dflimg.shape
+
+        seg_ie_polys = dflimg.get_seg_ie_polys()
+
+        if seg_ie_polys.has_polys():
+            mask = np.zeros ((H,W,1), dtype=np.float32)
+            seg_ie_polys.overlay_mask(mask)
+        elif dflimg.has_xseg_mask():
+            mask = dflimg.get_xseg_mask()
+            mask[mask < 0.5] = 0.0
+            mask[mask >= 0.5] = 1.0
+        else:
+            raise Exception(f'no mask in file {filepath}')
+
+
+        cv2_imwrite(mask_filepath, (mask*255).astype(np.uint8), [int(cv2.IMWRITE_JPEG_QUALITY), 100] )

@@ -1,4 +1,7 @@
 if __name__ == "__main__":
+    # Uncomment to start DFL with PDB
+    #__spec__ = "ModuleSpec(name='builtins', loader=<class '_frozen_importlib.BuiltinImporter'>)"
+    
     # Fix for linux
     import multiprocessing
     multiprocessing.set_start_method("spawn")
@@ -106,6 +109,10 @@ if __name__ == "__main__":
             io.log_info ("Performing faceset unpacking...\r\n")
             from samplelib import PackedFaceset
             PackedFaceset.unpack( Path(arguments.input_dir) )
+
+        if arguments.export_faceset_mask:
+            io.log_info ("Exporting faceset mask..\r\n")
+            Util.export_faceset_mask( Path(arguments.input_dir) )
             
     p = subparsers.add_parser( "util", help="Utilities.")
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir", help="Input directory. A directory containing the files you wish to process.")
@@ -115,6 +122,7 @@ if __name__ == "__main__":
     p.add_argument('--restore-faceset-metadata', action="store_true", dest="restore_faceset_metadata", default=False, help="Restore faceset metadata to file. Image filenames must be the same as used with save.")
     p.add_argument('--pack-faceset', action="store_true", dest="pack_faceset", default=False, help="")
     p.add_argument('--unpack-faceset', action="store_true", dest="unpack_faceset", default=False, help="")
+    p.add_argument('--export-faceset-mask', action="store_true", dest="export_faceset_mask", default=False, help="")
     p.add_argument('--archive-type', dest="archive_type", choices=['zip', 'pak'], default=None)
 
     p.set_defaults (func=process_util)
@@ -144,6 +152,7 @@ if __name__ == "__main__":
                   'flask_preview'            : arguments.flask_preview,
                   'config_training_file'     : arguments.config_training_file,
                   'auto_gen_config'          : arguments.auto_gen_config,
+                  'gen_snapshot'             : arguments.gen_snapshot,
                   'reduce_clutter'           : arguments.reduce_clutter
                   }
         from mainscripts import Trainer
@@ -171,6 +180,7 @@ if __name__ == "__main__":
     p.add_argument('--auto-gen-config', action="store_true", dest="auto_gen_config", default=False, help="Saves a configuration file for each model used in the trainer. It'll have the same model name")
     p.add_argument('--reduce-clutter', action="store_true", dest="reduce_clutter", default=False, help='Remove options that are not used from printed summary')
     
+    p.add_argument('--gen-snapshot', action="store_true", dest="gen_snapshot", default=False, help="Generate a set snapshot only.")
     p.add_argument('--flask-preview', action="store_true", dest="flask_preview", default=False,
                    help="Launches a flask server to view the previews in a web browser")
 
