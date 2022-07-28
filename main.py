@@ -374,6 +374,26 @@ if __name__ == "__main__":
     p.add_argument('--input-dir', required=True, action=fixPathAction, dest="input_dir")
     p.set_defaults (func=process_xsegfetch)
 
+    # dev
+    def process_latents(arguments):
+        osex.set_process_lowest_prio()
+
+        kwargs = {'model_class_name'         : arguments.model_name,
+                  'saved_models_path'        : Path(arguments.model_dir),
+                  'file_one'                 : Path(arguments.f1),
+                  'file_two'                 : Path(arguments.f2),
+                 }
+
+        from mainscripts import Latent
+        Latent.main(**kwargs)
+
+    p = subparsers.add_parser("latent")
+    p.add_argument('--model-dir', required=True, action=fixPathAction, dest="model_dir", help="Model dir.")
+    p.add_argument('--model', required=True, dest="model_name", choices=pathex.get_all_dir_names_startswith ( Path(__file__).parent / 'models' , 'Model_'), help="Model class name.")
+    p.add_argument('--f1', required=True, action=fixPathAction, dest="f1", help="File 1.")
+    p.add_argument('--f2', required=True, action=fixPathAction, dest="f2", help="File 2.")
+    p.set_defaults (func=process_latents)
+
     def bad_args(arguments):
         parser.print_help()
         exit(0)
