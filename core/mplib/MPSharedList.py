@@ -1,7 +1,6 @@
 import multiprocessing
 import pickle
 import struct
-from core.joblib import Subprocessor
 
 class MPSharedList():
     """

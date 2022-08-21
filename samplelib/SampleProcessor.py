@@ -1,4 +1,3 @@
-import collections
 import math
 from enum import IntEnum
 from core.imagelib.shadows import shadow_highlights_augmentation
@@ -8,7 +7,7 @@ import numpy as np
 
 from core import imagelib
 from core.cv2ex import *
-from core.imagelib import sd, LinearMotionBlur
+from core.imagelib import LinearMotionBlur
 from core.imagelib.color_transfer import random_lab_rotation
 from facelib import FaceType, LandmarksProcessor
 
@@ -330,6 +329,7 @@ class SampleProcessor(object):
                     raise ValueError ('expected sample_type')
 
                 outputs_sample.append ( out_sample )
+
             outputs += [outputs_sample]
 
-        return outputs
+        return outputs, warp_params['flip']
