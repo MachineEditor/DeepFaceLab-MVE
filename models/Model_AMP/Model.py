@@ -173,8 +173,7 @@ class AMPModel(ModelBase):
 
                 self.options['uniform_yaw'] = io.input_bool ("Uniform yaw distribution of samples", default_uniform_yaw, help_message='Helps to fix blurry side faces due to small amount of them in the faceset.')
                 
-                if self.options['masked_training']:
-                    self.options['blur_out_mask'] = io.input_bool ("Blur out mask", default_blur_out_mask, help_message='Blurs nearby area outside of applied face mask of training samples. The result is the background near the face is smoothed and less noticeable on swapped face. The exact xseg mask in src and dst faceset is required.')
+                self.options['blur_out_mask'] = io.input_bool ("Blur out mask", default_blur_out_mask, help_message='Blurs nearby area outside of applied face mask of training samples. The result is the background near the face is smoothed and less noticeable on swapped face. The exact xseg mask in src and dst faceset is required.')
                 
                 self.options['loss_function'] = io.input_str(f"Loss function", default_loss_function, ['SSIM', 'MS-SSIM', 'MS-SSIM+L1'], help_message="Change loss function used for image quality assessment.")
                 self.options['lr'] = np.clip (io.input_number("Learning rate", default_lr, add_info="0.0 .. 1.0", help_message="Learning rate: typical fine value 5e-5"), 0.0, 1)
@@ -566,11 +565,11 @@ class AMPModel(ModelBase):
                     
                     gpu_target_src_masked = gpu_target_src*gpu_target_srcm_blur if masked_training else gpu_target_src
                     gpu_target_dst_masked = gpu_target_dst*gpu_target_dstm_blur if masked_training else gpu_target_dst
-                    gpu_target_src_anti_masked = gpu_target_src*gpu_target_srcm_anti_blur if masked_training else gpu_pred_src_src
-                    gpu_target_dst_anti_masked = gpu_target_dst*gpu_target_dstm_anti_blur if masked_training else gpu_pred_dst_dst
+                    gpu_target_src_anti_masked = gpu_target_src*gpu_target_srcm_anti_blur
+                    gpu_target_dst_anti_masked = gpu_target_dst*gpu_target_dstm_anti_blur
 
-                    gpu_pred_src_src_masked = gpu_pred_src_src*gpu_target_srcm_blur
-                    gpu_pred_dst_dst_masked = gpu_pred_dst_dst*gpu_target_dstm_blur
+                    gpu_pred_src_src_masked = gpu_pred_src_src*gpu_target_srcm_blur if masked_training else gpu_pred_src_src
+                    gpu_pred_dst_dst_masked = gpu_pred_dst_dst*gpu_target_dstm_blur if masked_training else gpu_pred_dst_dst
                     gpu_pred_src_src_anti_masked = gpu_pred_src_src*gpu_target_srcm_anti_blur
                     gpu_pred_dst_dst_anti_masked = gpu_pred_dst_dst*gpu_target_dstm_anti_blur
 
