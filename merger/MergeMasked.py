@@ -115,14 +115,14 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
         wrk_face_mask_a_0 = prd_face_mask_a_0*prd_face_dst_mask_a_0
     elif cfg.mask_mode == 5: #learned-prd+learned-dst
         wrk_face_mask_a_0 = np.clip( prd_face_mask_a_0+prd_face_dst_mask_a_0, 0, 1)
-    elif cfg.mask_mode >= 6 and cfg.mask_mode <= 9:  #XSeg modes
-        if cfg.mask_mode == 6 or cfg.mask_mode == 8 or cfg.mask_mode == 9:
+    elif cfg.mask_mode >= 6 and cfg.mask_mode <= 10:  #XSeg modes
+        if cfg.mask_mode == 6 or cfg.mask_mode == 8 or cfg.mask_mode == 9 or cfg.mask_mode == 10:
             # obtain XSeg-prd
             prd_face_xseg_bgr = cv2.resize (prd_face_bgr, (xseg_input_size,)*2, interpolation=cv2.INTER_CUBIC)
             prd_face_xseg_mask = xseg_256_extract_func(prd_face_xseg_bgr)
             X_prd_face_mask_a_0 = cv2.resize ( prd_face_xseg_mask, (output_size, output_size), interpolation=cv2.INTER_CUBIC)
 
-        if cfg.mask_mode >= 7 and cfg.mask_mode <= 9:
+        if cfg.mask_mode >= 7 and cfg.mask_mode <= 10:
             # obtain XSeg-dst
             xseg_mat            = LandmarksProcessor.get_transform_mat (img_face_landmarks, xseg_input_size, face_type=cfg.face_type)
             dst_face_xseg_bgr   = cv2.warpAffine(img_bgr, xseg_mat, (xseg_input_size,)*2, flags=cv2.INTER_CUBIC )
@@ -135,7 +135,9 @@ def MergeMaskedFace (predictor_func, predictor_input_shape,
             wrk_face_mask_a_0 = X_dst_face_mask_a_0
         elif cfg.mask_mode == 8: #'XSeg-prd*XSeg-dst'
             wrk_face_mask_a_0 = X_prd_face_mask_a_0 * X_dst_face_mask_a_0
-        elif cfg.mask_mode == 9: #learned-prd*learned-dst*XSeg-prd*XSeg-dst
+        elif cfg.mask_mode == 9: #'XSeg-prd+XSeg-dst'
+            wrk_face_mask_a_0 = X_prd_face_mask_a_0 + X_dst_face_mask_a_0
+        elif cfg.mask_mode == 10: #learned-prd*learned-dst*XSeg-prd*XSeg-dst
             wrk_face_mask_a_0 = prd_face_mask_a_0 * prd_face_dst_mask_a_0 * X_prd_face_mask_a_0 * X_dst_face_mask_a_0
 
     wrk_face_mask_a_0[ wrk_face_mask_a_0 < (1.0/255.0) ] = 0.0 # get rid of noise
