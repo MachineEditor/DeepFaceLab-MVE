@@ -1,16 +1,13 @@
-import multiprocessing
-import time
 import traceback
-
-import cv2
+import os
 import numpy as np
 
 from core import mplib
 from core.interact import interact as io
 from core.joblib import SubprocessGenerator, ThisThreadGenerator
-from facelib import LandmarksProcessor
 from samplelib import (SampleGeneratorBase, SampleLoader, SampleProcessor,
                        SampleType)
+
 
 
 '''
@@ -45,6 +42,7 @@ class SampleGeneratorFace(SampleGeneratorBase):
             self.generators_count = max(1, generators_count)
 
         samples = SampleLoader.load (SampleType.FACE, samples_path, pak_name=pak_name, ignore_same_path=ignore_same_path)
+        self.samples = samples # used to have minimal changes with the repo - used for train analysis 
         self.samples_len = len(samples)
         
         if self.samples_len == 0:
@@ -119,6 +117,9 @@ class SampleGeneratorFace(SampleGeneratorBase):
         samples, index_host, ct_samples, ct_index_host = param
  
         bs = self.batch_size
+
+        # needed to know if the sample will be flipped or not
+        random_flip = None
         while True:
             batches = None
             filenames = []
@@ -126,7 +127,6 @@ class SampleGeneratorFace(SampleGeneratorBase):
             indexes = index_host.multi_get(bs)
             ct_indexes = ct_index_host.multi_get(bs) if ct_samples is not None else None
 
-            t = time.time()
             for n_batch in range(bs):
                 sample_idx = indexes[n_batch]
                 sample = samples[sample_idx]
@@ -136,16 +136,21 @@ class SampleGeneratorFace(SampleGeneratorBase):
                     ct_sample = ct_samples[ct_indexes[n_batch]]
 
                 try:
-                    x, = SampleProcessor.process ([sample], self.sample_process_options, self.output_sample_types, self.debug, ct_sample=ct_sample)
+                    
+                    output_samples, random_flip = SampleProcessor.process ([sample], self.sample_process_options, self.output_sample_types, self.debug, ct_sample=ct_sample)
                 except:
                     raise Exception ("Exception occured in sample %s. Error: %s" % (sample.filename, traceback.format_exc() ) )
 
                 if batches is None:
-                    batches = [ [] for _ in range(len(x)) ]
+                    batches = [ [] for _ in range(len(output_samples[0])) ]
 
-                for i in range(len(x)):
-                    batches[i].append ( x[i] )
+                # we need only the first element (list) of output_samples list
+                for i in range(len(output_samples[0])):
+                    batches[i].append(output_samples[0][i])
 
-                filenames.append(sample.filename)
+                if random_flip is not None:
+                    filenames.append(f"{os.path.basename(sample.filename)} {'(flipped)' if random_flip else ''}")
+                else:
+                    filenames.append(os.path.basename(sample.filename))
 
             yield ([ np.array(batch) for batch in batches], filenames)

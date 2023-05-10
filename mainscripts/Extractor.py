@@ -1,11 +1,9 @@
-import traceback
 import math
 import multiprocessing
-import operator
+from queue import Queue
 import os
-import shutil
+
 import sys
-import time
 from pathlib import Path
 
 import cv2
@@ -17,7 +15,7 @@ from core import imagelib
 from core import mathlib
 from facelib import FaceType, LandmarksProcessor
 from core.interact import interact as io
-from core.joblib import Subprocessor
+from core.joblib import Subprocessor, Undaemonize
 from core.leras import nn
 from core import pathex
 from core.cv2ex import *
@@ -27,8 +25,10 @@ DEBUG = False
 
 class ExtractSubprocessor(Subprocessor):
     class Data(object):
-        def __init__(self, filepath=None, rects=None, landmarks = None, landmarks_accurate=True, manual=False, force_output_path=None, final_output_files = None):
+        def __init__(self, image=None, filepath=None, rects=None, landmarks = None, landmarks_accurate=True, manual=False, force_output_path=None, final_output_files = None):
+            self.image = image
             self.filepath = filepath
+            self.idx = None
             self.rects = rects or []
             self.rects_rotation = 0
             self.landmarks_accurate = landmarks_accurate
@@ -39,6 +39,72 @@ class ExtractSubprocessor(Subprocessor):
             self.faces_detected = 0
 
     class Cli(Subprocessor.Cli):
+
+        def frames_generator(self, video_path, fps, queue_out: Queue, chunk_size=0):
+            major_ver, _, _ = cv2.__version__.split('.')
+            video = cv2.VideoCapture(str(video_path))
+            
+            if int(major_ver) < 3:
+                framerate = video.get(cv2.cv.CV_CAP_PROP_FPS)
+            else:
+                framerate = video.get(cv2.CAP_PROP_FPS)
+            
+            count = 0
+            idx = 0
+            # Number of iteration without size check
+            check_rate = 30
+            # Current iteration
+            tick = 0
+            # True when queue reached the chunk_size
+            wait = False
+
+            # if the chunk_size is not specified set it to 50 and let check_rate to the default value
+            if chunk_size == 0:
+                chunk_size = 50
+            else:
+                # else set the check_rate to the 30% of the chunk_size
+                check_rate = int(chunk_size * 30 / 100)
+
+            success, image = video.read()
+            success = True
+            if fps != 0:
+                fps_to_extract = round(math.floor(framerate) / fps, 3)
+            else:
+                fps_to_extract = 1
+
+            while success:
+                video.set(cv2.CAP_PROP_POS_FRAMES, count)
+                success, image = video.read()
+                if success:
+                    # If true, it's time to check the queue size
+                    if tick == check_rate:
+                        while True:
+                            if not wait:
+                                # if true we reached the max chunk size
+                                if queue_out.qsize() >= chunk_size:
+                                    wait = True
+                                else:
+                                    # we didn't reach the max chunk size so we can continue to put
+                                    # frames in the queue
+                                    queue_out.put((image, idx))
+                                    count += fps_to_extract
+                                    idx += 1
+                                    tick = 0
+                                    break
+                            else:
+                                # if true, the queue has the right size to continue to extract frames
+                                if queue_out.qsize() <= chunk_size - check_rate:
+                                    wait = False
+                                    tick = 0
+                                    break
+                    else:
+                        # it's still not time to check the queue size
+                        queue_out.put((image, idx))
+                        count += fps_to_extract
+                        idx += 1
+                        tick += 1
+
+            video.release()
 
         #override
         def on_initialize(self, client_dict):
@@ -51,6 +117,9 @@ class ExtractSubprocessor(Subprocessor):
             self.cpu_only             = client_dict['device_type'] == 'CPU'
             self.final_output_path    = client_dict['final_output_path']
             self.output_debug_path    = client_dict['output_debug_path']
+            self.video_path           = client_dict['video_path']
+            fps                       = client_dict['fps']
+            chunk_size                = client_dict['chunk_size']
 
             #transfer and set stdin in order to work code.interact in debug subprocess
             stdin_fd         = client_dict['stdin_fd']
@@ -79,23 +148,54 @@ class ExtractSubprocessor(Subprocessor):
 
             self.cached_image = (None, None)
 
+            if self.video_path is not None:
+                # true when no frame has been processed yet
+                self.first_frame = True
+
+                self.frames_queue = multiprocessing.Queue()
+                if sys.version_info[0] == 3 and sys.version_info[1] > 6:
+                    with Undaemonize():
+                        self.frames_processor = multiprocessing.Process(target=self.frames_generator, args=(self.video_path, fps, self.frames_queue, chunk_size if chunk_size is not None else 0))
+                        self.frames_processor.start()
+                else:
+                    self.frames_processor = multiprocessing.Process(target=self.frames_generator, args=(self.video_path, fps, self.frames_queue, chunk_size if chunk_size is not None else 0))
+                    self.frames_processor.start()
+
         #override
         def process_data(self, data):
             if 'landmarks' in self.type and len(data.rects) == 0:
                 return data
 
-            filepath = data.filepath
-            cached_filepath, image = self.cached_image
-            if cached_filepath != filepath:
-                image = cv2_imread( filepath )
-                if image is None:
-                    self.log_err (f'Failed to open {filepath}, reason: cv2_imread() fail.')
-                    return data
-                image = imagelib.normalize_channels(image, 3)
-                image = imagelib.cut_odd_image(image)
-                self.cached_image = ( filepath, image )
+            if not isinstance(data.image, int):
+                filepath = data.filepath
+                cached_filepath, image = self.cached_image
+                if cached_filepath != filepath:
+                    image = cv2_imread( filepath )
+                    if image is None:
+                        self.log_err (f'Failed to open {filepath}, reason: cv2_imread() fail.')
+                        return data
+                    image = imagelib.normalize_channels(image, 3)
+                    image = imagelib.cut_odd_image(image)
+                    self.cached_image = ( filepath, image )
+            else:
+                attempts = 0
+                while True:
+                    if not self.frames_queue.empty():
+                        # if first_frame is true set it to false cause queue finally has a frame inside
+                        if self.first_frame:
+                            self.first_frame = False
+                        image, idx = self.frames_queue.get()
+                        data.idx = f"{idx:{'0'}{5}}"
+                        image = imagelib.normalize_channels(image, 3)
+                        image = imagelib.cut_odd_image(image)
+                        break
+                    else:
+                        # do not increase the attempts counter if we still didn't processed any frames
+                        if not self.first_frame:
+                            attempts += 1
+                            if attempts == 1000:
+                                return data
 
-            h, w, c = image.shape
 
             if 'rects' in self.type or self.type == 'all':
                 data = ExtractSubprocessor.Cli.rects_stage (data=data,
@@ -113,13 +213,14 @@ class ExtractSubprocessor(Subprocessor):
 
             if self.type == 'final' or self.type == 'all':
                 data = ExtractSubprocessor.Cli.final_stage(data=data,
-                                                           image=image,
-                                                           face_type=self.face_type,
-                                                           image_size=self.image_size,
-                                                           jpeg_quality=self.jpeg_quality,
-                                                           output_debug_path=self.output_debug_path,
-                                                           final_output_path=self.final_output_path,
-                                                           )
+                                                        image=image,
+                                                        face_type=self.face_type,
+                                                        image_size=self.image_size,
+                                                        jpeg_quality=self.jpeg_quality,
+                                                        output_debug_path=self.output_debug_path,
+                                                        final_output_path=self.final_output_path
+                                                        )
+
             return data
 
         @staticmethod
@@ -243,14 +344,21 @@ class ExtractSubprocessor(Subprocessor):
                 output_path = final_output_path
                 if data.force_output_path is not None:
                     output_path = data.force_output_path
+ 
 
-                output_filepath = output_path / f"{filepath.stem}_{face_idx}.jpg"
+                if filepath is not None:
+                    output_filepath = output_path / f"{filepath.stem}_{face_idx}.jpg"
+                else:
+                    output_filepath = output_path / f"{data.idx}_{face_idx}.jpg"
                 cv2_imwrite(output_filepath, face_image, [int(cv2.IMWRITE_JPEG_QUALITY), jpeg_quality ] )
 
                 dflimg = DFLJPG.load(output_filepath)
                 dflimg.set_face_type(FaceType.toString(face_type))
                 dflimg.set_landmarks(face_image_landmarks.tolist())
-                dflimg.set_source_filename(filepath.name)
+                if filepath is None:
+                    dflimg.set_source_filename(data.idx)
+                else:
+                    dflimg.set_source_filename(filepath.name)
                 dflimg.set_source_rect(rect)
                 dflimg.set_source_landmarks(image_landmarks.tolist())
                 dflimg.set_image_to_face_mat(image_to_face_mat)
@@ -261,7 +369,10 @@ class ExtractSubprocessor(Subprocessor):
             data.faces_detected = face_idx
 
             if output_debug_path is not None:
-                cv2_imwrite( output_debug_path / (filepath.stem+'.jpg'), debug_image, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )
+                if filepath is not None:
+                    cv2_imwrite( output_debug_path / (filepath.stem +'.jpg'), debug_image, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )
+                else:
+                    cv2_imwrite( output_debug_path / (str(data.idx) +'.jpg'), debug_image, [int(cv2.IMWRITE_JPEG_QUALITY), 50] )
 
             return data
 
@@ -269,6 +380,28 @@ class ExtractSubprocessor(Subprocessor):
         def get_data_name (self, data):
             #return string identificator of your data
             return data.filepath
+
+        #override
+        def on_finalize(self):
+            self.frames_processor.terminate()
+
+    def count_video_frames(self, video_path, fps):
+            major_ver, _, _ = cv2.__version__.split('.')
+            video = cv2.VideoCapture(str(video_path))
+
+            if int(major_ver) < 3:
+                total_frames = int(video.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT))
+                framerate = video.get(cv2.cv.CV_CAP_PROP_FPS)
+            else:
+                total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+                framerate = video.get(cv2.CAP_PROP_FPS)
+
+            video.release()
+
+            if fps == 0:
+                return total_frames
+            else:
+                return int(math.floor(total_frames / framerate) * fps)
 
     @staticmethod
     def get_devices_for_config (type, device_config):
@@ -304,12 +437,29 @@ class ExtractSubprocessor(Subprocessor):
         elif type == 'final':
             return [ (i, 'CPU', 'CPU%d' % (i), 0 ) for i in (range(min(8, multiprocessing.cpu_count())) if not DEBUG else [0]) ]
 
-    def __init__(self, input_data, type, image_size=None, jpeg_quality=None, face_type=None, output_debug_path=None, manual_window_size=0, max_faces_from_image=0, final_output_path=None, device_config=None):
+    def __init__(self,
+                input_data,
+                type,
+                image_size=None,
+                jpeg_quality=None,
+                face_type=None,
+                output_debug_path=None,
+                manual_window_size=0,
+                max_faces_from_image=0,
+                final_output_path=None,
+                video_path=None,
+                fps=None,
+                chunk_size=None,
+                device_config=None):
+
         if type == 'landmarks-manual':
             for x in input_data:
                 x.manual = True
 
-        self.input_data = input_data
+        if input_data is None:
+            self.input_data = [ExtractSubprocessor.Data(image=image) for image in range(self.count_video_frames(video_path, fps))]
+        else:
+            self.input_data = input_data
 
         self.type = type
         self.image_size = image_size
@@ -319,11 +469,15 @@ class ExtractSubprocessor(Subprocessor):
         self.final_output_path = final_output_path
         self.manual_window_size = manual_window_size
         self.max_faces_from_image = max_faces_from_image
+        self.video_path = video_path
+        self.fps = fps
+        self.chunk_size = chunk_size
         self.result = []
 
         self.devices = ExtractSubprocessor.get_devices_for_config(self.type, device_config)
+        self.cli = ExtractSubprocessor.Cli
 
-        super().__init__('Extractor', ExtractSubprocessor.Cli,
+        super().__init__('Extractor', self.cli,
                              999999 if type == 'landmarks-manual' or DEBUG else 120)
 
     #override
@@ -369,6 +523,9 @@ class ExtractSubprocessor(Subprocessor):
                      'max_faces_from_image':self.max_faces_from_image,
                      'output_debug_path': self.output_debug_path,
                      'final_output_path': self.final_output_path,
+                     'video_path': self.video_path,
+                     'fps':self.fps,
+                     'chunk_size':self.chunk_size,
                      'stdin_fd': sys.stdin.fileno() }
 
 
@@ -571,7 +728,7 @@ class ExtractSubprocessor(Subprocessor):
                                           int(self.x+self.rect_size),
                                           int(self.y+self.rect_size) )
 
-                            return ExtractSubprocessor.Data (filepath, rects=[self.rect], landmarks_accurate=self.landmarks_accurate)
+                            return ExtractSubprocessor.Data (filepath=filepath, rects=[self.rect], landmarks_accurate=self.landmarks_accurate)
 
                 else:
                     is_frame_done = True
@@ -590,7 +747,7 @@ class ExtractSubprocessor(Subprocessor):
 
     #override
     def on_data_return (self, host_dict, data):
-        if not self.type != 'landmarks-manual':
+        if self.type == 'landmarks-manual':
             self.input_data.insert(0, data)
 
     def redraw(self):
@@ -626,7 +783,6 @@ class ExtractSubprocessor(Subprocessor):
 
         io.show_image (self.wnd_name, image)
 
-
     #override
     def on_result (self, host_dict, data, result):
         if self.type == 'landmarks-manual':
@@ -639,8 +795,6 @@ class ExtractSubprocessor(Subprocessor):
         else:
             self.result.append ( result )
             io.progress_bar_inc(1)
-
-
 
     #override
     def get_result(self):
@@ -705,6 +859,9 @@ class DeletedFilesSearcherSubprocessor(Subprocessor):
         return self.result
 
 def main(detector=None,
+         extract_from_video=False,
+         input_video=None,
+         chunk_size=None,
          input_path=None,
          output_path=None,
          output_debug=None,
@@ -717,11 +874,24 @@ def main(detector=None,
          jpeg_quality=None,
          cpu_only = False,
          force_gpu_idxs = None,
+         fps=None
          ):
 
-    if not input_path.exists():
+    if not input_path.exists() and not extract_from_video:
         io.log_err ('Input directory not found. Please ensure it exists.')
         return
+
+    if extract_from_video:
+        if input_video is None:
+            io.log_err ('No input video path given in input')
+            return
+        else:
+            if input_video.suffix == '.*':
+                input_video = pathex.get_first_file_by_stem (input_video.parent, input_video.stem)
+            else:
+                if not input_video.exists():
+                    io.log_err("input_file not found.")
+                    return
 
     if not output_path.exists():
         output_path.mkdir(parents=True, exist_ok=True)
@@ -737,25 +907,28 @@ def main(detector=None,
                 if dflimg is not None and dflimg.has_data():
                      face_type = FaceType.fromString ( dflimg.get_face_type() )
 
-    input_image_paths = pathex.get_image_unique_filestem_paths(input_path, verbose_print_func=io.log_info)
+    if not extract_from_video:
+        input_image_paths = pathex.get_image_unique_filestem_paths(input_path, verbose_print_func=io.log_info)
+
     output_images_paths = pathex.get_image_paths(output_path)
     output_debug_path = output_path.parent / (output_path.name + '_debug')
 
     continue_extraction = False
-    if not manual_output_debug_fix and len(output_images_paths) > 0:
-        if len(output_images_paths) > 128:
-            continue_extraction = io.input_bool ("Continue extraction?", True, help_message="Extraction can be continued, but you must specify the same options again.")
+    if not extract_from_video:
+        if not manual_output_debug_fix and len(output_images_paths) > 0:
+            if len(output_images_paths) > 128:
+                continue_extraction = io.input_bool ("Continue extraction?", True, help_message="Extraction can be continued, but you must specify the same options again.")
 
-        if len(output_images_paths) > 128 and continue_extraction:
-            try:
-                input_image_paths = input_image_paths[ [ Path(x).stem for x in input_image_paths ].index ( Path(output_images_paths[-128]).stem.split('_')[0] ) : ]
-            except:
-                io.log_err("Error in fetching the last index. Extraction cannot be continued.")
-                return
-        elif input_path != output_path:
-                io.input(f"\n WARNING !!! \n {output_path} contains files! \n They will be deleted. \n Press enter to continue.\n")
-                for filename in output_images_paths:
-                    Path(filename).unlink()
+            if len(output_images_paths) > 128 and continue_extraction:
+                try:
+                    input_image_paths = input_image_paths[ [ Path(x).stem for x in input_image_paths ].index ( Path(output_images_paths[-128]).stem.split('_')[0] ) : ]
+                except:
+                    io.log_err("Error in fetching the last index. Extraction cannot be continued.")
+                    return
+            elif input_path != output_path:
+                    io.input(f"\n WARNING !!! \n {output_path} contains files! \n They will be deleted. \n Press enter to continue.\n")
+                    for filename in output_images_paths:
+                        Path(filename).unlink()
 
     device_config = nn.DeviceConfig.GPUIndexes( force_gpu_idxs or nn.ask_choose_device_idxs(choose_only_one=detector=='manual', suggest_all_gpu=True) ) \
                     if not cpu_only else nn.DeviceConfig.CPU()
@@ -775,6 +948,9 @@ def main(detector=None,
     if jpeg_quality is None:
         jpeg_quality = io.input_int(f"Jpeg quality", 90, valid_range=[1,100], help_message="Jpeg quality. The higher jpeg quality the larger the output file size.")
 
+    if extract_from_video and fps is None:
+        fps = io.input_int ("Enter FPS", 0, help_message="How many frames of every second of the video will be extracted. 0 - full fps")
+
     if detector is None:
         io.log_info ("Choose detector type.")
         io.log_info ("[0] S3FD")
@@ -788,58 +964,84 @@ def main(detector=None,
     if output_debug:
         output_debug_path.mkdir(parents=True, exist_ok=True)
 
-    if manual_output_debug_fix:
-        if not output_debug_path.exists():
-            io.log_err(f'{output_debug_path} not found. Re-extract faces with "Write debug images" option.')
-            return
-        else:
-            detector = 'manual'
-            io.log_info('Performing re-extract frames which were deleted from _debug directory.')
-
-            input_image_paths = DeletedFilesSearcherSubprocessor (input_image_paths, pathex.get_image_paths(output_debug_path) ).run()
-            input_image_paths = sorted (input_image_paths)
-            io.log_info('Found %d images.' % (len(input_image_paths)))
-    else:
-        if not continue_extraction and output_debug_path.exists():
-            for filename in pathex.get_image_paths(output_debug_path):
-                Path(filename).unlink()
-
-    images_found = len(input_image_paths)
-    faces_detected = 0
-    if images_found != 0:
-        if detector == 'manual':
-            io.log_info ('Performing manual extract...')
-            data = ExtractSubprocessor ([ ExtractSubprocessor.Data(Path(filename)) for filename in input_image_paths ], 'landmarks-manual', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, manual_window_size=manual_window_size, device_config=device_config).run()
-
-            io.log_info ('Performing 3rd pass...')
-            data = ExtractSubprocessor (data, 'final', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, final_output_path=output_path, device_config=device_config).run()
-
-        else:
-            io.log_info ('Extracting faces...')
-            data = ExtractSubprocessor ([ ExtractSubprocessor.Data(Path(filename)) for filename in input_image_paths ],
-                                         'all',
-                                         image_size,
-                                         jpeg_quality,
-                                         face_type,
-                                         output_debug_path if output_debug else None,
-                                         max_faces_from_image=max_faces_from_image,
-                                         final_output_path=output_path,
-                                         device_config=device_config).run()
-
-        faces_detected += sum([d.faces_detected for d in data])
-
-        if manual_fix:
-            if all ( np.array ( [ d.faces_detected > 0 for d in data] ) == True ):
-                io.log_info ('All faces are detected, manual fix not needed.')
+    if not extract_from_video:
+        if manual_output_debug_fix:
+            if not output_debug_path.exists():
+                io.log_err(f'{output_debug_path} not found. Re-extract faces with "Write debug images" option.')
+                return
             else:
-                fix_data = [ ExtractSubprocessor.Data(d.filepath) for d in data if d.faces_detected == 0 ]
-                io.log_info ('Performing manual fix for %d images...' % (len(fix_data)) )
-                fix_data = ExtractSubprocessor (fix_data, 'landmarks-manual', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, manual_window_size=manual_window_size, device_config=device_config).run()
-                fix_data = ExtractSubprocessor (fix_data, 'final', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, final_output_path=output_path, device_config=device_config).run()
-                faces_detected += sum([d.faces_detected for d in fix_data])
+                detector = 'manual'
+                io.log_info('Performing re-extract frames which were deleted from _debug directory.')
 
+                input_image_paths = DeletedFilesSearcherSubprocessor (input_image_paths, pathex.get_image_paths(output_debug_path) ).run()
+                input_image_paths = sorted (input_image_paths)
+                io.log_info('Found %d images.' % (len(input_image_paths)))
+        else:
+            if not continue_extraction and output_debug_path.exists():
+                for filename in pathex.get_image_paths(output_debug_path):
+                    Path(filename).unlink()
+
+    faces_detected = 0
+
+    if not extract_from_video:
+        images_found = len(input_image_paths)
+        if images_found != 0:
+            if detector == 'manual':
+                if not extract_from_video:
+                    io.log_info ('Performing manual extract...')
+                    data = ExtractSubprocessor ([ ExtractSubprocessor.Data(filepath=Path(filename)) for filename in input_image_paths ], 'landmarks-manual', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, manual_window_size=manual_window_size, device_config=device_config).run()
+
+                    io.log_info ('Performing 3rd pass...')
+                    data = ExtractSubprocessor (data, 'final', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, final_output_path=output_path, device_config=device_config).run()
+            else:
+                io.log_info ('Extracting faces...')
+                data = ExtractSubprocessor ([ ExtractSubprocessor.Data(filepath=Path(filename)) for filename in input_image_paths ] if not extract_from_video else None,
+                                            'all',
+                                            image_size,
+                                            jpeg_quality,
+                                            face_type,
+                                            output_debug_path if output_debug else None,
+                                            max_faces_from_image=max_faces_from_image,
+                                            final_output_path=output_path,
+                                            video_path=input_video,
+                                            device_config=device_config).run()
+
+            faces_detected += sum([d.faces_detected for d in data])
+
+            if manual_fix:
+                if all ( np.array ( [ d.faces_detected > 0 for d in data] ) == True ):
+                    io.log_info ('All faces are detected, manual fix not needed.')
+                else:
+                    fix_data = [ ExtractSubprocessor.Data(filepath=d.filepath) for d in data if d.faces_detected == 0 ]
+                    io.log_info ('Performing manual fix for %d images...' % (len(fix_data)) )
+                    fix_data = ExtractSubprocessor (fix_data, 'landmarks-manual', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, manual_window_size=manual_window_size, device_config=device_config).run()
+                    fix_data = ExtractSubprocessor (fix_data, 'final', image_size, jpeg_quality, face_type, output_debug_path if output_debug else None, final_output_path=output_path, device_config=device_config).run()
+                    faces_detected += sum([d.faces_detected for d in fix_data])
+    else:
+        io.log_info ('Extracting faces...')
+        data = None
+        try:
+            sub = ExtractSubprocessor (None,
+                                        'all',
+                                        image_size,
+                                        jpeg_quality,
+                                        face_type,
+                                        output_debug_path if output_debug else None,
+                                        max_faces_from_image=max_faces_from_image,
+                                        final_output_path=output_path,
+                                        video_path=input_video,
+                                        fps=fps,
+                                        chunk_size=chunk_size,
+                                        device_config=device_config)
+            data = sub.run()
+        except KeyboardInterrupt:
+            for process in multiprocessing.active_children():
+                process.terminate()
+
+        if data is not None:
+            faces_detected += sum([d.faces_detected for d in data])
 
     io.log_info ('-------------------------')
-    io.log_info ('Images found:        %d' % (images_found) )
-    io.log_info ('Faces detected:      %d' % (faces_detected) )
+    io.log_info (f"Images found:        {images_found if not extract_from_video else 'No frames detected. (You are using extract from video mode)'}")
+    io.log_info (f'Faces detected:      {faces_detected}')
     io.log_info ('-------------------------')

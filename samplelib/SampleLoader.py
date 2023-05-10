@@ -1,6 +1,5 @@
 import multiprocessing
 import operator
-import pickle
 import traceback
 from pathlib import Path
 
@@ -10,7 +9,7 @@ from core.mplib import MPSharedList
 from core.interact import interact as io
 from core.joblib import Subprocessor
 from DFLIMG import *
-from facelib import FaceType, LandmarksProcessor
+from facelib import FaceType
 
 from .Sample import Sample, SampleType
 

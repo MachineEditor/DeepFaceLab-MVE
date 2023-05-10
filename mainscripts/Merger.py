@@ -27,7 +27,8 @@ def main (model_class_name=None,
           aligned_path=None,
           pak_name=None,
           force_gpu_idxs=None,
-          cpu_only=None):
+          cpu_only=None,
+          reduce_clutter=False):
     io.log_info ("Running merger.\r\n")
 
     try:
@@ -51,7 +52,8 @@ def main (model_class_name=None,
                                                       saved_models_path=saved_models_path,
                                                       force_gpu_idxs=force_gpu_idxs,
                                                       force_model_name=force_model_name,
-                                                      cpu_only=cpu_only)
+                                                      cpu_only=cpu_only,
+                                                      reduce_clutter=reduce_clutter)
 
         predictor_func, predictor_input_shape, cfg = model.get_MergerConfig()
 

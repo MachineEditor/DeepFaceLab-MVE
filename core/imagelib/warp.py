@@ -115,7 +115,7 @@ def gen_warp_params (w, flip=False, rotation_range=[-2,2], scale_range=[-0.5, 0.
         w = 64
         
     rotation = rnd_state.uniform( rotation_range[0], rotation_range[1] )
-    scale = rnd_state.uniform(1 +scale_range[0], 1 +scale_range[1])
+    scale = rnd_state.uniform( 1/(1-scale_range[0]) , 1+scale_range[1] )
     tx = rnd_state.uniform( tx_range[0], tx_range[1] )
     ty = rnd_state.uniform( ty_range[0], ty_range[1] )
     p_flip = flip and rnd_state.randint(10) < 4
@@ -143,7 +143,7 @@ def gen_warp_params (w, flip=False, rotation_range=[-2,2], scale_range=[-0.5, 0.
     ################
     
     #random transform
-    random_transform_mat = cv2.getRotationMatrix2D((w // 2, w // 2), rotation, scale)
+    random_transform_mat = cv2.getRotationMatrix2D((int(w / 2), int(w / 2)), rotation, scale)
     random_transform_mat[:, 2] += (tx*w, ty*w)
 
     params = dict()

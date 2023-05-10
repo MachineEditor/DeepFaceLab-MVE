@@ -1,4 +1,3 @@
-import collections
 import math
 from enum import IntEnum
 from core.imagelib.shadows import shadow_highlights_augmentation
@@ -8,7 +7,7 @@ import numpy as np
 
 from core import imagelib
 from core.cv2ex import *
-from core.imagelib import sd, LinearMotionBlur
+from core.imagelib import LinearMotionBlur
 from core.imagelib.color_transfer import random_lab_rotation
 from facelib import FaceType, LandmarksProcessor
 
@@ -167,7 +166,7 @@ class SampleProcessor(object):
                             mat  = LandmarksProcessor.get_transform_mat (sample_landmarks, warp_resolution, face_type)
                             img = cv2.warpAffine( img, mat, (warp_resolution, warp_resolution), flags=cv2.INTER_LINEAR )
                         else:
-                            if face_type != sample_face_type and sample_face_type != FaceType.CUSTOM: # custom always valid for stuff like for wf custom equivivelnet 
+                            if face_type != sample_face_type and sample_face_type != FaceType.CUSTOM: # custom always valid for stuff like for wf custom equivalent 
                                 mat = LandmarksProcessor.get_transform_mat (sample_landmarks, resolution, face_type)
                                 img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_LINEAR )
                             else:
@@ -187,7 +186,7 @@ class SampleProcessor(object):
                     elif sample_type == SPST.FACE_IMAGE:
                         img = sample_bgr
 
-                        if face_type != sample_face_type:
+                        if face_type != sample_face_type and sample_face_type != FaceType.CUSTOM:
                             mat = LandmarksProcessor.get_transform_mat (sample_landmarks, resolution, face_type)
                             img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_CUBIC )
                         else:
@@ -330,6 +329,7 @@ class SampleProcessor(object):
                     raise ValueError ('expected sample_type')
 
                 outputs_sample.append ( out_sample )
+
             outputs += [outputs_sample]
 
-        return outputs
+        return outputs, warp_params['flip']

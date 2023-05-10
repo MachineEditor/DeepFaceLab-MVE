@@ -9,14 +9,14 @@ from enum import Enum
 import numpy as np
 import itertools
 from pathlib import Path
-from core import pathex
 from core import imagelib
 import cv2
 import models
 from core.interact import interact as io
 import logging
-import datetime
 import os
+
+COLAB_TRAIN_STOPPER_FILENAME = 'stopper.txt'
 
 # adapted from https://stackoverflow.com/a/52295534
 class TensorBoardTool:
@@ -72,6 +72,7 @@ def trainerThread (s2c, c2s, e,
                     tensorboard_dir=None,
                     start_tensorboard=False,
                     config_training_file=None,
+                    gen_snapshot=False,
                     **kwargs):
     while True:
         try:
@@ -105,7 +106,9 @@ def trainerThread (s2c, c2s, e,
                         silent_start=silent_start,
                         config_training_file=config_training_file,
                         auto_gen_config=kwargs.get("auto_gen_config", False),
-                        debug=debug)
+                        debug=debug,
+                        reduce_clutter= kwargs.get('reduce_clutter', False)
+                    )
 
             is_reached_goal = model.is_reached_iter_goal()
 
@@ -132,6 +135,20 @@ def trainerThread (s2c, c2s, e,
             def model_backup():
                 if not debug and not is_reached_goal:
                     model.create_backup()
+
+            def read_stopping_file():
+                path = Path(saved_models_path / COLAB_TRAIN_STOPPER_FILENAME)
+                if not os.path.exists(path):
+                    write_stopping_file('false')
+                    return False
+                else:
+                    with open(path, 'r') as f:
+                        return True if f.read() == 'true' else False
+
+            def write_stopping_file(value):
+                path = Path(saved_models_path / COLAB_TRAIN_STOPPER_FILENAME)
+                with open(path, 'w') as f:
+                    f.write(value)
                     
             def log_step(step, step_time, src_loss, dst_loss):
                 c2s.put({ 
@@ -211,6 +228,10 @@ def trainerThread (s2c, c2s, e,
                                 io.log_info("https://i.imgur.com/B7cmDCB.jpg")
                                 io.log_info("!!!")
 
+                        if gen_snapshot:
+                            model.generate_training_state()
+                            break
+
                         iter, iter_time = model.train_one_iter()
 
                         loss_history = model.get_loss_history()
@@ -249,6 +270,10 @@ def trainerThread (s2c, c2s, e,
                         if model.get_iter() == 1 and not model.reset_training:
                             model_save()
 
+                        # if model.get_iter() % 5000 == 0:
+                        #     print ('Doing a training analysis.')
+                        #     model.generate_training_state()
+
                         if model.get_target_iter() != 0 and model.is_reached_iter_goal():
                             io.log_info('Reached target iteration.')
                             model_save()
@@ -265,6 +290,12 @@ def trainerThread (s2c, c2s, e,
                     last_save_time += save_interval_min*60
                     model_save()
                     send_preview()
+
+                if io.is_colab():
+                    if read_stopping_file():
+                        io.log_info('Stopping training due to stopping file!')
+                        write_stopping_file('false')
+                        s2c.put({'op': 'close'})
 
                 if i == 0:
                     if is_reached_goal:
@@ -481,7 +512,8 @@ def main(**kwargs):
         e.wait()  # Wait for inital load to occur.
 
         flask_t = threading.Thread(target=socketio.run, args=(flask_app,),
-                                   kwargs={'debug': True, 'use_reloader': False})
+                                   kwargs={'debug': True, 'use_reloader': False, 'host': '0.0.0.0'})
+        
         flask_t.start()
 
         while True:
