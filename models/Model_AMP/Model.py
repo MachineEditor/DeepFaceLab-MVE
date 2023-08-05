@@ -644,8 +644,11 @@ class AMPModel(ModelBase):
                     gpu_dst_losses += [gpu_dst_loss]
                     gpu_G_loss = gpu_src_loss + gpu_dst_loss
                     # dst-dst background weak loss
-                    gpu_G_loss += tf.reduce_mean(0.1*tf.square(gpu_pred_dst_dst_anti_masked-gpu_target_dst_anti_masked),axis=[1,2,3] )
-                    gpu_G_loss += 0.000001*nn.total_variation_mse(gpu_pred_dst_dst_anti_masked)
+                    gpu_G_loss += tf.reduce_mean(25*tf.square(gpu_pred_dst_dst_anti_masked-gpu_target_dst_anti_masked),axis=[1,2,3] )
+                    gpu_G_loss += 0.00001*nn.total_variation_mse(gpu_pred_dst_dst_anti_masked)
+                    # src-src background weak loss
+                    gpu_G_loss += tf.reduce_mean(25*tf.square(gpu_pred_src_src_anti_masked-gpu_target_src_anti_masked),axis=[1,2,3] )
+                    gpu_G_loss += 0.00001*nn.total_variation_mse(gpu_pred_src_src_anti_masked)
 
 
                     if gan_power != 0:
