@@ -194,9 +194,11 @@ class SampleProcessor(object):
                                 img = cv2.resize( img, (resolution, resolution), interpolation=cv2.INTER_CUBIC )
 
                         # Apply random color transfer
-                        if ct_mode is not None and ct_sample is not None or ct_mode == 'fs-aug':
+                        if ct_mode is not None and (ct_sample is not None or ct_mode == 'fs-aug' or ct_mode == 'cc-aug'):
                             if ct_mode == 'fs-aug':
                                 img = imagelib.color_augmentation(img, sample_rnd_seed)
+                            if ct_mode == 'cc-aug':
+                                img = imagelib.cc_aug(img, sample_rnd_seed)
                             else:
                                 if ct_sample_bgr is None:
                                     ct_sample_bgr = ct_sample.load_bgr()

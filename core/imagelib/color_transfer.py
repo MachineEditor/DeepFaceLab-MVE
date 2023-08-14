@@ -348,6 +348,56 @@ def color_augmentation(img, seed=None):
     img[:, :, :3] = face
     return (face / 255.0).astype(np.float32)
 
+def cc_aug(img, seed=None):
+    """Color adjust RGB image with increased augmentation range"""
+    img = img.astype(np.float32)
+    face = img
+    face = np.clip(face * 255.0, 0, 255).astype(np.uint8)
+    
+    # Apply stronger color transformations
+    face = random_clahe(face, seed)
+    face = cc_random_lab(face, seed)
+    
+    # Increase brightness, contrast, and color
+    brightness_factor_range = (0.7, 1.1)  # Random brightness factor range
+    contrast_factor_range = (0.7, 1.1)  # Random contrast factor range
+    color_factor_range = (0.6, 1.2)  # Random color factor range
+    
+    face = adjust_brightness(face, brightness_factor_range, seed)
+    face = adjust_contrast(face, contrast_factor_range, seed)
+    face = adjust_color(face, color_factor_range, seed)
+    
+    img[:, :, :3] = face
+    return (face / 255.0).astype(np.float32)
+
+
+def adjust_brightness(image, factor_range, seed=None):
+    """
+    Adjusts the brightness of an image by multiplying the pixel values by a random factor within the range.
+    """
+    np.random.seed(seed)
+    brightness_factor = np.random.uniform(*factor_range)
+    return np.clip(image * brightness_factor, 0, 255).astype(np.uint8)
+
+
+def adjust_contrast(image, factor_range, seed=None):
+    """
+    Adjusts the contrast of an image by multiplying the pixel values by a random factor within the range.
+    """
+    np.random.seed(seed)
+    mean_value = np.mean(image, axis=(0, 1), keepdims=True)
+    contrast_factor = np.random.uniform(*factor_range)
+    return np.clip((image - mean_value) * contrast_factor + mean_value, 0, 255).astype(np.uint8)
+
+
+def adjust_color(image, factor_range, seed=None):
+    """
+    Adjusts the color of an image by multiplying the color channels by a random factor within the range.
+    """
+    np.random.seed(seed)
+    color_factor = np.random.uniform(*factor_range)
+    return np.clip(image * color_factor, 0, 255).astype(np.uint8)
+    
 def random_lab_rotation(image, seed=None):
     """
     Randomly rotates image color around the L axis in LAB colorspace,
@@ -385,7 +435,27 @@ def random_lab(image, seed=None):
     image = cv2.cvtColor((image * 255.0).astype("uint8"),  # pylint:disable=no-member
                         cv2.COLOR_LAB2BGR)  # pylint:disable=no-member
     return image
+    
+def cc_random_lab(image, seed=None):
+    """ Perform random color/lightness adjustment in L*a*b* colorspace (increased aug)"""
+    random.seed(seed)
+    amount_l = 45 / 100
+    amount_ab = 20 / 100
+    randoms = [(random.random() * amount_l * 2) - amount_l,  # L adjust
+                (random.random() * amount_ab * 2) - amount_ab,  # A adjust
+                (random.random() * amount_ab * 2) - amount_ab]  # B adjust
+    image = cv2.cvtColor(  # pylint:disable=no-member
+    image, cv2.COLOR_BGR2LAB).astype("float32") / 255.0  # pylint:disable=no-member
 
+    for idx, adjustment in enumerate(randoms):
+        if adjustment >= 0:
+            image[:, :, idx] = ((1 - image[:, :, idx]) * adjustment) + image[:, :, idx]
+        else:
+            image[:, :, idx] = image[:, :, idx] * (1 + adjustment)
+    image = cv2.cvtColor((image * 255.0).astype("uint8"),  # pylint:disable=no-member
+                        cv2.COLOR_LAB2BGR)  # pylint:disable=no-member
+    return image
+    
 def random_clahe(image, seed=None):
     """ Randomly perform Contrast Limited Adaptive Histogram Equalization """
     random.seed(seed)
