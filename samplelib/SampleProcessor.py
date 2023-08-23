@@ -53,7 +53,7 @@ class SampleProcessor(object):
         outputs = []
         for sample in samples:
             sample_rnd_seed = np.random.randint(0x80000000)
-            
+
             sample_face_type = sample.face_type
             sample_bgr = sample.load_bgr()
             sample_landmarks = sample.landmarks
@@ -93,7 +93,7 @@ class SampleProcessor(object):
             for opts in output_sample_types:
                 resolution     = opts.get('resolution', 0)
                 sample_type    = opts.get('sample_type', SPST.NONE)
-                channel_type   = opts.get('channel_type', SPCT.NONE)                
+                channel_type   = opts.get('channel_type', SPCT.NONE)
                 nearest_resize_to = opts.get('nearest_resize_to', None)
                 warp           = opts.get('warp', False)
                 transform      = opts.get('transform', False)
@@ -112,12 +112,12 @@ class SampleProcessor(object):
                 rnd_state      = np.random.RandomState (sample_rnd_seed+rnd_seed_shift)
                 warp_rnd_state = np.random.RandomState (sample_rnd_seed+warp_rnd_seed_shift)
 
-                warp_params = imagelib.gen_warp_params(resolution, 
-                                                       sample_process_options.random_flip, 
-                                                       rotation_range=sample_process_options.rotation_range, 
-                                                       scale_range=sample_process_options.scale_range, 
-                                                       tx_range=sample_process_options.tx_range, 
-                                                       ty_range=sample_process_options.ty_range, 
+                warp_params = imagelib.gen_warp_params(resolution,
+                                                       sample_process_options.random_flip,
+                                                       rotation_range=sample_process_options.rotation_range,
+                                                       scale_range=sample_process_options.scale_range,
+                                                       tx_range=sample_process_options.tx_range,
+                                                       ty_range=sample_process_options.ty_range,
                                                        rnd_state=rnd_state,
                                                        warp_rnd_state=warp_rnd_state,
                                                        )
@@ -166,7 +166,7 @@ class SampleProcessor(object):
                             mat  = LandmarksProcessor.get_transform_mat (sample_landmarks, warp_resolution, face_type)
                             img = cv2.warpAffine( img, mat, (warp_resolution, warp_resolution), flags=cv2.INTER_LINEAR )
                         else:
-                            if face_type != sample_face_type and sample_face_type != FaceType.CUSTOM: # custom always valid for stuff like for wf custom equivalent 
+                            if face_type != sample_face_type and sample_face_type != FaceType.CUSTOM: # custom always valid for stuff like for wf custom equivalent
                                 mat = LandmarksProcessor.get_transform_mat (sample_landmarks, resolution, face_type)
                                 img = cv2.warpAffine( img, mat, (resolution,resolution), borderMode=borderMode, flags=cv2.INTER_LINEAR )
                             else:
@@ -197,7 +197,7 @@ class SampleProcessor(object):
                         if ct_mode is not None and (ct_sample is not None or ct_mode == 'fs-aug' or ct_mode == 'cc-aug'):
                             if ct_mode == 'fs-aug':
                                 img = imagelib.color_augmentation(img, sample_rnd_seed)
-                            if ct_mode == 'cc-aug':
+                            elif ct_mode == 'cc-aug':
                                 img = imagelib.cc_aug(img, sample_rnd_seed)
                             else:
                                 if ct_sample_bgr is None:
@@ -266,7 +266,7 @@ class SampleProcessor(object):
                             img_s = np.clip (img_s + (rnd_state.random()-0.5)*a, 0, 1 )
                             img_v = np.clip (img_v + (rnd_state.random()-0.5)*a, 0, 1 )
                             img = np.clip( cv2.cvtColor(cv2.merge([img_h, img_s, img_v]), cv2.COLOR_HSV2BGR) , 0, 1 )
-                        
+
                         # Apply random shadows
                         if isinstance(random_shadow, list):
                             shadow_opts = {}
