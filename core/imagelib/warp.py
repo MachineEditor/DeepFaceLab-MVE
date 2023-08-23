@@ -143,7 +143,7 @@ def gen_warp_params (w, flip=False, rotation_range=[-2,2], scale_range=[-0.5, 0.
     ################
     
     #random transform
-    random_transform_mat = cv2.getRotationMatrix2D((w // 2, w // 2), rotation, scale)
+    random_transform_mat = cv2.getRotationMatrix2D((int(w / 2), int(w / 2)), rotation, scale)
     random_transform_mat[:, 2] += (tx*w, ty*w)
 
     params = dict()

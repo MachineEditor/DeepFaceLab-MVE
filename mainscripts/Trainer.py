@@ -512,7 +512,8 @@ def main(**kwargs):
         e.wait()  # Wait for inital load to occur.
 
         flask_t = threading.Thread(target=socketio.run, args=(flask_app,),
-                                   kwargs={'debug': True, 'use_reloader': False})
+                                   kwargs={'debug': True, 'use_reloader': False, 'host': '0.0.0.0'})
+        
         flask_t.start()
 
         while True:

@@ -173,8 +173,7 @@ class AMPModel(ModelBase):
 
                 self.options['uniform_yaw'] = io.input_bool ("Uniform yaw distribution of samples", default_uniform_yaw, help_message='Helps to fix blurry side faces due to small amount of them in the faceset.')
                 
-                if self.options['masked_training']:
-                    self.options['blur_out_mask'] = io.input_bool ("Blur out mask", default_blur_out_mask, help_message='Blurs nearby area outside of applied face mask of training samples. The result is the background near the face is smoothed and less noticeable on swapped face. The exact xseg mask in src and dst faceset is required.')
+                self.options['blur_out_mask'] = io.input_bool ("Blur out mask", default_blur_out_mask, help_message='Blurs nearby area outside of applied face mask of training samples. The result is the background near the face is smoothed and less noticeable on swapped face. The exact xseg mask in src and dst faceset is required.')
                 
                 self.options['loss_function'] = io.input_str(f"Loss function", default_loss_function, ['SSIM', 'MS-SSIM', 'MS-SSIM+L1'], help_message="Change loss function used for image quality assessment.")
                 self.options['lr'] = np.clip (io.input_number("Learning rate", default_lr, add_info="0.0 .. 1.0", help_message="Learning rate: typical fine value 5e-5"), 0.0, 1)
@@ -219,7 +218,7 @@ class AMPModel(ModelBase):
                 self.options['background_power'] = np.clip ( io.input_number("Background power", default_background_power, add_info="0.0..1.0", help_message="Learn the area outside of the mask. Helps smooth out area near the mask boundaries. Can be used at any time"), 0.0, 1.0 )
 
 
-                self.options['ct_mode'] = io.input_str (f"Color transfer for src faceset", default_ct_mode, ['none','rct','lct','mkl','idt','sot', 'fs-aug'], help_message="Change color distribution of src samples close to dst samples. Try all modes to find the best.")
+                self.options['ct_mode'] = io.input_str (f"Color transfer for src faceset", default_ct_mode, ['none','rct','lct','mkl','idt','sot', 'fs-aug', 'cc-aug'], help_message="Change color distribution of src samples close to dst samples. Try all modes to find the best.")
                 self.options['random_color'] = io.input_bool ("Random color", default_random_color, help_message="Samples are randomly rotated around the L axis in LAB colorspace, helps generalize training")
 
                 self.options['clipgrad'] = io.input_bool ("Enable gradient clipping", default_clipgrad, help_message="Gradient clipping reduces chance of model collapse, sacrificing speed of training.")
@@ -566,11 +565,11 @@ class AMPModel(ModelBase):
                     
                     gpu_target_src_masked = gpu_target_src*gpu_target_srcm_blur if masked_training else gpu_target_src
                     gpu_target_dst_masked = gpu_target_dst*gpu_target_dstm_blur if masked_training else gpu_target_dst
-                    gpu_target_src_anti_masked = gpu_target_src*gpu_target_srcm_anti_blur if masked_training else gpu_pred_src_src
-                    gpu_target_dst_anti_masked = gpu_target_dst*gpu_target_dstm_anti_blur if masked_training else gpu_pred_dst_dst
+                    gpu_target_src_anti_masked = gpu_target_src*gpu_target_srcm_anti_blur
+                    gpu_target_dst_anti_masked = gpu_target_dst*gpu_target_dstm_anti_blur
 
-                    gpu_pred_src_src_masked = gpu_pred_src_src*gpu_target_srcm_blur
-                    gpu_pred_dst_dst_masked = gpu_pred_dst_dst*gpu_target_dstm_blur
+                    gpu_pred_src_src_masked = gpu_pred_src_src*gpu_target_srcm_blur if masked_training else gpu_pred_src_src
+                    gpu_pred_dst_dst_masked = gpu_pred_dst_dst*gpu_target_dstm_blur if masked_training else gpu_pred_dst_dst
                     gpu_pred_src_src_anti_masked = gpu_pred_src_src*gpu_target_srcm_anti_blur
                     gpu_pred_dst_dst_anti_masked = gpu_pred_dst_dst*gpu_target_dstm_anti_blur
 
@@ -645,8 +644,11 @@ class AMPModel(ModelBase):
                     gpu_dst_losses += [gpu_dst_loss]
                     gpu_G_loss = gpu_src_loss + gpu_dst_loss
                     # dst-dst background weak loss
-                    gpu_G_loss += tf.reduce_mean(0.1*tf.square(gpu_pred_dst_dst_anti_masked-gpu_target_dst_anti_masked),axis=[1,2,3] )
-                    gpu_G_loss += 0.000001*nn.total_variation_mse(gpu_pred_dst_dst_anti_masked)
+                    gpu_G_loss += tf.reduce_mean(25*tf.square(gpu_pred_dst_dst_anti_masked-gpu_target_dst_anti_masked),axis=[1,2,3] )
+                    gpu_G_loss += 0.00001*nn.total_variation_mse(gpu_pred_dst_dst_anti_masked)
+                    # src-src background weak loss
+                    gpu_G_loss += tf.reduce_mean(25*tf.square(gpu_pred_src_src_anti_masked-gpu_target_src_anti_masked),axis=[1,2,3] )
+                    gpu_G_loss += 0.00001*nn.total_variation_mse(gpu_pred_src_src_anti_masked)
 
 
                     if gan_power != 0:
@@ -827,7 +829,10 @@ class AMPModel(ModelBase):
             fs_aug = None
             if ct_mode == 'fs-aug':
                 fs_aug = 'fs-aug'
-
+            cc_aug= None
+            if ct_mode == 'cc-aug':
+                cc_aug = 'cc-aug'
+                
             channel_type = SampleProcessor.ChannelType.LAB_RAND_TRANSFORM if self.options['random_color'] else SampleProcessor.ChannelType.BGR
 
             # Check for pak names
@@ -874,9 +879,9 @@ class AMPModel(ModelBase):
                                                  'random_blur': self.options['random_blur'],
                                                  'random_jpeg': self.options['random_jpeg'],
                                                  'random_shadow': random_shadow_dst,
-                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,
+                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug, 'ct_mode': cc_aug,
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
-                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug, 'random_shadow': random_shadow_dst,   'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
+                                                {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug, 'ct_mode': cc_aug, 'random_shadow': random_shadow_dst,   'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE_EYES, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                               ],

@@ -1,4 +1,3 @@
-import collections
 import math
 from enum import IntEnum
 from core.imagelib.shadows import shadow_highlights_augmentation
@@ -8,7 +7,7 @@ import numpy as np
 
 from core import imagelib
 from core.cv2ex import *
-from core.imagelib import sd, LinearMotionBlur
+from core.imagelib import LinearMotionBlur
 from core.imagelib.color_transfer import random_lab_rotation
 from facelib import FaceType, LandmarksProcessor
 
@@ -195,9 +194,11 @@ class SampleProcessor(object):
                                 img = cv2.resize( img, (resolution, resolution), interpolation=cv2.INTER_CUBIC )
 
                         # Apply random color transfer
-                        if ct_mode is not None and ct_sample is not None or ct_mode == 'fs-aug':
+                        if ct_mode is not None and (ct_sample is not None or ct_mode == 'fs-aug' or ct_mode == 'cc-aug'):
                             if ct_mode == 'fs-aug':
                                 img = imagelib.color_augmentation(img, sample_rnd_seed)
+                            if ct_mode == 'cc-aug':
+                                img = imagelib.cc_aug(img, sample_rnd_seed)
                             else:
                                 if ct_sample_bgr is None:
                                     ct_sample_bgr = ct_sample.load_bgr()
@@ -330,6 +331,7 @@ class SampleProcessor(object):
                     raise ValueError ('expected sample_type')
 
                 outputs_sample.append ( out_sample )
+
             outputs += [outputs_sample]
 
-        return outputs
+        return outputs, warp_params['flip']
