@@ -14,9 +14,9 @@ def prepare_sample(sample: Sample, options: dict, resolution: int, face_type_enu
     sample_bgr = sample.load_bgr()
     sample_mask, sample_mask_em = get_masks(sample, sample_bgr, sample.landmarks, eye_prio=options['eyes_prio'], mouth_prio=options['mouth_prio'])
 
-    sample_bgr = get_input_image(sample_bgr, sample.sample_type, sample.landmarks, resolution, face_type_enum)
-    sample_mask = get_input_image(sample_mask, sample.sample_type, sample.landmarks, resolution, face_type_enum)
-    sample_mask_em = get_input_image(sample_mask_em, sample.sample_type, sample.landmarks, resolution, face_type_enum)
+    sample_bgr = get_input_image(sample_bgr, sample.face_type, sample.landmarks, resolution, face_type_enum)
+    sample_mask = get_input_image(sample_mask, sample.face_type, sample.landmarks, resolution, face_type_enum)
+    sample_mask_em = get_input_image(sample_mask_em, sample.face_type, sample.landmarks, resolution, face_type_enum)
 
     return sample_bgr, sample_mask, sample_mask_em
 
@@ -73,7 +73,7 @@ def get_masks(sample, sample_bgr, sample_landmarks, eye_prio = False, mouth_prio
     return mask, mask_em
 
 def get_input_image(image, sample_face_type, sample_landmarks, resolution, face_type):
-    if face_type != sample_face_type and sample_face_type != FaceType.CUSTOM: # custom always valid for stuff like for wf custom equivivelnet
+    if face_type != sample_face_type and sample_face_type != FaceType.CUSTOM: # custom always valid for stuff like for wf custom equivalent
         mat = LandmarksProcessor.get_transform_mat(sample_landmarks, resolution, face_type)
         image = cv2.warpAffine(image, mat, (resolution, resolution), borderMode=cv2.BORDER_CONSTANT, flags=cv2.INTER_LINEAR )
     else:

@@ -1262,7 +1262,7 @@ class AMPLegacyModel(ModelBase):
         if samples_tuple[0] != 0:
             src_file_name = Path(samples_tuple[0].filename).stem
 
-            cv2_imwrite(self.src_state_path / f"{src_file_name}_output.jpg", self._get_formatted_image(self._get_formatted_image(np.expand_dims(pred_src_src[0,:,:,:], axis=0))) * 255, [int(cv2.IMWRITE_JPEG_QUALITY), 100 ] ) # output
+            cv2_imwrite(self.src_state_path / f"{src_file_name}_output.jpg", self._get_formatted_image(np.expand_dims(pred_src_src[0,:,:,:], axis=0)) * 255, [int(cv2.IMWRITE_JPEG_QUALITY), 100 ] ) # output
 
             src_data = { 'loss': float(src_loss[0]), 'input': f"{src_file_name}.jpg", 'output': f"{src_file_name}_output.jpg" }
             self.src_sample_state.append(src_data)
