@@ -104,7 +104,7 @@ class SAEHDModel(ModelBase):
                 default_random_shadow = self.load_or_def_option('random_shadow', 'none')
             else:
                 default_random_shadow = self.options['random_shadow'] = self.load_or_def_option('random_shadow', 'none')
-            
+
             del self.options['random_shadow_src']
             del self.options['random_shadow_dst']
 
@@ -130,7 +130,7 @@ class SAEHDModel(ModelBase):
                 self.ask_write_preview_history()
                 self.options['preview_samples'] = np.clip ( io.input_int ("Number of samples to preview", default_preview_samples, add_info="1 - 16", help_message="Typical fine value is 4"), 1, 16 )
                 self.options['force_full_preview'] = io.input_bool ("Use old preview panel", default_full_preview)
-                
+
                 self.ask_target_iter()
                 self.ask_retraining_samples(default_retraining_samples)
                 self.ask_random_src_flip()
@@ -227,7 +227,7 @@ class SAEHDModel(ModelBase):
 
                 self.options['loss_function'] = io.input_str(f"Loss function", default_loss_function, ['SSIM', 'MS-SSIM', 'MS-SSIM+L1'],
                                                             help_message="Change loss function used for image quality assessment.")
-                
+
                 self.options['lr'] = np.clip (io.input_number("Learning rate", default_lr, add_info="0.0 .. 1.0", help_message="Learning rate: typical fine value 5e-5"), 0.0, 1)
 
                 self.options['random_warp'] = io.input_bool ("Enable random warp of samples", default_random_warp, help_message="Random warp is required to generalize facial expressions of both faces. When the face is trained enough, you can disable it to get extra sharpness and reduce subpixel shake for less amount of iterations.")
@@ -239,7 +239,7 @@ class SAEHDModel(ModelBase):
                 self.options['random_blur'] = io.input_bool("Enable random blur of samples", default_random_blur, help_message="")
                 self.options['random_jpeg'] = io.input_bool("Enable random jpeg compression of samples", default_random_jpeg, help_message="")
                 self.options['random_shadow'] = io.input_str('Enable random shadows and highlights of samples', default_random_shadow, ['none','src','dst','all'], help_message="Helps to create shadows in dataset. Use src if you src dataset has lack of shadows/different lighting situations; dst to help generalization; all for both reason.")
-        
+
                 self.options['gan_power'] = np.clip ( io.input_number ("GAN power", default_gan_power, add_info="0.0 .. 10.0", help_message="Train the network in Generative Adversarial manner. Forces the neural network to learn small details of the face. Enable it only when the face is trained enough and don't disable. Typical value is 0.1"), 0.0, 10.0 )
 
                 if self.options['gan_power'] != 0.0:
@@ -313,7 +313,7 @@ class SAEHDModel(ModelBase):
             self.set_iter(0)
 
         adabelief = self.options['adabelief']
-        
+
         use_fp16 = self.options['use_fp16']
         if self.is_exporting:
             use_fp16 = io.input_bool ("Export quantized?", False, help_message='Makes the exported model faster. If you have problems, disable this option.')
@@ -324,7 +324,7 @@ class SAEHDModel(ModelBase):
         random_dst_flip = self.random_dst_flip if not self.pretrain else True
         random_hsv_power = self.options['random_hsv_power'] if not self.pretrain else 0.0
         blur_out_mask = self.options['blur_out_mask']
-        
+
         if self.pretrain:
             self.options_show_override['lr_dropout'] = 'n'
             self.options_show_override['random_warp'] = False
@@ -420,7 +420,7 @@ class SAEHDModel(ModelBase):
 
                 # Initialize optimizers
                 lr = self.options['lr']
-                
+
                 if self.options['lr_dropout'] in ['y','cpu'] and not self.pretrain:
                     lr_cos = 500
                     lr_dropout = 0.3
@@ -499,7 +499,7 @@ class SAEHDModel(ModelBase):
                         y = 1-nn.gaussian_blur(gpu_target_srcm_all, sigma)
                         y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
                         gpu_target_src = gpu_target_src*gpu_target_srcm_all + (x/y)*gpu_target_srcm_anti
-                        
+
                         x = nn.gaussian_blur(gpu_target_dst*gpu_target_dstm_anti, sigma)
                         y = 1-nn.gaussian_blur(gpu_target_dstm_all, sigma)
                         y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
@@ -876,9 +876,10 @@ class SAEHDModel(ModelBase):
             if ct_mode is not None:
                 src_generators_count = int(src_generators_count * 1.5)
 
-            fs_aug = None
-            if ct_mode == 'fs-aug':
-                fs_aug = 'fs-aug'
+            dst_aug = None
+            allowed_dst_augs = ['fs-aug', 'cc-aug']
+            if ct_mode in allowed_dst_augs:
+                dst_aug = ct_mode
 
             channel_type = SampleProcessor.ChannelType.LAB_RAND_TRANSFORM if self.options['random_color'] else SampleProcessor.ChannelType.BGR
 
@@ -909,7 +910,7 @@ class SAEHDModel(ModelBase):
                                                  'random_jpeg': self.options['random_jpeg'],
                                                  'random_shadow': random_shadow_src,
                                                  'random_hsv_shift_amount' : random_hsv_power,
-                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,  
+                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': ct_mode,
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution
                                                  },
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False,
@@ -936,7 +937,7 @@ class SAEHDModel(ModelBase):
                                                 },
                                               ],
                         uniform_yaw_distribution=self.options['uniform_yaw'] or self.pretrain,
-                        generators_count=src_generators_count 
+                        generators_count=src_generators_count
                     ),
 
                     SampleGeneratorFace(training_data_dst_path, pak_name=self.dst_pak_name, ignore_same_path=ignore_same_path,
@@ -948,10 +949,10 @@ class SAEHDModel(ModelBase):
                                                  'random_blur': self.options['random_blur'],
                                                  'random_jpeg': self.options['random_jpeg'],
                                                  'random_shadow': random_shadow_dst,
-                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,
+                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': dst_aug,
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False,
-                                                'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,
+                                                'transform':True, 'channel_type' : channel_type, 'ct_mode': dst_aug,
                                                 'random_shadow': random_shadow_dst,
                                                 'random_hsv_shift_amount' : random_hsv_power,
                                                 'face_type':self.face_type,
@@ -1226,7 +1227,7 @@ class SAEHDModel(ModelBase):
         import json
         from itertools import zip_longest
         import multiprocessing as mp
-        
+
 
         src_gen = self.generator_list[0]
         dst_gen =  self.generator_list[1]
@@ -1249,7 +1250,7 @@ class SAEHDModel(ModelBase):
         # create state folder
         idx_str = datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
         idx_state_history_path= self.state_history_path / idx_str
-        idx_state_history_path.mkdir()        
+        idx_state_history_path.mkdir()
         # create set folders
         self.src_state_path = idx_state_history_path / 'src'
         self.src_state_path.mkdir()
@@ -1322,7 +1323,7 @@ class SAEHDModel(ModelBase):
             src_sample_bgr, src_sample_mask, src_sample_mask_em = prepare_sample(samples_tuple[0], self.options, self.resolution, self.face_type)
         else:
             src_sample_bgr, src_sample_mask, src_sample_mask_em = self._dummy_input, self._dummy_mask, self._dummy_mask
-        if samples_tuple[1] != 0: 
+        if samples_tuple[1] != 0:
             dst_sample_bgr, dst_sample_mask, dst_sample_mask_em = prepare_sample(samples_tuple[1], self.options, self.resolution, self.face_type)
         else:
             dst_sample_bgr, dst_sample_mask, dst_sample_mask_em = self._dummy_input, self._dummy_mask, self._dummy_mask

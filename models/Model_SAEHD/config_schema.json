@@ -186,7 +186,8 @@
             "mkl",
             "idt",
             "sot",
-            "fs-aug"
+            "fs-aug",
+            "cc-aug"
           ]
         },
         "random_color": {

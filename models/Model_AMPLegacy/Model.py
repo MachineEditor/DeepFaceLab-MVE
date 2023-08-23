@@ -31,10 +31,10 @@ class AMPLegacyModel(ModelBase):
         # Check compatibility for models without inter dims
         if not self.load_inter_dims() and not self.is_first_run():
             self.options['inter_dims'] = self.options['ae_dims']
-            
+
         else:
             default_inter_dims      = self.options['inter_dims']        = self.load_or_def_option('inter_dims', 1024)
-            
+
 
         default_e_dims             = self.options['e_dims']             = self.load_or_def_option('e_dims', 64)
         default_d_dims             = self.options['d_dims']             = self.options.get('d_dims', None)
@@ -67,7 +67,7 @@ class AMPLegacyModel(ModelBase):
         default_random_noise       = self.options['random_noise']       = self.load_or_def_option('random_noise', False)
         default_random_blur        = self.options['random_blur']        = self.load_or_def_option('random_blur', False)
         default_random_jpeg        = self.options['random_jpeg']        = self.load_or_def_option('random_jpeg', False)
-        
+
         random_shadow_src_options = self.options['random_shadow_src']   = self.load_or_def_option('random_shadow_src', False)
         random_shadow_dst_options = self.options['random_shadow_dst']   = self.load_or_def_option('random_shadow_dst', False)
         default_pretrain           = self.options['pretrain']      = self.load_or_def_option('pretrain', False)
@@ -143,8 +143,8 @@ class AMPLegacyModel(ModelBase):
         if self.is_first_run():
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
                 self.options['ae_dims']    = np.clip ( io.input_int("AutoEncoder dimensions", default_ae_dims, add_info="32-1024", help_message="All face information will packed to AE dims. If amount of AE dims are not enough, then for example closed eyes will not be recognized. More dims are better, but require more VRAM. You can fine-tune model size to fit your GPU." ), 32, 1024 )
-                
-                
+
+
                 self.options['inter_dims'] = np.clip ( io.input_int("Inter dimensions", default_inter_dims, add_info="32-2048", help_message="Should be equal or more than AutoEncoder dimensions. More dims are better, but require more VRAM. You can fine-tune model size to fit your GPU." ), 32, 2048 )
 
                 e_dims = np.clip ( io.input_int("Encoder dimensions", default_e_dims, add_info="16-256", help_message="More dims help to recognize more facial features and achieve sharper result, but require more VRAM. You can fine-tune model size to fit your GPU." ), 16, 256 )
@@ -163,7 +163,7 @@ class AMPLegacyModel(ModelBase):
 
                 preview_mf = io.input_number ("Preview morph factor.", default_preview_mf, add_info="0.25 | 0.50 | 0.65 | 0.75 | 1", valid_list=[0.25, 0.50, 0.65, 0.75, 1], help_message="Morph factor of last column in preview 1/3")
                 self.options['preview_mf'] = preview_mf
-            
+
                 if self.options['face_type'] == 'wf' or self.options['face_type'] == 'head':
                         self.options['masked_training']  = io.input_bool ("Masked training", default_masked_training, help_message="This option is available only for 'whole_face' or 'head' type. Masked training clips training area to full_face mask or XSeg mask, thus network will train the faces properly.")
 
@@ -171,10 +171,10 @@ class AMPLegacyModel(ModelBase):
                 self.options['mouth_prio'] = io.input_bool ("Mouth priority", default_mouth_prio, help_message='Helps to fix mouth problems during training by forcing the neural network to train mouth with higher priority similar to eyes ')
 
                 self.options['uniform_yaw'] = io.input_bool ("Uniform yaw distribution of samples", default_uniform_yaw, help_message='Helps to fix blurry side faces due to small amount of them in the faceset.')
-                
+
                 if self.options['masked_training']:
                     self.options['blur_out_mask'] = io.input_bool ("Blur out mask", default_blur_out_mask, help_message='Blurs nearby area outside of applied face mask of training samples. The result is the background near the face is smoothed and less noticeable on swapped face. The exact xseg mask in src and dst faceset is required.')
-                
+
                 self.options['loss_function'] = io.input_str(f"Loss function", default_loss_function, ['SSIM', 'MS-SSIM', 'MS-SSIM+L1'], help_message="Change loss function used for image quality assessment.")
                 self.options['lr'] = np.clip (io.input_number("Learning rate", default_lr, add_info="0.0 .. 1.0", help_message="Learning rate: typical fine value 5e-5"), 0.0, 1)
 
@@ -185,7 +185,7 @@ class AMPLegacyModel(ModelBase):
         default_gan_dims           = self.options['gan_dims']           = self.load_or_def_option('gan_dims', 16)
         default_gan_smoothing      = self.options['gan_smoothing']      = self.load_or_def_option('gan_smoothing', 0.1)
         default_gan_noise          = self.options['gan_noise']          = self.load_or_def_option('gan_noise', 0.0)
-        
+
         if self.is_first_run() or ask_override:
             if (self.read_from_conf and not self.config_file_exists) or not self.read_from_conf:
                 self.options['models_opt_on_gpu'] = io.input_bool ("Place models and optimizer on GPU", default_models_opt_on_gpu, help_message="When you train on one GPU, by default model and optimizer weights are placed on GPU to accelerate the process. You can place they on CPU to free up extra VRAM, thus set bigger dimensions.")
@@ -256,23 +256,23 @@ class AMPLegacyModel(ModelBase):
         morph_factor = self.options['morph_factor']
 
         adabelief = self.options['adabelief']
-        
+
         pretrain = self.pretrain = self.options['pretrain']
         if self.pretrain_just_disabled:
             self.set_iter(0)
-            
+
         self.gan_power = gan_power = 0.0 if self.pretrain else self.options['gan_power']
         random_warp = False if self.pretrain else self.options['random_warp']
         random_hsv_power = self.options['random_hsv_power']
         random_src_flip = self.random_src_flip if not self.pretrain else True
         random_dst_flip = self.random_dst_flip if not self.pretrain else True
-        
+
         if self.pretrain:
             self.options_show_override['gan_power'] = 0.0
             self.options_show_override['random_warp'] = False
             self.options_show_override['lr_dropout'] = 'n'
             self.options_show_override['uniform_yaw'] = True
-            
+
         masked_training = self.options['masked_training']
         blur_out_mask = self.options['blur_out_mask'] if masked_training else False
         eyes_prio = self.options['eyes_prio']
@@ -434,7 +434,7 @@ class AMPLegacyModel(ModelBase):
                 # Initialize optimizers
                 lr=5e-5
                 lr_dropout = 0.3 if self.options['lr_dropout'] in ['y','cpu'] and not self.pretrain else 1.0
-                
+
                 clipnorm = 1.0 if self.options['clipgrad'] else 0.0
                 if self.options['lr_dropout'] in ['y','cpu'] and not self.pretrain:
                     lr_cos = 500
@@ -442,7 +442,7 @@ class AMPLegacyModel(ModelBase):
                 else:
                     lr_cos = 0
                     lr_dropout = 1.0
-                
+
                 OptimizerClass = nn.AdaBelief if adabelief else nn.RMSprop
 
                 self.all_weights = self.encoder.get_weights() + self.inter_src.get_weights() + self.inter_dst.get_weights() + self.decoder.get_weights()
@@ -503,7 +503,7 @@ class AMPLegacyModel(ModelBase):
                     # process model tensors
                     gpu_src_code = self.encoder (gpu_warped_src)
                     gpu_dst_code = self.encoder (gpu_warped_dst)
-                    
+
                     if pretrain:
                         gpu_src_inter_src_code = self.inter_src (gpu_src_code)
                         gpu_dst_inter_dst_code = self.inter_dst (gpu_dst_code)
@@ -542,7 +542,7 @@ class AMPLegacyModel(ModelBase):
                         y = 1-nn.gaussian_blur(gpu_target_srcm, sigma)
                         y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
                         gpu_target_src = gpu_target_src*gpu_target_srcm + (x/y)*gpu_target_srcm_anti
-                        
+
                         x = nn.gaussian_blur(gpu_target_dst*gpu_target_dstm_anti, sigma)
                         y = 1-nn.gaussian_blur(gpu_target_dstm, sigma)
                         y = tf.where(tf.equal(y, 0), tf.ones_like(y), y)
@@ -586,7 +586,7 @@ class AMPLegacyModel(ModelBase):
                             gpu_dst_loss = tf.reduce_mean ( 5*nn.dssim(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0, filter_size=int(resolution/11.6) ), axis=[1])
                             gpu_dst_loss += tf.reduce_mean ( 5*nn.dssim(gpu_target_dst_masked_opt, gpu_pred_dst_dst_masked_opt, max_val=1.0, filter_size=int(resolution/23.2) ), axis=[1])
                         gpu_dst_loss += tf.reduce_mean ( 10*tf.square(  gpu_target_dst_masked_opt- gpu_pred_dst_dst_masked_opt ), axis=[1,2,3])
-                    
+
                     #if eyes_mouth_prio:
                         # gpu_dst_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_dst*gpu_target_dstm_em - gpu_pred_dst_dst*gpu_target_dstm_em ), axis=[1,2,3])
 
@@ -599,7 +599,7 @@ class AMPLegacyModel(ModelBase):
                             gpu_target_part_mask_dst = gpu_target_dstm_mouth
 
                         gpu_dst_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_dst*gpu_target_part_mask_dst - gpu_pred_dst_dst*gpu_target_part_mask_dst ), axis=[1,2,3])
-                    
+
                     gpu_dst_loss += tf.reduce_mean ( 10*tf.square( gpu_target_dstm - gpu_pred_dst_dstm ),axis=[1,2,3] )
                     gpu_dst_loss += 0.1*tf.reduce_mean(tf.square(gpu_pred_dst_dst_anti_masked-gpu_target_dst_anti_masked),axis=[1,2,3] )
 
@@ -645,9 +645,9 @@ class AMPLegacyModel(ModelBase):
                                 gpu_target_part_mask_src = gpu_target_srcm_eyes
                             elif mouth_prio:
                                 gpu_target_part_mask_src = gpu_target_srcm_mouth
-                                
+
                             gpu_src_loss += tf.reduce_mean ( 300*tf.abs ( gpu_target_src*gpu_target_part_mask_src - gpu_pred_src_src*gpu_target_part_mask_src ), axis=[1,2,3])
-                        
+
                         gpu_src_loss += tf.reduce_mean ( 10*tf.square( gpu_target_srcm - gpu_pred_src_srcm ),axis=[1,2,3] )
 
                         if self.options['background_power'] > 0:
@@ -667,19 +667,19 @@ class AMPLegacyModel(ModelBase):
                                 gpu_src_loss += bg_factor * tf.reduce_mean ( 10*tf.square ( gpu_target_src - gpu_pred_src_src ), axis=[1,2,3])
                     else:
                         gpu_src_loss = gpu_dst_loss
-                    
+
                     gpu_src_losses += [gpu_src_loss]
-                    
+
                     if pretrain:
                         gpu_G_loss = gpu_dst_loss
-                    else:     
+                    else:
                         gpu_G_loss = gpu_src_loss + gpu_dst_loss
 
                     def DLoss(labels,logits):
                         return tf.reduce_mean( tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits), axis=[1,2,3])
 
                     if gan_power != 0:
-                        
+
                         gpu_pred_src_src_d, gpu_pred_src_src_d2 = self.GAN(gpu_pred_src_src_masked_opt)
 
                         def get_smooth_noisy_labels(label, tensor, smoothing=0.1, noise=0.05):
@@ -718,12 +718,12 @@ class AMPLegacyModel(ModelBase):
 
                         gpu_G_loss += gan_power*(DLoss(gpu_pred_src_src_d_ones, gpu_pred_src_src_d)  + \
                                                  DLoss(gpu_pred_src_src_d2_ones, gpu_pred_src_src_d2))
-                        
+
                         if masked_training:
                             # Minimal src-src-bg rec with total_variation_mse to suppress random bright dots from gan
                             gpu_G_loss += 0.000001*nn.total_variation_mse(gpu_pred_src_src)
                             gpu_G_loss += 0.02*tf.reduce_mean(tf.square(gpu_pred_src_src_anti_masked-gpu_target_src_anti_masked),axis=[1,2,3] )
-                    
+
                     gpu_G_loss_gvs += [ nn.gradients ( gpu_G_loss, self.trainable_weights ) ]
 
             # Average losses and gradients, and create optimizer update ops
@@ -828,7 +828,7 @@ class AMPLegacyModel(ModelBase):
                 if self.is_training and gan_power != 0 and model == self.GAN:
                     if self.gan_model_changed:
                         do_init = True
-                        
+
             if not do_init:
                 do_init = not model.load_weights( self.get_strpath_storage_for_file(filename) )
             if do_init:
@@ -863,9 +863,10 @@ class AMPLegacyModel(ModelBase):
                 random_shadow_src = self.options['random_shadow_src']
                 random_shadow_dst = self.options['random_shadow_dst']
 
-            fs_aug = None
-            if ct_mode == 'fs-aug':
-                fs_aug = 'fs-aug'
+            dst_aug = None
+            allowed_dst_augs = ['fs-aug', 'cc-aug']
+            if ct_mode in allowed_dst_augs:
+                dst_aug = ct_mode
 
             channel_type = SampleProcessor.ChannelType.LAB_RAND_TRANSFORM if self.options['random_color'] else SampleProcessor.ChannelType.BGR
 
@@ -916,7 +917,7 @@ class AMPLegacyModel(ModelBase):
                                                  'random_blur': self.options['random_blur'],
                                                  'random_jpeg': self.options['random_jpeg'],
                                                  'random_shadow': random_shadow_dst,
-                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug,
+                                                 'transform':True, 'channel_type' : channel_type, 'ct_mode': dst_aug,
                                                  'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_IMAGE,'warp':False                      , 'transform':True, 'channel_type' : channel_type, 'ct_mode': fs_aug, 'random_shadow': random_shadow_dst,   'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
                                                 {'sample_type': SampleProcessor.SampleType.FACE_MASK, 'warp':False                      , 'transform':True, 'channel_type' : SampleProcessor.ChannelType.G,   'face_mask_type' : SampleProcessor.FaceMaskType.FULL_FACE, 'face_type':self.face_type, 'data_format':nn.data_format, 'resolution': resolution},
@@ -1093,15 +1094,15 @@ class AMPLegacyModel(ModelBase):
                     S[i] = label_face_filename(S[i], filenames[0][i])
                     D[i] = label_face_filename(D[i], filenames[1][i])
             st = []
-            temp_r = []        
+            temp_r = []
             for i in range(n_samples if not for_history else 1):
                 st =  [ np.concatenate ((S[i], SS[i],  D[i]), axis=1) ]
                 st += [ np.concatenate ((DD[i], DD[i]*DDM_000[i], morphed_preview_dict[self.options['preview_mf']][i] ), axis=1) ]
                 temp_r += [ np.concatenate (st, axis=1) ]
             result += [ (f"AMP morph {self.options['preview_mf']}", np.concatenate (temp_r, axis=0 )), ]
             # result += [ ('AMP morph 1.0', np.concatenate (st, axis=0 )), ]
-            st = []  
-            temp_r = []      
+            st = []
+            temp_r = []
             for i in range(n_samples if not for_history else 1):
                 st =  [ np.concatenate ((DD[i], SD_025[i],  SD_050[i]), axis=1) ]
                 st += [ np.concatenate ((SD_065[i], SD_075[i], SD_100[i]), axis=1) ]
@@ -1109,7 +1110,7 @@ class AMPLegacyModel(ModelBase):
             result += [ ('AMP morph list', np.concatenate (temp_r, axis=0 )), ]
             #result += [ ('AMP morph list', np.concatenate (st, axis=0 )), ]
             st = []
-            temp_r = []        
+            temp_r = []
             for i in range(n_samples if not for_history else 1):
                 st = [ np.concatenate ((DD[i], SD_025[i]*DDM_025[i]*SDM_025[i],  SD_050[i]*DDM_050[i]*SDM_050[i]), axis=1) ]
                 st += [ np.concatenate ((SD_065[i]*DDM_065[i]*SDM_065[i], SD_075[i]*DDM_075[i]*SDM_075[i], SD_100[i]*DDM_100[i]*SDM_100[i]), axis=1) ]
@@ -1128,7 +1129,7 @@ class AMPLegacyModel(ModelBase):
 
     #override
     def get_MergerConfig(self):
-            
+
         def predictor_morph(face, func_morph_factor=1.0):
             return self.predictor_func(face, func_morph_factor)
 
@@ -1153,7 +1154,7 @@ class AMPLegacyModel(ModelBase):
         import json
         from itertools import zip_longest
         import multiprocessing as mp
-        
+
 
         src_gen = self.generator_list[0]
         dst_gen =  self.generator_list[1]
@@ -1176,7 +1177,7 @@ class AMPLegacyModel(ModelBase):
         # create state folder
         idx_str = datetime.datetime.now().strftime('%Y%m%dT%H%M%S')
         idx_state_history_path= self.state_history_path / idx_str
-        idx_state_history_path.mkdir()        
+        idx_state_history_path.mkdir()
         # create set folders
         self.src_state_path = idx_state_history_path / 'src'
         self.src_state_path.mkdir()
@@ -1249,7 +1250,7 @@ class AMPLegacyModel(ModelBase):
             src_sample_bgr, src_sample_mask, src_sample_mask_em = prepare_sample(samples_tuple[0], self.options, self.resolution, self.face_type)
         else:
             src_sample_bgr, src_sample_mask, src_sample_mask_em = self._dummy_input, self._dummy_mask, self._dummy_mask
-        if samples_tuple[1] != 0: 
+        if samples_tuple[1] != 0:
             dst_sample_bgr, dst_sample_mask, dst_sample_mask_em = prepare_sample(samples_tuple[1], self.options, self.resolution, self.face_type)
         else:
             dst_sample_bgr, dst_sample_mask, dst_sample_mask_em = self._dummy_input, self._dummy_mask, self._dummy_mask
