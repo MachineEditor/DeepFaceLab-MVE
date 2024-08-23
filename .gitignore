@@ -5,3 +5,6 @@ __pycache__/
 !requirements*
 !Dockerfile*
 !*.sh
+*.bat
+*.zip
+test*
