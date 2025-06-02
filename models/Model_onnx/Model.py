@@ -41,7 +41,7 @@ class Model(object):
         self.input_height, self.input_width = inputs[0].shape[1:3]
 
         if len(inputs) == 2:
-            if 'in_morph' not in inputs[1].name:
+            if 'morph_value' not in inputs[1].name:
                 raise ValueError(f'Invalid model input name {inputs[1].name}')
             self.has_morph = True
         else:
@@ -115,7 +115,6 @@ class Model(object):
     def predictor_func (self, face, morph_value = None):
         face = nn.to_data_format(face[None,...], 'NHWC', "NHWC")
 
-        # print("face shape: ", face.shape)
         if self.has_morph:
             out_face_mask, out_celeb, out_celeb_mask = self.session.run(None, {'in_face:0': face, 'morph_value:0':np.float32([morph_value]) })
         else:
@@ -125,13 +124,6 @@ class Model(object):
 
         return out_celeb[0], out_celeb_mask[0][...,0], out_face_mask[0][...,0]
 
-    # amp model
-    # def predictor_func (self, face, morph_value):
-    #     face = nn.to_data_format(face[None,...], self.model_data_format, "NHWC")
-
-    #     bgr, mask_dst_dstm, mask_src_dstm = [ nn.to_data_format(x,"NHWC", self.model_data_format).astype(np.float32) for x in self.AE_merge (face, morph_value) ]
-
-    #     return bgr[0], mask_src_dstm[0][...,0], mask_dst_dstm[0][...,0]
 
     #override
     # def get_MergerConfig(self):
