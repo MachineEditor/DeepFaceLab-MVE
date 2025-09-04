@@ -22,7 +22,7 @@ def get_text_image( shape, text, color=(1,1,1), border=0.2, font=None):
         canvas = Image.new('RGB', (w,h) , (0,0,0) )
         draw = ImageDraw.Draw(canvas)
         offset = ( 0, 0)
-        draw.text(offset, text, font=pil_font, fill=tuple((np.array(color)*255).astype(np.int)) )
+        draw.text(offset, text, font=pil_font, fill=tuple((np.array(color)*255).astype(int)) )
 
         result = np.asarray(canvas) / 255
 

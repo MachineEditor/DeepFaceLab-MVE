@@ -512,7 +512,7 @@ class QCanvasOperator(QWidget):
         tl = QPoint_to_np(rect.topLeft())
         xy = self.img_to_cli_pt(tl)
         xy2 = self.img_to_cli_pt(tl + QSize_to_np(rect.size()) ) - xy
-        return QRect ( *xy.astype(np.int), *xy2.astype(np.int) )
+        return QRect ( *xy.astype(int), *xy2.astype(int) )
 
     # ====================================================================================
     # ====================================================================================

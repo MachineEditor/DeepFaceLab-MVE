@@ -53,7 +53,7 @@ def QPixmap_from_np(img):
     return QPixmap.fromImage(QImage_from_np(img))
     
 def QPoint_from_np(n):
-    return QPoint(*n.astype(np.int))
+    return QPoint(*n.astype(int))
     
 def QPoint_to_np(q):
     return np.int32( [q.x(), q.y()] )

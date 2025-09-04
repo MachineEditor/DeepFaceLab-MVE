@@ -758,8 +758,8 @@ class ExtractSubprocessor(Subprocessor):
         else:
             image = self.image.copy()
 
-        view_rect = (np.array(self.rect) * self.view_scale).astype(np.int).tolist()
-        view_landmarks  = (np.array(self.landmarks) * self.view_scale).astype(np.int).tolist()
+        view_rect = (np.array(self.rect) * self.view_scale).astype(int).tolist()
+        view_landmarks  = (np.array(self.landmarks) * self.view_scale).astype(int).tolist()
 
         if self.rect_size <= 40:
             scaled_rect_size = h // 3 if w > h else w // 3

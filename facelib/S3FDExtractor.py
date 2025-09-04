@@ -242,7 +242,7 @@ class S3FDExtractor(object):
             bboxlist = np.zeros((1, 5))
 
         bboxlist = bboxlist[self.refine_nms(bboxlist, 0.3), :]
-        bboxlist = [ x[:-1].astype(np.int) for x in bboxlist if x[-1] >= 0.5]
+        bboxlist = [ x[:-1].astype(int) for x in bboxlist if x[-1] >= 0.5]
         return bboxlist
 
     def refine_nms(self, dets, thresh):
